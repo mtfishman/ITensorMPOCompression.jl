@@ -1,0 +1,13 @@
+name = "ITensorMPOCompression"
+uuid = "03645d51-6a26-4d1e-b9a1-035dc79d88e7"
+authors = ["Jan Reimers <janreimers@gmail.com> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
