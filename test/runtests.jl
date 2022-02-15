@@ -2,5 +2,5 @@ using ITensorMPOCompression
 using Test
 
 @testset "ITensorMPOCompression.jl" begin
-    # Write your tests here.
+    include("qx_unittests.jl")
 end

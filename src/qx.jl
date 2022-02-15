@@ -1,0 +1,143 @@
+using LinearAlgebra
+using ITensors
+
+function ql!(A::StridedMatrix{<:LAPACK.BlasFloat}, ::NoPivot; blocksize=36)
+  tau=similar(A, min(size(A)...))
+  x=LAPACK.geqlf!(A, tau)
+  #save L from the lower portion of A, before orgql! mangles it!
+  nr,nc=size(A)
+  mn=min(nr,nc)
+  L=similar(A,(mn,nc))
+  for r in 1:mn
+    for c in 1:r+nc-mn
+      L[r,c]=A[r+nr-mn,c]
+    end
+    for c in r+1+nc-mn:nc
+      L[r,c]=0.0
+    end
+  end
+  # Now we need shift the orth vectors from the right side of Q over the left side, before
+  if (mn<nc)
+      for r in 1:nr
+        for c in 1:mn
+            A[r,c]=A[r,c+nc-mn];
+        end
+      end
+  end
+# A may now have extra columns from mn+1:nc, but they get chopped of in the outer functions
+  LAPACK.orgql!(A,tau)
+  return  A,L
+end
+
+ql!(A::AbstractMatrix) = ql!(A, NoPivot())
+
+
+function ql(A::AbstractMatrix{T}, arg...; kwargs...) where T
+    Base.require_one_based_indexing(A)
+    AA = similar(A, LinearAlgebra._qreltype(T), size(A))
+    copyto!(AA, A)
+    return ql!(AA, arg...; kwargs...)
+end
+
+function ql_positive(M::AbstractMatrix)
+  sparseQ, L = ql(M)
+  Q = convert(Matrix, sparseQ)
+  nr,nc = size(Q)
+  dc=nc>nr ? nc-nr : 0 #diag is shifted over by dc if nc>nr
+  for c in 1:nc
+    if c<=nr && real(L[c, c+dc]) < 0.0
+      L[c, 1:c+dc] *= -1
+      Q[:,c] *= -1
+    end
+  end
+  return (Q, L)
+end
+
+function ql(T::NDTensors.DenseTensor{ElT,2,IndsT}; kwargs...) where {ElT,IndsT}
+    positive = get(kwargs, :positive, false)
+    # TODO: just call qr on T directly (make sure
+    # that is fast)
+    if positive
+      QM, LM = ql_positive(matrix(T))
+    else
+      QM, LM = ql(matrix(T))
+    end
+    # Make the new indices to go onto Q and L
+    q, l = inds(T)
+    q = dim(q) < dim(l) ? sim(q) : sim(l)
+    Qinds = IndsT((ind(T, 1), q))
+    Linds = IndsT((q, ind(T, 2)))
+    Q = NDTensors.tensor(NDTensors.Dense(vec(Matrix(QM))), Qinds)
+    L = NDTensors.tensor(NDTensors.Dense(vec(LM)), Linds)
+    return Q, L
+  end
+
+# ql decomposition of an order-n tensor according to 
+# positions Lpos and Rpos 
+function ql(
+  T::NDTensors.DenseTensor{<:Number,N,IndsT}, 
+  Lpos::NTuple{NL,Int}, 
+  Rpos::NTuple{NR,Int}; 
+  kwargs...
+) where {N,IndsT,NL,NR}
+  M = NDTensors.permute_reshape(T, Lpos, Rpos)
+  QM, LM = ql(M; kwargs...)
+  q = ind(QM, 2)
+  l = ind(LM, 1)
+  # TODO: simplify this by permuting inds(T) by (Lpos,Rpos)
+  # then grab Linds,Rinds
+  Linds = NDTensors.similartype(IndsT, Val{NL})(ntuple(i -> inds(T)[Lpos[i]], Val(NL)))
+  Qinds = NDTensors.push(Linds, l)
+  Q = reshape(QM, Qinds)
+  Rinds = NDTensors.similartype(IndsT, Val{NR})(ntuple(i -> inds(T)[Rpos[i]], Val(NR)))
+  Rinds = NDTensors.pushfirst(Rinds, l)
+  L = NDTensors.reshape(LM, Rinds)
+  return Q, L
+end
+
+  
+
+function ql(A::ITensor, Linds...; kwargs...)
+    tags::TagSet = get(kwargs, :tags, "Link,ql")
+    Lis = commoninds(A, ITensors.indices(Linds))
+    Ris = uniqueinds(A, Lis)
+    Lpos, Rpos = NDTensors.getperms(inds(A), Lis, Ris)
+    QT, LT = ql(ITensors.tensor(A), Lpos, Rpos; kwargs...)
+    Q, L = itensor(QT), itensor(LT)
+    q::Index = ITensors.commonind(Q, L)
+    settags!(Q, tags, q)
+    settags!(L, tags, q)
+    q = settags(q, tags)
+    return Q, L, q
+end
+
+function qr_test()
+  A1 = [3.0 -6.0; 4.0 -8.0; 0.0 1.0]
+  M,N=size(A1)
+  ir=Index(M,"row")
+  ic=Index(N,"col")
+  A=ITensor(ir,ic,)
+  for irc=eachindval(inds(A))
+      A[irc...]=A1[irc[1].second,irc[2].second]
+  end
+  Q,R=qr(A,ir)
+  A2=Q*R
+  norm(A-A2)<1e-15
+end
+
+function ql_test()
+  A1 = [2.0 0.5 1.0; -1.0 0.0 2.0]
+  #A1 = [2.0 0.5; 1.0 1.0; 0.0 -2.0]
+  M,N=size(A1)
+  ir=Index(M,"row")
+  ic=Index(N,"col")
+  A=ITensor(ir,ic)
+  for irc=eachindval(inds(A))
+      A[irc...]=A1[irc[1].second,irc[2].second]
+  end
+  Q,L=ql(A,ir;positive=true)
+  A2=Q*L
+  norm(A-A2)
+end
+
+#@show ql_test()
