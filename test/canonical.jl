@@ -1,12 +1,10 @@
-using ITensors
 using ITensorMPOCompression
 using Revise
 using Test
 
-include("../test/hamiltonians.jl")
+include("hamiltonians.jl")
 
-
-function runtest()
+@testset "Bring MPO into canonical form" begin
     N=5
     NNN=4
     hx=0.5
@@ -22,12 +20,4 @@ function runtest()
     E1=inner(psi',to_openbc(H),psi)
     @test abs(E0-E1)<1e-14
     
-
-    
-    
 end
-
-using Printf
-Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
-println("-----------Start--------------")
-runtest()

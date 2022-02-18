@@ -111,33 +111,33 @@ function ql(A::ITensor, Linds...; kwargs...)
     return Q, L, q
 end
 
-function qr_test()
-  A1 = [3.0 -6.0; 4.0 -8.0; 0.0 1.0]
-  M,N=size(A1)
-  ir=Index(M,"row")
-  ic=Index(N,"col")
-  A=ITensor(ir,ic,)
-  for irc=eachindval(inds(A))
-      A[irc...]=A1[irc[1].second,irc[2].second]
-  end
-  Q,R=qr(A,ir)
-  A2=Q*R
-  norm(A-A2)<1e-15
-end
+# function qr_test()
+#   A1 = [3.0 -6.0; 4.0 -8.0; 0.0 1.0]
+#   M,N=size(A1)
+#   ir=Index(M,"row")
+#   ic=Index(N,"col")
+#   A=ITensor(ir,ic,)
+#   for irc=eachindval(inds(A))
+#       A[irc...]=A1[irc[1].second,irc[2].second]
+#   end
+#   Q,R=qr(A,ir)
+#   A2=Q*R
+#   norm(A-A2)<1e-15
+# end
 
-function ql_test()
-  A1 = [2.0 0.5 1.0; -1.0 0.0 2.0]
-  #A1 = [2.0 0.5; 1.0 1.0; 0.0 -2.0]
-  M,N=size(A1)
-  ir=Index(M,"row")
-  ic=Index(N,"col")
-  A=ITensor(ir,ic)
-  for irc=eachindval(inds(A))
-      A[irc...]=A1[irc[1].second,irc[2].second]
-  end
-  Q,L=ql(A,ir;positive=true)
-  A2=Q*L
-  norm(A-A2)
-end
+# function ql_test()
+#   A1 = [2.0 0.5 1.0; -1.0 0.0 2.0]
+#   #A1 = [2.0 0.5; 1.0 1.0; 0.0 -2.0]
+#   M,N=size(A1)
+#   ir=Index(M,"row")
+#   ic=Index(N,"col")
+#   A=ITensor(ir,ic)
+#   for irc=eachindval(inds(A))
+#       A[irc...]=A1[irc[1].second,irc[2].second]
+#   end
+#   Q,L=ql(A,ir;positive=true)
+#   A2=Q*L
+#   norm(A-A2)
+# end
 
-#@show ql_test()
+# #@show ql_test()
