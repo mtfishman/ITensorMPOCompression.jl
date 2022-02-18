@@ -4,9 +4,57 @@ using ITensors
 include("util.jl")
 include("qx.jl")
 
-export ql,assign!,getV,setV!,growRL,to_openbc,set_scale!,block_qx,canonical!
+export ql,assign!,getV,setV!,growRL,to_openbc,set_scale!,block_qx,canonical!,is_canonical
+export tri_type,orth_type,matrix_state,full,upper,lower,none,left,right
 
-# Write your package code here.
+@enum tri_type  full upper lower
+@enum orth_type none left right
+
+struct matrix_state
+    ul::tri_type
+    lr::orth_type
+end
+
+function is_canonical(W::ITensor,ms::matrix_state,eps::Float64)::Bool
+    V=getV(W,1,1)
+    d,n,r,c=parse_links(V)
+    if ms.lr==left
+        rc=c
+    elseif ms.lr==right
+        rc=r
+    else
+        assert(false)
+    end
+    Id=V*prime(V,rc)/d
+    Id1=delta(rc,rc)
+return norm(Id-Id1)<eps
+end
+
+#
+#  Figure out the site number, and left and indicies of an MPS or MPO ITensor
+#  assumes:
+#       1) all tensors have two link indices (edge sites no handled yet)
+#       2) link indices all have a "Link" tag
+#       3) the "Link" tag is the first tag for each link index
+#       4) the second tag has the for "l=nnnnn"  where nnnnn are the integer digits of the link number
+#       5) the site number is the larges of the link numbers
+#
+#  Obviously a lot of things could go wrong with all these assumptions.
+#
+function parse_links(A::ITensor)::Tuple{Int64,Int64,Index,Index}
+    d=dim(filterinds(inds(A),tags="Site")[1])
+    ils=filterinds(inds(A),tags="Link")
+    @assert length(ils)==2
+    t1=tags(ils[1])
+    t2=tags(ils[2])
+    n1::Int64=tryparse(Int64,String(t1[2])[3:end]) # assume second tag is the "l=n" tag
+    n2::Int64=tryparse(Int64,String(t2[2])[3:end]) # assume second tag is the "l=n" tag
+    if n1>n2
+        return d,n1,ils[2],ils[1]
+    else 
+        return d,n2,ils[1],ils[2]
+    end
+end
 
 function assign!(W::ITensor,i1::IndexVal,i2::IndexVal,op::ITensor)
     is=inds(op)

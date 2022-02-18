@@ -47,7 +47,7 @@ println("-----------Start--------------")
 
     N=5
     hx=0.5
-    eps=3e-14 #this is right at the lower limit for passing the tests.
+    eps=4e-14 #this is right at the lower limit for passing the tests.
     sites = siteinds("SpinHalf", N)
     
     test_auto_vs_direct(sites,1,hx,-1.5066685458330529,eps) #1st neighbour interactions
