@@ -39,9 +39,9 @@ function test_auto_vs_direct(sites,NNN::Int64,hx::Float64,Eexpected::Float64,eps
     @test abs(overlap-1.0)<eps
 end
 
-using Printf
-Base.show(io::IO, f::Float64) = @printf(io, "%1.16f", f)
-println("-----------Start--------------")
+#using Printf
+#Base.show(io::IO, f::Float64) = @printf(io, "%1.16f", f)
+#println("-----------Start--------------")
 
 @testset "MPOs with periodic boundary conditions" begin
 

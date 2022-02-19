@@ -4,8 +4,8 @@ using ITensors
 include("util.jl")
 include("qx.jl")
 
-export ql,assign!,getV,setV!,growRL,to_openbc,set_scale!,block_qx,canonical!,is_canonical
-export tri_type,orth_type,matrix_state,full,upper,lower,none,left,right
+export ql,lq,assign!,getV,setV!,growRL,to_openbc,set_scale!,block_qx,canonical!,is_canonical
+export tri_type,orth_type,matrix_state,full,upper,lower,none,left,right,parse_links
 
 @enum tri_type  full upper lower
 @enum orth_type none left right
@@ -111,7 +111,7 @@ function set_scale!(RL::ITensor,Q::ITensor,o1::Int64,o2::Int64)
     is=inds(RL)
     Dw1,Dw2=map(dim,is)
     i1= o1==0 ? 1 : Dw1
-    i2= o2==0 ? 2 : Dw2
+    i2= o2==0 ? 1 : Dw2
     scale=RL[is[1]=>i1,is[2]=>i2]
     @assert abs(scale)>1e-12
     RL./=scale

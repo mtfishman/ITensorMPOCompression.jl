@@ -29,7 +29,31 @@ function ql!(A::StridedMatrix{<:LAPACK.BlasFloat}, ::NoPivot; blocksize=36)
   return  A,L
 end
 
+function lq!(A::StridedMatrix{<:LAPACK.BlasFloat}, ::NoPivot; blocksize=36)
+  tau=similar(A, min(size(A)...))
+  x=LAPACK.gelqf!(A, tau)
+  #save L from the lower portion of A, before orgql! mangles it!
+  nr,nc=size(A)
+  mn=min(nr,nc)
+  L=similar(A,(nr,mn))
+  for c in 1:mn
+    for r in 1:c-1
+      L[r,c]=0.0
+    end
+    for r in c:nr
+      L[r,c]=A[r,c]
+    end
+  end
+  
+  LAPACK.orglq!(A,tau)
+  # now A is Q but it may nave extra rows that need to be chopped off
+  Q=A[1:mn,:] 
+  return  L,Q
+end
+
+
 ql!(A::AbstractMatrix) = ql!(A, NoPivot())
+lq!(A::AbstractMatrix) = lq!(A, NoPivot())
 
 
 function ql(A::AbstractMatrix{T}, arg...; kwargs...) where T
@@ -37,6 +61,13 @@ function ql(A::AbstractMatrix{T}, arg...; kwargs...) where T
     AA = similar(A, LinearAlgebra._qreltype(T), size(A))
     copyto!(AA, A)
     return ql!(AA, arg...; kwargs...)
+end
+
+function lq(A::AbstractMatrix{T}, arg...; kwargs...) where T
+  Base.require_one_based_indexing(A)
+  AA = similar(A, LinearAlgebra._qreltype(T), size(A))
+  copyto!(AA, A)
+  return lq!(AA, arg...; kwargs...)
 end
 
 function ql_positive(M::AbstractMatrix)
@@ -51,6 +82,19 @@ function ql_positive(M::AbstractMatrix)
     end
   end
   return (Q, L)
+end
+
+function lq_positive(M::AbstractMatrix)
+  L, sparseQ = lq(M)
+  Q = convert(Matrix, sparseQ)
+  nr,nc = size(Q)
+  for r in 1:nr
+    if r<=nc && real(L[r, r]) < 0.0
+      L[r:end, r] *= -1 
+      Q[r,:] *= -1
+    end
+  end
+  return (L, Q)
 end
 
 function ql(T::NDTensors.DenseTensor{ElT,2,IndsT}; kwargs...) where {ElT,IndsT}
@@ -70,6 +114,26 @@ function ql(T::NDTensors.DenseTensor{ElT,2,IndsT}; kwargs...) where {ElT,IndsT}
     Q = NDTensors.tensor(NDTensors.Dense(vec(Matrix(QM))), Qinds)
     L = NDTensors.tensor(NDTensors.Dense(vec(LM)), Linds)
     return Q, L
+  end
+
+  function lq(T::NDTensors.DenseTensor{ElT,2,IndsT}; kwargs...) where {ElT,IndsT}
+    positive = get(kwargs, :positive, false)
+    # TODO: just call qr on T directly (make sure
+    # that is fast)
+    if positive
+      LM, QM = lq_positive(matrix(T))
+    else
+      LM, QM = lq(matrix(T))
+    end
+    
+    # Make the new indices to go onto Q and L
+    l, q = inds(T)
+    q = dim(q) < dim(l) ? sim(q) : sim(l)
+    Qinds = IndsT((q,ind(T, 2)))
+    Linds = IndsT((ind(T, 1),q))
+    Q = NDTensors.tensor(NDTensors.Dense(vec(Matrix(QM))), Qinds)
+    L = NDTensors.tensor(NDTensors.Dense(vec(LM)), Linds)
+    return L, Q
   end
 
 # ql decomposition of an order-n tensor according to 
@@ -95,6 +159,30 @@ function ql(
   return Q, L
 end
 
+# lq decomposition of an order-n tensor according to 
+# positions Lpos and Rpos 
+function lq(
+  T::NDTensors.DenseTensor{<:Number,N,IndsT}, 
+  Lpos::NTuple{NL,Int}, 
+  Rpos::NTuple{NR,Int}; 
+  kwargs...
+) where {N,IndsT,NL,NR}
+  M = NDTensors.permute_reshape(T, Lpos, Rpos)
+  LM, QM = lq(M; kwargs...)
+  q = ind(QM, 1)
+  l = ind(LM, 2)
+
+  # TODO: simplify this by permuting inds(T) by (Lpos,Rpos)
+  # then grab Linds,Rinds
+  Rinds = NDTensors.similartype(IndsT, Val{NR})(ntuple(i -> inds(T)[Rpos[i]], Val(NR)))
+  Qinds = NDTensors.pushfirst(Rinds, l)
+  Q = reshape(QM, Qinds)
+  Linds = NDTensors.similartype(IndsT, Val{NL})(ntuple(i -> inds(T)[Lpos[i]], Val(NL)))
+  Linds = NDTensors.push(Linds, l)
+  L = NDTensors.reshape(LM, Linds)
+  return L, Q
+end
+
   
 
 function ql(A::ITensor, Linds...; kwargs...)
@@ -111,6 +199,20 @@ function ql(A::ITensor, Linds...; kwargs...)
     return Q, L, q
 end
 
+function lq(A::ITensor, Rinds...; kwargs...)
+  tags::TagSet = get(kwargs, :tags, "Link,lq")
+  Ris = commoninds(A, ITensors.indices(Rinds))
+  Lis = uniqueinds(A, Ris)
+  Lpos, Rpos = NDTensors.getperms(inds(A), Lis, Ris)
+  LT, QT = lq(ITensors.tensor(A), Lpos, Rpos; kwargs...)
+  Q, L = itensor(QT), itensor(LT)
+  q::Index = ITensors.commonind(Q, L)
+  settags!(Q, tags, q)
+  settags!(L, tags, q)
+  q = settags(q, tags)
+  return L, Q, q
+end
+
 # function qr_test()
 #   A1 = [3.0 -6.0; 4.0 -8.0; 0.0 1.0]
 #   M,N=size(A1)
@@ -125,19 +227,37 @@ end
 #   norm(A-A2)<1e-15
 # end
 
-# function ql_test()
-#   A1 = [2.0 0.5 1.0; -1.0 0.0 2.0]
-#   #A1 = [2.0 0.5; 1.0 1.0; 0.0 -2.0]
-#   M,N=size(A1)
-#   ir=Index(M,"row")
-#   ic=Index(N,"col")
-#   A=ITensor(ir,ic)
-#   for irc=eachindval(inds(A))
-#       A[irc...]=A1[irc[1].second,irc[2].second]
-#   end
-#   Q,L=ql(A,ir;positive=true)
-#   A2=Q*L
-#   norm(A-A2)
-# end
+function ql_test()
+  #A1 = [2.0 0.5 1.0; -1.0 0.0 2.0]
+  #A1 = [2.0 0.5; 1.0 1.0; 0.0 -2.0]
+  A1 = [1.0 0.0; 2.0 1.0]
+  M,N=size(A1)
+  ir=Index(M,"row")
+  ic=Index(N,"col")
+  A=ITensor(ir,ic) 
+  for irc=eachindval(inds(A))
+      A[irc...]=A1[irc[1].second,irc[2].second]
+  end
+  Q,L=ql(A,ir;positive=true)
+  @show Q,L
+  norm(A-Q*L)
+end
 
-# #@show ql_test()
+function lq_test()
+  #A1 = [2.0 0.5 1.0; -1.0 0.0 2.0]
+  A1 = [2.0 0.5; 1.0 1.0; 0.0 -2.0]
+  #A1 = [1.0 0.0; 2.0 1.0]
+  M,N=size(A1)
+  ir=Index(M,"row")
+  ic=Index(N,"col")
+  A=ITensor(ir,ic)
+  for irc=eachindval(inds(A))
+      A[irc...]=A1[irc[1].second,irc[2].second]
+  end
+  L,Q=lq(A,ic;positive=true)
+  @show L,Q
+  norm(A-L*Q)
+end
+
+#println("--------------------start--------------------")
+#@show lq_test()

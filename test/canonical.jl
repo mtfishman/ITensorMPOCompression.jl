@@ -13,7 +13,6 @@ include("hamiltonians.jl")
     psi=randomMPS(sites)
     H=make_transIsing_MPO(sites,NNN,hx,pbc=true) 
     E0=inner(psi',to_openbc(H),psi)
-    @show E0
 
     canonical!(H)
     
