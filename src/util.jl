@@ -30,13 +30,14 @@ end
 function pprint(W::ITensor,eps::Float64)
     isl=filterinds(W,tags="Link")
     if length(isl)==2
-        for i in  eachindval(isl[1])
-        for j in  eachindval(isl[2])
-            Oij=slice(W,i,j)
-            Base.print(to_char(Oij,eps))
-            Base.print(" ")
-        end
-        Base.print("\n")
+        d,n,r,c=parse_links(W)
+        for ir in  eachindval(r)
+            for ic in  eachindval(c)
+                Oij=slice(W,ir,ic)
+                Base.print(to_char(Oij,eps))
+                Base.print(" ")
+            end
+            Base.print("\n")
         end
     elseif length(isl)==1
         for i in  eachindval(isl[1])

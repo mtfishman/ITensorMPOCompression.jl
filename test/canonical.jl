@@ -4,6 +4,11 @@ using Test
 
 include("hamiltonians.jl")
 
+using Printf
+Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
+println("-----------Start--------------")
+
+
 @testset "Upper, lower, pbc, regular detections" begin
     N=5
     NNN=4
@@ -68,26 +73,60 @@ end
 
 @testset "Bring MPO into canonical form" begin
     N=5
-    NNN=4
+    NNN=2
     hx=0.5
     eps=1e-15
+    msl=matrix_state(lower,left )
+    msr=matrix_state(lower,right)
+
     sites = siteinds("SpinHalf", N)
     psi=randomMPS(sites)
+    #
+    # left canonical for lower triangular MPO
+    #
     H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
     E0=inner(psi',to_openbc(H),psi)
-
+    @test detect_upper_lower(H,eps)==lower
+    
     canonical!(H,left)
     
     E1=inner(psi',to_openbc(H),psi)
     @test abs(E0-E1)<1e-14
-    msl=matrix_state(lower,left )
-    msr=matrix_state(lower,right)
-    for n in 1:N-1
-        @test  is_canonical(H[n],msl,eps)
-        @test !is_canonical(H[n],msr,eps)
-    end
+    @test detect_upper_lower(H,eps)==lower
+    @test  is_canonical(H,msl,eps)
+    @test !is_canonical(H,msr,eps)
+    #
+    # right canonical for lower triangular MPO
+    #
+    H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
+    E0=inner(psi',to_openbc(H),psi)
 
+    canonical!(H,right)
+    @test detect_upper_lower(H,eps)==lower
+    
+    E1=inner(psi',to_openbc(H),psi)
+    @test abs(E0-E1)<1e-14
+    @test !is_canonical(H,msl,eps)
+    @test  is_canonical(H,msr,eps)
+    #
+    #  two more sweeps just make sure nothing get messed up.
+    #
+    canonical!(H,left)
+    canonical!(H,right)
+    E2=inner(psi',to_openbc(H),psi)
+    @test abs(E0-E2)<1e-14
+    @test detect_upper_lower(H,eps)==lower
+    @test !is_canonical(H,msl,eps)
+    @test  is_canonical(H,msr,eps)
+
+
+    #
+    # Make sure upper triangular MPO has the same energy as the lower version had
+    #
     H=make_transIsing_MPO(sites,NNN,hx,upper,pbc=true)
+    @test detect_upper_lower(H,eps)==upper
     Eupper=inner(psi',to_openbc(H),psi)
     @test abs(E0-Eupper)<1e-14
+
+
 end

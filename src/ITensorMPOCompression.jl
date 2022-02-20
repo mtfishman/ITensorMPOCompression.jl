@@ -84,14 +84,21 @@ function setV!(W::ITensor,V::ITensor,o1::Int64,o2::Int64)
     @assert o1==0 || o1==1
     @assert o2==0 || o2==1
 
-    wils=filterinds(inds(W),tags="Link")
-    vils=filterinds(inds(V),tags="Link")
+    wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
+    vils=filterinds(inds(V),tags="Link") #should be {lq,ql} and {l=n,l=n-1} depending on sweep direction
     @assert length(wils)==2
     @assert length(vils)==2
     @assert dim(wils[1])==dim(vils[1])+1
     @assert dim(wils[2])==dim(vils[2])+1
     iss=filterinds(inds(W),tags="Site")
     @assert iss==filterinds(inds(V),tags="Site")
+    #
+    #  these need to loop in the correct order in order to get the W and V indices to line properly.
+    #  one index from each of W & V should be the same, so we just need these indices to loop together.
+    #
+    if tags(wils[1])!=tags(vils[1]) && tags(wils[2])!=tags(vils[2])
+        vils=vils[2],vils[1] #swap got tags the same on index 1 or 2.
+    end
 
     for ilv in eachindval(vils)
         wlv=(IndexVal(wils[1],ilv[1].second+o1),IndexVal(wils[2],ilv[2].second+o2))
@@ -154,7 +161,8 @@ function growRL(RL::ITensor,iWlink::Index,o1::Int64,o2::Int64)::ITensor
 end
 
 function get_lr_lower(mpo::MPO)::Tuple{ITensor,ITensor}
-    ul=detect_upper_lower(mpo,1e-14)
+    ul=detect_upper_lower(mpo,1e-10)
+    @assert ul!=full
     N=length(mpo)
     W1=mpo[1]
     llink=filterinds(inds(W1),tags="l=0")[1]
@@ -167,7 +175,6 @@ function get_lr_lower(mpo::MPO)::Tuple{ITensor,ITensor}
         l[llink=>dim(llink)]=1.0
         r[rlink=>1]=1.0
     else
-        @assert ul==upper
         l[llink=>1]=1.0
         r[rlink=>dim(rlink)]=1.0
     end
@@ -200,24 +207,52 @@ function to_openbc(mpo::MPO)::MPO
     return to_openbc(pbc)
 end
 
-function block_qx(W::ITensor)
+function block_qx(W::ITensor,lr::orth_type)
     d,n,r,c=parse_links(W)
-    V=getV(W,1,1) #exctract the V block
-    #find the (2) site indices and the l=n_site-1 link index.
-    il=filterinds(inds(V),tags="l=$n")[1]
-    iothers=noncommoninds(inds(V),il)
-    Q,L=ql(V,iothers;positive=true) #block respecting QL decomposition
-    set_scale!(L,Q,1,1) #rescale so the L(n,n)==1.0
-    @assert norm(V-Q*L)<1e-12 
-    setV!(W,Q,1,1) #Q is the new V, stuff Q into W
+    if lr==left
+        V=getV(W,1,1) #extract the V block
+        il=filterinds(inds(V),tags="l=$n")[1] #link to next site to the right
+    elseif lr==right
+        V=getV(W,0,0) #extract the V block
+        il=filterinds(inds(V),tags="l=$(n-1)")[1] #link to next site to left
+    else
+        assert(false)
+    end
 
-    iWl=filterinds(inds(W),tags="l=$n")[1]
-    return growRL(L,iWl,1,1) #Now make a full size version of L
+    iothers=noncommoninds(inds(V),il)
+    if lr==left
+        Q,L=ql(V,iothers;positive=true) #block respecting QL decomposition
+        set_scale!(L,Q,1,1) #rescale so the L(n,n)==1.0
+        @assert norm(V-Q*L)<1e-12 
+        setV!(W,Q,1,1) #Q is the new V, stuff Q into W
+    
+        iWl=filterinds(inds(W),tags="l=$n")[1]
+        Lplus=growRL(L,iWl,1,1) #Now make a full size version of L
+    elseif lr==right
+        @assert detect_upper_lower(V,1e-14)==lower
+        L,Q=lq(V,iothers;positive=true) #block respecting QL decomposition
+        set_scale!(L,Q,0,0) #rescale so the L(n,n)==1.0
+        @assert norm(V-L*Q)<1e-12 
+        setV!(W,Q,0,0) #Q is the new V, stuff Q into W
+        @assert detect_upper_lower(W,1e-14)==lower
+        iWl=filterinds(inds(W),tags="l=$(n-1)")[1]
+        Lplus=growRL(L,iWl,0,0) #Now make a full size version of L
+    
+    else
+        assert(false)
+    end
+    return Lplus
 end
 
 
 function is_canonical(W::ITensor,ms::matrix_state,eps::Float64)::Bool
-    V=getV(W,1,1)
+    if ms.lr==left
+        V=getV(W,1,1)
+    elseif ms.lr==right
+        V=getV(W,0,0)
+    else
+        assert(false)
+    end
     d,n,r,c=parse_links(V)
     if ms.lr==left
         rc=c
@@ -229,6 +264,22 @@ function is_canonical(W::ITensor,ms::matrix_state,eps::Float64)::Bool
     Id=V*prime(V,rc)/d
     Id1=delta(rc,rc)
     return norm(Id-Id1)<eps
+end
+
+function is_canonical(H::MPO,ms::matrix_state,eps::Float64)::Bool
+    N=length(H)
+    if ms.lr==left
+        r=1:N-1
+    elseif ms.lr==right
+        r=2:N
+    else
+        assert(false)
+    end
+    ic=true
+    for n in r
+        ic=ic &&  is_canonical(H[n],ms,eps)
+    end
+    return ic
 end
 
 function has_pbc(H::MPO)::Bool
@@ -371,12 +422,24 @@ end
 function canonical!(H::MPO,lr::orth_type)
     @assert has_pbc(H)
     N=length(H)
-    for n in 1:N-1
-        Lplus=block_qx(H[n])
-        H[n+1]=Lplus*H[n+1]
-        il=filterinds(inds(Lplus),tags="l=$n")[1]
-        iq=filterinds(inds(Lplus),tags="ql")[1]
-        replaceind!(H[n+1],iq,il)
+    if lr==left
+        for n in 1:N-1 #sweep left to right
+            Lplus=block_qx(H[n],lr)
+            H[n+1]=Lplus*H[n+1] 
+            il=filterinds(inds(Lplus),tags="l=$n")[1]
+            iq=filterinds(inds(Lplus),tags="ql")[1]
+            replaceind!(H[n+1],iq,il)
+        end
+    else
+        for n in N:-1:2 #sweep right to left
+            Lplus=block_qx(H[n],lr)
+            @assert detect_upper_lower(H[n],1e-14)==lower
+            H[n-1]=Lplus*H[n-1]
+            il=filterinds(inds(Lplus),tags="l=$(n-1)")[1]
+            iq=filterinds(inds(Lplus),tags="lq")[1]
+            replaceind!(H[n-1],iq,il)
+            @assert detect_upper_lower(H[n-1],1e-14)==lower
+        end
     end
 end
 
