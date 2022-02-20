@@ -31,15 +31,15 @@ function make_transIsing_AutoMPO(sites::Vector{Index{Int64}},NNN::Int64,hx::Floa
     return MPO(ampo,sites)  
 end
 
-function make_transIsing_MPO(sites,NNN::Int64,hx::Float64;kwargs...)::MPO
+function make_transIsing_MPO(sites,NNN::Int64,hx::Float64,ul::tri_type=lower;kwargs...)::MPO
     N=length(sites)
     mpo=MPO(sites) #make and MPO only to get the indices
     add_edge_links!(mpo)
 
-    prev_link=Index(1) #Don;t know Dw here so we can;t make an l=0 link index
+    prev_link=Index(1) #Don't know Dw here so we can't make an l=0 link index
     for n in 1:N
         iset=IndexSet(inds(mpo[n])...)
-        mpo[n]=make_transIsing_op(iset,prev_link,n,NNN,hx)
+        mpo[n]=make_transIsing_op(iset,prev_link,n,NNN,hx,ul)
         prev_link=filterinds(inds(mpo[n],"l=$n"))[1]
     end
     if !get(kwargs,:pbc,false)
@@ -60,9 +60,10 @@ end
     # NNN = Number of Nearest Neighbours, for example
 #    NNN=2 corresponds to nearest neighbour
 #    NNN=3 corresponds to nearest and next nearest neighbour
-function make_transIsing_op(indices::Vector{<:Index},prev_link::Index,nsite::Int64,NNN::Int64,hx::Float64=0.0)::ITensor
+function make_transIsing_op(indices::Vector{<:Index},prev_link::Index,nsite::Int64,NNN::Int64,hx::Float64=0.0,ul::tri_type=lower)::ITensor
     @assert NNN>=1
     @assert length(indices)==4
+    @assert ul==upper || ul==lower #diagonal and full are not options here.
     #  It turns out that
     #  Dw = 2+Sum(i,i=1..NNN) =2 + NNN*(NNN+1)/2
     #
@@ -85,16 +86,32 @@ function make_transIsing_op(indices::Vector{<:Index},prev_link::Index,nsite::Int
     Sx=op(is,"Sx")
     assign!(W,il1=>1 ,il2=>1 ,unit)
     assign!(W,il1=>Dw,il2=>Dw,unit)
-    assign!(W,il1=>Dw,il2=>1 ,hx*Sx); #add field term
-    #very hard to explain this without a diagram.
-    for iNN in 1:NNN
-        assign!(W,il1=>iblock+1,il2=>1,Sz)
-        for jNN in 1:iNN-1
-            assign!(W,il1=>iblock+1+jNN,il2=>iblock+jNN,unit)
+    #loop below is coded for lower, just swap indexes to get upper
+    
+    if ul==lower
+        assign!(W,il1=>Dw,il2=>1 ,hx*Sx); #add field term
+        #very hard to explain this without a diagram.
+        for iNN in 1:NNN
+            assign!(W,il1=>iblock+1,il2=>1,Sz)
+            for jNN in 1:iNN-1
+                assign!(W,il1=>iblock+1+jNN,il2=>iblock+jNN,unit)
+            end
+            Jn=1.0/(iNN) #interactions need to decay with distance in order for H to extensive 
+            assign!(W,il1=>Dw,il2=>iblock+iNN,Jn*Sz)
+            iblock+=iNN
         end
-        Jn=1.0/(iNN) #interactions need to decay with distance in order for H to extensive 
-        assign!(W,il1=>Dw,il2=>iblock+iNN,Jn*Sz)
-        iblock+=iNN
+    else
+        assign!(W,il1=>1,il2=>Dw ,hx*Sx); #add field term
+        #very hard to explain this without a diagram.
+        for iNN in 1:NNN
+            assign!(W,il1=>1,il2=>iblock+1,Sz)
+            for jNN in 1:iNN-1
+                assign!(W,il1=>iblock+jNN,il2=>iblock+1+jNN,unit)
+            end
+            Jn=1.0/(iNN) #interactions need to decay with distance in order for H to extensive 
+            assign!(W,il1=>iblock+iNN,il2=>Dw,Jn*Sz)
+            iblock+=iNN
+        end
     end
     return W
 end

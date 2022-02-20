@@ -8,7 +8,7 @@ include("hamiltonians.jl")
 function fast_GS(H::MPO,sites)::Tuple{Float64,MPS}
     psi0  = randomMPS(sites,length(H))
 
-    sweeps = Sweeps(4)
+    sweeps = Sweeps(5)
     setmaxdim!(sweeps, 2,4,8,16,32)
     setcutoff!(sweeps, 1E-10)
 
