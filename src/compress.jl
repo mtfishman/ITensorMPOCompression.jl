@@ -51,9 +51,9 @@ function grow(ig1::Index,A::ITensor,ig2::Index)
     chi1,chi2=map(dim,ils)
 #    @show tags(ig2) tags(ils[2])
     @assert dim(ig1)==chi1+2
-    @assert tags(ig1)==tags(ils[1])
+    #@assert tags(ig1)==tags(ils[1])
     @assert dim(ig2)==chi2+2
-    @assert tags(ig2)==tags(ils[2])
+    #@assert tags(ig2)==tags(ils[2])
     G=ITensor(0.0,ig1,ig2) #would be nice to use delta() but we can't set elements on it.
     G[ig1=>1,ig2=>1]=1.0;
     G[ig1=>chi1+2,ig2=>chi2+2]=1.0;
@@ -67,43 +67,39 @@ end
 
 function compress(W::ITensor,lr::orth_type,epsSVD::Float64)::Tuple{ITensor,ITensor}
     @assert lr==left  || lr==right
-    d,n,r,c=parse_links(W) # links: r(l=$(n-1)), c(l=$n)
+    d,n,r,c=parse_links(W) # W[l=$(n-1)l=$n]=W[r,c]
     eps=1e-14
-    W,Lplus,lq=block_qx(W,lr) #W becomes Q with l=$(n-1), lq links
-    @assert is_lower(lq,Lplus,c,eps)
-    M,L_prime,im=getM(Lplus,lr) #M has ql, l=$n links with dim Dw1-2 x Dw2-2
-  
+    Q,RL,lq=block_qx(W,lr) #left Q[r,lq], RL[lq,c] - right RL[r,lq] Q[lq,c]
+    @assert is_canonical(Q,matrix_state(lower,lr),eps)
+    @assert is_lower_regular_form(Q,eps)
+    @show inds(RL)
 
+    M,L_prime,im=getM(RL,lr) #left M[lq,im] L_prime[im,c] - right L_prime[r,im] M[im,lq]
+    @show inds(M) inds(L_prime)
     U,s,V=svd(M,inds(M)[1],cutoff=epsSVD) # ns sing. values survive compression
     ns=dim(inds(s)[1])
     @assert ns==dim(inds(s)[2]) #s should be square
+    
     if lr==left
-        lu=filterinds(inds(U),tags="u")[1]
-        lv=filterinds(inds(V),tags="v")[1]
-        #lq=filterinds(inds(U),tags="ql")[1]
-        sV=s*V # Links u, l=$n  with dim ns x Dw2-2
-        lu=Index(ns+2,"Link,u")
-        sV=grow(lu,sV,im) #Links u,l=$n with dim ns->ns+2, chi2=Dw2-2->Dw2
         @assert is_lower(im,L_prime,c,eps)
-        Lplus=sV*L_prime #links u,ql with dim ns+2 x Dw2
-        # W has links l=$(n-1), l=$n with dim Dw1,Dw2 + site indices
-        # U has links ql,u with dim Dw1-2,ns
-        Uplus=grow(lq,U,lu)
-        replaceind!(W,c,lq)
-        replacetags!(Lplus,"u","l=$n")
-        replacetags!(Uplus,"u","l=$n")
-        @assert is_lower_regular_form(W,eps)
-        W=W*Uplus
-        @assert is_lower_regular_form(W,eps)
+        @assert is_lower(lq,RL,c,eps)
+        ln=Index(ns+2,"Link,l=$n")
+        RL=grow(ln,s*V,im)*L_prime #RL[l=n,l=n] dim ns+2 x Dw2
+        W=Q*grow(lq,U,ln) #W[l=n-1,l=n]
     elseif lr==right
-        Us=U*s
-        Us=grow(Us)
-        Lplus=Lplus*Us
-        Q=grow(V)*W
+        @assert is_lower(lq,L_prime,im,eps)
+        @assert is_lower(r,RL,lq,eps)
+        ln=Index(ns+2,"Link,l=$(n-1)")
+        @show inds(L_prime)
+        RL=L_prime*grow(im,U*s,ln) #RL[l=n-1,l=n-1] dim Dw1 x ns+2
+        #@show ln inds(V) lq
+        W=grow(lq,V,ln)*Q #W[l=n-1,l=n]
     else
         @assert(false) 
     end
-    return W,Lplus
+    @assert is_lower_regular_form(W,eps)
+    @assert is_canonical(W,matrix_state(lower,lr),eps)
+return W,RL
 end
 
 function compress!(H::MPO,lr::orth_type,epsSVD::Float64)

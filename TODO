@@ -1,1 +1,9 @@
 -make block_qx return link name qx instead of ql,lq,qr,rq
+-calculate getV,setV offsets from matrix_state
+-We need pure left/right and upper/lower enums with diagonal and full options
+-Need to save SV spectrum somewhere
+-Look into the MPS compession code for inspiration.
+-Get min and max Dw from H
+-Figure out how to turn off asserts for performance.
+-consistent variable names for link indexs r,c,q,u,v or ir,ic,iq,iu,iv ?
+#grow(i1,W,i2) relies on index ordering inside W ... is that bad??

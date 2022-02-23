@@ -139,15 +139,15 @@ end
     sites = siteinds("SpinHalf", N)
     psi=randomMPS(sites)
     #
-    # left canonical for lower triangular MPO
+    # Make right canonical, then compress to left canonical
     #
     H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
-    E0=inner(psi',to_openbc(H),psi)
+    E0l=inner(psi',to_openbc(H),psi)
     @test detect_upper_lower(H,eps)==lower
     canonical!(H,right)
 
-    E1=inner(psi',to_openbc(H),psi)
-    @test abs(E0-E1)<1e-14
+    E1l=inner(psi',to_openbc(H),psi)
+    @test abs(E0l-E1l)<1e-14
     @test detect_upper_lower(H,eps)==lower
     @test  is_canonical(H,msr,eps)
 
@@ -158,47 +158,102 @@ end
     H[1]=W
     H[2]=L*H[2]
     @test detect_upper_lower(H[2],eps)==lower
+    @test  is_canonical(H[1],msl,eps)
     # make sure the energy in unchanged
-    E2=inner(psi',to_openbc(H),psi)
-    @test abs(E0-E2)<1e-14
+    E2l=inner(psi',to_openbc(H),psi)
+    @test abs(E0l-E2l)<1e-14
+    #
+    # Make left canonical, then compress to right canonical
+    #
+    # H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
+    # E0r=inner(psi',to_openbc(H),psi)
+    # @test detect_upper_lower(H,eps)==lower
+    # canonical!(H,left)
 
-    #@test  is_canonical(H[1],msl,eps)
+    # E1r=inner(psi',to_openbc(H),psi)
+    # @test abs(E0r-E1r)<1e-14
+    # @test detect_upper_lower(H,eps)==lower
+    # @test  is_canonical(H,msl,eps)
 
+    # W,L=compress(H[N],right,epsSVD)
+    # @test detect_upper_lower(H,eps)==lower
+    # @test detect_upper_lower(W,eps)==lower
+    # @show inds(H[N]) inds(W) inds(L)
+    # @test norm(H[N]-L*W)<eps
+    # H[N]=W
+    # H[N-1]=H[N-1]*L
+    # @test detect_upper_lower(H[N-1],eps)==lower
+    # @test  is_canonical(H[N],msl,eps)
+    # # make sure the energy in unchanged
+    # E2r=inner(psi',to_openbc(H),psi)
+    # @test abs(E0r-E2r)<1e-14
 end
 
-@testset "Compress full MPO" begin
-    N=15
-    NNN=4
-    hx=0.5
-    eps=1e-15
-    epsSVD=1e-15
+function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Float64,eps::Float64)
     msl=matrix_state(lower,left )
     msr=matrix_state(lower,right)
 
     sites = siteinds("SpinHalf", N)
     psi=randomMPS(sites)
     #
-    # left canonical for lower triangular MPO
+    # Make right canonical, then compress to left canonical
     #
-    H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
-    E0=inner(psi',to_openbc(H),psi)
+    H=make_transIsing_MPO(sites,NNN,hx,ul,pbc=true)
+    E0l=inner(psi',to_openbc(H),psi)
     @test is_lower_regular_form(H,eps)
     canonical!(H,right)
-    pprint(H,eps)
 
-    E1=inner(psi',to_openbc(H),psi)
-    @test abs(E0-E1)<1e-14
+    E1l=inner(psi',to_openbc(H),psi)
+    @test abs(E0l-E1l)<1e-14
     @test is_lower_regular_form(H,eps)
-    @test  is_canonical(H,msr,eps)
+    @test is_canonical(H,msr,eps)
 
     compress!(H,left,epsSVD)
     @test is_lower_regular_form(H,eps)
+    @test is_canonical(H,msl,eps)
     # make sure the energy in unchanged
-    E2=inner(psi',to_openbc(H),psi)
-    @test abs(E0-E2)<1e-14
+    E2l=inner(psi',to_openbc(H),psi)
+    @test abs(E0l-E2l)<1e-14
 
-    pprint(H,eps)
-    pprint(H[3],eps)
-#    @test  is_canonical(H,msr,eps)
 
+    #
+    # Make left canonical, then compress to right canonical
+    #
+    
+   #=  H=make_transIsing_MPO(sites,NNN,hx,ul,pbc=true)
+    E0r=inner(psi',to_openbc(H),psi)
+    @test abs(E0l-E0r)<1e-14
+    @test is_lower_regular_form(H,eps)
+    canonical!(H,left)
+
+    E1r=inner(psi',to_openbc(H),psi)
+    @test abs(E0r-E1r)<1e-14
+    @test is_lower_regular_form(H,eps)
+    @test is_canonical(H,msl,eps)
+
+    compress!(H,right,epsSVD)
+    @test is_lower_regular_form(H,eps)
+    @test is_canonical(H,msr,eps)
+    # make sure the energy in unchanged
+    E2r=inner(psi',to_openbc(H),psi)
+    @test abs(E0r-E2r)<1e-14 =#
+
+end
+
+@testset "Compress full MPO" begin
+    hx=0.5
+    eps=1e-14
+    epsSVD=1e-15
+
+#                  V=N sites
+#                    V=Num Nearest Neighbours in H
+    # test_one_sweep(5,1,hx,lower,epsSVD,eps)
+    # test_one_sweep(5,2,hx,lower,epsSVD,eps)
+    # test_one_sweep(5,3,hx,lower,epsSVD,eps)
+    # test_one_sweep(5,4,hx,lower,epsSVD,eps)
+    # epsSVD=1e-5
+    # test_one_sweep(50,1,hx,lower,epsSVD,eps)
+    # test_one_sweep(50,2,hx,lower,epsSVD,eps)
+    # test_one_sweep(50,3,hx,lower,epsSVD,eps)
+    # test_one_sweep(50,4,hx,lower,epsSVD,eps)
 end
