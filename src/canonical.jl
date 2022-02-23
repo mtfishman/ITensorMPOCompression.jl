@@ -6,7 +6,7 @@ function canonical!(H::MPO,lr::orth_type)
     N=length(H)
     if lr==left
         for n in 1:N-1 #sweep left to right
-            Lplus=block_qx(H[n],lr)
+            Lplus=block_qx!(H[n],lr)
             H[n+1]=Lplus*H[n+1] 
             il=filterinds(inds(Lplus),tags="l=$n")[1]
             iq=filterinds(inds(Lplus),tags="ql")[1]
@@ -14,7 +14,7 @@ function canonical!(H::MPO,lr::orth_type)
         end
     else
         for n in N:-1:2 #sweep right to left
-            Lplus=block_qx(H[n],lr)
+            Lplus=block_qx!(H[n],lr)
             @assert detect_upper_lower(H[n],1e-14)==lower
             H[n-1]=Lplus*H[n-1]
             il=filterinds(inds(Lplus),tags="l=$(n-1)")[1]

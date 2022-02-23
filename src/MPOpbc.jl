@@ -27,8 +27,8 @@ function to_openbc(mpo::MPO)::MPO
 end
 
 function get_lr_lower(mpo::MPO)::Tuple{ITensor,ITensor}
-    ul=detect_upper_lower(mpo,1e-10)
-    @assert ul!=full
+    ul::tri_type = is_lower_regular_form(mpo,1e-14) ? lower : upper
+ 
     N=length(mpo)
     W1=mpo[1]
     llink=filterinds(inds(W1),tags="l=0")[1]

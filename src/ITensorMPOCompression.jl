@@ -1,16 +1,11 @@
 module ITensorMPOCompression
 
 using ITensors
-include("util.jl")
-include("qx.jl")
-include("characterization.jl")
-include("blocking.jl")
-include("MPOpbc.jl")
-include("canonical.jl")
 
-export ql,lq,assign!,getV,setV!,growRL,to_openbc,set_scale!,block_qx,canonical!,is_canonical
+export ql,lq,assign!,getV,setV!,growRL,to_openbc,set_scale!,block_qx!,block_qx,canonical!,is_canonical
 export tri_type,orth_type,matrix_state,full,upper,lower,none,left,right,parse_links
-export detect_upper_lower,has_pbc,is_regular_form
+export detect_upper_lower,has_pbc,is_regular_form,compress,getM,grow
+export is_lower_regular_form,is_upper_regular_form
 
 @enum tri_type  full upper lower diagonal
 @enum orth_type none left right
@@ -43,6 +38,13 @@ function set_scale!(RL::ITensor,Q::ITensor,o1::Int64,o2::Int64)
     Q.*=scale
 end
 
+include("util.jl")
+include("qx.jl")
+include("characterization.jl") 
+include("blocking.jl")
+include("MPOpbc.jl")
+include("canonical.jl")
+include("compress.jl")
 
 
 end

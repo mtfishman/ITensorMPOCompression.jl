@@ -8,4 +8,5 @@ using Revise
     include("blocking.jl")
     include("mpopbc.jl")
     include("canonical.jl")
+    include("compress.jl")
 #end

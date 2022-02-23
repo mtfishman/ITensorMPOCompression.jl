@@ -55,7 +55,7 @@ end
 #   0   at bottom, Dw1+1    0   at right, Dw2+1
 #   1   at top, 1           1   at left, 1
 #
-function growRL(RL::ITensor,iWlink::Index,o1::Int64,o2::Int64)::ITensor
+function growRL(RL::ITensor,iWlink::Index,o1::Int64,o2::Int64)::Tuple{ITensor,Index}
     @assert o1==0 || o1==1
     @assert o2==0 || o2==1
     @assert order(RL)==2
@@ -85,5 +85,5 @@ function growRL(RL::ITensor,iWlink::Index,o1::Int64,o2::Int64)::ITensor
     if !(o1==0 && o2==0)
         RLplus[iq=>1,iWlink=>1]=1.0
     end
-    return RLplus
+    return RLplus,iq
 end

@@ -22,51 +22,51 @@ println("-----------Start--------------")
     @test has_pbc(H)
     @test detect_upper_lower(H[1],eps)==lower
     @test detect_upper_lower(H,eps)==lower
-    @test is_regular_form(H[1],eps)
-    @test is_regular_form(H,eps)
+    @test is_lower_regular_form(H[1],eps)
+    @test is_lower_regular_form(H,eps)
     W=H[1]
     d,n,r,c=parse_links(W)
     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
     Sz=op(is,"Sz")
     assign!(W,r=>1,c=>2,Sz) #stuff any op on the top row
-    @test !is_regular_form(W,eps)
+    @test !is_lower_regular_form(W,eps)
     W=H[2]
     d,n,r,c=parse_links(W)
     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
     Sz=op(is,"Sz")
     assign!(W,r=>2,c=>dim(c),Sz) #stuff any op on the right column
-    @test !is_regular_form(W,eps)
+    @test !is_lower_regular_form(W,eps)
     W=H[3]
     d,n,r,c=parse_links(W)
     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
     Sz=op(is,"Sz")
     assign!(W,r=>2,c=>2,Sz) #stuff any op on the diag
-    @test is_regular_form(W,eps) #this one should still be regular
+    @test is_lower_regular_form(W,eps) #this one should still be regular
     W=H[4]
     d,n,r,c=parse_links(W)
     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
     Id=delta(is,is')
     assign!(W,r=>2,c=>2,Id) #stuff unit op on the diag
-    @test is_regular_form(W,eps) #this one should still be regular, but should see a warning
+    @test is_lower_regular_form(W,eps) #this one should still be regular, but should see a warning
     # at this point the whole H should fail since we stuffed ops in the all wrong places.
-    @test !is_regular_form(H,eps)
+    @test !is_lower_regular_form(H,eps)
 
 
     H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=false) 
     @test !has_pbc(H)
     @test detect_upper_lower(H[2],eps)==lower
     @test detect_upper_lower(H,eps)==lower
-    @test is_regular_form(H[2],eps)
-    @test is_regular_form(H[1],eps) #should handle edge row/col vectors
-    @test is_regular_form(H[N],eps)
-    @test is_regular_form(H,eps)
+    @test is_lower_regular_form(H[2],eps)
+    @test is_lower_regular_form(H[1],eps) #should handle edge row/col vectors
+    @test is_lower_regular_form(H[N],eps)
+    @test is_lower_regular_form(H,eps)
 
     H=make_transIsing_MPO(sites,NNN,hx,upper,pbc=true) 
     @test has_pbc(H)
     @test detect_upper_lower(H[1],eps)==upper
     @test detect_upper_lower(H,eps)==upper
-    @test is_regular_form(H[1],eps)
-    @test is_regular_form(H,eps)
+    @test is_upper_regular_form(H[1],eps)
+    @test is_upper_regular_form(H,eps)
    
 
 end
