@@ -19,9 +19,9 @@ function block_qx!(W::ITensor,lr::orth_type)::ITensor
       set_scale!(L,Q,1,1) #rescale so the L(n,n)==1.0
       @assert norm(V-Q*L)<1e-12 
       setV!(W,Q,1,1) #Q is the new V, stuff Q into W
-  
       iWl=filterinds(inds(W),tags="l=$n")[1]
       Lplus,iqx=growRL(L,iWl,1,1) #Now make a full size version of L
+      replaceind!(W,c,iqx)
   elseif lr==right
       @assert detect_upper_lower(V,1e-14)==lower
       L,Q=lq(V,iothers;positive=true) #block respecting QL decomposition
@@ -31,6 +31,7 @@ function block_qx!(W::ITensor,lr::orth_type)::ITensor
       @assert detect_upper_lower(W,1e-14)==lower
       iWl=filterinds(inds(W),tags="l=$(n-1)")[1]
       Lplus,iqx=growRL(L,iWl,0,0) #Now make a full size version of L
+      replaceind!(W,r,iqx)
   
   else
       assert(false)
@@ -59,7 +60,8 @@ function block_qx(W_::ITensor,lr::orth_type)::Tuple{ITensor,ITensor,Index}
       setV!(W,Q,1,1) #Q is the new V, stuff Q into W
   
       iWl=filterinds(inds(W),tags="l=$n")[1]
-      Lplus,lq=growRL(L,iWl,1,1) #Now make a full size version of L
+      Lplus,iqx=growRL(L,iWl,1,1) #Now make a full size version of L
+      replaceind!(W,c,iqx)
   elseif lr==right
       @assert detect_upper_lower(V,1e-14)==lower
       L,Q=lq(V,iothers;positive=true) #block respecting QL decomposition
@@ -68,12 +70,13 @@ function block_qx(W_::ITensor,lr::orth_type)::Tuple{ITensor,ITensor,Index}
       setV!(W,Q,0,0) #Q is the new V, stuff Q into W
       @assert detect_upper_lower(W,1e-14)==lower
       iWl=filterinds(inds(W),tags="l=$(n-1)")[1]
-      Lplus,lq=growRL(L,iWl,0,0) #Now make a full size version of L
+      Lplus,iqx=growRL(L,iWl,0,0) #Now make a full size version of L
+      replaceind!(W,r,iqx)
   
   else
       assert(false)
   end
-  return W,Lplus,lq
+  return W,Lplus,iqx
 end
 
 
