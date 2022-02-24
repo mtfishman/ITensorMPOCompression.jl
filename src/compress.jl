@@ -85,28 +85,33 @@ function compress(W::ITensor,lr::orth_type,epsSVD::Float64)::Tuple{ITensor,ITens
     Q,RL,lq=block_qx(W,lr) #left Q[r,lq], RL[lq,c] - right RL[r,lq] Q[lq,c]
     @assert is_canonical(Q,matrix_state(lower,lr),eps)
     @assert is_lower_regular_form(Q,eps)
-    @show inds(RL)
 
     M,L_prime,im=getM(RL,lr) #left M[lq,im] L_prime[im,c] - right L_prime[r,im] M[im,lq]
-    @show inds(M) inds(L_prime)
-    U,s,V=svd(M,inds(M)[1],cutoff=epsSVD) # ns sing. values survive compression
+    if lr==left
+        iusv=findinds(M,"qx")[1]
+    else #right
+        iusv=findinds(M,"m")[1]
+    end
+    U,s,V=svd(M,iusv,cutoff=epsSVD) # ns sing. values survive compression
     ns=dim(inds(s)[1])
     @assert ns==dim(inds(s)[2]) #s should be square
     
     if lr==left
         @assert is_lower(im,L_prime,c,eps)
         @assert is_lower(lq,RL,c,eps)
-        ln=Index(ns+2,"Link,l=$n")
-        RL=grow(ln,s*V,im)*L_prime #RL[l=n,l=n] dim ns+2 x Dw2
-        W=Q*grow(lq,U,ln) #W[l=n-1,l=n]
+        lu=Index(ns+2,"Link,u")
+        RL=grow(lu,s*V,im)*L_prime #RL[l=n,u] dim ns+2 x Dw2
+        W=Q*grow(lq,U,lu) #W[l=n-1,u]
+        replacetags!(RL,"u","l=$n") #RL[l=n,l=n]
+        replacetags!(W,"u","l=$n")
     elseif lr==right
-        @assert is_lower(lq,L_prime,im,eps)
+        @assert is_lower(r,L_prime,im,eps)
         @assert is_lower(r,RL,lq,eps)
-        ln=Index(ns+2,"Link,l=$(n-1)")
-        @show inds(L_prime)
-        RL=L_prime*grow(im,U*s,ln) #RL[l=n-1,l=n-1] dim Dw1 x ns+2
-        #@show ln inds(V) lq
-        W=grow(lq,V,ln)*Q #W[l=n-1,l=n]
+        lv=Index(ns+2,"Link,v")
+        RL=L_prime*grow(im,U*s,lv) #RL[l=n-1,v] dim Dw1 x ns+2
+        W=grow(lq,V,lv)*Q #W[l=n-1,v]
+        replacetags!(RL,"v","l=$(n-1)") #RL[l=n,l=n]
+        replacetags!(W,"v","l=$(n-1)")
     else
         @assert(false) 
     end
