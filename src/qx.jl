@@ -22,6 +22,8 @@ function block_qx!(W::ITensor,lr::orth_type)::ITensor
       iWl=filterinds(inds(W),tags="l=$n")[1]
       Lplus,iqx=growRL(L,iWl,1,1) #Now make a full size version of L
       replaceind!(W,c,iqx)
+      replacetags!(W    ,"ql","qx")
+      replacetags!(Lplus,"ql","qx")
   elseif lr==right
       @assert detect_upper_lower(V,1e-14)==lower
       L,Q=lq(V,iothers;positive=true) #block respecting QL decomposition
@@ -32,7 +34,8 @@ function block_qx!(W::ITensor,lr::orth_type)::ITensor
       iWl=filterinds(inds(W),tags="l=$(n-1)")[1]
       Lplus,iqx=growRL(L,iWl,0,0) #Now make a full size version of L
       replaceind!(W,r,iqx)
-  
+      replacetags!(W    ,"lq","qx")
+      replacetags!(Lplus,"lq","qx")
   else
       assert(false)
   end
