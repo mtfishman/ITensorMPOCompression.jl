@@ -6,41 +6,45 @@
 #
 function getM(RL::ITensor,lr::orth_type)::Tuple{ITensor,ITensor,Index}
     ils=filterinds(inds(RL),tags="Link")
-    Dw1,Dw2=map(dim,ils)
-    Dwm=min(Dw1,Dw2)
+    iqx=findinds(ils,"qx")[1]
+    iln=noncommonind(ils,iqx)
+    Dwq,Dwn=dim(iqx),dim(iln)
+    Dwm=min(Dwq,Dwn)
     im=Index(Dwm,"Link,m") #common link for M_plus
     if (lr==left)
-        im1=Index(Dw1-2,tags(ils[1]))
-        im2=Index(Dwm-2,tags(im))
-        ir1=im
-        ir2=ils[2]
+        #@show "left" iqx iln
+        imq=Index(Dwq-2,tags(iqx))
+        imm=Index(Dwm-2,tags(im)) #mini version of im
+        irm=im
+        irn=iln
     else # lr must be right
-        im1=Index(Dwm-2,tags(im))
-        im2=Index(Dw2-2,tags(ils[2]))
-        ir1=ils[1]
-        ir2=im
+        #@show "right"  iqx iln
+        imm=Index(Dwm-2,tags(im))
+        imq=Index(Dwq-2,tags(iqx))
+        irn=iln
+        irm=im
     end
-    M=ITensor(im1,im2)
-    for j1 in 2:Dw1-1
-        for j2 in 2:Dw2-1
-            M[im1=>j1-1,im2=>j2-1]=RL[ils[1]=>j1,ils[2]=>j2]
+    M=ITensor(imq,imm)
+    for j1 in 2:Dwq-1
+        for j2 in 2:Dwm-1
+            M[imq=>j1-1,imm=>j2-1]=RL[iqx=>j1,iln=>j2]
         end
     end
     #
     # Now we need RL_prime such that RL=M*RL_prime.
     # RL_prime is just the perimeter of RL with 1's on the diagonal
     #
-    RL_prime=ITensor(0.0,ir1,ir2)
-    for j1 in 1:dim(ir1)
-        RL_prime[ir1=>j1,ir2=>1       ]=RL[ils[1]=>j1,ils[2]=>1  ]
-        RL_prime[ir1=>j1,ir2=>dim(ir2)]=RL[ils[1]=>j1,ils[2]=>Dw2]
-        RL_prime[ir1=>j1,ir2=>j1]=1.0
+    RL_prime=ITensor(0.0,irm,irn)
+    for j1 in 1:dim(irm)
+        RL_prime[irm=>j1,irn=>1       ]=RL[iqx=>j1,iln=>1  ]
+        RL_prime[irm=>j1,irn=>dim(irn)]=RL[iqx=>j1,iln=>Dwn]
+        RL_prime[irm=>j1,irn=>j1]=1.0
     end
-    for j2 in 1:dim(ir2)
-        RL_prime[ir1=>1       ,ir2=>j2]=RL[ils[1]=>1  ,ils[2]=>j2]
-        RL_prime[ir1=>dim(ir1),ir2=>j2]=RL[ils[1]=>Dw1,ils[2]=>j2]
+    for j2 in 1:dim(irn)
+        RL_prime[irm=>1       ,irn=>j2]=RL[iqx=>1  ,iln=>j2]
+        RL_prime[irm=>dim(irm),irn=>j2]=RL[iqx=>Dwq,iln=>j2]
     end
-    RL_prime[ir1=>dim(ir1),ir2=>dim(ir2)]=1.0
+    RL_prime[irm=>dim(irm),irn=>dim(irn)]=1.0
 
     return M,RL_prime,im
 end
@@ -48,18 +52,27 @@ end
 function grow(ig1::Index,A::ITensor,ig2::Index)
     ils=inds(A)
     @assert length(ils)==order(A)
-    chi1,chi2=map(dim,ils)
-#    @show tags(ig2) tags(ils[2])
+    if hastags(ils[1],tags(ig1))
+        ia1=ils[1]
+        @assert hastags(ils[2],tags(ig2))
+        ia2=ils[2]
+    elseif hastags(ils[1],tags(ig2))
+        ia2=ils[1]
+        @assert hastags(ils[2],tags(ig1))
+        ia1=ils[2]
+    else
+        @assert false
+    end
+    chi1,chi2=dim(ia1),dim(ia2)
     @assert dim(ig1)==chi1+2
-    #@assert tags(ig1)==tags(ils[1])
     @assert dim(ig2)==chi2+2
-    #@assert tags(ig2)==tags(ils[2])
+
     G=ITensor(0.0,ig1,ig2) #would be nice to use delta() but we can't set elements on it.
     G[ig1=>1,ig2=>1]=1.0;
     G[ig1=>chi1+2,ig2=>chi2+2]=1.0;
     for j1 in 1:chi1
         for j2 in 1:chi2
-            G[ig1=>j1+1,ig2=>j2+1]=A[ils[1]=>j1,ils[2]=>j2]
+            G[ig1=>j1+1,ig2=>j2+1]=A[ia1=>j1,ia2=>j2]
         end
     end
     return G
