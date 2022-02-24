@@ -49,7 +49,7 @@ function getM(RL::ITensor,lr::orth_type)::Tuple{ITensor,ITensor,Index}
     return M,RL_prime,im
 end
 
-function grow(ig1::Index,A::ITensor,ig2::Index)
+function grow(A::ITensor,ig1::Index,ig2::Index)
     ils=inds(A)
     @assert length(ils)==order(A)
     if hastags(ils[1],tags(ig1))
@@ -100,16 +100,16 @@ function compress(W::ITensor,lr::orth_type,epsSVD::Float64)::Tuple{ITensor,ITens
         @assert is_lower(im,L_prime,c,eps)
         @assert is_lower(lq,RL,c,eps)
         lu=Index(ns+2,"Link,u")
-        RL=grow(lu,s*V,im)*L_prime #RL[l=n,u] dim ns+2 x Dw2
-        W=Q*grow(lq,U,lu) #W[l=n-1,u]
+        RL=grow(s*V,lu,im)*L_prime #RL[l=n,u] dim ns+2 x Dw2
+        W=Q*grow(U,lq,lu) #W[l=n-1,u]
         replacetags!(RL,"u","l=$n") #RL[l=n,l=n]
         replacetags!(W,"u","l=$n")
     elseif lr==right
         @assert is_lower(r,L_prime,im,eps)
         @assert is_lower(r,RL,lq,eps)
         lv=Index(ns+2,"Link,v")
-        RL=L_prime*grow(im,U*s,lv) #RL[l=n-1,v] dim Dw1 x ns+2
-        W=grow(lq,V,lv)*Q #W[l=n-1,v]
+        RL=L_prime*grow(U*s,im,lv) #RL[l=n-1,v] dim Dw1 x ns+2
+        W=grow(V,lq,lv)*Q #W[l=n-1,v]
         replacetags!(RL,"v","l=$(n-1)") #RL[l=n,l=n]
         replacetags!(W,"v","l=$(n-1)")
     else

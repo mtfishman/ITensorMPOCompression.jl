@@ -73,9 +73,9 @@ function test_getM(r,c,lr::orth_type,swap::Bool)
         L=make_RL(r,c,ms,swap)
         M,L_prime,im=getM(L,ms.lr)
         if hastags(M,tags(c))
-            Mplus=grow(im,M,c)
+            Mplus=grow(M,im,c)
         elseif hastags(M,tags(r))
-            Mplus=grow(r,M,im)
+            Mplus=grow(M,r,im)
         else
             @assert false
         end
@@ -87,9 +87,9 @@ function test_getM(r,c,lr::orth_type,swap::Bool)
         R=make_RL(r,c,ms,swap)
         M,R_prime,im=getM(R,ms.lr)
         if hastags(M,tags(c))
-            Mplus=grow(im,M,c)
+            Mplus=grow(M,im,c)
         elseif hastags(M,tags(r))
-            Mplus=grow(r,M,im)
+            Mplus=grow(M,r,im)
         else
             @assert false
         end
@@ -103,9 +103,9 @@ function test_getM(r,c,lr::orth_type,swap::Bool)
         L=make_RL(r,c,ms,swap)
         M,L_prime,im=getM(L,ms.lr)
         if hastags(M,tags(c))
-            Mplus=grow(im,M,c)
+            Mplus=grow(M,im,c)
         elseif hastags(M,tags(r))
-            Mplus=grow(r,M,im)
+            Mplus=grow(M,r,im)
         else
             @assert false
         end
@@ -118,9 +118,9 @@ function test_getM(r,c,lr::orth_type,swap::Bool)
         R=make_RL(r,c,ms,swap)
         M,R_prime,im=getM(R,ms.lr)
         if hastags(M,tags(c))
-            Mplus=grow(im,M,c)
+            Mplus=grow(M,im,c)
         elseif hastags(M,tags(r))
-            Mplus=grow(r,M,im)
+            Mplus=grow(M,r,im)
         else
             @assert false
         end
