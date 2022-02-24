@@ -10,20 +10,9 @@ function getM(RL::ITensor,lr::orth_type)::Tuple{ITensor,ITensor,Index}
     iln=noncommonind(ils,iqx)
     Dwq,Dwn=dim(iqx),dim(iln)
     Dwm=min(Dwq,Dwn)
-    im=Index(Dwm,"Link,m") #common link for M_plus
-    if (lr==left)
-        #@show "left" iqx iln
-        imq=Index(Dwq-2,tags(iqx))
-        imm=Index(Dwm-2,tags(im)) #mini version of im
-        irm=im
-        irn=iln
-    else # lr must be right
-        #@show "right"  iqx iln
-        imm=Index(Dwm-2,tags(im))
-        imq=Index(Dwq-2,tags(iqx))
-        irn=iln
-        irm=im
-    end
+    irm=Index(Dwm,"Link,m") #common tag between M and RL_prime
+    imq=Index(Dwq-2,tags(iqx)) #mini version of iqx
+    imm=Index(Dwm-2,tags(irm)) #mini version of irm
     M=ITensor(imq,imm)
     for j1 in 2:Dwq-1
         for j2 in 2:Dwm-1
@@ -34,24 +23,31 @@ function getM(RL::ITensor,lr::orth_type)::Tuple{ITensor,ITensor,Index}
     # Now we need RL_prime such that RL=M*RL_prime.
     # RL_prime is just the perimeter of RL with 1's on the diagonal
     #
-    RL_prime=ITensor(0.0,irm,irn)
+    RL_prime=ITensor(0.0,irm,iln)
     for j1 in 1:dim(irm)
-        RL_prime[irm=>j1,irn=>1       ]=RL[iqx=>j1,iln=>1  ]
-        RL_prime[irm=>j1,irn=>dim(irn)]=RL[iqx=>j1,iln=>Dwn]
-        RL_prime[irm=>j1,irn=>j1]=1.0
+        RL_prime[irm=>j1,iln=>1       ]=RL[iqx=>j1,iln=>1  ]
+        RL_prime[irm=>j1,iln=>dim(iln)]=RL[iqx=>j1,iln=>Dwn]
+        RL_prime[irm=>j1,iln=>j1]=1.0
     end
-    for j2 in 1:dim(irn)
-        RL_prime[irm=>1       ,irn=>j2]=RL[iqx=>1  ,iln=>j2]
-        RL_prime[irm=>dim(irm),irn=>j2]=RL[iqx=>Dwq,iln=>j2]
+    for j2 in 1:dim(iln)
+        RL_prime[irm=>1       ,iln=>j2]=RL[iqx=>1  ,iln=>j2]
+        RL_prime[irm=>dim(irm),iln=>j2]=RL[iqx=>Dwq,iln=>j2]
     end
-    RL_prime[irm=>dim(irm),irn=>dim(irn)]=1.0
+    RL_prime[irm=>dim(irm),iln=>dim(iln)]=1.0
 
-    return M,RL_prime,im
+    return M,RL_prime,irm
 end
 
+#                    |1 0 0|
+#  given A, spit out |0 A 0|
+#                    |0 0 1|
+#
 function grow(A::ITensor,ig1::Index,ig2::Index)
     ils=inds(A)
     @assert length(ils)==order(A)
+    #
+    # we need to connect the indices of A with ig1,ig2 indices based on matching tags.
+    #
     if hastags(ils[1],tags(ig1))
         ia1=ils[1]
         @assert hastags(ils[2],tags(ig2))
@@ -68,7 +64,7 @@ function grow(A::ITensor,ig1::Index,ig2::Index)
     @assert dim(ig2)==chi2+2
 
     G=ITensor(0.0,ig1,ig2) #would be nice to use delta() but we can't set elements on it.
-    G[ig1=>1,ig2=>1]=1.0;
+    G[ig1=>1     ,ig2=>1     ]=1.0;
     G[ig1=>chi1+2,ig2=>chi2+2]=1.0;
     for j1 in 1:chi1
         for j2 in 1:chi2
@@ -78,72 +74,85 @@ function grow(A::ITensor,ig1::Index,ig2::Index)
     return G
 end
 
+#
+#  Compress one site
+#
 function compress(W::ITensor,lr::orth_type,epsSVD::Float64)::Tuple{ITensor,ITensor}
     @assert lr==left  || lr==right
     d,n,r,c=parse_links(W) # W[l=$(n-1)l=$n]=W[r,c]
-    eps=1e-14
-    Q,RL,lq=block_qx(W,lr) #left Q[r,lq], RL[lq,c] - right RL[r,lq] Q[lq,c]
+    eps=1e-14 #relax used for testing upper/lower/regular-form etc.
+    # establish some tag strings then depend on lr.
+    if lr==left
+        tsvd="qx"
+        tuv="u"
+        tln="l=$n"
+    else #lr==right
+        tsvd="m"
+        tuv="v"
+        tln="l=$(n-1)"
+    end
+#
+# Block repecting QR/QL/LQ/RQ factorization.  RL=L or R for upper and lower.
+#
+    Q,RL,lq=block_qx(W,lr) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
     @assert is_canonical(Q,matrix_state(lower,lr),eps)
     @assert is_lower_regular_form(Q,eps)
-
-    M,L_prime,im=getM(RL,lr) #left M[lq,im] L_prime[im,c] - right L_prime[r,im] M[im,lq]
-    if lr==left
-        iusv=findinds(M,"qx")[1]
-    else #right
-        iusv=findinds(M,"m")[1]
-    end
-    U,s,V=svd(M,iusv,cutoff=epsSVD) # ns sing. values survive compression
+#
+#  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
+#
+    M,RL_prime,im=getM(RL,lr) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
+#
+#  At last we can svd and compress M using epsSVD as the cutoff.
+#    
+    isvd=findinds(M,tsvd)[1] #decide the left index
+    U,s,V=svd(M,isvd,cutoff=epsSVD) # ns sing. values survive compression
     ns=dim(inds(s)[1])
-    @assert ns==dim(inds(s)[2]) #s should be square
     
+    luv=Index(ns+2,"Link,$tuv") #link for expanded U,US,V,sV matricies.
     if lr==left
-        @assert is_lower(im,L_prime,c,eps)
+        @assert is_lower(im,RL_prime,c,eps)
         @assert is_lower(lq,RL,c,eps)
-        lu=Index(ns+2,"Link,u")
-        RL=grow(s*V,lu,im)*L_prime #RL[l=n,u] dim ns+2 x Dw2
-        W=Q*grow(U,lq,lu) #W[l=n-1,u]
-        replacetags!(RL,"u","l=$n") #RL[l=n,l=n]
-        replacetags!(W,"u","l=$n")
+        RL=grow(s*V,luv,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
+        W=Q*grow(U,lq,luv) #W[l=n-1,u]
     elseif lr==right
-        @assert is_lower(r,L_prime,im,eps)
+        @assert is_lower(r,RL_prime,im,eps)
         @assert is_lower(r,RL,lq,eps)
-        lv=Index(ns+2,"Link,v")
-        RL=L_prime*grow(U*s,im,lv) #RL[l=n-1,v] dim Dw1 x ns+2
-        W=grow(V,lq,lv)*Q #W[l=n-1,v]
-        replacetags!(RL,"v","l=$(n-1)") #RL[l=n,l=n]
-        replacetags!(W,"v","l=$(n-1)")
+        RL=RL_prime*grow(U*s,im,luv) #RL[l=n-1,v] dim Dw1 x ns+2
+        W=grow(V,lq,luv)*Q #W[l=n-1,v]
     else
         @assert(false) 
     end
+    replacetags!(RL,tuv,tln) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+    replacetags!(W ,tuv,tln) #W[l=n-1,l=n]
     @assert is_lower_regular_form(W,eps)
     @assert is_canonical(W,matrix_state(lower,lr),eps)
 return W,RL
 end
 
+#
+#  Compress MPO
+#
 function compress!(H::MPO,lr::orth_type,epsSVD::Float64)
     @assert lr==left  || lr==right
-    eps=1e-14
+    eps=1e-14 #relax used for testing upper/lower/regular-form etc.
     N=length(H)
     if lr==left
         @assert is_canonical(H,matrix_state(lower,right),eps)
-        for n in 1:N-1
-            W,L=compress(H[n],lr,epsSVD)
- #           pprint(W,eps)
-            @assert is_lower_regular_form(W,eps)
-            @assert norm(H[n]-W*L)<eps
+        for n in 1:N-1 #sweep right
+            W,RL=compress(H[n],lr,epsSVD)
+            @assert norm(H[n]-W*RL)<eps
             H[n]=W
-            H[n+1]=L*H[n+1]
+            H[n+1]=RL*H[n+1]
             is_lower_regular_form(H[n+1],eps)
         end
     else #lr must be right
         @assert is_canonical(H,matrix_state(lower,left),eps)
-        for n in N:2
-            W,R=compress(H[n],lr,epsSVD)
-            @assert detect_upper_lower(H,eps)==lower
-            @assert detect_upper_lower(W,eps)==lower
-            @assert norm(H[n]-R*W)<eps
+        for n in N:2 #sweep left
+            W,RL=compress(H[n],lr,epsSVD)
+            @assert norm(H[n]-RL*W)<eps
             H[n]=W
-            H[n-1]=H[n]*R
+            H[n-1]=H[n]*RL
+            is_lower_regular_form(H[n-1],eps)
         end
     end
 end

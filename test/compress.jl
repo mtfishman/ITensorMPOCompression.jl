@@ -129,7 +129,7 @@ function test_getM(r,c,lr::orth_type,swap::Bool)
     end
     
 end
-
+ 
 @testset "getM and grow(M)" begin
     test_getM(Index(5,"Link,qx"),Index(5,"Link,l=1"),left,false)
     test_getM(Index(5,"Link,qx"),Index(5,"Link,l=1"),left,true)

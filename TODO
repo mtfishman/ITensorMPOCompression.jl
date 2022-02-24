@@ -9,3 +9,6 @@ Done: -make block_qx return link name qx instead of ql,lq,qr,rq
 Fixed: #grow(i1,W,i2) relies on index ordering inside W ... is that bad??
 Done: -grow(i1,W,i2) --> grow(W,i1,i2)
 -Fix known fail for compressing when H has 8 NNN
+-Support upper-tri MPOs
+Done: -Clean up canonical and compress code.
+-reduce two block_qx functions to 1
