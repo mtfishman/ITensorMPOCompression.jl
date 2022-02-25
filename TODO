@@ -12,4 +12,4 @@ Done: -grow(i1,W,i2) --> grow(W,i1,i2)
     Do tidy up items first.
 -Support upper-tri MPOs
 Done: -Clean up canonical and compress code.
--reduce two block_qx functions to 1
+Done: -reduce two block_qx functions to one

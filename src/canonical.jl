@@ -1,5 +1,5 @@
 function canonical!(W1::ITensor,W2::ITensor,lr::orth_type,n::Int64)
-    Lplus=block_qx!(W1,lr) 
+    W1,Lplus=block_qx(W1,lr) 
     W2=Lplus*W2
     il=filterinds(inds(Lplus),tags="l=$n")[1]
     iq=filterinds(inds(Lplus),tags="qx")[1]

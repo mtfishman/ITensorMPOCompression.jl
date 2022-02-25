@@ -1,47 +1,6 @@
 using LinearAlgebra
 using ITensors
 
-function block_qx!(W::ITensor,lr::orth_type)::ITensor
-  d,n,r,c=parse_links(W)
-  offset=V_offsets(matrix_state(lower,lr))
-  V=getV(W,offset) #extract the V block
-  if lr==left
-      il=filterinds(inds(V),tags="l=$n")[1] #link to next site to the right
-  elseif lr==right
-      il=filterinds(inds(V),tags="l=$(n-1)")[1] #link to next site to left
-  else
-      assert(false)
-  end
-
-  iothers=noncommoninds(inds(V),il)
-  if lr==left
-      Q,L=ql(V,iothers;positive=true) #block respecting QL decomposition
-      set_scale!(L,Q,offset) #rescale so the L(n,n)==1.0
-      @assert norm(V-Q*L)<1e-12 
-      setV!(W,Q,offset) #Q is the new V, stuff Q into W
-      iWl=filterinds(inds(W),tags="l=$n")[1]
-      Lplus,iqx=growRL(L,iWl,offset) #Now make a full size version of L
-      replaceind!(W,c,iqx)
-      replacetags!(W    ,"ql","qx")
-      replacetags!(Lplus,"ql","qx")
-  elseif lr==right
-      @assert detect_upper_lower(V,1e-14)==lower
-      L,Q=lq(V,iothers;positive=true) #block respecting QL decomposition
-      set_scale!(L,Q,offset) #rescale so the L(n,n)==1.0
-      @assert norm(V-L*Q)<1e-12 
-      setV!(W,Q,offset) #Q is the new V, stuff Q into W
-      @assert detect_upper_lower(W,1e-14)==lower
-      iWl=filterinds(inds(W),tags="l=$(n-1)")[1]
-      Lplus,iqx=growRL(L,iWl,offset) #Now make a full size version of L
-      replaceind!(W,r,iqx)
-      replacetags!(W    ,"lq","qx")
-      replacetags!(Lplus,"lq","qx")
-  else
-      assert(false)
-  end
-  return Lplus   
-end
-
 function block_qx(W_::ITensor,lr::orth_type)::Tuple{ITensor,ITensor,Index}
   W=copy(W_)
   d,n,r,c=parse_links(W)
@@ -51,7 +10,6 @@ function block_qx(W_::ITensor,lr::orth_type)::Tuple{ITensor,ITensor,Index}
   (tln,lql,cr)= lr==left ? ("l=$n","ql",c) : ("l=$(n-1)","lq",r)
   offset=V_offsets(matrix_state(lower,lr))
   V=getV(W,offset) #extract the V block
-  #V=getV(W,V_offsets(o1,o2)) #extract the V block
   il=filterinds(inds(V),tags=tln)[1] #link to next site 
   iothers=noncommoninds(inds(V),il) #group all other indices for QX factorization
 
@@ -68,8 +26,8 @@ function block_qx(W_::ITensor,lr::orth_type)::Tuple{ITensor,ITensor,Index}
   replacetags!(L,lql,"qx")
   setV!(W,Q,offset) #Q is the new V, stuff Q into W
   #@assert detect_upper_lower(W,1e-14)==lower
-  iln=filterinds(inds(W),tags=tln)[1]
-  Lplus,iqx=growRL(L,iln,offset) #Now make a full size version of L
+  il=filterinds(inds(W),tags=tln)[1] #get new version of link to next site, might have resized
+  Lplus,iqx=growRL(L,il,offset) #Now make a full size version of L
   replaceind!(W,cr,iqx)  
   return W,Lplus,iqx
 end
