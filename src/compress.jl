@@ -38,9 +38,9 @@ function getM(RL::ITensor,lr::orth_type)::Tuple{ITensor,ITensor,Index}
     return M,RL_prime,irm
 end
 
-#                    |1 0 0|
-#  given A, spit out |0 A 0|
-#                    |0 0 1|
+#                      |1 0 0|
+#  given A, spit out G=|0 A 0|
+#                      |0 0 1|
 #
 function grow(A::ITensor,ig1::Index,ig2::Index)
     ils=inds(A)
@@ -115,7 +115,7 @@ function compress(W::ITensor,lr::orth_type,epsSVD::Float64)::Tuple{ITensor,ITens
     replacetags!(W ,tuv,tln) #W[l=n-1,l=n]
     @assert is_lower_regular_form(W,eps)
     @assert is_canonical(W,matrix_state(lower,lr),eps)
-return W,RL
+    return W,RL
 end
 
 #

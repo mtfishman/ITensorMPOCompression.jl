@@ -74,13 +74,31 @@ end
     @test test_xq(ComplexF64,lq,M1,N1,true )<eps
 end
 
+@testset "RQ decomposition, single index" begin
+    eps=1e-14
+    M,N=5,5
+    M1,N1=10,10
+    @test test_xq(Float64   ,rq,M ,N,false)<eps
+    @test test_xq(Float64   ,rq,M ,N1,false)<eps
+    @test test_xq(Float64   ,rq,M1,N1,false)<eps
+    @test test_xq(Float64   ,rq,M ,N ,true )<eps
+    @test test_xq(Float64   ,rq,M ,N1,true )<eps
+    @test test_xq(Float64   ,rq,M1,N1,true )<eps
+    @test test_xq(ComplexF64,rq,M ,N ,false)<eps
+    @test test_xq(ComplexF64,rq,M ,N1,false)<eps
+    @test test_xq(ComplexF64,rq,M1,N1,false)<eps
+    @test test_xq(ComplexF64,rq,M ,N ,true )<eps
+    @test test_xq(ComplexF64,rq,M ,N1,true )<eps
+    @test test_xq(ComplexF64,rq,M1,N1,true )<eps
+end
+
 #
 #  Test multiple indicies using MPO matrices
 #
 
 include("hamiltonians.jl")
 
-@testset "QR,QL,LQ decomposition fo MPO matrices" begin
+@testset "QR,QL,LQ,RQ decomposition fo MPO matrices" begin
     N=5
     NNN=4
     hx=0.5
@@ -114,5 +132,10 @@ include("hamiltonians.jl")
     @test norm(Id-Idq)<eps
     @test norm(W-L*Q)<eps
 
-
+    R,Q=rq(W,Rind;positive=true)
+    iql=commonindex(Q,R)
+    Id=Q*prime(Q,iql)
+    Idq=delta(iql,iql)
+    @test norm(Id-Idq)<eps
+    @test norm(W-R*Q)<eps
 end

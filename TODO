@@ -1,6 +1,7 @@
 Done: -make block_qx return link name qx instead of ql,lq,qr,rq
 Done: -calculate getV,setV offsets from matrix_state
 Done: -We need pure upper/lower enums without diagonal and full options
+-further simplify the compress H loop
 -Need to save SV spectrum somewhere
 -Look into the MPS compession code for inspiration.
 -Get min and max Dw from H
@@ -10,6 +11,8 @@ Fixed: #grow(i1,W,i2) relies on index ordering inside W ... is that bad?? (hint:
 Done: -grow(i1,W,i2) --> grow(W,i1,i2)
 -Fix known fail for compressing when H has 8 NNN
     Do tidy up items first.
+Done -Get RQ decomp going. in order to ....
 -Support upper-tri MPOs
+-Support rank releavling QR,RQ,QL,LQ
 Done: -Clean up canonical and compress code.
 Done: -reduce two block_qx functions to one
