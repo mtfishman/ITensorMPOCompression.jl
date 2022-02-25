@@ -2,9 +2,7 @@
 # functions for getting and setting V blocks required for block respecting QX and SVD
 #
 
-function getV(W::ITensor,o1::Int64,o2::Int64)::ITensor
-    @assert o1==0 || o1==1
-    @assert o2==0 || o2==1
+function getV(W::ITensor,off::V_offsets)::ITensor
     ils=filterinds(inds(W),tags="Link")
     iss=filterinds(inds(W),tags="Site")
     w1=ils[1]
@@ -13,7 +11,7 @@ function getV(W::ITensor,o1::Int64,o2::Int64)::ITensor
     v2=Index(dim(w2)-1,tags(ils[2]))
     V=ITensor(v1,v2,iss...)
     for ilv in eachindval(v1,v2)
-        wlv=(IndexVal(w1,ilv[1].second+o1),IndexVal(w2,ilv[2].second+o2))
+        wlv=(IndexVal(w1,ilv[1].second+off.o1),IndexVal(w2,ilv[2].second+off.o2))
         for isv in eachindval(iss)
             V[ilv...,isv...]=W[wlv...,isv...]
     
@@ -22,12 +20,10 @@ function getV(W::ITensor,o1::Int64,o2::Int64)::ITensor
     return V
 end
 
-function setV!(W::ITensor,V::ITensor,o1::Int64,o2::Int64)
-    @assert o1==0 || o1==1
-    @assert o2==0 || o2==1
+function setV!(W::ITensor,V::ITensor,off::V_offsets)
 
     wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
-    vils=filterinds(inds(V),tags="Link") #should be {lq,ql} and {l=n,l=n-1} depending on sweep direction
+    vils=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
     @assert length(wils)==2
     @assert length(vils)==2
     @assert dim(wils[1])==dim(vils[1])+1
@@ -39,11 +35,11 @@ function setV!(W::ITensor,V::ITensor,o1::Int64,o2::Int64)
     #  one index from each of W & V should be the same, so we just need these indices to loop together.
     #
     if tags(wils[1])!=tags(vils[1]) && tags(wils[2])!=tags(vils[2])
-        vils=vils[2],vils[1] #swap got tags the same on index 1 or 2.
+        vils=vils[2],vils[1] #swap tags the same on index 1 or 2.
     end
 
     for ilv in eachindval(vils)
-        wlv=(IndexVal(wils[1],ilv[1].second+o1),IndexVal(wils[2],ilv[2].second+o2))
+        wlv=(IndexVal(wils[1],ilv[1].second+off.o1),IndexVal(wils[2],ilv[2].second+off.o2))
         for isv in eachindval(iss)
             W[wlv...,isv...]=V[ilv...,isv...]
         end
@@ -55,9 +51,7 @@ end
 #   0   at bottom, Dw1+1    0   at right, Dw2+1
 #   1   at top, 1           1   at left, 1
 #
-function growRL(RL::ITensor,iWlink::Index,o1::Int64,o2::Int64)::Tuple{ITensor,Index}
-    @assert o1==0 || o1==1
-    @assert o2==0 || o2==1
+function growRL(RL::ITensor,iWlink::Index,off::V_offsets)::Tuple{ITensor,Index}
     @assert order(RL)==2
     is=inds(RL)
     iLlinks=filterinds(inds(RL),tags=tags(iWlink)) #find the link index of l
@@ -74,15 +68,15 @@ function growRL(RL::ITensor,iWlink::Index,o1::Int64,o2::Int64)::Tuple{ITensor,In
     @assert norm(RLplus)==0.0
     for jq in eachindval(iLqx)
         for jl in eachindval(iLlink)
-            ip=(IndexVal(iq,jq.second+o1),IndexVal(iWlink,jl.second+o2))
+            ip=(IndexVal(iq,jq.second+off.o1),IndexVal(iWlink,jl.second+off.o2))
             RLplus[ip...]=RL[jq,jl]
         end
     end
     #add diagonal 1.0
-    if !(o1==1 && o2==1)
+    if !(off.o1==1 && off.o2==1)
         RLplus[iq=>Dwq+1,iWlink=>Dwl+1]=1.0
     end
-    if !(o1==0 && o2==0)
+    if !(off.o1==0 && off.o2==0)
         RLplus[iq=>1,iWlink=>1]=1.0
     end
     return RLplus,iq

@@ -81,13 +81,7 @@ function parse_links(A::ITensor)::Tuple{Int64,Int64,Index,Index}
 end
 
 function is_canonical(r::Index,W::ITensor,c::Index,d::Int64,ms::matrix_state,eps::Float64)::Bool
-    if ms.lr==left
-        V=getV(W,1,1)
-    elseif ms.lr==right
-        V=getV(W,0,0)
-    else
-        assert(false)
-    end
+    V=getV(W,V_offsets(ms))
     rv=findinds(V,tags(r))[1]
     cv=findinds(V,tags(c))[1]
     if ms.lr==left
@@ -111,13 +105,7 @@ end
 
 
 function is_canonical(W::ITensor,ms::matrix_state,eps::Float64)::Bool
-    if ms.lr==left
-        V=getV(W,1,1)
-    elseif ms.lr==right
-        V=getV(W,0,0)
-    else
-        assert(false)
-    end
+    V=getV(W,V_offsets(ms))
     d,n,r,c=parse_links(V)
     if ms.lr==left
         rc=c
@@ -289,7 +277,7 @@ function is_regular_form(W::ITensor,eps::Float64)::Tuple{Bool,Bool}
     end
     if diag_unit
         pprint(W,eps)
-        println("ITensorMPOCompression.is_regular_for\n  Warning: found unit operator along the diagonal of an MPO")
+        println("ITensorMPOCompression.is_regular_form\n  Warning: found unit operator along the diagonal of an MPO")
     end    
    
     return reg_lower,reg_upper

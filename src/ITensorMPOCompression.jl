@@ -4,8 +4,8 @@ using ITensors
 
 export ql,lq,assign!,getV,setV!,growRL,to_openbc,set_scale!,block_qx!,block_qx,canonical!,is_canonical
 export tri_type,orth_type,matrix_state,full,upper,lower,none,left,right,parse_links
-export detect_upper_lower,has_pbc,is_regular_form,compress,getM,grow
-export is_lower_regular_form,is_upper_regular_form
+export detect_upper_lower,has_pbc,is_regular_form,compress,compress!,getM,grow
+export is_lower_regular_form,is_upper_regular_form,V_offsets
 
 @enum tri_type  full upper lower diagonal
 @enum orth_type none left right
@@ -13,6 +13,46 @@ export is_lower_regular_form,is_upper_regular_form
 struct matrix_state
     ul::tri_type
     lr::orth_type
+end
+
+#
+#  simple struct for encapsulating offsets for V-blocks
+#
+struct V_offsets
+    o1::Int64 #currently o1=o2 for std. Parker compression.  
+    o2::Int64 #Leave them distinct for now until we know more
+    #
+    # The purpose of this struct is to ensure the asserts below
+    #
+    V_offsets(o1_::Int64, o2_::Int64) = begin
+        @assert o1_==0 || o1_==1
+        @assert o2_==0 || o2_==1 
+        new(o1_,o2_)
+    end 
+end
+
+#
+#  This is essentially table 2 in the notes.
+#
+V_offsets(ms::matrix_state) = begin
+    if ms.lr==left
+        if ms.ul ==lower
+            o1_=1
+            o2_=1
+        else #upper
+            o1_=0
+            o2_=0
+        end
+    else #right
+        if ms.ul ==lower
+            o1_=0
+            o2_=0
+        else #upper
+            o1_=1
+            o2_=1
+        end
+    end
+    V_offsets(o1_,o2_)
 end
 
 
@@ -23,15 +63,14 @@ function assign!(W::ITensor,i1::IndexVal,i2::IndexVal,op::ITensor)
     end
 end
 
+set_scale!(RL::ITensor,Q::ITensor,o1::Int64,o2::Int64)=set_scale!(RL,Q,V_offsets(o1,o2))
 
-function set_scale!(RL::ITensor,Q::ITensor,o1::Int64,o2::Int64)
-    @assert o1==0 || o1==1
-    @assert o2==0 || o2==1
+function set_scale!(RL::ITensor,Q::ITensor,off::V_offsets)
     @assert order(RL)==2
     is=inds(RL)
     Dw1,Dw2=map(dim,is)
-    i1= o1==0 ? 1 : Dw1
-    i2= o2==0 ? 1 : Dw2
+    i1= off.o1==0 ? 1 : Dw1
+    i2= off.o2==0 ? 1 : Dw2
     scale=RL[is[1]=>i1,is[2]=>i2]
     @assert abs(scale)>1e-12
     RL./=scale

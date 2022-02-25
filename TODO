@@ -1,14 +1,15 @@
 Done: -make block_qx return link name qx instead of ql,lq,qr,rq
--calculate getV,setV offsets from matrix_state
+Done: -calculate getV,setV offsets from matrix_state
 -We need pure left/right and upper/lower enums without diagonal and full options
 -Need to save SV spectrum somewhere
 -Look into the MPS compession code for inspiration.
 -Get min and max Dw from H
 -Figure out how to turn off asserts for performance.
 -consistent variable names for link indexs r,c,q,u,v or ir,ic,iq,iu,iv ?
-Fixed: #grow(i1,W,i2) relies on index ordering inside W ... is that bad??
+Fixed: #grow(i1,W,i2) relies on index ordering inside W ... is that bad?? (hint:yes!)
 Done: -grow(i1,W,i2) --> grow(W,i1,i2)
 -Fix known fail for compressing when H has 8 NNN
+    Do tidy up items first.
 -Support upper-tri MPOs
 Done: -Clean up canonical and compress code.
 -reduce two block_qx functions to 1
