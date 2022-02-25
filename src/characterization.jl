@@ -152,11 +152,15 @@ function has_pbc(H::MPO)::Bool
 end
 
 function is_lower(r::Index,W::ITensor,c::Index,eps::Float64)::Bool
-    ul=detect_upper_lower(r,W,c,eps)
-    return ul==lower || ul==diagonal
+    l,u=detect_upper_lower(r,W,c,eps)
+    return l
 end
 
-function detect_upper_lower(r::Index,W::ITensor,c::Index,eps::Float64)::tri_type
+#
+# It could be both or neither, so we return two Bools corresponding to
+# (lower,upper) triangular
+#
+function detect_upper_lower(r::Index,W::ITensor,c::Index,eps::Float64)::Tuple{Bool,Bool}
     @assert hasind(W,r)
     @assert hasind(W,c)
     ord=order(W)
@@ -181,42 +185,41 @@ function detect_upper_lower(r::Index,W::ITensor,c::Index,eps::Float64)::tri_type
             end
         end
     end
-    if zero_upper && zero_lower
-        ret=diagonal
-    elseif zero_upper
-        ret=lower
-    elseif zero_lower
-        ret=upper
-    else
-        ret=full
-    end
-    return ret
+    return zero_upper,zero_lower
 end
 
-function detect_upper_lower(W::ITensor,eps::Float64)::tri_type
+function detect_upper_lower(W::ITensor,eps::Float64)::Tuple{Bool,Bool}
     d,n,r,c=parse_links(W)
     return detect_upper_lower(r,W,c,eps)
 end
 
-
-            
-
-
-function detect_upper_lower(H::MPO,eps::Float64)::tri_type
-    @assert length(H)>1
-    ul=detect_upper_lower(H[2],eps) #skip left and right sites in case MPO is obc
-    for n in 3:length(H)-1
-        iln=detect_upper_lower(H[n],eps)
-        if (iln!=ul && iln!=diagonal) 
-            if ul==diagonal
-                ul=iln
-            else
-                ul=full
-            end
-        end
-    end
-    return ul
+function is_upper_lower(W::ITensor,ul::tri_type,eps::Float64)::Bool 
+    l,u=detect_upper_lower(W,eps)
+    ul==lower ? l : u
 end
+
+is_lower(W::ITensor,eps::Float64)::Bool = is_upper_lower(W,lower,eps) 
+is_upper(W::ITensor,eps::Float64)::Bool = is_upper_lower(W,upper,eps) 
+    
+
+function detect_upper_lower(H::MPO,eps::Float64)::Tuple{Bool,Bool}
+    @assert length(H)>1
+    l,u=detect_upper_lower(H[2],eps) #skip left and right sites in case MPO is obc
+    for n in 3:length(H)-1
+        il,iu=detect_upper_lower(H[n],eps)
+        l = l && il
+        u = u && iu
+    end
+    return l,u
+end
+
+function is_upper_lower(H::MPO,ul::tri_type,eps::Float64)::Bool 
+    l,u=detect_upper_lower(H,eps)
+    ul==lower ? l : u
+end
+
+is_lower(H::MPO,eps::Float64)::Bool = is_upper_lower(H,lower,eps) 
+is_upper(H::MPO,eps::Float64)::Bool = is_upper_lower(H,upper,eps) 
 
 #
 # This test is complicated by two things

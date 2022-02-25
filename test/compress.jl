@@ -157,21 +157,21 @@ end
     #
     H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
     E0l=inner(psi',to_openbc(H),psi)
-    @test detect_upper_lower(H,eps)==lower
+    @test is_upper_lower(H,lower,eps)
     canonical!(H,right)
 
     E1l=inner(psi',to_openbc(H),psi)
     @test abs(E0l-E1l)<1e-14
-    @test detect_upper_lower(H,eps)==lower
+    @test is_upper_lower(H,lower,eps)
     @test  is_canonical(H,msr,eps)
 
     W,L=compress(H[1],left,epsSVD)
-    @test detect_upper_lower(H,eps)==lower
-    @test detect_upper_lower(W,eps)==lower
+    @test is_upper_lower(H,lower,eps)
+    @test is_upper_lower(W,lower,eps)
     @test norm(H[1]-W*L)<eps
     H[1]=W
     H[2]=L*H[2]
-    @test detect_upper_lower(H[2],eps)==lower
+    @test is_upper_lower(H[2],lower,eps)
     @test  is_canonical(H[1],msl,eps)
     # make sure the energy in unchanged
     E2l=inner(psi',to_openbc(H),psi)
@@ -181,22 +181,22 @@ end
     #
     H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
     E0r=inner(psi',to_openbc(H),psi)
-    @test detect_upper_lower(H,eps)==lower
+    @test is_upper_lower(H,lower,eps)
     canonical!(H,left)
 
     E1r=inner(psi',to_openbc(H),psi)
     @test abs(E0r-E1r)<1e-14
-    @test detect_upper_lower(H,eps)==lower
+    @test is_upper_lower(H,lower,eps)
     @test  is_canonical(H,msl,eps)
 
     W,L=compress(H[N],right,epsSVD)
-    @test detect_upper_lower(H,eps)==lower
-    @test detect_upper_lower(W,eps)==lower
+    @test is_upper_lower(H,lower,eps)
+    @test is_upper_lower(W,lower,eps)
     # @show inds(H[N]) inds(W) inds(L)
     @test norm(H[N]-L*W)<eps
     H[N]=W
     H[N-1]=H[N-1]*L
-    @test detect_upper_lower(H[N-1],eps)==lower
+    @test is_upper_lower(H[N-1],lower,eps)
     @test  is_canonical(H[N],msr,eps)
     # make sure the energy in unchanged
     E2r=inner(psi',to_openbc(H),psi)

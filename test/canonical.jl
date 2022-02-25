@@ -20,8 +20,8 @@ println("-----------Start--------------")
     #
     H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true) 
     @test has_pbc(H)
-    @test detect_upper_lower(H[1],eps)==lower
-    @test detect_upper_lower(H,eps)==lower
+    @test is_upper_lower(H[1],lower,eps)
+    @test is_upper_lower(H   ,lower,eps)
     @test is_lower_regular_form(H[1],eps)
     @test is_lower_regular_form(H,eps)
     W=H[1]
@@ -54,8 +54,8 @@ println("-----------Start--------------")
 
     H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=false) 
     @test !has_pbc(H)
-    @test detect_upper_lower(H[2],eps)==lower
-    @test detect_upper_lower(H,eps)==lower
+    @test is_upper_lower(H[2],lower,eps)
+    @test is_upper_lower(H   ,lower,eps)
     @test is_lower_regular_form(H[2],eps)
     @test is_lower_regular_form(H[1],eps) #should handle edge row/col vectors
     @test is_lower_regular_form(H[N],eps)
@@ -63,8 +63,8 @@ println("-----------Start--------------")
 
     H=make_transIsing_MPO(sites,NNN,hx,upper,pbc=true) 
     @test has_pbc(H)
-    @test detect_upper_lower(H[1],eps)==upper
-    @test detect_upper_lower(H,eps)==upper
+    @test is_upper_lower(H[1],upper,eps)
+    @test is_upper_lower(H   ,upper,eps)
     @test is_upper_regular_form(H[1],eps)
     @test is_upper_regular_form(H,eps)
    
@@ -86,13 +86,13 @@ end
     #
     H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
     E0=inner(psi',to_openbc(H),psi)
-    @test detect_upper_lower(H,eps)==lower
+    @test is_upper_lower(H,lower,eps)
     
     canonical!(H,left)
     
     E1=inner(psi',to_openbc(H),psi)
     @test abs(E0-E1)<1e-14
-    @test detect_upper_lower(H,eps)==lower
+    @test is_upper_lower(H,lower,eps)
     @test  is_canonical(H,msl,eps)
     @test !is_canonical(H,msr,eps)
     #
@@ -102,7 +102,7 @@ end
     E0=inner(psi',to_openbc(H),psi)
 
     canonical!(H,right)
-    @test detect_upper_lower(H,eps)==lower
+    @test is_upper_lower(H,lower,eps)
     
     E1=inner(psi',to_openbc(H),psi)
     @test abs(E0-E1)<1e-14
@@ -115,7 +115,7 @@ end
     canonical!(H,right)
     E2=inner(psi',to_openbc(H),psi)
     @test abs(E0-E2)<1e-14
-    @test detect_upper_lower(H,eps)==lower
+    @test is_upper_lower(H,lower,eps)
     @test !is_canonical(H,msl,eps)
     @test  is_canonical(H,msr,eps)
 
@@ -124,7 +124,7 @@ end
     # Make sure upper triangular MPO has the same energy as the lower version had
     #
     H=make_transIsing_MPO(sites,NNN,hx,upper,pbc=true)
-    @test detect_upper_lower(H,eps)==upper
+    @test is_upper_lower(H,upper,eps)
     Eupper=inner(psi',to_openbc(H),psi)
     @test abs(E0-Eupper)<1e-14
 
