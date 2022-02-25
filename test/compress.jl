@@ -9,7 +9,6 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
 println("-----------Start--------------")
 
 function make_RL(r::Index,c::Index,ms::matrix_state,swap::Bool)::ITensor
-    @assert ms.ul==upper || ms.ul==lower
     @assert ms.lr==left  || ms.lr==right
     A= swap ? randomITensor(c,r) : randomITensor(r,c)
     if ms.ul==lower
@@ -251,6 +250,7 @@ function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Flo
     # make sure the energy in unchanged
     E2r=inner(psi',to_openbc(H),psi)
     @test abs(E0r-E2r)<1e-14
+    #pprint(H,eps)
 
 end
 

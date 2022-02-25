@@ -78,19 +78,10 @@ end
 #  Compress one site
 #
 function compress(W::ITensor,lr::orth_type,epsSVD::Float64)::Tuple{ITensor,ITensor}
-    @assert lr==left  || lr==right
     d,n,r,c=parse_links(W) # W[l=$(n-1)l=$n]=W[r,c]
     eps=1e-14 #relax used for testing upper/lower/regular-form etc.
     # establish some tag strings then depend on lr.
-    if lr==left
-        tsvd="qx"
-        tuv="u"
-        tln="l=$n"
-    else #lr==right
-        tsvd="m"
-        tuv="v"
-        tln="l=$(n-1)"
-    end
+    (tsvd,tuv,tln) = lr==left ? ("qx","u","l=$n") : ("m","v","l=$(n-1)")
 #
 # Block repecting QR/QL/LQ/RQ factorization.  RL=L or R for upper and lower.
 #
@@ -114,13 +105,11 @@ function compress(W::ITensor,lr::orth_type,epsSVD::Float64)::Tuple{ITensor,ITens
         @assert is_lower(lq,RL,c,eps)
         RL=grow(s*V,luv,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
         W=Q*grow(U,lq,luv) #W[l=n-1,u]
-    elseif lr==right
+    else # right
         @assert is_lower(r,RL_prime,im,eps)
         @assert is_lower(r,RL,lq,eps)
         RL=RL_prime*grow(U*s,im,luv) #RL[l=n-1,v] dim Dw1 x ns+2
         W=grow(V,lq,luv)*Q #W[l=n-1,v]
-    else
-        @assert(false) 
     end
     replacetags!(RL,tuv,tln) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
     replacetags!(W ,tuv,tln) #W[l=n-1,l=n]
@@ -133,7 +122,6 @@ end
 #  Compress MPO
 #
 function compress!(H::MPO,lr::orth_type,epsSVD::Float64)
-    @assert lr==left  || lr==right
     eps=1e-14 #relax used for testing upper/lower/regular-form etc.
     N=length(H)
     if lr==left

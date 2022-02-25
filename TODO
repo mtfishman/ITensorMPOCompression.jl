@@ -1,6 +1,6 @@
 Done: -make block_qx return link name qx instead of ql,lq,qr,rq
 Done: -calculate getV,setV offsets from matrix_state
--We need pure left/right and upper/lower enums without diagonal and full options
+Done: -We need pure upper/lower enums without diagonal and full options
 -Need to save SV spectrum somewhere
 -Look into the MPS compession code for inspiration.
 -Get min and max Dw from H

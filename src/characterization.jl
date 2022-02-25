@@ -86,10 +86,8 @@ function is_canonical(r::Index,W::ITensor,c::Index,d::Int64,ms::matrix_state,eps
     cv=findinds(V,tags(c))[1]
     if ms.lr==left
         rc=cv
-    elseif ms.lr==right
-        rc=rv
     else
-        assert(false)
+        rc=rv
     end
     #@show inds(V) rv,cv,rc
     Id=V*prime(V,rc)/d
@@ -109,10 +107,8 @@ function is_canonical(W::ITensor,ms::matrix_state,eps::Float64)::Bool
     d,n,r,c=parse_links(V)
     if ms.lr==left
         rc=c
-    elseif ms.lr==right
+    else #right
         rc=r
-    else
-        assert(false)
     end
     Id=V*prime(V,rc)/d
     Id1=delta(rc,rc)
@@ -123,10 +119,8 @@ function is_canonical(H::MPO,ms::matrix_state,eps::Float64)::Bool
     N=length(H)
     if ms.lr==left
         r=1:N-1
-    elseif ms.lr==right
+    else # right
         r=2:N
-    else
-        assert(false)
     end
     ic=true
     for n in r
@@ -223,10 +217,11 @@ is_upper(H::MPO,eps::Float64)::Bool = is_upper_lower(H,upper,eps)
 
 #
 # This test is complicated by two things
-#   1) Itis not clear to me (JR) that the A block of an MPO matrix must be upper or lower triangular for
+#   1) It is not clear to me (JR) that the A block of an MPO matrix must be upper or lower triangular for
 #      block respecting compression to work properly.  Parker et al. make no definitive statement about this.
-#      It is my intention to test this empirically using auto MPO generated which tend to non-triangular.
-#   2) As a consequence of 1, we cannot decide in advance whether to test of upper or lower regular forms.
+#      It is my intention to test this empirically using auto MPO generated Hamiltonians 
+#      which tend to non-triangular.
+#   2) As a consequence of 1, we cannot decide in advance whether to test for upper or lower regular forms.
 #      We must therefore test for both and return true if either one is true. 
 #
 function is_regular_form(W::ITensor,eps::Float64)::Tuple{Bool,Bool}
@@ -287,7 +282,6 @@ function is_regular_form(W::ITensor,eps::Float64)::Tuple{Bool,Bool}
 end
 
 function is_regular_form(W::ITensor,ul::tri_type,eps::Float64)::Bool
-    @assert ul==lower || ul==upper
     i = ul==lower ? 1 : 2
     return is_regular_form(W,eps)[i]
 end
@@ -331,20 +325,10 @@ function get_traits(W::ITensor,eps::Float64)
     d,n,r,c=parse_links(W)
     Dw1,Dw2=dim(r),dim(c)
     bl,bu = is_regular_form(W,eps)
-    if bl && bu
-        ul='D'
-        tri=diagonal
-    elseif bl && !bu
-        ul='L'
-        tri=lower
-    elseif !bl && bu
-        ul='U'
-        tri=upper
-    else
-        ul='F'
-        tri=full
-    end
+    l= bl ? 'L' : ' '
+    u= bu ? 'U' : ' '
 
+    tri = bl ? lower : upper
     msl=matrix_state(tri,left)
     msr=matrix_state(tri,right)
     is__left=is_canonical(W,msl,eps)
@@ -359,14 +343,14 @@ function get_traits(W::ITensor,eps::Float64)
         lr='M'
     end
 
-    return Dw1,Dw2,d,ul,lr
+    return Dw1,Dw2,d,l,u,lr
 end
     
 function pprint(H::MPO,eps::Float64)
     N=length(H)
     println(" n   Dw1   Dw2   d   U/L   L/R")
     for n in 1:N
-        Dw1,Dw2,d,ul,lr=get_traits(H[n],eps)
-        println(" $n    $Dw1     $Dw2    $d    $ul     $lr")
+        Dw1,Dw2,d,l,u,lr=get_traits(H[n],eps)
+        println(" $n    $Dw1     $Dw2    $d    $l$u     $lr")
     end
 end

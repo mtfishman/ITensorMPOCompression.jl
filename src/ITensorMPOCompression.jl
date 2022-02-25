@@ -3,12 +3,12 @@ module ITensorMPOCompression
 using ITensors
 
 export ql,lq,assign!,getV,setV!,growRL,to_openbc,set_scale!,block_qx!,block_qx,canonical!,is_canonical
-export tri_type,orth_type,matrix_state,full,upper,lower,none,left,right,parse_links
+export tri_type,orth_type,matrix_state,upper,lower,none,left,right,parse_links
 export has_pbc,is_regular_form,compress,compress!,getM,grow
 export is_lower_regular_form,is_upper_regular_form,V_offsets
 export detect_upper_lower,is_upper_lower
 
-@enum tri_type  full upper lower diagonal
+@enum tri_type  upper lower
 @enum orth_type none left right
 
 struct matrix_state

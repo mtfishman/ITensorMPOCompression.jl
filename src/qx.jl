@@ -15,10 +15,8 @@ function block_qx(W_::ITensor,lr::orth_type)::Tuple{ITensor,ITensor,Index}
 
   if lr==left
       Q,L=ql(V,iothers;positive=true) #block respecting QL decomposition
-  elseif lr==right
+  else #right
       L,Q=lq(V,iothers;positive=true) #block respecting LQ decomposition
-  else
-      assert(false)
   end
   set_scale!(L,Q,offset) #rescale so the L(n,n)==1.0
   @assert norm(V-L*Q)<1e-12 #make decomp worked

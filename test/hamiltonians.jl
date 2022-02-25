@@ -63,7 +63,6 @@ end
 function make_transIsing_op(indices::Vector{<:Index},prev_link::Index,nsite::Int64,NNN::Int64,hx::Float64=0.0,ul::tri_type=lower)::ITensor
     @assert NNN>=1
     @assert length(indices)==4
-    @assert ul==upper || ul==lower #diagonal and full are not options here.
     #  It turns out that
     #  Dw = 2+Sum(i,i=1..NNN) =2 + NNN*(NNN+1)/2
     #
