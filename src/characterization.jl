@@ -145,10 +145,6 @@ function has_pbc(H::MPO)::Bool
     return pbc
 end
 
-function is_lower(r::Index,W::ITensor,c::Index,eps::Float64)::Bool
-    l,u=detect_upper_lower(r,W,c,eps)
-    return l
-end
 
 #
 # It could be both or neither, so we return two Bools corresponding to
@@ -181,6 +177,14 @@ function detect_upper_lower(r::Index,W::ITensor,c::Index,eps::Float64)::Tuple{Bo
     end
     return zero_upper,zero_lower
 end
+
+function is_upper_lower(r::Index,W::ITensor,c::Index,ul::tri_type,eps::Float64)::Bool
+    l,u=detect_upper_lower(r,W,c,eps)
+    ul==lower ? l : u
+end
+
+is_lower(r::Index,W::ITensor,c::Index,eps::Float64) = is_upper_lower(r,W,c,lower,eps)
+is_upper(r::Index,W::ITensor,c::Index,eps::Float64) = is_upper_lower(r,W,c,upper,eps)
 
 function detect_upper_lower(W::ITensor,eps::Float64)::Tuple{Bool,Bool}
     d,n,r,c=parse_links(W)

@@ -67,66 +67,47 @@ println("-----------Start--------------")
     @test is_upper_lower(H   ,upper,eps)
     @test is_upper_regular_form(H[1],eps)
     @test is_upper_regular_form(H,eps)
-   
-
 end
 
-@testset "Bring MPO into canonical form" begin
-    N=5
-    NNN=2
-    hx=0.5
-    eps=1e-15
-    msl=matrix_state(lower,left )
-    msr=matrix_state(lower,right)
-
+function test_canonical(N::Int64,NNN::Int64,hx::Float64,ms::matrix_state)
+    eps=1e-14
     sites = siteinds("SpinHalf", N)
     psi=randomMPS(sites)
-    #
-    # left canonical for lower triangular MPO
-    #
-    H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
+    H=make_transIsing_MPO(sites,NNN,hx,ms.ul,pbc=true) 
+    @test has_pbc(H)
+    @test is_upper_lower(H[1],ms.ul,eps)
+    @test is_upper_lower(H   ,ms.ul,eps)
+    @test is_regular_form(H[1],ms.ul,eps)
+    @test is_regular_form(H   ,ms.ul,eps)
     E0=inner(psi',to_openbc(H),psi)
-    @test is_upper_lower(H,lower,eps)
-    
-    canonical!(H,left)
-    
+    canonical!(H,ms)
     E1=inner(psi',to_openbc(H),psi)
     @test abs(E0-E1)<1e-14
-    @test is_upper_lower(H,lower,eps)
-    @test  is_canonical(H,msl,eps)
-    @test !is_canonical(H,msr,eps)
+    @test is_upper_lower(H,ms.ul,eps)
+    @test  is_canonical(H,ms,eps)
+    @test !is_canonical(H,mirror(ms),eps)    
     #
-    # right canonical for lower triangular MPO
+    #  two more sweeps just make sure nothing gets messed up.
     #
-    H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
-    E0=inner(psi',to_openbc(H),psi)
-
-    canonical!(H,right)
-    @test is_upper_lower(H,lower,eps)
-    
-    E1=inner(psi',to_openbc(H),psi)
-    @test abs(E0-E1)<1e-14
-    @test !is_canonical(H,msl,eps)
-    @test  is_canonical(H,msr,eps)
-    #
-    #  two more sweeps just make sure nothing get messed up.
-    #
-    canonical!(H,left)
-    canonical!(H,right)
+    canonical!(H,mirror(ms))
+    canonical!(H,ms)
     E2=inner(psi',to_openbc(H),psi)
     @test abs(E0-E2)<1e-14
-    @test is_upper_lower(H,lower,eps)
-    @test !is_canonical(H,msl,eps)
-    @test  is_canonical(H,msr,eps)
+    @test is_upper_lower(H,ms.ul,eps)
+    @test !is_canonical(H,mirror(ms),eps)
+    @test  is_canonical(H,ms,eps)
+end
 
 
-    #
-    # Make sure upper triangular MPO has the same energy as the lower version had
-    #
-    H=make_transIsing_MPO(sites,NNN,hx,upper,pbc=true)
-    @test is_upper_lower(H,upper,eps)
-    Eupper=inner(psi',to_openbc(H),psi)
-    @test abs(E0-Eupper)<1e-14
+@testset "Bring MPO into canonical form" begin
+  
+    N=5
+    NNN=4
+    hx=0.5
+    test_canonical(N,NNN,hx,matrix_state(lower,left ))
+    test_canonical(N,NNN,hx,matrix_state(lower,right))
+    test_canonical(N,NNN,hx,matrix_state(upper,left ))
+    test_canonical(N,NNN,hx,matrix_state(upper,right))
 
 
 end

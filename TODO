@@ -12,7 +12,9 @@ Done: -grow(i1,W,i2) --> grow(W,i1,i2)
 -Fix known fail for compressing when H has 8 NNN
     Do tidy up items first.
 Done -Get RQ decomp going. in order to ....
--Support upper-tri MPOs
+Done -Support upper-tri MPOs
 -Support rank releavling QR,RQ,QL,LQ
 Done: -Clean up canonical and compress code.
 Done: -reduce two block_qx functions to one
+-Do we need to copy W in block_qx?
+-Comment indices in canonical!(...)

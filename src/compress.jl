@@ -77,21 +77,21 @@ end
 #
 #  Compress one site
 #
-function compress(W::ITensor,lr::orth_type,epsSVD::Float64)::Tuple{ITensor,ITensor}
+function compress(W::ITensor,ms::matrix_state,epsSVD::Float64)::Tuple{ITensor,ITensor}
     d,n,r,c=parse_links(W) # W[l=$(n-1)l=$n]=W[r,c]
     eps=1e-14 #relax used for testing upper/lower/regular-form etc.
     # establish some tag strings then depend on lr.
-    (tsvd,tuv,tln) = lr==left ? ("qx","u","l=$n") : ("m","v","l=$(n-1)")
+    (tsvd,tuv,tln) = ms.lr==left ? ("qx","u","l=$n") : ("m","v","l=$(n-1)")
 #
 # Block repecting QR/QL/LQ/RQ factorization.  RL=L or R for upper and lower.
 #
-    Q,RL,lq=block_qx(W,lr) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
-    @assert is_canonical(Q,matrix_state(lower,lr),eps)
-    @assert is_lower_regular_form(Q,eps)
+    Q,RL,lq=block_qx(W,ms) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
+    @assert is_canonical(Q,ms,eps)
+    @assert is_regular_form(Q,ms.ul,eps)
 #
 #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
 #
-    M,RL_prime,im=getM(RL,lr) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
+    M,RL_prime,im=getM(RL,ms.lr) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
 #
 #  At last we can svd and compress M using epsSVD as the cutoff.
 #    
@@ -100,47 +100,51 @@ function compress(W::ITensor,lr::orth_type,epsSVD::Float64)::Tuple{ITensor,ITens
     ns=dim(inds(s)[1])
     
     luv=Index(ns+2,"Link,$tuv") #link for expanded U,US,V,sV matricies.
-    if lr==left
-        @assert is_lower(im,RL_prime,c,eps)
-        @assert is_lower(lq,RL,c,eps)
+    if ms.lr==left
+        @assert is_upper_lower(im,RL_prime,c,ms.ul,eps)
+        @assert is_upper_lower(lq,RL      ,c,ms.ul,eps)
         RL=grow(s*V,luv,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
         W=Q*grow(U,lq,luv) #W[l=n-1,u]
     else # right
-        @assert is_lower(r,RL_prime,im,eps)
-        @assert is_lower(r,RL,lq,eps)
+        @assert is_upper_lower(r,RL_prime,im,ms.ul,eps)
+        @assert is_upper_lower(r,RL,lq,ms.ul,eps)
         RL=RL_prime*grow(U*s,im,luv) #RL[l=n-1,v] dim Dw1 x ns+2
         W=grow(V,lq,luv)*Q #W[l=n-1,v]
     end
     replacetags!(RL,tuv,tln) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
     replacetags!(W ,tuv,tln) #W[l=n-1,l=n]
-    @assert is_lower_regular_form(W,eps)
-    @assert is_canonical(W,matrix_state(lower,lr),eps)
+    @assert is_regular_form(W,ms.ul,eps)
+    @assert is_canonical(W,ms,eps)
     return W,RL
 end
 
 #
 #  Compress MPO
 #
-function compress!(H::MPO,lr::orth_type,epsSVD::Float64)
+function compress!(H::MPO,ms::matrix_state,epsSVD::Float64)
     eps=1e-14 #relax used for testing upper/lower/regular-form etc.
     N=length(H)
-    if lr==left
-        @assert is_canonical(H,matrix_state(lower,right),eps)
+    if ms.lr==left
+        @assert is_canonical(H,mirror(ms),eps) #TODO we need not(ms.lr)
         for n in 1:N-1 #sweep right
-            W,RL=compress(H[n],lr,epsSVD)
-            @assert norm(H[n]-W*RL)<eps
+            W,RL=compress(H[n],ms,epsSVD)
+            if (epsSVD==0)
+                @assert norm(H[n]-W*RL)<eps
+            end
             H[n]=W
             H[n+1]=RL*H[n+1]
-            is_lower_regular_form(H[n+1],eps)
+            is_regular_form(H[n+1],ms.ul,eps)
         end
     else #lr must be right
-        @assert is_canonical(H,matrix_state(lower,left),eps)
+        @assert is_canonical(H,mirror(ms),eps)#TODO we need not(ms.lr)
         for n in N:2 #sweep left
-            W,RL=compress(H[n],lr,epsSVD)
-            @assert norm(H[n]-RL*W)<eps
+            W,RL=compress(H[n],ms,epsSVD)
+            if (epsSVD==0)
+                @assert norm(H[n]-W*RL)<eps
+            end
             H[n]=W
             H[n-1]=H[n]*RL
-            is_lower_regular_form(H[n-1],eps)
+            is_regular_form(H[n-1],ms.ul,eps)
         end
     end
 end

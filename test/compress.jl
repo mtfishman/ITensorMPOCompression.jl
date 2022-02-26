@@ -5,7 +5,7 @@ using Test
 include("hamiltonians.jl")
 
 using Printf
-Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
+Base.show(io::IO, f::Float64) = @printf(io, "%1.13f", f)
 println("-----------Start--------------")
 
 function make_RL(r::Index,c::Index,ms::matrix_state,swap::Bool)::ITensor
@@ -157,14 +157,14 @@ end
     H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
     E0l=inner(psi',to_openbc(H),psi)
     @test is_upper_lower(H,lower,eps)
-    canonical!(H,right)
+    canonical!(H,msr)
 
     E1l=inner(psi',to_openbc(H),psi)
     @test abs(E0l-E1l)<1e-14
     @test is_upper_lower(H,lower,eps)
     @test  is_canonical(H,msr,eps)
 
-    W,L=compress(H[1],left,epsSVD)
+    W,L=compress(H[1],msl,epsSVD)
     @test is_upper_lower(H,lower,eps)
     @test is_upper_lower(W,lower,eps)
     @test norm(H[1]-W*L)<eps
@@ -181,14 +181,14 @@ end
     H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
     E0r=inner(psi',to_openbc(H),psi)
     @test is_upper_lower(H,lower,eps)
-    canonical!(H,left)
+    canonical!(H,msl)
 
     E1r=inner(psi',to_openbc(H),psi)
     @test abs(E0r-E1r)<1e-14
     @test is_upper_lower(H,lower,eps)
     @test  is_canonical(H,msl,eps)
 
-    W,L=compress(H[N],right,epsSVD)
+    W,L=compress(H[N],msr,epsSVD)
     @test is_upper_lower(H,lower,eps)
     @test is_upper_lower(W,lower,eps)
     # @show inds(H[N]) inds(W) inds(L)
@@ -203,8 +203,8 @@ end
 end
 
 function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Float64,eps::Float64)
-    msl=matrix_state(lower,left )
-    msr=matrix_state(lower,right)
+    msl=matrix_state(ul,left )
+    msr=matrix_state(ul,right)
 
     sites = siteinds("SpinHalf", N)
     psi=randomMPS(sites)
@@ -213,16 +213,16 @@ function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Flo
     #
     H=make_transIsing_MPO(sites,NNN,hx,ul,pbc=true)
     E0l=inner(psi',to_openbc(H),psi)
-    @test is_lower_regular_form(H,eps)
-    canonical!(H,right)
+    @test is_regular_form(H,ul,eps)
+    canonical!(H,msr)
 
     E1l=inner(psi',to_openbc(H),psi)
     @test abs(E0l-E1l)<1e-14
-    @test is_lower_regular_form(H,eps)
+    @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msr,eps)
 
-    compress!(H,left,epsSVD)
-    @test is_lower_regular_form(H,eps)
+    compress!(H,msl,epsSVD)
+    @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msl,eps)
     # make sure the energy in unchanged
     E2l=inner(psi',to_openbc(H),psi)
@@ -236,16 +236,16 @@ function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Flo
     H=make_transIsing_MPO(sites,NNN,hx,ul,pbc=true)
     E0r=inner(psi',to_openbc(H),psi)
     @test abs(E0l-E0r)<1e-14
-    @test is_lower_regular_form(H,eps)
-    canonical!(H,left)
+    @test is_regular_form(H,ul,eps)
+    canonical!(H,msl)
 
     E1r=inner(psi',to_openbc(H),psi)
     @test abs(E0r-E1r)<1e-14
-    @test is_lower_regular_form(H,eps)
+    @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msl,eps)
 
-    compress!(H,right,epsSVD)
-    @test is_lower_regular_form(H,eps)
+    compress!(H,msr,epsSVD)
+    @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msl,eps)
     # make sure the energy in unchanged
     E2r=inner(psi',to_openbc(H),psi)
@@ -261,12 +261,18 @@ end
 
 #                  V=N sites
 #                    V=Num Nearest Neighbours in H
-    test_one_sweep(5,1,hx,lower,epsSVD,eps)
-    test_one_sweep(5,2,hx,lower,epsSVD,eps)
-    test_one_sweep(5,3,hx,lower,epsSVD,eps)
-    test_one_sweep(5,4,hx,lower,epsSVD,eps)
-    epsSVD=1e-5
+    # test_one_sweep(5,1,hx,lower,epsSVD,eps)
+    # test_one_sweep(5,2,hx,lower,epsSVD,eps)
+    # test_one_sweep(5,3,hx,lower,epsSVD,eps)
+    # test_one_sweep(5,4,hx,lower,epsSVD,eps)
+    # test_one_sweep(5,1,hx,upper,epsSVD,eps)
+    # test_one_sweep(5,2,hx,upper,epsSVD,eps)
+    # test_one_sweep(5,3,hx,upper,epsSVD,eps) #known unit on diagonal
+    # test_one_sweep(5,4,hx,upper,epsSVD,eps)
+    epsSVD=0.0
     test_one_sweep(10,1,hx,lower,epsSVD,eps)
     test_one_sweep(10,7,hx,lower,epsSVD,eps)
+    test_one_sweep(10,1,hx,upper,epsSVD,eps)
+    test_one_sweep(10,7,hx,upper,epsSVD,eps)
     #test_one_sweep(10,8,hx,lower,epsSVD,eps) #Known Fail
 end

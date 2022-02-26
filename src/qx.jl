@@ -1,33 +1,43 @@
 using LinearAlgebra
 using ITensors
 
-function block_qx(W_::ITensor,lr::orth_type)::Tuple{ITensor,ITensor,Index}
+function block_qx(W_::ITensor,ms::matrix_state)::Tuple{ITensor,ITensor,Index}
   W=copy(W_)
   d,n,r,c=parse_links(W)
   #
   #  decide some strings and variables based on lr.
   #
-  (tln,lql,cr)= lr==left ? ("l=$n","ql",c) : ("l=$(n-1)","lq",r)
-  offset=V_offsets(matrix_state(lower,lr))
+  (tln,cr)= ms.lr==left ? ("l=$n",c) : ("l=$(n-1)",r)
+  
+  offset=V_offsets(ms)
   V=getV(W,offset) #extract the V block
   il=filterinds(inds(V),tags=tln)[1] #link to next site 
   iothers=noncommoninds(inds(V),il) #group all other indices for QX factorization
 
-  if lr==left
-      Q,L=ql(V,iothers;positive=true) #block respecting QL decomposition
-  else #right
-      L,Q=lq(V,iothers;positive=true) #block respecting LQ decomposition
+  if ms.ul==lower
+    if ms.lr==left
+      Q,RL=ql(V,iothers;positive=true) #block respecting QL decomposition
+    else #right
+      RL,Q=lq(V,iothers;positive=true) #block respecting LQ decomposition
+    end
+  else #upper
+    if ms.lr==left
+      Q,RL=qr(V,iothers;positive=true) #block respecting QR decomposition
+    else #right
+      RL,Q=rq(V,iothers;positive=true) #block respecting RQ decomposition
+    end
   end
-  set_scale!(L,Q,offset) #rescale so the L(n,n)==1.0
-  @assert norm(V-L*Q)<1e-12 #make decomp worked
-  replacetags!(Q,lql,"qx") #releive client code from the burden dealing ql,lq,qr,rq tags
-  replacetags!(L,lql,"qx")
+  set_scale!(RL,Q,offset) #rescale so the L(n,n)==1.0
+  @assert norm(V-RL*Q)<1e-12 #make decomp worked
+  qx=String(tags(commonind(RL,Q))[2]) #should be "ql","lq","qr" os "rq"
+  replacetags!(Q ,qx,"qx") #releive client code from the burden dealing ql,lq,qr,rq tags
+  replacetags!(RL,qx,"qx")
   setV!(W,Q,offset) #Q is the new V, stuff Q into W
   #@assert detect_upper_lower(W,1e-14)==lower
   il=filterinds(inds(W),tags=tln)[1] #get new version of link to next site, might have resized
-  Lplus,iqx=growRL(L,il,offset) #Now make a full size version of L
+  RLplus,iqx=growRL(RL,il,offset) #Now make a full size version of L
   replaceind!(W,cr,iqx)  
-  return W,Lplus,iqx
+  return W,RLplus,iqx
 end
 
 
