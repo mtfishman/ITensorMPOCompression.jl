@@ -1,3 +1,4 @@
+using ITensorMPOCompression
 using LinearAlgebra
 using ITensors
 
@@ -9,6 +10,7 @@ function block_qx(W_::ITensor,ms::matrix_state)::Tuple{ITensor,ITensor,Index}
   #
   (tln,cr)= ms.lr==left ? ("l=$n",c) : ("l=$(n-1)",r)
   
+  ilw=filterinds(inds(W),tags=tln)[1] #get the link to the next site
   offset=V_offsets(ms)
   V=getV(W,offset) #extract the V block
   il=filterinds(inds(V),tags=tln)[1] #link to next site 
@@ -32,11 +34,11 @@ function block_qx(W_::ITensor,ms::matrix_state)::Tuple{ITensor,ITensor,Index}
   qx=String(tags(commonind(RL,Q))[2]) #should be "ql","lq","qr" os "rq"
   replacetags!(Q ,qx,"qx") #releive client code from the burden dealing ql,lq,qr,rq tags
   replacetags!(RL,qx,"qx")
-  setV!(W,Q,offset) #Q is the new V, stuff Q into W
-  #@assert detect_upper_lower(W,1e-14)==lower
-  il=filterinds(inds(W),tags=tln)[1] #get new version of link to next site, might have resized
-  RLplus,iqx=growRL(RL,il,offset) #Now make a full size version of L
-  replaceind!(W,cr,iqx)  
+  W=setV(W,Q,offset) #Q is the new V, stuff Q into W
+  RLplus,iqx=growRL(RL,ilw,offset) #Now make a full size version of L
+  ilw=filterinds(W,tags=tln)[1]
+  replaceind!(W,ilw,iqx)  
+  @assert hastags(W,"qx")
   return W,RLplus,iqx
 end
 

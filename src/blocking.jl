@@ -20,30 +20,72 @@ function getV(W::ITensor,off::V_offsets)::ITensor
     return V
 end
 
-function setV!(W::ITensor,V::ITensor,off::V_offsets)
+function setV(W::ITensor,V::ITensor,off::V_offsets)::ITensor
 
     wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
     vils=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
+    #@show wils vils
     @assert length(wils)==2
     @assert length(vils)==2
-    @assert dim(wils[1])==dim(vils[1])+1
-    @assert dim(wils[2])==dim(vils[2])+1
     iss=filterinds(inds(W),tags="Site")
     @assert iss==filterinds(inds(V),tags="Site")
     #
     #  these need to loop in the correct order in order to get the W and V indices to line properly.
-    #  one index from each of W & V should be the same, so we just need these indices to loop together.
+    #  one index from each of W & V should be the same, so we just need get these
+    #  indices to loop together.
     #
     if tags(wils[1])!=tags(vils[1]) && tags(wils[2])!=tags(vils[2])
         vils=vils[2],vils[1] #swap tags the same on index 1 or 2.
     end
 
+    if hastags(vils[1],"qx")
+        @assert dim(wils[2])==dim(vils[2])+1
+        if dim(wils[1])>dim(vils[1])+1
+            #we need to rezise W_
+            iw1=Index(dim(vils[1])+1,tags(wils[1]))
+            W1=ITensor(iw1,wils[2],iss)
+            others=noncommoninds(W,wils[1])
+            for io in eachindval(others...)
+                for w in eachindval(iw1)
+                    if w.second<dim(iw1)
+                        W1[w,io...]=W[wils[1]=>w.second,io...]
+                    else
+                        W1[w,io...]=W[wils[1]=>dim(wils[1]),io...]
+                    end
+                end
+            end
+            W=W1
+            wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
+        end
+    elseif hastags(vils[2],"qx")
+        @assert dim(wils[1])==dim(vils[1])+1
+        #we need to rezise W
+        if dim(wils[2])>dim(vils[2])+1
+            iw2=Index(dim(vils[2])+1,tags(wils[2]))
+            W1=ITensor(wils[1],iw2,iss) #order matters 
+            others=noncommoninds(W,wils[2])
+            for io in eachindval(others...)
+                for w in eachindval(iw2)
+                    if w.second<dim(iw2)
+                        W1[w,io...]=W[wils[2]=>w.second,io...]
+                    else
+                        W1[w,io...]=W[wils[2]=>dim(wils[2]),io...] 
+                    end
+                end
+            end
+            W=W1
+            wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
+        end
+    end
+
+    #@show "in setV"  inds(W) wils
     for ilv in eachindval(vils)
         wlv=(IndexVal(wils[1],ilv[1].second+off.o1),IndexVal(wils[2],ilv[2].second+off.o2))
         for isv in eachindval(iss)
             W[wlv...,isv...]=V[ilv...,isv...]
         end
     end
+    return W
 end
 
 #
@@ -53,13 +95,9 @@ end
 #
 function growRL(RL::ITensor,iWlink::Index,off::V_offsets)::Tuple{ITensor,Index}
     @assert order(RL)==2
-    is=inds(RL)
-    iLlinks=filterinds(inds(RL),tags=tags(iWlink)) #find the link index of l
-    iLqxs=noncommoninds(inds(RL),iLlinks) #find the qx link of l
-    @assert length(iLlinks)==1
-    @assert length(iLqxs)==1
-    iLlink=iLlinks[1]
-    iLqx=iLqxs[1]
+    #is=inds(RL)
+    iLlink=filterinds(inds(RL),tags=tags(iWlink))[1] #find the link index of RL
+    iLqx=noncommonind(inds(RL),iLlink) #find the qx link of RL
     Dwl=dim(iLlink)
     Dwq=dim(iLqx)
     @assert dim(iWlink)==Dwl+1

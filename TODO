@@ -18,3 +18,5 @@ Done: -Clean up canonical and compress code.
 Done: -reduce two block_qx functions to one
 -Do we need to copy W in block_qx?
 -Comment indices in canonical!(...)
+
+

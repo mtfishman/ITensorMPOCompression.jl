@@ -98,6 +98,7 @@ function compress(W::ITensor,ms::matrix_state,epsSVD::Float64)::Tuple{ITensor,IT
     isvd=findinds(M,tsvd)[1] #decide the left index
     U,s,V=svd(M,isvd,cutoff=epsSVD) # ns sing. values survive compression
     ns=dim(inds(s)[1])
+    @show diag(array(s))
     
     luv=Index(ns+2,"Link,$tuv") #link for expanded U,US,V,sV matricies.
     if ms.lr==left
