@@ -18,5 +18,6 @@ Done: -Clean up canonical and compress code.
 Done: -reduce two block_qx functions to one
 -Do we need to copy W in block_qx?
 -Comment indices in canonical!(...)
-
+-use index returned by ql,qr,lq,rq
+Done -We need rank reaving QR/QL/RQ/LQ throughout, otherwise we get zero col/rows away from the edges which causes no end of trouble.
 

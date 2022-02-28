@@ -334,6 +334,12 @@ function ql(A::ITensor, Linds...; kwargs...)
     settags!(Q, tags, q)
     settags!(L, tags, q)
     q = settags(q, tags)
+    #
+    #  Do row removal for rank revealing LQ
+    #
+    rr::Bool     = get(kwargs, :rank, false)
+    eps::Float64 = get(kwargs, :eps , 1e-14)
+    if rr L,Q=trim(L,Q,eps) end
     return Q, L, q
 end
 
@@ -348,6 +354,12 @@ function lq(A::ITensor, Rinds...; kwargs...)
   settags!(Q, tags, q)
   settags!(L, tags, q)
   q = settags(q, tags)
+  #
+  #  Do row removal for rank revealing LQ
+  #
+  rr::Bool     = get(kwargs, :rank, false)
+  eps::Float64 = get(kwargs, :eps , 1e-14)
+  if rr L,Q=trim(L,Q,eps) end
   return L, Q, q
 end
 
@@ -362,6 +374,77 @@ function rq(A::ITensor, Rinds...; kwargs...)
   settags!(Q, tags, q)
   settags!(R, tags, q)
   q = settags(q, tags)
+  #
+  #  Do row removal for rank revealing RQ
+  #
+  rr::Bool     = get(kwargs, :rank, false)
+  eps::Float64 = get(kwargs, :eps , 1e-14)
+  if rr R,Q=trim(R,Q,eps) end
   return R, Q, q
 end
 
+function qr(A::ITensor, Rinds...; kwargs...)
+  Q,R,q=ITensors.qr(A,Rinds...;kwargs...)
+  #
+  #  Do row removal for rank revealing RQ
+  #
+  rr::Bool     = get(kwargs, :rank, false)
+  eps::Float64 = get(kwargs, :eps , 1e-14)
+  if rr R,Q=trim(R,Q,eps) end
+  return Q, R, q
+end
+
+function trim(R::ITensor,Q::ITensor,eps::Float64)
+  iq=commonind(R,Q)
+  zeros=find_zero_rows(R,iq,eps)
+  nq=dim(iq)-sum(zeros)
+  iRo=noncommoninds(R,iq)
+  iQo=noncommoninds(Q,iq)
+  iqn=Index(nq,tags(iq))
+  Rn=ITensor(0.0,iqn,iRo)
+  Qn=ITensor(0.0,iQo,iqn)
+  ivqn=1
+  for ivq in eachindval(iq)
+    if zeros[ivq.second]==false
+      for ivRo in eachindval(iRo...)
+        Rn[iqn=>ivqn,ivRo]=R[ivq,ivRo]
+      end #for ivRo
+      for ivQo in eachindval(iQo...)
+        Qn[iqn=>ivqn,ivQo...]=Q[ivq,ivQo...]
+      end #for ivQo
+      ivqn+=1
+    end #if zero
+  end #for ivq
+  return Rn,Qn
+end
+
+function find_zero_rows(R::ITensor,iq::Index,eps::Float64)::Array{Bool}
+  zeros=falses(dim(iq))
+  others=noncommoninds(R,iq)
+  for iqv in eachindval(iq)
+    s=0.0
+    for io in eachindval(others...)
+      s+=abs(R[iqv,io])
+    end
+    zeros[iqv.second]= (s<=eps)
+  end
+  return zeros
+end
+#=
+is=Index(2,"Site,n=1")
+ir=Index(4,"Link,l=0")
+ic=Index(4,"Link,l=1")
+iq=Index(4,"Link,qx")
+#AQ=[i*1.0 for i in 1:dim(ic)*dim(iq)*dim(is)*dim(is)]
+#Q=ITensor(eltype(AQ),AQ,ic,iq,is,is')
+AQ=[i*1.0 for i in 1:dim(ic)*dim(iq)]
+Q=ITensor(eltype(AQ),AQ,ic,iq)
+
+A=[1:4;;5:8;;9:12;;13:16]
+A[2,:].=0.0
+R=ITensor(eltype(A),A,iq,ir)
+z=find_zero_rows(R,iq,0.0)
+Rn,Qn=trim(R,Q,1e-14)
+@show Rn
+@show Qn
+=#
