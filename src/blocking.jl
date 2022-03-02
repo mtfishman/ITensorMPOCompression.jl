@@ -1,3 +1,4 @@
+using Printf
 #
 # functions for getting and setting V blocks required for block respecting QX and SVD
 #
@@ -20,8 +21,7 @@ function getV(W::ITensor,off::V_offsets)::ITensor
     return V
 end
 
-function setV(W::ITensor,V::ITensor,off::V_offsets)::ITensor
-
+function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
     vils=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
     #@show wils vils
@@ -37,53 +37,99 @@ function setV(W::ITensor,V::ITensor,off::V_offsets)::ITensor
     if tags(wils[1])!=tags(vils[1]) && tags(wils[2])!=tags(vils[2])
         vils=vils[2],vils[1] #swap tags the same on index 1 or 2.
     end
-
+    @assert tags(wils[1])==tags(vils[1]) || tags(wils[2])==tags(vils[2])
     if hastags(vils[1],"qx")
-        @assert dim(wils[2])==dim(vils[2])+1
-        if dim(wils[1])>dim(vils[1])+1
-            #we need to rezise W_
-            iw1=Index(dim(vils[1])+1,tags(wils[1]))
-            W1=ITensor(iw1,wils[2],iss)
-            others=noncommoninds(W,wils[1])
-            for io in eachindval(others...)
-                for w in eachindval(iw1)
-                    if w.second<dim(iw1)
-                        W1[w,io...]=W[wils[1]=>w.second,io...]
-                    else
-                        W1[w,io...]=W[wils[1]=>dim(wils[1]),io...]
-                    end
-                end
-            end
-            W=W1
-            wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
-        end
-    elseif hastags(vils[2],"qx")
-        @assert dim(wils[1])==dim(vils[1])+1
-        #we need to rezise W
-        if dim(wils[2])>dim(vils[2])+1
-            iw2=Index(dim(vils[2])+1,tags(wils[2]))
-            W1=ITensor(wils[1],iw2,iss) #order matters 
-            others=noncommoninds(W,wils[2])
-            for io in eachindval(others...)
-                for w in eachindval(iw2)
-                    if w.second<dim(iw2)
-                        W1[w,io...]=W[wils[2]=>w.second,io...]
-                    else
-                        W1[w,io...]=W[wils[2]=>dim(wils[2]),io...] 
-                    end
-                end
-            end
-            W=W1
-            wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
-        end
+        ivqx=vils[1]
+        iwqx=wils[1]
+        ivl=vils[2]
+        iwl=wils[2]
+    else
+        @assert hastags(vils[2],"qx")
+        ivqx=vils[2]
+        iwqx=wils[2]
+        ivl=vils[1]
+        iwl=wils[1]
     end
 
-    #@show "in setV"  inds(W) wils
-    for ilv in eachindval(vils)
-        wlv=(IndexVal(wils[1],ilv[1].second+off.o1),IndexVal(wils[2],ilv[2].second+off.o2))
+    off=V_offsets(ms)
+    resize=false
+    if ms.lr==left
+        if dim(iwqx)>dim(ivqx)+1
+            #@printf "left resize %4i to %4i \n" dim(iwqx) dim(ivqx)
+            #pprint(W,eps)
+            resize=true
+                #we need to rezise W_
+            iw1=Index(dim(ivqx)+1,tags(iwqx))
+            W1=ITensor(0.0,iw1,iwl,iss)
+            others=noncommoninds(W,iwqx)
+            if ms.ul==lower
+                #need to preserve the first column
+                @assert off.o1==1 && off.o1==1
+                for io in eachindval(others...)
+                    W1[iw1=>1,io...]=W[iwqx=>1,io...]
+                end
+                #@show "after column W1="
+                #pprint(W1,eps)
+
+            else #upper
+                #need to preserve the last column
+                @assert off.o1==0 && off.o1==0
+                for io in eachindval(others...)
+                    W1[iw1=>dim(iw1),io...]=W[iwqx=>dim(iwqx),io...]
+                end
+                #@show "after column W1="
+                #pprint(W1,eps)
+            end #if lower
+            W=W1
+            wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
+            iwqx=iw1
+        end # if dim
+    else #right
+        if dim(iwqx)>dim(ivqx)+1
+            #@printf "right resize %4i to %4i \n" dim(iwqx) dim(ivqx)
+            #@show "right" iwqx ivqx "W="
+            #pprint(W,eps)
+            #we need to rezise W_
+            resize=true
+            iw1=Index(dim(ivqx)+1,tags(iwqx))
+            W1=ITensor(iwl,iw1,iss)
+            others=noncommoninds(W,iwqx)
+            if ms.ul==lower
+                #need to preserve the bottom row
+                @assert off.o1==0 && off.o1==0
+                for io in eachindval(others...)
+                    W1[iw1=>dim(iw1),io...]=W[iwqx=>dim(iwqx),io...]
+                end
+                others=noncommoninds(W,iwqx,iwl)
+                for io in eachindval(others...)
+                    for j=1:dim(iw1)-1
+                        W1[iwl=>dim(iwl),iw1=>j,io...]=W[iwl=>dim(iwl),iwqx=>j,io...]
+                    end
+                    #W1[iwl=>dim(iwl),iw1=>dim(iw1),io...]=W[iwl=>dim(iwl),iwqx=>dim(iwqx),io...]
+                end
+            else #upper
+                #need to preserve the first column
+                @assert off.o1==1 && off.o1==1
+                for io in eachindval(others...)
+                    W1[iw1=>1,io...]=W[iwqx=>1,io...]
+                end
+            end #if loswer
+            W=W1
+            wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
+            iwqx=iw1
+        end #if dim
+    end #if left
+    
+    #@show "in setV"  inds(W) wils inds(V) vils
+    for ilv in eachindval(ivqx,ivl)
+        wlv=(IndexVal(iwqx,ilv[1].second+off.o1),IndexVal(iwl,ilv[2].second+off.o2))
         for isv in eachindval(iss)
             W[wlv...,isv...]=V[ilv...,isv...]
         end
+    end
+    if resize
+        #@show "after set V W="
+        #pprint(W,eps)
     end
     return W
 end

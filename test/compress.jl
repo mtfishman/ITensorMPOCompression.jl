@@ -4,8 +4,8 @@ using Test
 
 include("hamiltonians.jl")
 
-# using Printf
-# Base.show(io::IO, f::Float64) = @printf(io, "%1.13f", f)
+using Printf
+Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
 println("-----------Start--------------")
 
 function make_RL(r::Index,c::Index,ms::matrix_state,swap::Bool)::ITensor
@@ -65,12 +65,13 @@ function make_RL(r::Index,c::Index,ms::matrix_state,swap::Bool)::ITensor
 end
 
 function test_getM(r,c,lr::orth_type,swap::Bool)
+    eps=1e-14
     if lr==left
         @assert dim(r)>=dim(c)
     #    println("---------- lower left -----------")
         ms=matrix_state(lower,left)
         L=make_RL(r,c,ms,swap)
-        M,L_prime,im=getM(L,ms.lr)
+        M,L_prime,im=getM(L,ms,eps)
         if hastags(M,tags(c))
             Mplus=grow(M,im,c)
         elseif hastags(M,tags(r))
@@ -84,7 +85,7 @@ function test_getM(r,c,lr::orth_type,swap::Bool)
     #    println("---------- upper left -----------")
         ms=matrix_state(upper,left)
         R=make_RL(r,c,ms,swap)
-        M,R_prime,im=getM(R,ms.lr)
+        M,R_prime,im=getM(R,ms,eps)
         if hastags(M,tags(c))
             Mplus=grow(M,im,c)
         elseif hastags(M,tags(r))
@@ -100,7 +101,7 @@ function test_getM(r,c,lr::orth_type,swap::Bool)
     #    println("---------- lower right -----------")
         ms=matrix_state(lower,right)
         L=make_RL(r,c,ms,swap)
-        M,L_prime,im=getM(L,ms.lr)
+        M,L_prime,im=getM(L,ms,eps)
         if hastags(M,tags(c))
             Mplus=grow(M,im,c)
         elseif hastags(M,tags(r))
@@ -115,7 +116,7 @@ function test_getM(r,c,lr::orth_type,swap::Bool)
     #    println("---------- upper right -----------")
         ms=matrix_state(upper,right)
         R=make_RL(r,c,ms,swap)
-        M,R_prime,im=getM(R,ms.lr)
+        M,R_prime,im=getM(R,ms,eps)
         if hastags(M,tags(c))
             Mplus=grow(M,im,c)
         elseif hastags(M,tags(r))
@@ -128,7 +129,8 @@ function test_getM(r,c,lr::orth_type,swap::Bool)
     end
     
 end
- 
+
+
 @testset "getM and grow(M)" begin
     test_getM(Index(5,"Link,qx"),Index(5,"Link,l=1"),left,false)
     test_getM(Index(5,"Link,qx"),Index(5,"Link,l=1"),left,true)
@@ -144,68 +146,66 @@ end
 # These test are set up not to compress (epsSVD is zero).  This is so that we can test
 # the integrity of MPO forms and calculated energies to high precision.  Essentialy we
 # just checking that the algorithm as coded is gauge invariant.
-#
-# @testset "Compress one site" begin
-#     N=5
-#     NNN=3
-#     hx=0.5
-#     eps=1e-15
-#     epsSVD=1e-15
-#     msl=matrix_state(lower,left )
-#     msr=matrix_state(lower,right)
 
-#     sites = siteinds("SpinHalf", N)
-#     psi=randomMPS(sites)
-#     #
-#     # Make right canonical, then compress to left canonical
-#     #
-#     H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
-#     E0l=inner(psi',to_openbc(H),psi)
-#     @test is_upper_lower(H,lower,eps)
-#     canonical!(H,msr)
+@testset "Compress one site" begin
+    N=10
+    NNN=6
+    hx=0.5
+    eps=1e-14
+    epsSVD=.00
+    msl=matrix_state(lower,left )
+    msr=matrix_state(lower,right)
 
-#     E1l=inner(psi',to_openbc(H),psi)
-#     @test abs(E0l-E1l)<1e-14
-#     @test is_upper_lower(H,lower,eps)
-#     @test  is_canonical(H,msr,eps)
+    sites = siteinds("SpinHalf", N)
+    psi=randomMPS(sites)
+    #
+    # Make right canonical, then compress to left canonical
+    #
+    H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
+    E0l=inner(psi',to_openbc(H),psi)
+    @test is_upper_lower(H,lower,eps)
+    canonical!(H,msr)
 
-#     W,L=compress(H[1],msl,epsSVD)
-#     @test is_upper_lower(H,lower,eps)
-#     @test is_upper_lower(W,lower,eps)
-#     @test norm(H[1]-W*L)<eps
-#     H[1]=W
-#     H[2]=L*H[2]
-#     @test is_upper_lower(H[2],lower,eps)
-#     @test  is_canonical(H[1],msl,eps)
-#     # make sure the energy in unchanged
-#     E2l=inner(psi',to_openbc(H),psi)
-#     @test abs(E0l-E2l)<1e-14
-#     #
-#     # Make left canonical, then compress to right canonical
-#     #
-#     H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
-#     E0r=inner(psi',to_openbc(H),psi)
-#     @test is_upper_lower(H,lower,eps)
-#     canonical!(H,msl)
+    E1l=inner(psi',to_openbc(H),psi)
+    @test abs(E0l-E1l)<eps
+    @test is_regular_form(H,lower,eps)
+    @test is_canonical(H,msr,eps)
 
-#     E1r=inner(psi',to_openbc(H),psi)
-#     @test abs(E0r-E1r)<1e-14
-#     @test is_upper_lower(H,lower,eps)
-#     @test  is_canonical(H,msl,eps)
+    W,L=compress(H[1],msl,epsSVD)
+    @test is_regular_form(H,lower,eps)
+    @test is_regular_form(W,lower,eps)
+    @test norm(H[1]-W*L)<eps
+    H[1]=W
+    H[2]=L*H[2]
+    @test is_regular_form(H[2],lower,eps)
+    @test  is_canonical(H[1],msl,eps)
+    # make sure the energy in unchanged
+    E2l=inner(psi',to_openbc(H),psi)
+    @test abs(E0l-E2l)<eps
+    #
+    # Make left canonical, then compress to right canonical
+    #
+    H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
+    E0r=inner(psi',to_openbc(H),psi)
+    @test is_upper_lower(H,lower,eps)
+    canonical!(H,msl)
 
-#     W,L=compress(H[N],msr,epsSVD)
-#     pprint(W,eps)
-#     @test is_regular_form(W,lower,eps)
-#     # @show inds(H[N]) inds(W) inds(L)
-#     @test norm(H[N]-L*W)<eps
-#     H[N]=W
-#     H[N-1]=H[N-1]*L
-#     @test is_regular_form(H[N-1],lower,eps)
-#     @test  is_canonical(H[N],msr,eps)
-#     # make sure the energy in unchanged
-#     E2r=inner(psi',to_openbc(H),psi)
-#     @test abs(E0r-E2r)<1e-14
-# end
+    E1r=inner(psi',to_openbc(H),psi)
+    @test abs(E0r-E1r)<1e-14
+    @test is_regular_form(H,lower,eps)
+    @test  is_canonical(H,msl,eps)
+
+    W,L=compress(H[N],msr,epsSVD)
+    @test is_regular_form(W,lower,eps)
+    @test norm(H[N]-L*W)<eps
+    H[N]=W
+    H[N-1]=H[N-1]*L
+    @test is_regular_form(H[N-1],lower,eps)
+    @test  is_canonical(H[N],msr,eps)
+    # make sure the energy in unchanged
+    E2r=inner(psi',to_openbc(H),psi)
+    @test abs(E0r-E2r)<eps
+end
 
 function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Float64,eps::Float64)
     msl=matrix_state(ul,left )
@@ -220,18 +220,20 @@ function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Flo
     E0l=inner(psi',to_openbc(H),psi)
     @test is_regular_form(H,ul,eps)
     canonical!(H,msr)
+    #pprint(H,eps)
 
     E1l=inner(psi',to_openbc(H),psi)
-    @test abs(E0l-E1l)<1e-14
+    @test abs(E0l-E1l)<eps
     @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msr,eps)
 
     compress!(H,msl,epsSVD)
+    compress!(H,msr,epsSVD)
     @test is_regular_form(H,ul,eps)
-    @test is_canonical(H,msl,eps)
+    @test is_canonical(H,msr,eps)
     # make sure the energy in unchanged
     E2l=inner(psi',to_openbc(H),psi)
-    @test abs(E0l-E2l)<3*epsSVD
+    @test abs(E0l-E2l)<10*epsSVD
 
 
     #
@@ -250,19 +252,20 @@ function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Flo
     @test is_canonical(H,msl,eps)
 
     compress!(H,msr,epsSVD)
+    compress!(H,msl,epsSVD)
     @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msl,eps)
     # make sure the energy in unchanged
     E2r=inner(psi',to_openbc(H),psi)
-    @test abs(E0r-E2r)<3*epsSVD
-    #pprint(H,eps)
+    relError=abs(E0r-E2r)/epsSVD
+    @printf "Relative error in Energy %.1e" relError
 
 end
 
 @testset "Compress full MPO" begin
     hx=0.5
     eps=1e-14
-    epsSVD=1e-15
+    epsSVD=1e-14
 
 #                  V=N sites
 #                    V=Num Nearest Neighbours in H
@@ -274,14 +277,15 @@ end
     test_one_sweep(5,2,hx,upper,epsSVD,eps)
     test_one_sweep(5,3,hx,upper,epsSVD,eps) #known unit on diagonal
     test_one_sweep(5,4,hx,upper,epsSVD,eps)
-    #epsSVD=0.08
+    epsSVD=.0000001
     test_one_sweep(10,1,hx,lower,epsSVD,eps)
     test_one_sweep(10,7,hx,lower,epsSVD,eps)
+    test_one_sweep(10,8,hx,lower,epsSVD,eps) 
     test_one_sweep(10,9,hx,lower,epsSVD,eps)
     test_one_sweep(10,1,hx,upper,epsSVD,eps)
     test_one_sweep(10,7,hx,upper,epsSVD,eps)
-    # test_one_sweep(10,9,hx,upper,epsSVD,eps) #Known Fail
-    # test_one_sweep(10,8,hx,lower,epsSVD,eps) #Known Fail
+    test_one_sweep(10,8,hx,upper,epsSVD,eps) 
+    test_one_sweep(10,9,hx,upper,epsSVD,eps) 
 end
 
 #
@@ -290,15 +294,14 @@ end
 #
 @testset "Compress with higher values of epsSVD" begin
     N=10
-    NNN=6
     hx=0.5
-    eps=1e-14
+    eps=1e-13
     epsSVD=1e-12
     test_one_sweep(10,6,hx,lower,epsSVD,eps)
     test_one_sweep(10,6,hx,upper,epsSVD,eps)
     
-    epsSVD=0.025
-    test_one_sweep(10,6,hx,lower,epsSVD,eps) 
-    #test_one_sweep(10,6,hx,upper,epsSVD,eps) #Known Fail
+    epsSVD=1e-10
+    test_one_sweep(10,6,hx,lower,epsSVD,eps)  
+    test_one_sweep(10,6,hx,upper,epsSVD,eps) 
 
 end

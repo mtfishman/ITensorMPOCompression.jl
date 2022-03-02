@@ -9,15 +9,17 @@ Done: -We need pure upper/lower enums without diagonal and full options
 -consistent variable names for link indexs r,c,q,u,v or ir,ic,iq,iu,iv ?
 Fixed: #grow(i1,W,i2) relies on index ordering inside W ... is that bad?? (hint:yes!)
 Done: -grow(i1,W,i2) --> grow(W,i1,i2)
--Fix known fail for compressing when H has 8 NNN
-    Do tidy up items first.
+Done: -Fix known fail for compressing when H has 8 NNN  Do tidy up items first.
 Done -Get RQ decomp going. in order to ....
 Done -Support upper-tri MPOs
--Support rank releavling QR,RQ,QL,LQ
+Done: -Support rank releavling QR,RQ,QL,LQ
 Done: -Clean up canonical and compress code.
 Done: -reduce two block_qx functions to one
 -Do we need to copy W in block_qx?
 -Comment indices in canonical!(...)
 -use index returned by ql,qr,lq,rq
 Done -We need rank reaving QR/QL/RQ/LQ throughout, otherwise we get zero col/rows away from the edges which causes no end of trouble.
+-is_regular is looking along the wrong diagonal for upper rectangular
+-for lower,right SetV seems to require the last column(above I)  should be preserved ... 
+  but why?       It should be zeros.  Index ordering?
 

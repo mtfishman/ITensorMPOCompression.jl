@@ -4,6 +4,7 @@ using ITensors
 
 function block_qx(W_::ITensor,ms::matrix_state)::Tuple{ITensor,ITensor,Index}
   W=copy(W_)
+  use_rr=true #use rank revealing QX to clear out zero pivots.
   d,n,r,c=parse_links(W)
   #
   #  decide some strings and variables based on lr.
@@ -18,15 +19,15 @@ function block_qx(W_::ITensor,ms::matrix_state)::Tuple{ITensor,ITensor,Index}
 
   if ms.ul==lower
     if ms.lr==left
-      Q,RL=ql(V,iothers;positive=true) #block respecting QL decomposition
+      Q,RL=ql(V,iothers;positive=true,rank=use_rr) #block respecting QL decomposition
     else #right
-      RL,Q=lq(V,iothers;positive=true) #block respecting LQ decomposition
+      RL,Q=lq(V,iothers;positive=true,rank=use_rr) #block respecting LQ decomposition
     end
   else #upper
     if ms.lr==left
-      Q,RL=qr(V,iothers;positive=true) #block respecting QR decomposition
+      Q,RL=ITensorMPOCompression.qr(V,iothers;positive=true,rank=use_rr) #block respecting QR decomposition
     else #right
-      RL,Q=rq(V,iothers;positive=true) #block respecting RQ decomposition
+      RL,Q=rq(V,iothers;positive=true,rank=use_rr) #block respecting RQ decomposition
     end
   end
   set_scale!(RL,Q,offset) #rescale so the L(n,n)==1.0
@@ -34,8 +35,24 @@ function block_qx(W_::ITensor,ms::matrix_state)::Tuple{ITensor,ITensor,Index}
   qx=String(tags(commonind(RL,Q))[2]) #should be "ql","lq","qr" os "rq"
   replacetags!(Q ,qx,"qx") #releive client code from the burden dealing ql,lq,qr,rq tags
   replacetags!(RL,qx,"qx")
-  W=setV(W,Q,offset) #Q is the new V, stuff Q into W
+  W=setV(W,Q,ms) #Q is the new V, stuff Q into W. THis can resize W
+  # @show ms
+  # @show "RL="
+  # if ms.lr==left
+  #   pprint(commonind(RL,Q),RL,il,1e-14)
+  # else
+  #   pprint(il,RL,commonind(RL,Q),1e-14)
+  # end
+  #@show inds(W) ilw inds(RL)
   RLplus,iqx=growRL(RL,ilw,offset) #Now make a full size version of L
+  #@show inds(RLplus) iqx
+  # @show "RLplus="
+  # if ms.lr==left
+  #   #@show inds(RLplus) iqx ilw
+  #   pprint(iqx,RLplus,ilw,1e-14)
+  # else
+  #   pprint(ilw,RLplus,iqx,1e-14)
+  # end  
   ilw=filterinds(W,tags=tln)[1]
   replaceind!(W,ilw,iqx)  
   @assert hastags(W,"qx")

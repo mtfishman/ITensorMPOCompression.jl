@@ -278,7 +278,7 @@ function is_regular_form(W::ITensor,eps::Float64)::Tuple{Bool,Bool}
         end
     end
     if diag_unit
-        pprint(W,eps)
+        #pprint(W,eps)
         println("ITensorMPOCompression.is_regular_form\n  Warning: found unit operator along the diagonal of an MPO")
     end    
    

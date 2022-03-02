@@ -93,7 +93,7 @@ function test_canonical(N::Int64,NNN::Int64,hx::Float64,ms::matrix_state)
     canonical!(H,ms)
     E2=inner(psi',to_openbc(H),psi)
     @test abs(E0-E2)<1e-14
-    @test is_upper_lower(H,ms.ul,eps)
+    @test is_regular_form(H,ms.ul,eps)
     @test !is_canonical(H,mirror(ms),eps)
     @test  is_canonical(H,ms,eps)
 end
