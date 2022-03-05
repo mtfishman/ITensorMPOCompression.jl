@@ -167,7 +167,7 @@ function compress(W::ITensor,ms::matrix_state,epsSVD::Float64)::Tuple{ITensor,IT
 #
 # Block repecting QR/QL/LQ/RQ factorization.  RL=L or R for upper and lower.
 #
-    Q,RL,lq=block_qx(W,ms) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
+    Q,RL,lq=block_qx(W,ms.ul;dir=ms.lr) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
     @assert is_canonical(Q,ms,eps)
     @assert is_regular_form(Q,ms.ul,eps)
 #

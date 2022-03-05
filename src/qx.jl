@@ -3,7 +3,7 @@ using LinearAlgebra
 using ITensors
 
 """
-  `block_qx(W_::ITensor,ms::matrix_state)::Tuple{ITensor,ITensor,Index}`
+  `block_qx(W_::ITensor,ul::tri_type)::Tuple{ITensor,ITensor,Index}`
 
 Perform a block respecting QX decomposition of the operator valued matrix `W`. 
 The appropriate decomposition, QR, RQ, QL, LQ is selected based on the `matrix_state` `ms`.
@@ -14,26 +14,30 @@ Hilbert space.
 
 # Arguments
 - `W` Opertor valued matrix for decomposition.
-- `ms` upper/lower state of `W` and the left/right state of the returned `Q` 
+- `ul` upper/lower state of `W`. We can auto detect here, but is more efficitent if this is done by the higher level calling routines.
 
 # Keywords
 - `dir::orth_type = right` : choose `left` or `right` canonical form
 - `epsrr::Foat64 = 1e-14` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
-   All rows with max(abs(R[:,j]))<epsrr are considered zero and removed. 
+   All rows with max(abs(R[:,j]))<epsrr are considered zero and removed.  epsrr==0.0 indicates no rank reduction.
 
 # Returns a Tuple containing
-- `Q` with orthonormal columns or rows depending on `ms.lr`, dimensions: (χ+1)x(χ\'+1)
+- `Q` with orthonormal columns or rows depending on left/right, dimensions: (χ+1)x(χ\'+1)
 - `R` or `L` depending on `ms.ul`, dimensions: (χ+2)x(χ\'+2)
 - `iq` the new internal link index between `Q` and `R`/`L`.  tags="Link,qx"
 """
-function block_qx(W_::ITensor,ms::matrix_state)::Tuple{ITensor,ITensor,Index}
+function block_qx(W_::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor,Index}
   W=copy(W_)
-  use_rr=true #use rank revealing QX to clear out zero pivots.
+  #
+  # settle the left/right && upper/lower question
+  #
+  lr::orth_type=get(kwargs, :dir, right)
+  ms=matrix_state(ul,lr)
   d,n,r,c=parse_links(W)
   #
   #  decide some strings and variables based on lr.
   #
-  (tln,cr)= ms.lr==left ? ("l=$n",c) : ("l=$(n-1)",r)
+  (tln,cr)= lr==left ? ("l=$n",c) : ("l=$(n-1)",r)
   
   ilw=filterinds(inds(W),tags=tln)[1] #get the link to the next site
   offset=V_offsets(ms)
@@ -41,17 +45,17 @@ function block_qx(W_::ITensor,ms::matrix_state)::Tuple{ITensor,ITensor,Index}
   il=filterinds(inds(V),tags=tln)[1] #link to next site 
   iothers=noncommoninds(inds(V),il) #group all other indices for QX factorization
 
-  if ms.ul==lower
-    if ms.lr==left
-      Q,RL=ql(V,iothers;positive=true,rank=use_rr) #block respecting QL decomposition
+  if ul==lower
+    if lr==left
+      Q,RL=ql(V,iothers;positive=true,kwargs...) #block respecting QL decomposition
     else #right
-      RL,Q=lq(V,iothers;positive=true,rank=use_rr) #block respecting LQ decomposition
+      RL,Q=lq(V,iothers;positive=true,kwargs...) #block respecting LQ decomposition
     end
   else #upper
-    if ms.lr==left
-      Q,RL=ITensorMPOCompression.qr(V,iothers;positive=true,rank=use_rr) #block respecting QR decomposition
+    if lr==left
+      Q,RL=ITensorMPOCompression.qr(V,iothers;positive=true,kwargs...) #block respecting QR decomposition
     else #right
-      RL,Q=rq(V,iothers;positive=true,rank=use_rr) #block respecting RQ decomposition
+      RL,Q=rq(V,iothers;positive=true,kwargs...) #block respecting RQ decomposition
     end
   end
   set_scale!(RL,Q,offset) #rescale so the L(n,n)==1.0
@@ -378,9 +382,8 @@ function ql(A::ITensor, Linds...; kwargs...)
     #
     #  Do row removal for rank revealing LQ
     #
-    rr::Bool     = get(kwargs, :rank, false)
-    eps::Float64 = get(kwargs, :eps , 1e-14)
-    if rr L,Q=trim(L,Q,eps) end
+    epsrr::Float64 = get(kwargs, :epsrr , 1e-14)
+    if epsrr>0.0 L,Q=trim(L,Q,epsrr) end
     return Q, L, q
 end
 
@@ -398,9 +401,8 @@ function lq(A::ITensor, Rinds...; kwargs...)
   #
   #  Do row removal for rank revealing LQ
   #
-  rr::Bool     = get(kwargs, :rank, false)
-  eps::Float64 = get(kwargs, :eps , 1e-14)
-  if rr L,Q=trim(L,Q,eps) end
+  epsrr::Float64 = get(kwargs, :epsrr , 1e-14)
+  if epsrr>0.0 L,Q=trim(L,Q,epsrr) end
   return L, Q, q
 end
 
@@ -418,9 +420,8 @@ function rq(A::ITensor, Rinds...; kwargs...)
   #
   #  Do row removal for rank revealing RQ
   #
-  rr::Bool     = get(kwargs, :rank, false)
-  eps::Float64 = get(kwargs, :eps , 1e-14)
-  if rr R,Q=trim(R,Q,eps) end
+  epsrr::Float64 = get(kwargs, :epsrr , 1e-14)
+  if epsrr>0.0 R,Q=trim(R,Q,epsrr) end
   return R, Q, q
 end
 
@@ -429,15 +430,17 @@ function qr(A::ITensor, Rinds...; kwargs...)
   #
   #  Do row removal for rank revealing RQ
   #
-  rr::Bool     = get(kwargs, :rank, false)
-  eps::Float64 = get(kwargs, :eps , 1e-14)
-  if rr R,Q=trim(R,Q,eps) end
+  epsrr::Float64 = get(kwargs, :epsrr , 1e-14)
+  if epsrr>0.0 R,Q=trim(R,Q,epsrr) end
   return Q, R, q
 end
 
 function trim(R::ITensor,Q::ITensor,eps::Float64)
   iq=commonind(R,Q)
   zeros=find_zero_rows(R,iq,eps)
+  if sum(zeros)==0
+    return R,Q
+  end
   nq=dim(iq)-sum(zeros)
   iRo=noncommoninds(R,iq)
   iQo=noncommoninds(Q,iq)

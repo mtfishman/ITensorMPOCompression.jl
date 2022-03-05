@@ -2,7 +2,7 @@
 #  Functions for bringing and MPO into left or right canonical form
 #
 function canonical!(W1::ITensor,W2::ITensor,ms::matrix_state,n::Int64)
-    W1,Lplus=block_qx(W1,ms) 
+    W1,Lplus=block_qx(W1,ms.ul;dir=ms.lr) 
     W2=Lplus*W2
     il=filterinds(inds(Lplus),tags="l=$n")[1]
     iq=filterinds(inds(Lplus),tags="qx")[1]

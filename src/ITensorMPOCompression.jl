@@ -29,10 +29,8 @@ export detect_upper_lower,is_upper_lower
 function mirror(lr::orth_type)::orth_type
     if lr==left
         ret=right
-    elseif lr==right
+    else #must be right
         ret=left
-    else
-        ret=none
     end
     return ret
 end
