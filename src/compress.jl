@@ -240,9 +240,22 @@ function compress(W::ITensor,ms::matrix_state,epsSVD::Float64)::Tuple{ITensor,IT
     return W,RL
 end
 
-#
-#  Compress MPO
-#
+"""
+    compress!(H::MPO,ms::matrix_state,epsSVD::Float64)
+
+Compress an MPO using block respecting SVD techniques as described in 
+> *Daniel E. Parker, Xiangyu Cao, and Michael P. Zaletel Phys. Rev. B 102, 035147*
+
+# Arguments
+- `H` MPO for decomposition. If H is not already in the correct canonical form for compression, it will automatically be put into the correct form prior to compression.
+
+# Keywords
+- `dir::orth_type = right` : choose `left` or `right` canonical form for the final output. 
+- `cutoff::Foat64 = 1e-14` : Using a `cutoff` allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy. 
+- `maxdim::Int64` If the number of singular values exceeds `maxdim`, only the largest `maxdim` will be retained.
+- `mindim::Int64` At least `mindim` singular values will be retained, even if some fall below the cutoff
+
+"""
 function compress!(H::MPO,ms::matrix_state,epsSVD::Float64)
     println("------------compression start----------------")
     eps=1e-14 #relax used for testing upper/lower/regular-form etc.

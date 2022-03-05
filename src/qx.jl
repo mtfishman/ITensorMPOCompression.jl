@@ -2,6 +2,30 @@ using ITensorMPOCompression
 using LinearAlgebra
 using ITensors
 
+"""
+  `block_qx(W_::ITensor,ms::matrix_state)::Tuple{ITensor,ITensor,Index}`
+
+Perform a block respecting QX decomposition of the operator valued matrix `W`. 
+The appropriate decomposition, QR, RQ, QL, LQ is selected based on the `matrix_state` `ms`.
+The new internal `Index` between Q and R/L is modified so that the tags are "Link,qx" instead
+"Link,qr" etc. returned by the qr/rq/ql/lq routines.  Q and R are also gauge fixed so that 
+the corner element of R is 1.0 and Q†Q=d x 𝕀 where d in the dimensionality of the local
+Hilbert space.
+
+# Arguments
+- `W` Opertor valued matrix for decomposition.
+- `ms` upper/lower state of `W` and the left/right state of the returned `Q` 
+
+# Keywords
+- `dir::orth_type = right` : choose `left` or `right` canonical form
+- `epsrr::Foat64 = 1e-14` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
+   All rows with max(abs(R[:,j]))<epsrr are considered zero and removed. 
+
+# Returns a Tuple containing
+- `Q` with orthonormal columns or rows depending on `ms.lr`, dimensions: (χ+1)x(χ\'+1)
+- `R` or `L` depending on `ms.ul`, dimensions: (χ+2)x(χ\'+2)
+- `iq` the new internal link index between `Q` and `R`/`L`.  tags="Link,qx"
+"""
 function block_qx(W_::ITensor,ms::matrix_state)::Tuple{ITensor,ITensor,Index}
   W=copy(W_)
   use_rr=true #use rank revealing QX to clear out zero pivots.
@@ -31,7 +55,7 @@ function block_qx(W_::ITensor,ms::matrix_state)::Tuple{ITensor,ITensor,Index}
     end
   end
   set_scale!(RL,Q,offset) #rescale so the L(n,n)==1.0
-  @assert norm(V-RL*Q)<1e-12 #make decomp worked
+  @assert norm(V-RL*Q)<1e-12 #make sure decomp worked
   qx=String(tags(commonind(RL,Q))[2]) #should be "ql","lq","qr" os "rq"
   replacetags!(Q ,qx,"qx") #releive client code from the burden dealing ql,lq,qr,rq tags
   replacetags!(RL,qx,"qx")
@@ -44,7 +68,7 @@ function block_qx(W_::ITensor,ms::matrix_state)::Tuple{ITensor,ITensor,Index}
   #   pprint(il,RL,commonind(RL,Q),1e-14)
   # end
   #@show inds(W) ilw inds(RL)
-  RLplus,iqx=growRL(RL,ilw,offset) #Now make a full size version of L
+  RLplus,iqx=growRL(RL,ilw,offset) #Now make a full size version of RL
   #@show inds(RLplus) iqx
   # @show "RLplus="
   # if ms.lr==left

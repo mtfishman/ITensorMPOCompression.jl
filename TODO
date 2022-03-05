@@ -4,6 +4,14 @@ Done: -We need pure upper/lower enums without diagonal and full options
 -further simplify the compress H loop
 -Need to save SV spectrum somewhere
 -Look into the MPS compession code for inspiration.
+    rename compress! to trunctate! (supprts the svd args)
+        cutoff  Using a cutoff allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy.
+
+        maxdim –- integer M. If the number of singular values exceeds M, only the largest M will be retained.
+
+        mindim –- integer m. At least m singular values will be retained, even if some fall below the cutoff
+    rename canonical! to orthogonalize! and orthogonalize (support left/right rankreveal)
+
 -Get min and max Dw from H
 -Figure out how to turn off asserts for performance.
 -consistent variable names for link indexs r,c,q,u,v or ir,ic,iq,iu,iv ?
@@ -22,4 +30,6 @@ Done -We need rank reaving QR/QL/RQ/LQ throughout, otherwise we get zero col/row
 -is_regular is looking along the wrong diagonal for upper rectangular
 -for lower,right SetV seems to require the last column(above I)  should be preserved ... 
   but why?       It should be zeros.  Index ordering?
-
+-mirror(::matrix_state) should also flip ul ... no?  THen we need reflect to just flip lr.
+-Make rank reaviling an option for block_qx
+-For obc MPO try compressing 2..N-1, what do we end up with for W[N].  Then try N..2, what does W[1] look like??  Can we get around PBC issue this way?

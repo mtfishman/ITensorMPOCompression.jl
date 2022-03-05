@@ -2,16 +2,30 @@ module ITensorMPOCompression
 
 using ITensors
 
-export ql,lq,rq,assign!,getV,setV,growRL,to_openbc,set_scale!,block_qx!,block_qx,canonical!,is_canonical
+export ql,lq,rq,assign!,getV,setV,growRL,to_openbc,set_scale!,block_qx,canonical!,is_canonical
 export tri_type,orth_type,matrix_state,upper,lower,none,left,right,mirror,parse_links
 export has_pbc,is_regular_form,compress,compress!,getM,grow
 export is_lower_regular_form,is_upper_regular_form,V_offsets
 export detect_upper_lower,is_upper_lower
 
+"""
+    @enum tri_type  upper lower
+    Indicates if an MPO matrix has either an `upper` or `lower` triangular form.
+    This becomes non-trival for rectangular matrices.
+    See also [`detect_upper_lower`](@ref)
+"""
 @enum tri_type  upper lower 
+
+"""
+    @enum orth_type none left right
+    Indicates of an MPO matrix satisfies the conditions for `left` or `right` canonical form     
+"""
 @enum orth_type none left right
 
-
+# """
+#     mirror(lr::orth_type)::orth_type
+#     returns this mirror of lr.  `left`->`right` and `right`->`left`
+# """
 function mirror(lr::orth_type)::orth_type
     if lr==left
         ret=right
@@ -23,16 +37,23 @@ function mirror(lr::orth_type)::orth_type
     return ret
 end
 
-
+ """
+     Indicates both the `orth_type` and `tri_type` of an MPO
+     See also [`orth_type`](@ref) [`tri_type`](@ref)
+ """
 struct matrix_state
     ul::tri_type
     lr::orth_type
 end
+
 mirror(ms::matrix_state)::matrix_state=matrix_state(ms.ul,mirror(ms.lr))
 
-#
-#  simple struct for encapsulating offsets for V-blocks
-#
+"""
+    V_offsets
+
+A simple struct for encapsulating offsets for V-blocks
+
+"""
 struct V_offsets
     o1::Int64 #currently o1=o2 for std. Parker compression.  
     o2::Int64 #Leave them distinct for now until we know more
@@ -46,9 +67,11 @@ struct V_offsets
     end 
 end
 
-#
-#  This is essentially table 2 in the notes.
-#
+"""
+    V_offsets(ms::matrix_state)
+
+Derives the correct V-block offsets for the given `matrix_state`
+"""
 V_offsets(ms::matrix_state) = begin
     if ms.lr==left
         if ms.ul ==lower
@@ -70,7 +93,12 @@ V_offsets(ms::matrix_state) = begin
     V_offsets(o1_,o2_)
 end
 
+"""
+    assign!(W::ITensor,i1::IndexVal,i2::IndexVal,op::ITensor)
 
+Assign an operator to an element of the operator valued matrix W
+    W[i1,i2]=op
+"""
 function assign!(W::ITensor,i1::IndexVal,i2::IndexVal,op::ITensor)
     is=inds(op)
     for s in eachindval(is)
@@ -78,8 +106,12 @@ function assign!(W::ITensor,i1::IndexVal,i2::IndexVal,op::ITensor)
     end
 end
 
-set_scale!(RL::ITensor,Q::ITensor,o1::Int64,o2::Int64)=set_scale!(RL,Q,V_offsets(o1,o2))
+"""
+    set_scale!(RL::ITensor,Q::ITensor,off::V_offsets)
 
+Fix the gauge freedom between QR/QL after a block respecting QR/QL decomposition. The
+gauge fix is to ensure that either the top left or bottom right corner of `R` is 1.0. 
+"""
 function set_scale!(RL::ITensor,Q::ITensor,off::V_offsets)
     @assert order(RL)==2
     is=inds(RL)
