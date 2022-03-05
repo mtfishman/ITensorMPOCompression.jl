@@ -228,7 +228,7 @@ is_upper(H::MPO,eps::Float64)::Bool = is_upper_lower(H,upper,eps)
 #   2) As a consequence of 1, we cannot decide in advance whether to test for upper or lower regular forms.
 #      We must therefore test for both and return true if either one is true. 
 #
-function is_regular_form(W::ITensor,eps::Float64)::Tuple{Bool,Bool}
+function detect_regular_form(W::ITensor,eps::Float64)::Tuple{Bool,Bool}
     d,n,r,c=parse_links(W)
     Dw1,Dw2=dim(r),dim(c)
     #handle edge row and col vectors
@@ -287,25 +287,27 @@ end
 
 function is_regular_form(W::ITensor,ul::tri_type,eps::Float64)::Bool
     i = ul==lower ? 1 : 2
-    return is_regular_form(W,eps)[i]
+    return detect_regular_form(W,eps)[i]
 end
 
 function is_lower_regular_form(W::ITensor,eps::Float64)::Bool
-    return is_regular_form(W,eps)[1]
+    return detect_regular_form(W,eps)[1]
 end
 
 function is_upper_regular_form(W::ITensor,eps::Float64)::Bool
-    return is_regular_form(W,eps)[2]
+    return detect_regular_form(W,eps)[2]
 end
 
 
 function is_regular_form(H::MPO,eps::Float64)::Bool
     N=length(H)
-    irf=true,true
+    lrf,urf=true,true
     for n in 1:N
-        irf=irf && is_regular_form(H[n],eps)
+        l,u=detect_regular_form(H[n],eps) #there must be some trick to get all this onto one line
+        lrf=lrf && l
+        urf=urf && u
     end
-    return irf[1] || irf[2]
+    return lrf || url
 end
 
 function is_regular_form(H::MPO,ul::tri_type,eps::Float64)::Bool
@@ -315,6 +317,17 @@ function is_regular_form(H::MPO,ul::tri_type,eps::Float64)::Bool
         irf=irf && is_regular_form(H[n],ul,eps)
     end
     return irf
+end
+
+function detect_regular_form(H::MPO,eps::Float64)::Tuple{Bool,Bool}
+    N=length(H)
+    l,u=true,true
+    for n in 1:N
+        ln,un=detect_regular_form(H[n],eps)
+        l= l && ln
+        u= u && un
+    end
+    return l,u
 end
 
 function is_lower_regular_form(H::MPO,eps::Float64)::Bool

@@ -164,7 +164,7 @@ end
     H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
     E0l=inner(psi',to_openbc(H),psi)
     @test is_upper_lower(H,lower,eps)
-    canonical!(H,msr)
+    canonical!(H,dir=right)
 
     E1l=inner(psi',to_openbc(H),psi)
     @test abs(E0l-E1l)<eps
@@ -188,7 +188,7 @@ end
     H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
     E0r=inner(psi',to_openbc(H),psi)
     @test is_upper_lower(H,lower,eps)
-    canonical!(H,msl)
+    canonical!(H;dir=left)
 
     E1r=inner(psi',to_openbc(H),psi)
     @test abs(E0r-E1r)<1e-14
@@ -219,7 +219,7 @@ function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Flo
     H=make_transIsing_MPO(sites,NNN,hx,ul,pbc=true)
     E0l=inner(psi',to_openbc(H),psi)
     @test is_regular_form(H,ul,eps)
-    canonical!(H,msr)
+    canonical!(H,dir=right)
     #pprint(H,eps)
 
     E1l=inner(psi',to_openbc(H),psi)
@@ -244,7 +244,7 @@ function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Flo
     E0r=inner(psi',to_openbc(H),psi)
     @test abs(E0l-E0r)<1e-14
     @test is_regular_form(H,ul,eps)
-    canonical!(H,msl)
+    canonical!(H,dir=left)
 
     E1r=inner(psi',to_openbc(H),psi)
     @test abs(E0r-E1r)<1e-14

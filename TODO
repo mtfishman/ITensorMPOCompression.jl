@@ -33,3 +33,4 @@ Done -We need rank reaving QR/QL/RQ/LQ throughout, otherwise we get zero col/row
 -mirror(::matrix_state) should also flip ul ... no?  THen we need reflect to just flip lr.
 -Make rank reaviling an option for block_qx
 -For obc MPO try compressing 2..N-1, what do we end up with for W[N].  Then try N..2, what does W[1] look like??  Can we get around PBC issue this way?
+-Test canonical with epsrr=0.0 and compare.  need an max_Dw(H::MPO) function.  
