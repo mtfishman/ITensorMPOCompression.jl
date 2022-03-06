@@ -117,28 +117,28 @@ end
     Q,R=qr(W,Lind;positive=true)
     iqr=commonindex(Q,R)
     Id=Q*prime(Q,iqr)
-    Idq=delta(iqr,iqr)
+    Idq=delta(iqr,iqr')
     @test norm(Id-Idq)<eps
     @test norm(W-Q*R)<eps
 
     Q,L=ql(W,Lind;positive=true)
     iql=commonindex(Q,L)
     Id=Q*prime(Q,iql)
-    Idq=delta(iql,iql)
+    Idq=delta(iql,iql')
     @test norm(Id-Idq)<eps
     @test norm(W-Q*L)<eps
 
     L,Q=lq(W,Rind;positive=true)
     iql=commonindex(Q,L)
     Id=Q*prime(Q,iql)
-    Idq=delta(iql,iql)
+    Idq=delta(iql,iql')
     @test norm(Id-Idq)<eps
     @test norm(W-L*Q)<eps
 
     R,Q=rq(W,Rind;positive=true)
     iql=commonindex(Q,R)
     Id=Q*prime(Q,iql)
-    Idq=delta(iql,iql)
+    Idq=delta(iql,iql')
     @test norm(Id-Idq)<eps
     @test norm(W-R*Q)<eps
 end
@@ -172,7 +172,7 @@ end
     @printf "RQ decomposition %4i rows were removed from R\n" dim(c)-dim(iq)
     #@assert dim(iq)<dim(c) #make sure some rows got removed
     Id=Q*prime(Q,iq)
-    Idq=delta(iq,iq)
+    Idq=delta(iq,iq')
     @test norm(Id-Idq)<eps
     @test norm(W-R*Q)<eps
     #
@@ -184,7 +184,7 @@ end
     @printf "QL decomposition %4i rows were removed from L\n" dim(c)-dim(iq)
 #    @assert dim(iq)<dim(c) #make sure some rows got removed
     Id=Q*prime(Q,iq)
-    Idq=delta(iq,iq)
+    Idq=delta(iq,iq')
     @test norm(Id-Idq)<eps
     @test norm(W-L*Q)<eps    
     
@@ -206,7 +206,7 @@ end
     iq=commonindex(Q,R)
     @printf "QR decomposition %4i rows were removed from R\n" dim(c)-dim(iq)
     Id=Q*prime(Q,iq)
-    Idq=delta(iq,iq)
+    Idq=delta(iq,iq')
     @test norm(Id-Idq)<eps
     @test norm(W-R*Q)<eps
     #
@@ -217,7 +217,7 @@ end
     @printf "LQ decomposition %4i rows were removed from L\n" dim(c)-dim(iq)
 #    @assert dim(iq)<dim(c) #make sure some rows got removed
     Id=Q*prime(Q,iq)
-    Idq=delta(iq,iq)
+    Idq=delta(iq,iq')
     @test norm(Id-Idq)<eps
     @test norm(W-L*Q)<eps
 

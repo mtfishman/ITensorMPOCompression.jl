@@ -77,8 +77,10 @@ function truncate(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor}
 # Block repecting QR/QL/LQ/RQ factorization.  RL=L or R for upper and lower.
 #
     Q,RL,lq=block_qx(W,ul;kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
-    @assert is_canonical(Q,ms,eps)
-    @assert is_regular_form(Q,ul,eps)
+    ITensors.@debug_check begin
+        @assert is_canonical(Q,ms,eps)
+        @assert is_regular_form(Q,ul,eps)
+    end
 #
 #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
 #
@@ -132,20 +134,24 @@ function truncate(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor}
 
     luv=Index(ns+2,"Link,$tuv") #link for expanded U,US,V,sV matricies.
     if lr==left
-#        @assert is_upper_lower(im,RL_prime,c,ms.ul,eps)
-        @assert is_upper_lower(lq,RL      ,c,ul,eps)
+        ITensors.@debug_check begin
+            @assert is_upper_lower(lq,RL      ,c,ul,eps)
+        end
         RL=grow(s*V,luv,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
         W=Q*grow(U,lq,luv) #W[l=n-1,u]
     else # right
-#        @assert is_upper_lower(r,RL_prime,im,ms.ul,eps)
-        @assert is_upper_lower(r,RL      ,lq,ms.ul,eps)
+        ITensors.@debug_check begin
+            @assert is_upper_lower(r,RL      ,lq,ms.ul,eps)
+        end
         RL=RL_prime*grow(U*s,im,luv) #RL[l=n-1,v] dim Dw1 x ns+2
         W=grow(V,lq,luv)*Q #W[l=n-1,v]
     end
     replacetags!(RL,tuv,tln) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
     replacetags!(W ,tuv,tln) #W[l=n-1,l=n]
-    @assert is_regular_form(W,ul,eps)
-    @assert is_canonical(W,ms,eps)
+    ITensors.@debug_check begin
+        @assert is_regular_form(W,ul,eps)
+        @assert is_canonical(W,ms,eps)
+    end
     return W,RL
 end
 
@@ -186,7 +192,9 @@ function truncate!(H::MPO;kwargs...)
     end
     N=length(H)
     if ms.lr==left
-        @assert is_canonical(H,mirror(ms),eps) 
+        ITensors.@debug_check begin
+            @assert is_canonical(H,mirror(ms),eps)
+        end
         for n in 1:N-1 #sweep right
             W,RL=truncate(H[n],ul;kwargs...)
             #@show norm(H[n]-W*RL)
@@ -195,7 +203,9 @@ function truncate!(H::MPO;kwargs...)
             is_regular_form(H[n+1],ms.ul,eps)
         end
     else #lr must be right
-        @assert is_canonical(H,mirror(ms),eps)#TODO we need not(ms.lr)
+        ITensors.@debug_check begin
+            @assert is_canonical(H,mirror(ms),eps)#TODO we need not(ms.lr)
+        end
         for n in N:-1:2 #sweep left
             W,RL=truncate(H[n],ul;kwargs...)
             #@show norm(H[n]-W*RL)

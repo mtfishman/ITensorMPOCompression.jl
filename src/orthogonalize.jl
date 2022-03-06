@@ -9,8 +9,10 @@ function orthogonalize!(W1::ITensor,W2::ITensor,ul::tri_type,n::Int64;kwargs...)
     il=Index(dim(iq),tags(il))
     replaceind!(W1,iq,il)
     replaceind!(W2,iq,il)
-    @assert is_regular_form(W1,ul,1e-14)
-    @assert is_regular_form(W2,ul,1e-14)
+    ITensors.@debug_check begin
+        @assert is_regular_form(W1,ul,1e-14)
+        @assert is_regular_form(W2,ul,1e-14)
+    end
     return W1,W2 #We should not to return these if W1 and W2 were truely passed by reference.
 end
 
@@ -42,7 +44,9 @@ Bring an MPO into left or right canonical form using block respecting QR decompo
    All rows with max(abs(R[:,j]))<epsrr are considered zero and removed. 
 """
 function orthogonalize!(H::MPO;kwargs...)
-    @assert has_pbc(H)
+    ITensors.@debug_check begin
+        @assert has_pbc(H)
+    end
     (bl,bu)=detect_regular_form(H,1e-14)
     if !(bl || bu)
         throw(ErrorException("orthogonalize!(H::MPO), H must be in either lower or upper regular form"))

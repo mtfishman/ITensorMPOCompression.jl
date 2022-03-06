@@ -92,7 +92,7 @@ function is_canonical(r::Index,W::ITensor,c::Index,d::Int64,ms::matrix_state,eps
     #@show inds(V) rv,cv,rc
     Id=V*prime(V,rc)/d
     @show Id
-    Id1=delta(rc,rc)
+    Id1=delta(rc,rc')
     @show Id1
     @show Id-Id1
     if !(norm(Id-Id1)<eps)
@@ -111,7 +111,7 @@ function is_canonical(W::ITensor,ms::matrix_state,eps::Float64)::Bool
         rc=r
     end
     Id=V*prime(V,rc)/d
-    Id1=delta(rc,rc)
+    Id1=delta(rc,rc')
     return norm(Id-Id1)<eps
 end
 

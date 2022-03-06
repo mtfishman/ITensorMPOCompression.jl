@@ -11,8 +11,10 @@ function fast_GS(H::MPO,sites)::Tuple{Float64,MPS}
     sweeps = Sweeps(5)
     setmaxdim!(sweeps, 2,4,8,16,32)
     setcutoff!(sweeps, 1E-10)
-
-    E, psi = dmrg(H,psi0, sweeps;outputlevel=0)
+    db=true#ITensors.using_debug_checks()
+    #if db  ITensors.ITensors.disable_debug_checks() end
+    E,psi= dmrg(H,psi0, sweeps;outputlevel=0)
+    #if db  ITensors.ITensors.enable_debug_checks() end
     return E,psi
 end
 
@@ -62,14 +64,19 @@ end
     NNN=3
     hx=0.5
     eps=1e-14
-    sites = siteinds("SpinHalf", N)
+    #avoid type Dense has no field blockoffsets errors
+    db=ITensors.using_debug_checks()
+    sites = siteinds("SpinHalf", N; conserve_qns=false)
+
     H_pbc=make_transIsing_AutoMPO(sites,NNN,hx;obc=false) 
     @test has_pbc(H_pbc)
     @test is_regular_form(H_pbc,lower,eps)
     H_obc=make_transIsing_AutoMPO(sites,NNN,hx;obc=true) 
     @test !has_pbc(H_obc)
+    if db  ITensors.ITensors.disable_debug_checks() end
     E_pbc,psi=fast_GS(to_openbc(H_pbc),sites)
     E_obc,psi=fast_GS(H_obc,sites)
+    if db  ITensors.ITensors.enable_debug_checks() end
     @show E_pbc E_obc
     @test abs(E_pbc-E_obc)<eps
 
@@ -78,8 +85,10 @@ end
     @test is_regular_form(H_pbc,lower,eps)
     H_obc=make_Heisenberg_AutoMPO(sites,NNN,hx;obc=true) 
     @test !has_pbc(H_obc)
+    if db  ITensors.ITensors.disable_debug_checks() end
     E_pbc,psi=fast_GS(to_openbc(H_pbc),sites)
     E_obc,psi=fast_GS(H_obc,sites)
+    if db  ITensors.ITensors.enable_debug_checks() end
     @show E_pbc E_obc
     @test abs(E_pbc-E_obc)<eps
 end

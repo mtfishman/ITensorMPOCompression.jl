@@ -59,7 +59,9 @@ function block_qx(W_::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor,Ind
     end
   end
   set_scale!(RL,Q,offset) #rescale so the L(n,n)==1.0
-  @assert norm(V-RL*Q)<1e-12 #make sure decomp worked
+  ITensors.@debug_check begin
+    @assert norm(V-RL*Q)<1e-12 #make sure decomp worked
+  end
   qx=String(tags(commonind(RL,Q))[2]) #should be "ql","lq","qr" os "rq"
   replacetags!(Q ,qx,"qx") #releive client code from the burden dealing ql,lq,qr,rq tags
   replacetags!(RL,qx,"qx")
