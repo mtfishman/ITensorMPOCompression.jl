@@ -9,7 +9,7 @@ import ITensorMPOCompression.orthogonalize!
 include("hamiltonians.jl")
 
 using Printf
-Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
+Base.show(io::IO, f::Float64) = @printf(io, "%1.15f", f)
 println("-----------Start--------------")
 
 function make_RL(r::Index,c::Index,ms::matrix_state,swap::Bool)::ITensor
@@ -166,7 +166,7 @@ end
     #
     # Make right canonical, then compress to left canonical
     #
-    H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
+    H=make_transIsing_MPO(sites,NNN,hx,lower,obc=false)
     E0l=inner(psi',to_openbc(H),psi)
     @test is_upper_lower(H,lower,eps)
     orthogonalize!(H,dir=right)
@@ -190,7 +190,7 @@ end
     #
     # Make left canonical, then compress to right canonical
     #
-    H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
+    H=make_transIsing_MPO(sites,NNN,hx,lower,obc=false)
     E0r=inner(psi',to_openbc(H),psi)
     @test is_upper_lower(H,lower,eps)
     orthogonalize!(H;dir=left)
@@ -212,7 +212,7 @@ end
     @test abs(E0r-E2r)<eps
 end
 
-function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Float64,eps::Float64)
+function test_direct_TransIsing(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Float64,eps::Float64)
     msl=matrix_state(ul,left )
     msr=matrix_state(ul,right)
 
@@ -221,7 +221,7 @@ function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Flo
     #
     # Make right canonical, then compress to left canonical
     #
-    H=make_transIsing_MPO(sites,NNN,hx,ul,pbc=true)
+    H=make_transIsing_MPO(sites,NNN,hx,ul,obc=false)
     E0l=inner(psi',to_openbc(H),psi)
     @test is_regular_form(H,ul,eps)
     orthogonalize!(H,dir=right)
@@ -245,7 +245,7 @@ function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Flo
     # Make left canonical, then compress to right canonical
     #
     
-    H=make_transIsing_MPO(sites,NNN,hx,ul,pbc=true)
+    H=make_transIsing_MPO(sites,NNN,hx,ul,obc=false)
     E0r=inner(psi',to_openbc(H),psi)
     @test abs(E0l-E0r)<1e-14
     @test is_regular_form(H,ul,eps)
@@ -267,6 +267,72 @@ function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Flo
 
 end
 
+function test_autoMPO_TransIsing(N::Int64,NNN::Int64,hx::Float64,epsSVD::Float64,eps::Float64)
+    test_autoMPO(make_transIsing_AutoMPO,N,NNN,hx,epsSVD,eps)
+end
+function test_autoMPO_Heisenberg(N::Int64,NNN::Int64,hx::Float64,epsSVD::Float64,eps::Float64)
+    test_autoMPO(make_Heisenberg_AutoMPO,N,NNN,hx,epsSVD,eps)
+end
+
+function test_autoMPO(makeH,N::Int64,NNN::Int64,hx::Float64,epsSVD::Float64,eps::Float64)
+    ul=lower #auto MPO only makes lower
+    msl=matrix_state(ul,left )
+    msr=matrix_state(ul,right)
+
+    sites = siteinds("SpinHalf", N)
+    psi=randomMPS(sites)
+    #
+    # Make right canonical, then compress to left canonical
+    #
+    H=makeH(sites,NNN,hx,obc=false)
+    E0l=inner(psi',to_openbc(H),psi)
+    @test is_regular_form(H,ul,eps)
+    orthogonalize!(H,dir=left)
+    orthogonalize!(H,dir=right)
+    #pprint(H,eps)
+
+    E1l=inner(psi',to_openbc(H),psi)
+    @test abs(E0l-E1l)<eps
+    @test is_regular_form(H,ul,eps)
+    @test is_canonical(H,msr,eps)
+
+    truncate!(H;dir=left,cutoff=epsSVD)
+    truncate!(H;dir=right,cutoff=epsSVD)
+    @test is_regular_form(H,ul,eps)
+    @test is_canonical(H,msr,eps)
+    # make sure the energy in unchanged
+    E2l=inner(psi',to_openbc(H),psi)
+    @test abs(E0l-E2l)<10*epsSVD
+
+
+    #
+    # Make left canonical, then compress to right canonical
+    #
+    
+    H=makeH(sites,NNN,hx,obc=false)
+    E0r=inner(psi',to_openbc(H),psi)
+    @test abs(E0l-E0r)<1e-14
+    @test is_regular_form(H,ul,eps)
+    orthogonalize!(H,dir=right)
+    orthogonalize!(H,dir=left)
+
+    E1r=inner(psi',to_openbc(H),psi)
+    @test abs(E0r-E1r)<1e-14
+    @test is_regular_form(H,ul,eps)
+    @test is_canonical(H,msl,eps)
+
+    truncate!(H;dir=right,cutoff=epsSVD)
+    truncate!(H;dir=left,cutoff=epsSVD)
+    @test is_regular_form(H,ul,eps)
+    @test is_canonical(H,msl,eps)
+    # make sure the energy in unchanged
+    E2r=inner(psi',to_openbc(H),psi)
+    relError=abs(E0r-E2r)/epsSVD
+    @printf "Relative error in Energy %.1e \n" relError
+
+end
+
+
 @testset "Compress full MPO" begin
     hx=0.5
     eps=1e-14
@@ -274,23 +340,46 @@ end
 
 #                  V=N sites
 #                    V=Num Nearest Neighbours in H
-    test_one_sweep(5,1,hx,lower,epsSVD,eps)
-    test_one_sweep(5,2,hx,lower,epsSVD,eps)
-    test_one_sweep(5,3,hx,lower,epsSVD,eps)
-    test_one_sweep(5,4,hx,lower,epsSVD,eps)
-    test_one_sweep(5,1,hx,upper,epsSVD,eps)
-    test_one_sweep(5,2,hx,upper,epsSVD,eps)
-    test_one_sweep(5,3,hx,upper,epsSVD,eps) #known unit on diagonal
-    test_one_sweep(5,4,hx,upper,epsSVD,eps)
-     epsSVD=.0000001
-    test_one_sweep(10,1,hx,lower,epsSVD,eps)
-    test_one_sweep(10,7,hx,lower,epsSVD,eps)
-    test_one_sweep(10,8,hx,lower,epsSVD,eps) 
-    test_one_sweep(10,9,hx,lower,epsSVD,eps)
-    test_one_sweep(10,1,hx,upper,epsSVD,eps)
-    test_one_sweep(10,7,hx,upper,epsSVD,eps)
-    test_one_sweep(10,8,hx,upper,epsSVD,eps) 
-    test_one_sweep(10,9,hx,upper,epsSVD,eps) 
+    test_direct_TransIsing(5,1,hx,lower,epsSVD,eps)
+    test_direct_TransIsing(5,2,hx,lower,epsSVD,eps)
+    test_direct_TransIsing(5,3,hx,lower,epsSVD,eps)
+    test_direct_TransIsing(5,4,hx,lower,epsSVD,eps)
+    test_direct_TransIsing(5,1,hx,upper,epsSVD,eps)
+    test_direct_TransIsing(5,2,hx,upper,epsSVD,eps)
+    test_direct_TransIsing(5,3,hx,upper,epsSVD,eps) #known unit on diagonal
+    test_direct_TransIsing(5,4,hx,upper,epsSVD,eps)
+    epsSVD=.0000001
+    test_direct_TransIsing(10,1,hx,lower,epsSVD,eps)
+    test_direct_TransIsing(10,7,hx,lower,epsSVD,eps)
+    test_direct_TransIsing(10,8,hx,lower,epsSVD,eps) 
+    test_direct_TransIsing(10,9,hx,lower,epsSVD,eps)
+    test_direct_TransIsing(10,1,hx,upper,epsSVD,eps)
+    test_direct_TransIsing(10,7,hx,upper,epsSVD,eps)
+    test_direct_TransIsing(10,8,hx,upper,epsSVD,eps) 
+    test_direct_TransIsing(10,9,hx,upper,epsSVD,eps) 
+
+    epsSVD=1e-14
+    test_autoMPO_TransIsing(10,5,hx,epsSVD,eps)
+    test_autoMPO_TransIsing(10,7,hx,epsSVD,eps)
+    test_autoMPO_TransIsing(10,8,hx,epsSVD,eps)
+    test_autoMPO_TransIsing(10,9,hx,epsSVD,eps)
+    epsSVD=.0000001
+    test_autoMPO_TransIsing(10,5,hx,epsSVD,eps)
+    test_autoMPO_TransIsing(10,7,hx,epsSVD,eps)
+    #test_autoMPO_TransIsing(10,8,hx,epsSVD,eps) #known fail energy, but no RL_prime error
+    #test_autoMPO_TransIsing(10,9,hx,epsSVD,eps) #known fail energy, but no RL_prime error
+
+    epsSVD=1e-14
+    test_autoMPO_Heisenberg(10,5,hx,epsSVD,eps)
+    test_autoMPO_Heisenberg(10,7,hx,epsSVD,eps)
+    test_autoMPO_Heisenberg(10,8,hx,epsSVD,eps)
+    test_autoMPO_Heisenberg(10,9,hx,epsSVD,eps)
+    epsSVD=.0000001
+    test_autoMPO_Heisenberg(10,5,hx,epsSVD,eps)
+    test_autoMPO_Heisenberg(10,7,hx,epsSVD,eps)
+    #test_autoMPO_Heisenberg(10,8,hx,epsSVD,eps) #known fail energy, but no RL_prime error
+    #test_autoMPO_Heisenberg(10,9,hx,epsSVD,eps) #known fail energy, but no RL_prime error
+
 end
 
 #
@@ -302,11 +391,11 @@ end
     hx=0.5
     eps=1e-13
     epsSVD=1e-12
-    test_one_sweep(10,6,hx,lower,epsSVD,eps)
-    test_one_sweep(10,6,hx,upper,epsSVD,eps)
+    # test_direct_TransIsing(10,6,hx,lower,epsSVD,eps)
+    # test_direct_TransIsing(10,6,hx,upper,epsSVD,eps)
     
-    # epsSVD=1e-10
-    test_one_sweep(10,6,hx,lower,epsSVD,eps)  
-    test_one_sweep(10,6,hx,upper,epsSVD,eps) 
+    # # epsSVD=1e-10
+    # test_direct_TransIsing(10,6,hx,lower,epsSVD,eps)  
+    # test_direct_TransIsing(10,6,hx,upper,epsSVD,eps) 
 
 end

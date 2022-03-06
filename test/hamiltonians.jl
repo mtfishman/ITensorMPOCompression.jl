@@ -85,7 +85,7 @@ function make_transIsing_MPO(sites,NNN::Int64,hx::Float64,ul::tri_type=lower;kwa
         mpo[n]=make_transIsing_op(iset,prev_link,n,NNN,hx,ul)
         prev_link=filterinds(inds(mpo[n],"l=$n"))[1]
     end
-    if !get(kwargs,:pbc,false)
+    if get(kwargs,:obc,true)
         mpo=ITensorMPOCompression.to_openbc(mpo) #contract with l* and *r at the edges.
     end
     return mpo

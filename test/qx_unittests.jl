@@ -107,7 +107,7 @@ end
     hx=0.5
     eps=2e-15
     sites = siteinds("SpinHalf", N)
-    H=make_transIsing_MPO(sites,NNN,hx,pbc=true)
+    H=make_transIsing_MPO(sites,NNN,hx,obc=false)
     W=H[1]
     d,n,r,c=parse_links(W)
 
@@ -157,7 +157,7 @@ end
     #
     #  use lower tri MPO to get some zero pivots for QL and RQ.
     #
-    H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
+    H=make_transIsing_MPO(sites,NNN,hx,lower,obc=false)
     W=H[1]
     d,n,r,c=parse_links(W)
 
@@ -191,7 +191,7 @@ end
     #
     #  use upper tri MPO to get some zero pivots for LQ and QR.
     #
-    H=make_transIsing_MPO(sites,NNN,hx,upper,pbc=true)
+    H=make_transIsing_MPO(sites,NNN,hx,upper,obc=false)
     W=H[1]
     d,n,r,c=parse_links(W)
 
