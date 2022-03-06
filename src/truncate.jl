@@ -159,7 +159,7 @@ end
 #
 #  Compress one site
 #
-function compress(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor}
+function truncate(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor}
     d,n,r,c=parse_links(W) # W[l=$(n-1)l=$n]=W[r,c]
     lr::orth_type=get(kwargs, :dir, right)
     ms=matrix_state(ul,lr)
@@ -282,7 +282,7 @@ function truncate!(H::MPO;kwargs...)
     if ms.lr==left
         @assert is_canonical(H,mirror(ms),eps) 
         for n in 1:N-1 #sweep right
-            W,RL=compress(H[n],ul;kwargs...)
+            W,RL=truncate(H[n],ul;kwargs...)
             #@show norm(H[n]-W*RL)
             H[n]=W
             H[n+1]=RL*H[n+1]
@@ -291,7 +291,7 @@ function truncate!(H::MPO;kwargs...)
     else #lr must be right
         @assert is_canonical(H,mirror(ms),eps)#TODO we need not(ms.lr)
         for n in N:-1:2 #sweep left
-            W,RL=compress(H[n],ul;kwargs...)
+            W,RL=truncate(H[n],ul;kwargs...)
             #@show norm(H[n]-W*RL)
             H[n]=W
             H[n-1]=H[n-1]*RL

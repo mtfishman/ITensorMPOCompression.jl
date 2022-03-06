@@ -3,6 +3,7 @@ using Revise
 using Test
 
 import ITensorMPOCompression.truncate!
+import ITensorMPOCompression.truncate
 import ITensorMPOCompression.orthogonalize!
 
 include("hamiltonians.jl")
@@ -175,7 +176,7 @@ end
     @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msr,eps)
 
-    W,L=compress(H[1],ul;dir=left,cutoff=epsSVD)
+    W,L=truncate(H[1],ul;dir=left,cutoff=epsSVD)
     @test is_regular_form(H,ul,eps)
     @test is_regular_form(W,ul,eps)
     @test norm(H[1]-W*L)<eps
@@ -199,7 +200,7 @@ end
     @test is_regular_form(H,lower,eps)
     @test  is_canonical(H,msl,eps)
 
-    W,L=compress(H[N],ul;dir=right,cutoff=epsSVD)
+    W,L=truncate(H[N],ul;dir=right,cutoff=epsSVD)
     @test is_regular_form(W,lower,eps)
     @test norm(H[N]-L*W)<eps
     H[N]=W

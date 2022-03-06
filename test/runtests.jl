@@ -7,6 +7,6 @@ using Revise
     include("qx_unittests.jl")
     include("blocking.jl")
     include("mpopbc.jl")
-    include("canonical.jl")
-    include("compress.jl")
+    include("orthogonalize.jl")
+    include("truncate.jl")
 #end

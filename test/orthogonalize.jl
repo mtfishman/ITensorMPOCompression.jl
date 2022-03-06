@@ -1,6 +1,7 @@
 using ITensorMPOCompression
 using Revise
 using Test
+import ITensorMPOCompression.orthogonalize!
 
 include("hamiltonians.jl")
 
