@@ -159,17 +159,20 @@ end
 #
 #  Compress one site
 #
-function compress(W::ITensor,ms::matrix_state,epsSVD::Float64)::Tuple{ITensor,ITensor}
+function compress(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor}
     d,n,r,c=parse_links(W) # W[l=$(n-1)l=$n]=W[r,c]
+    lr::orth_type=get(kwargs, :dir, right)
+    ms=matrix_state(ul,lr)
     eps=1e-14 #relax used for testing upper/lower/regular-form etc.
     # establish some tag strings then depend on lr.
-    (tsvd,tuv,tln) = ms.lr==left ? ("qx","u","l=$n") : ("m","v","l=$(n-1)")
+    (tsvd,tuv,tln) = lr==left ? ("qx","u","l=$n") : ("m","v","l=$(n-1)")
+
 #
 # Block repecting QR/QL/LQ/RQ factorization.  RL=L or R for upper and lower.
 #
-    Q,RL,lq=block_qx(W,ms.ul;dir=ms.lr) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
+    Q,RL,lq=block_qx(W,ul;kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
     @assert is_canonical(Q,ms,eps)
-    @assert is_regular_form(Q,ms.ul,eps)
+    @assert is_regular_form(Q,ul,eps)
 #
 #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
 #
@@ -187,7 +190,7 @@ function compress(W::ITensor,ms::matrix_state,epsSVD::Float64)::Tuple{ITensor,IT
 #  At last we can svd and compress M using epsSVD as the cutoff.
 #    
     isvd=findinds(M,tsvd)[1] #decide the left index
-    U,s,V=svd(M,isvd,cutoff=epsSVD) # ns sing. values survive compression
+    U,s,V=svd(M,isvd;kwargs...) # ns sing. values survive compression
     ns=dim(inds(s)[1])
     #@show diag(array(s))
     
@@ -210,7 +213,7 @@ function compress(W::ITensor,ms::matrix_state,epsSVD::Float64)::Tuple{ITensor,IT
     end
     Mplus=grow(M,lq,im)
     D=RL-Mplus*RL_prime
-    if norm(D)>epsSVD
+    if norm(D)>get(kwargs, :cutoff, 1e-14)
         #@show  RLnz "RL_prime="
         #pprint(im,RL_prime,c,eps)
         @printf "High normD(D)=%.1e min(s)=%.1e \n" norm(D) min(diag(array(s))...)
@@ -222,9 +225,9 @@ function compress(W::ITensor,ms::matrix_state,epsSVD::Float64)::Tuple{ITensor,IT
     end
 
     luv=Index(ns+2,"Link,$tuv") #link for expanded U,US,V,sV matricies.
-    if ms.lr==left
+    if lr==left
 #        @assert is_upper_lower(im,RL_prime,c,ms.ul,eps)
-        @assert is_upper_lower(lq,RL      ,c,ms.ul,eps)
+        @assert is_upper_lower(lq,RL      ,c,ul,eps)
         RL=grow(s*V,luv,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
         W=Q*grow(U,lq,luv) #W[l=n-1,u]
     else # right
@@ -235,13 +238,13 @@ function compress(W::ITensor,ms::matrix_state,epsSVD::Float64)::Tuple{ITensor,IT
     end
     replacetags!(RL,tuv,tln) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
     replacetags!(W ,tuv,tln) #W[l=n-1,l=n]
-    @assert is_regular_form(W,ms.ul,eps)
+    @assert is_regular_form(W,ul,eps)
     @assert is_canonical(W,ms,eps)
     return W,RL
 end
 
 """
-    compress!(H::MPO,ms::matrix_state,epsSVD::Float64)
+    compress!(H::MPO)
 
 Compress an MPO using block respecting SVD techniques as described in 
 > *Daniel E. Parker, Xiangyu Cao, and Michael P. Zaletel Phys. Rev. B 102, 035147*
@@ -251,19 +254,36 @@ Compress an MPO using block respecting SVD techniques as described in
 
 # Keywords
 - `dir::orth_type = right` : choose `left` or `right` canonical form for the final output. 
-- `cutoff::Foat64 = 1e-14` : Using a `cutoff` allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy. 
-- `maxdim::Int64` If the number of singular values exceeds `maxdim`, only the largest `maxdim` will be retained.
-- `mindim::Int64` At least `mindim` singular values will be retained, even if some fall below the cutoff
+- `cutoff::Foat64` : Using a `cutoff` allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy. 
+- `maxdim::Int64` : If the number of singular values exceeds `maxdim`, only the largest `maxdim` will be retained.
+- `mindim::Int64` : At least `mindim` singular values will be retained, even if some fall below the cutoff
 
 """
-function compress!(H::MPO,ms::matrix_state,epsSVD::Float64)
+function compress!(H::MPO;kwargs...)
     println("------------compression start----------------")
+    #
+    # decide left/right and upper/lower
+    #
     eps=1e-14 #relax used for testing upper/lower/regular-form etc.
+    lr::orth_type=get(kwargs, :dir, right)
+    (bl,bu)=detect_regular_form(H,eps)
+    if !(bl || bu)
+        throw(ErrorException("compress!(H::MPO), H must be in either lower or upper regular form"))
+    end
+    @assert !(bl && bu)
+    ul::tri_type = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
+    #
+    # Now check if H required orthogonalization
+    #
+    ms=matrix_state(ul,lr)
+    if !is_canonical(H,mirror(ms),eps) 
+        canonical!(H,ul;dir=mirror(lr),kwargs...) 
+    end
     N=length(H)
     if ms.lr==left
-        @assert is_canonical(H,mirror(ms),eps) #TODO we need not(ms.lr)
+        @assert is_canonical(H,mirror(ms),eps) 
         for n in 1:N-1 #sweep right
-            W,RL=compress(H[n],ms,epsSVD)
+            W,RL=compress(H[n],ul;kwargs...)
             #@show norm(H[n]-W*RL)
             H[n]=W
             H[n+1]=RL*H[n+1]
@@ -272,7 +292,7 @@ function compress!(H::MPO,ms::matrix_state,epsSVD::Float64)
     else #lr must be right
         @assert is_canonical(H,mirror(ms),eps)#TODO we need not(ms.lr)
         for n in N:-1:2 #sweep left
-            W,RL=compress(H[n],ms,epsSVD)
+            W,RL=compress(H[n],ul;kwargs...)
             #@show norm(H[n]-W*RL)
             H[n]=W
             H[n-1]=H[n-1]*RL

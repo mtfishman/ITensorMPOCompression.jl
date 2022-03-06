@@ -153,8 +153,9 @@ end
     hx=0.5
     eps=1e-14
     epsSVD=.00
-    msl=matrix_state(lower,left )
-    msr=matrix_state(lower,right)
+    ul=lower
+    msl=matrix_state(ul,left )
+    msr=matrix_state(ul,right)
 
     sites = siteinds("SpinHalf", N)
     psi=randomMPS(sites)
@@ -168,16 +169,16 @@ end
 
     E1l=inner(psi',to_openbc(H),psi)
     @test abs(E0l-E1l)<eps
-    @test is_regular_form(H,lower,eps)
+    @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msr,eps)
 
-    W,L=compress(H[1],msl,epsSVD)
-    @test is_regular_form(H,lower,eps)
-    @test is_regular_form(W,lower,eps)
+    W,L=compress(H[1],ul;dir=left,cutoff=epsSVD)
+    @test is_regular_form(H,ul,eps)
+    @test is_regular_form(W,ul,eps)
     @test norm(H[1]-W*L)<eps
     H[1]=W
     H[2]=L*H[2]
-    @test is_regular_form(H[2],lower,eps)
+    @test is_regular_form(H[2],ul,eps)
     @test  is_canonical(H[1],msl,eps)
     # make sure the energy in unchanged
     E2l=inner(psi',to_openbc(H),psi)
@@ -195,12 +196,12 @@ end
     @test is_regular_form(H,lower,eps)
     @test  is_canonical(H,msl,eps)
 
-    W,L=compress(H[N],msr,epsSVD)
+    W,L=compress(H[N],ul;dir=right,cutoff=epsSVD)
     @test is_regular_form(W,lower,eps)
     @test norm(H[N]-L*W)<eps
     H[N]=W
     H[N-1]=H[N-1]*L
-    @test is_regular_form(H[N-1],lower,eps)
+    @test is_regular_form(H[N-1],ul,eps)
     @test  is_canonical(H[N],msr,eps)
     # make sure the energy in unchanged
     E2r=inner(psi',to_openbc(H),psi)
@@ -227,8 +228,8 @@ function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Flo
     @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msr,eps)
 
-    compress!(H,msl,epsSVD)
-    compress!(H,msr,epsSVD)
+    compress!(H;dir=left,cutoff=epsSVD)
+    compress!(H;dir=right,cutoff=epsSVD)
     @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msr,eps)
     # make sure the energy in unchanged
@@ -251,8 +252,8 @@ function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Flo
     @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msl,eps)
 
-    compress!(H,msr,epsSVD)
-    compress!(H,msl,epsSVD)
+    compress!(H;dir=right,cutoff=epsSVD)
+    compress!(H;dir=left,cutoff=epsSVD)
     @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msl,eps)
     # make sure the energy in unchanged
