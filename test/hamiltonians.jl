@@ -2,10 +2,45 @@ using ITensors
 import ITensorMPOCompression
 using Revise
 
-function make_Heisenberg_AutoMPO(sites::Vector{Index{Int64}})::MPO
+function fix_autoMPO(W::ITensor)::ITensor
+    ils=filterinds(W,"Link")
+    iss=filterinds(W,"Site")
+    @assert length(ils)==2
+    @assert length(iss)==2
+    d,n,r,c=parse_links(W)
+    Dw1,Dw2=dim(r),dim(c)
+    #
+    #  set up perm arrays to swap row and col 2 with N
+    #
+    pr=collect(1:Dw1)
+    pc=collect(1:Dw2)
+    pr[2],pr[Dw1]=pr[Dw1],pr[2]
+    pc[2],pc[Dw2]=pc[Dw2],pc[2]
+    W1=ITensor(r,c,iss...)
+    for js in eachindval(iss)
+        for jr in eachindval(r)
+            for jc in eachindval(c)
+                W1[r=>pr[jr.second],c=>pc[jc.second],js...]=W[jr,jc,js...]
+            end
+        end
+    end
+    return W1
+end
+
+function fix_autoMPO!(H::MPO)
+    N=length(H)
+    for n in 1:N
+        H[n]=fix_autoMPO(H[n])
+    end
+end
+
+function make_Heisenberg_AutoMPO(sites,NNN::Int64,hx::Float64;kwargs...)::MPO
     N=length(sites)
     ampo = OpSum()
-    for dj=1:3
+    for j=1:N
+        add!(ampo, hx   ,"Sz", j)
+    end
+    for dj=1:NNN
         f=1.0/dj
         for j=1:N-dj
             add!(ampo, f    ,"Sz", j, "Sz", j+dj)
@@ -13,10 +48,14 @@ function make_Heisenberg_AutoMPO(sites::Vector{Index{Int64}})::MPO
             add!(ampo, f*0.5,"S-", j, "S+", j+dj)
         end
     end
-    return MPO(ampo,sites)  
+    mpo=MPO(ampo,sites;kwargs...)
+    if !get(kwargs,:obc,true)
+        fix_autoMPO!(mpo)
+    end
+    return mpo
 end
 
-function make_transIsing_AutoMPO(sites::Vector{Index{Int64}},NNN::Int64,hx::Float64)::MPO
+function make_transIsing_AutoMPO(sites,NNN::Int64,hx::Float64;kwargs...)::MPO
     N=length(sites)
     ampo = OpSum()
     for j=1:N
@@ -28,7 +67,11 @@ function make_transIsing_AutoMPO(sites::Vector{Index{Int64}},NNN::Int64,hx::Floa
             add!(ampo, f    ,"Sz", j, "Sz", j+dj)
         end
     end
-    return MPO(ampo,sites)  
+    mpo=MPO(ampo,sites;kwargs...)
+    if !get(kwargs,:obc,true)
+        fix_autoMPO!(mpo)
+    end
+    return mpo
 end
 
 function make_transIsing_MPO(sites,NNN::Int64,hx::Float64,ul::tri_type=lower;kwargs...)::MPO
