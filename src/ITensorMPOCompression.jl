@@ -2,9 +2,9 @@ module ITensorMPOCompression
 
 using ITensors
 
-export ql,lq,rq,assign!,getV,setV,growRL,to_openbc,set_scale!,block_qx,canonical!,is_canonical
+export ql,lq,rq,assign!,getV,setV,growRL,to_openbc,set_scale!,block_qx,orthogonalize!,is_canonical
 export tri_type,orth_type,matrix_state,upper,lower,none,left,right,mirror,parse_links
-export has_pbc,is_regular_form,compress,compress!,getM,grow
+export has_pbc,is_regular_form,truncate!,getM,grow
 export is_lower_regular_form,is_upper_regular_form,V_offsets
 export detect_upper_lower,is_upper_lower
 

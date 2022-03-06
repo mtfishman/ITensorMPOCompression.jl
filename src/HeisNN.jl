@@ -15,7 +15,7 @@ function runtest()
     sites = siteinds("SpinHalf", N)
     psi=randomMPS(sites)
     H=make_transIsing_MPO(sites,NNN,hx,pbc=true) 
-    canonical!(H)
+    orthogonalize!(H)
     @test is_canonical(H[2],matrix_state(lower,left),eps)
     @test !is_canonical(H[2],matrix_state(lower,right),eps)
 end

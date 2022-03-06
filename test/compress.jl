@@ -2,6 +2,9 @@ using ITensorMPOCompression
 using Revise
 using Test
 
+import ITensorMPOCompression.truncate!
+import ITensorMPOCompression.orthogonalize!
+
 include("hamiltonians.jl")
 
 using Printf
@@ -165,7 +168,7 @@ end
     H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
     E0l=inner(psi',to_openbc(H),psi)
     @test is_upper_lower(H,lower,eps)
-    canonical!(H,dir=right)
+    orthogonalize!(H,dir=right)
 
     E1l=inner(psi',to_openbc(H),psi)
     @test abs(E0l-E1l)<eps
@@ -189,7 +192,7 @@ end
     H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=true)
     E0r=inner(psi',to_openbc(H),psi)
     @test is_upper_lower(H,lower,eps)
-    canonical!(H;dir=left)
+    orthogonalize!(H;dir=left)
 
     E1r=inner(psi',to_openbc(H),psi)
     @test abs(E0r-E1r)<1e-14
@@ -220,7 +223,7 @@ function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Flo
     H=make_transIsing_MPO(sites,NNN,hx,ul,pbc=true)
     E0l=inner(psi',to_openbc(H),psi)
     @test is_regular_form(H,ul,eps)
-    canonical!(H,dir=right)
+    orthogonalize!(H,dir=right)
     #pprint(H,eps)
 
     E1l=inner(psi',to_openbc(H),psi)
@@ -228,8 +231,8 @@ function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Flo
     @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msr,eps)
 
-    compress!(H;dir=left,cutoff=epsSVD)
-    compress!(H;dir=right,cutoff=epsSVD)
+    truncate!(H;dir=left,cutoff=epsSVD)
+    truncate!(H;dir=right,cutoff=epsSVD)
     @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msr,eps)
     # make sure the energy in unchanged
@@ -245,21 +248,21 @@ function test_one_sweep(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Flo
     E0r=inner(psi',to_openbc(H),psi)
     @test abs(E0l-E0r)<1e-14
     @test is_regular_form(H,ul,eps)
-    canonical!(H,dir=left)
+    orthogonalize!(H,dir=left)
 
     E1r=inner(psi',to_openbc(H),psi)
     @test abs(E0r-E1r)<1e-14
     @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msl,eps)
 
-    compress!(H;dir=right,cutoff=epsSVD)
-    compress!(H;dir=left,cutoff=epsSVD)
+    truncate!(H;dir=right,cutoff=epsSVD)
+    truncate!(H;dir=left,cutoff=epsSVD)
     @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msl,eps)
     # make sure the energy in unchanged
     E2r=inner(psi',to_openbc(H),psi)
     relError=abs(E0r-E2r)/epsSVD
-    @printf "Relative error in Energy %.1e" relError
+    @printf "Relative error in Energy %.1e \n" relError
 
 end
 
@@ -278,7 +281,7 @@ end
     test_one_sweep(5,2,hx,upper,epsSVD,eps)
     test_one_sweep(5,3,hx,upper,epsSVD,eps) #known unit on diagonal
     test_one_sweep(5,4,hx,upper,epsSVD,eps)
-    epsSVD=.0000001
+     epsSVD=.0000001
     test_one_sweep(10,1,hx,lower,epsSVD,eps)
     test_one_sweep(10,7,hx,lower,epsSVD,eps)
     test_one_sweep(10,8,hx,lower,epsSVD,eps) 
@@ -301,7 +304,7 @@ end
     test_one_sweep(10,6,hx,lower,epsSVD,eps)
     test_one_sweep(10,6,hx,upper,epsSVD,eps)
     
-    epsSVD=1e-10
+    # epsSVD=1e-10
     test_one_sweep(10,6,hx,lower,epsSVD,eps)  
     test_one_sweep(10,6,hx,upper,epsSVD,eps) 
 

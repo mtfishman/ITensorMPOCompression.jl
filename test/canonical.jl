@@ -80,7 +80,7 @@ function test_canonical(N::Int64,NNN::Int64,hx::Float64,ms::matrix_state)
     @test is_regular_form(H[1],ms.ul,eps)
     @test is_regular_form(H   ,ms.ul,eps)
     E0=inner(psi',to_openbc(H),psi)
-    canonical!(H;dir=ms.lr)
+    orthogonalize!(H;dir=ms.lr)
     E1=inner(psi',to_openbc(H),psi)
     @test abs(E0-E1)<1e-14
     @test is_upper_lower(H,ms.ul,eps)
@@ -89,8 +89,8 @@ function test_canonical(N::Int64,NNN::Int64,hx::Float64,ms::matrix_state)
     #
     #  two more sweeps just make sure nothing gets messed up.
     #
-    canonical!(H;dir=mirror(ms.lr))
-    canonical!(H;dir=ms.lr)
+    orthogonalize!(H;dir=mirror(ms.lr))
+    orthogonalize!(H;dir=ms.lr)
     E2=inner(psi',to_openbc(H),psi)
     @test abs(E0-E2)<1e-14
     @test is_regular_form(H,ms.ul,eps)

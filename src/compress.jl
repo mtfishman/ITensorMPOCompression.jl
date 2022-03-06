@@ -244,7 +244,7 @@ function compress(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor}
 end
 
 """
-    compress!(H::MPO)
+    truncate!(H::MPO)
 
 Compress an MPO using block respecting SVD techniques as described in 
 > *Daniel E. Parker, Xiangyu Cao, and Michael P. Zaletel Phys. Rev. B 102, 035147*
@@ -259,8 +259,7 @@ Compress an MPO using block respecting SVD techniques as described in
 - `mindim::Int64` : At least `mindim` singular values will be retained, even if some fall below the cutoff
 
 """
-function compress!(H::MPO;kwargs...)
-    println("------------compression start----------------")
+function truncate!(H::MPO;kwargs...)
     #
     # decide left/right and upper/lower
     #
@@ -268,7 +267,7 @@ function compress!(H::MPO;kwargs...)
     lr::orth_type=get(kwargs, :dir, right)
     (bl,bu)=detect_regular_form(H,eps)
     if !(bl || bu)
-        throw(ErrorException("compress!(H::MPO), H must be in either lower or upper regular form"))
+        throw(ErrorException("truncate!(H::MPO), H must be in either lower or upper regular form"))
     end
     @assert !(bl && bu)
     ul::tri_type = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
@@ -277,7 +276,7 @@ function compress!(H::MPO;kwargs...)
     #
     ms=matrix_state(ul,lr)
     if !is_canonical(H,mirror(ms),eps) 
-        canonical!(H,ul;dir=mirror(lr),kwargs...) 
+        orthogonalize!(H,ul;dir=mirror(lr),kwargs...) 
     end
     N=length(H)
     if ms.lr==left

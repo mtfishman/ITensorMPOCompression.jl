@@ -265,7 +265,7 @@ function detect_regular_form(W::ITensor,eps::Float64)::Tuple{Bool,Bool}
     reg_lower=irf && top_row_zero && right_col_zero
     reg_upper=irf && bot_row_zero && left__col_zero
     # before returning we should also check for any unit matricies along the diagonal
-    # this gets a tricky for non-square matrices.
+    # this gets a bit tricky for non-square matrices.
     diag_unit = false
     if Dw1>=Dw2
         for ic in 2:Dw2-1
@@ -277,10 +277,14 @@ function detect_regular_form(W::ITensor,eps::Float64)::Tuple{Bool,Bool}
             diag_unit = diag_unit || is_unit(slice(W,r=>ir,c=>ir+dr),eps)
         end
     end
-    if diag_unit
-        #pprint(W,eps)
-        println("ITensorMPOCompression.is_regular_form\n  Warning: found unit operator along the diagonal of an MPO")
-    end    
+    #
+    #  Not sure how to hanlde this right now ... unit ops seem to appear with alarming
+    #  frequency after compression.
+    #
+    # if diag_unit
+    #     pprint(W,eps)
+    #     println("ITensorMPOCompression.is_regular_form\n  Warning: found unit operator along the diagonal of an MPO")
+    # end    
    
     return reg_lower,reg_upper
 end
