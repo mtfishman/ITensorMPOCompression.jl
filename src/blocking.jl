@@ -165,3 +165,98 @@ function growRL(RL::ITensor,iWlink::Index,off::V_offsets)::Tuple{ITensor,Index}
     end
     return RLplus,iq
 end
+
+#
+#  factor LR such that for
+#       lr=left  LR=M*RM_prime
+#       lr=right LR=RL_primt*M
+#  However becuase of the ITensor index work we don;t need to distinguish between left and 
+#  matrix multiplication in the code.  BUT we do need to worry about upper and lower RL
+#  matrices when they are rectangular.  For an upper triangular matrix we wnat to grab the
+#  matrix from the right side of R, since that is where the most meat (numerical weight) is
+#  Conversly for the lower tri L we want grab M from left side.  In short we want as few
+#  zeros as possible in M in order for the SVD decomp and compression to have maximum effect.
+#
+function getM(RL::ITensor,ms::matrix_state,eps::Float64)::Tuple{ITensor,ITensor,Index,Bool}
+    ils=filterinds(inds(RL),tags="Link") 
+    iqx=findinds(ils,"qx")[1] #think of this as the row index
+    iln=noncommonind(ils,iqx) #think of this as the column index
+    Dwq,Dwn=dim(iqx),dim(iln)
+    Dwm=min(Dwq,Dwn)
+    irm=Index(Dwm,"Link,m") #new common index between Mplus and RL_prime
+    imq=Index(Dwq-2,tags(iqx)) #mini version of iqx
+    imm=Index(Dwm-2,tags(irm)) #mini version of irm
+    M=ITensor(imq,imm)
+    shift=0
+    if ms.ul==upper
+        shift=max(0,Dwn-Dwq) #for upper rectangular R we want M over at the right
+    end
+    for j1 in 2:Dwq-1
+        for j2 in 2:Dwm-1
+            M[imq=>j1-1,imm=>j2-1]=RL[iqx=>j1,iln=>j2+shift]
+        end
+    end
+    #
+    # Now we need RL_prime such that RL=M*RL_prime.
+    # RL_prime is just the perimeter of RL with 1's on the diagonal
+    # Well sort of, if RL is rectangular then htings get a little more involved.
+    #
+    #@show Dwm dim(iln) Dwn
+    non_zero=false
+    RL_prime=ITensor(0.0,irm,iln)
+    for j1 in 1:dim(irm) #or 1:Dwm
+        RL_prime[irm=>j1,iln=>1       ]=RL[iqx=>j1,iln=>1  ] #first col
+        RL_prime[irm=>j1,iln=>dim(iln)]=RL[iqx=>j1,iln=>dim(iln)] #last cols
+        #check for non-zero elements to right of where I is.
+        #@show Dwm iln
+        for j2 in Dwm:dim(iln)-1
+            #@show j2
+            non_zero = non_zero || abs(RL[iqx=>j1,iln=>j2]) >eps
+        end
+        RL_prime[irm=>j1,iln=>j1+shift]=1.0
+    end
+    for j2 in 1:dim(iln)
+        RL_prime[irm=>1       ,iln=>j2]=RL[iqx=>1  ,iln=>j2]
+        RL_prime[irm=>dim(irm),iln=>j2]=RL[iqx=>Dwq,iln=>j2]
+    end
+    RL_prime[irm=>dim(irm),iln=>dim(iln)]=1.0
+
+    return M,RL_prime,irm,non_zero
+end
+
+#                      |1 0 0|
+#  given A, spit out G=|0 A 0|
+#                      |0 0 1|
+#
+function grow(A::ITensor,ig1::Index,ig2::Index)
+    ils=inds(A)
+    @assert length(ils)==order(A)
+    #
+    # we need to connect the indices of A with ig1,ig2 indices based on matching tags.
+    #
+    if hastags(ils[1],tags(ig1))
+        ia1=ils[1]
+        @assert hastags(ils[2],tags(ig2))
+        ia2=ils[2]
+    elseif hastags(ils[1],tags(ig2))
+        ia2=ils[1]
+        @assert hastags(ils[2],tags(ig1))
+        ia1=ils[2]
+    else
+        @assert false
+    end
+    chi1,chi2=dim(ia1),dim(ia2)
+    @assert dim(ig1)==chi1+2
+    @assert dim(ig2)==chi2+2
+
+    G=ITensor(0.0,ig1,ig2) #would be nice to use delta() but we can't set elements on it.
+    G[ig1=>1     ,ig2=>1     ]=1.0;
+    G[ig1=>chi1+2,ig2=>chi2+2]=1.0;
+    for j1 in 1:chi1
+        for j2 in 1:chi2
+            G[ig1=>j1+1,ig2=>j2+1]=A[ia1=>j1,ia2=>j2]
+        end
+    end
+    return G
+end
+
