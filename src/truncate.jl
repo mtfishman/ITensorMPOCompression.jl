@@ -75,8 +75,10 @@ function truncate(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor}
 
 #
 # Block repecting QR/QL/LQ/RQ factorization.  RL=L or R for upper and lower.
+# here we purposely turn off rank reavealing feature (epsrr=0.0) to (mostly) avoide
+# horizontal rectangular RL matricies which are .
 #
-    Q,RL,lq=block_qx(W,ul;kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
+    Q,RL,lq=block_qx(W,ul;epsrr=0.0,kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
     ITensors.@debug_check begin
         @assert is_canonical(Q,ms,eps)
         @assert is_regular_form(Q,ul,eps)
