@@ -3,18 +3,16 @@ using ITensorMPOCompression
 using Revise
 using Test
 
+#ITensors.ITensors.enable_debug_checks()
+
 include("hamiltonians.jl")
 
 function fast_GS(H::MPO,sites)::Tuple{Float64,MPS}
     psi0  = randomMPS(sites,length(H))
-
     sweeps = Sweeps(5)
     setmaxdim!(sweeps, 2,4,8,16,32)
     setcutoff!(sweeps, 1E-10)
-    db=true#ITensors.using_debug_checks()
-    #if db  ITensors.ITensors.disable_debug_checks() end
     E,psi= dmrg(H,psi0, sweeps;outputlevel=0)
-    #if db  ITensors.ITensors.enable_debug_checks() end
     return E,psi
 end
 
@@ -45,18 +43,24 @@ end
 #Base.show(io::IO, f::Float64) = @printf(io, "%1.16f", f)
 #println("-----------Start--------------")
 
-# @testset "MPOs with periodic boundary conditions" begin
+@testset "MPOs with periodic boundary conditions" begin
 
-#     N=5
-#     hx=0.5
-#     eps=4e-14 #this is right at the lower limit for passing the tests.
-#     sites = siteinds("SpinHalf", N)
-    
-#     test_auto_vs_direct(sites,1,hx,-1.5066685458330529,eps) #1st neighbour interactions
-#     test_auto_vs_direct(sites,2,hx,-1.4524087749432490,eps) #1&2 neighbour interactions
-#     test_auto_vs_direct(sites,3,hx,-1.4516941302867301,eps) #1->3 neighbour interactions
-#     test_auto_vs_direct(sites,4,hx,-1.4481111362390489,eps) #1->4 neighbour interactions
-# end
+    N=5
+    hx=0.5
+    eps=4e-14 #this is right at the lower limit for passing the tests.
+    sites = siteinds("SpinHalf", N)
+
+    # It seems we need to jump through hoops to avoid the 
+    # "type Dense has no field blockoffsets" from inside DMRG errors
+    # I tried to move these disables inside fast_GS with no success?!?!?
+    db=ITensors.using_debug_checks()
+    if db  ITensors.ITensors.disable_debug_checks() end
+    test_auto_vs_direct(sites,1,hx,-1.5066685458330529,eps) #1st neighbour interactions
+    test_auto_vs_direct(sites,2,hx,-1.4524087749432490,eps) #1&2 neighbour interactions
+    test_auto_vs_direct(sites,3,hx,-1.4516941302867301,eps) #1->3 neighbour interactions
+    test_auto_vs_direct(sites,4,hx,-1.4481111362390489,eps) #1->4 neighbour interactions
+    if db  ITensors.ITensors.enable_debug_checks() end
+end
 
 
 @testset "Check obc=false setting for auto MPO" begin
@@ -64,8 +68,6 @@ end
     NNN=3
     hx=0.5
     eps=1e-14
-    #avoid type Dense has no field blockoffsets errors
-    db=ITensors.using_debug_checks()
     sites = siteinds("SpinHalf", N; conserve_qns=false)
 
     H_pbc=make_transIsing_AutoMPO(sites,NNN,hx;obc=false) 
@@ -73,6 +75,11 @@ end
     @test is_regular_form(H_pbc,lower,eps)
     H_obc=make_transIsing_AutoMPO(sites,NNN,hx;obc=true) 
     @test !has_pbc(H_obc)
+
+    # It seems we need to jump through hoops to avoid the 
+    # "type Dense has no field blockoffsets" from inside DMRG errors
+    # I tried to move these disables inside fast_GS with no success?!?!?
+    db=ITensors.using_debug_checks()
     if db  ITensors.ITensors.disable_debug_checks() end
     E_pbc,psi=fast_GS(to_openbc(H_pbc),sites)
     E_obc,psi=fast_GS(H_obc,sites)
