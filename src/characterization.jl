@@ -342,10 +342,20 @@ function is_upper_regular_form(H::MPO,eps::Float64)::Bool
     return is_regular_form(H,upper,eps)
 end
 
+function get_Dw(H::MPO)::Vector{Int64}
+    N=length(H)
+    Dws=Vector{Int64}(undef,N-1)
+    for n in 1:N-1
+        d,n,r,c=parse_links(H[n])
+        Dws[n]=dim(c)
+    end
+    return Dws
+end
+    
 function get_traits(W::ITensor,eps::Float64)
     d,n,r,c=parse_links(W)
     Dw1,Dw2=dim(r),dim(c)
-    bl,bu = is_regular_form(W,eps)
+    bl,bu = detect_regular_form(W,eps)
     l= bl ? 'L' : ' '
     u= bu ? 'U' : ' '
 

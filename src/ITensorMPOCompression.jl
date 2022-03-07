@@ -6,7 +6,7 @@ export ql,lq,rq,assign!,getV,setV,growRL,to_openbc,set_scale!,block_qx,orthogona
 export tri_type,orth_type,matrix_state,upper,lower,none,left,right,mirror,parse_links
 export has_pbc,is_regular_form,truncate,truncate!,getM,grow
 export is_lower_regular_form,is_upper_regular_form,V_offsets
-export detect_upper_lower,is_upper_lower
+export detect_upper_lower,is_upper_lower,get_Dw
 
 """
     @enum tri_type  upper lower
