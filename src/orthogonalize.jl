@@ -6,6 +6,7 @@ function orthogonalize!(W1::ITensor,W2::ITensor,ul::tri_type,n::Int64;kwargs...)
     W2=Lplus*W2
     il=filterinds(inds(Lplus),tags="l=$n")[1]
     iq=filterinds(inds(Lplus),tags="qx")[1]
+    #pprint(iq,Lplus,il,1e-14)
     il=Index(dim(iq),tags(il))
     replaceind!(W1,iq,il)
     replaceind!(W2,iq,il)
@@ -13,7 +14,7 @@ function orthogonalize!(W1::ITensor,W2::ITensor,ul::tri_type,n::Int64;kwargs...)
         @assert is_regular_form(W1,ul,1e-14)
         @assert is_regular_form(W2,ul,1e-14)
     end
-    return W1,W2 #We should not to return these if W1 and W2 were truely passed by reference.
+    return W1,W2 #We should not need to return these if W1 and W2 were truely passed by reference.
 end
 
 function orthogonalize!(H::MPO,ul::tri_type;kwargs...)
@@ -40,6 +41,7 @@ Bring an MPO into left or right canonical form using block respecting QR decompo
 
 # Keywords
 - `dir::orth_type = right` : choose `left` or `right` canonical form
+- `sweeps::Int64` : number of sweeps to perform. If sweeps is zero or not set then sweeps continue there is no change in the internal dimensions from rank revelaing QR. 
 - `epsrr::Foat64 = 1e-14` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
    All rows with max(abs(R[:,j]))<epsrr are considered zero and removed. 
 """
@@ -53,7 +55,30 @@ function orthogonalize!(H::MPO;kwargs...)
     end
     @assert !(bl && bu)
     ul::tri_type = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
-    orthogonalize!(H,ul;kwargs...)
+    nsweep=get(kwargs,:sweeps,0)
+
+    kwargs=Dict(kwargs) #this allws us to set the dir elements
+    lr=get(kwargs,:dir,right)
+    lrm=mirror(lr)
+    if nsweep>0
+        for isweep in 1:nsweep
+            kwargs[:dir]=lrm
+            orthogonalize!(H,ul;kwargs...)
+            kwargs[:dir]=lr
+            orthogonalize!(H,ul;kwargs...)
+        end
+    else
+        Dws=get_Dw(H)
+        while true
+            kwargs[:dir]=lrm
+            orthogonalize!(H,ul;kwargs...)
+            kwargs[:dir]=lr
+            orthogonalize!(H,ul;kwargs...)
+            new_Dws=get_Dw(H)
+            if new_Dws==Dws break end
+            Dws=new_Dws
+        end
+    end
 end
 
 
