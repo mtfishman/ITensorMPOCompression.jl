@@ -443,6 +443,7 @@ function trim(R::ITensor,Q::ITensor,eps::Float64)
   if sum(zeros)==0
     return R,Q
   end
+  #@printf "Rank Reveal removing %4i rows with epsrr=%.1e\n" sum(zeros) eps
   nq=dim(iq)-sum(zeros)
   iRo=noncommoninds(R,iq)
   iQo=noncommoninds(Q,iq)
