@@ -187,10 +187,14 @@ function getM(RL::ITensor,ms::matrix_state,eps::Float64)::Tuple{ITensor,ITensor,
     imq=Index(Dwq-2,tags(iqx)) #mini version of iqx
     imm=Index(Dwm-2,tags(irm)) #mini version of irm
     M=ITensor(imq,imm)
+    # @show inds(M)
     shift=0
-    if ms.ul==upper
+    if ms.ul==lower
         shift=max(0,Dwn-Dwq) #for upper rectangular R we want M over at the right
+    else #upper
+        shift=max(0,Dwq-Dwn)
     end
+    #@show shift,ms.ul,Dwn,Dwq
     for j1 in 2:Dwq-1
         for j2 in 2:Dwm-1
             M[imq=>j1-1,imm=>j2-1]=RL[iqx=>j1,iln=>j2+shift]
