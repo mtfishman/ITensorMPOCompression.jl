@@ -25,12 +25,13 @@ function test_auto_vs_direct(sites,NNN::Int64,hx::Float64,Eexpected::Float64,eps
     #@show Eauto
     @test abs(Eauto-Eexpected)<eps
     Eauto1=inner(psi',Hauto,psi)
+    @test abs(Eauto1-Eexpected)<eps
     
     #pprint(H[1],eps)
     #
     #  Make H directly ... should be lower triangular
     #
-    Hdirect=make_transIsing_MPO(sites,NNN,hx) 
+    Hdirect=make_transIsing_MPO(sites,NNN,hx) #defaults to lower reg form
     
     @test abs(inner(psi',Hdirect,psi)-Eexpected)<eps
     Edirect,psidirect=fast_GS(Hdirect,sites)

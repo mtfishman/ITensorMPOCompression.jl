@@ -47,7 +47,8 @@ function SolveRLprime(RL::ITensor,RL_prime::ITensor,U::ITensor,s::ITensor,V::ITe
             R2[j1,j2]=RL[iq=>j1.second+j1_offset,ic1=>j2.second+j2_offset]
         end
     end
-    #pprint(iqm,R2,icm,eps)
+    # @show "R2="
+    # pprint(iqm,R2,icm,1e-14)
     #@assert(false)
     R2_prime=Minv*R2
     
@@ -91,9 +92,10 @@ function truncate(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor}
     #pprint(lq,RL,c,eps)
     M,RL_prime,im,RLnz=getM(RL,ms,eps) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
     
-    # imm=filterinds(M,tags="m")[1]
-    # imq=filterinds(M,tags="qx")[1]
-    # pprint(imq,M,imm,eps)
+    imm=filterinds(M,tags="m")[1]
+    imq=filterinds(M,tags="qx")[1]
+    #@show "M="
+    #pprint(imq,M,imm,eps)
     
     
     #
@@ -118,7 +120,8 @@ function truncate(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor}
     #  since we know UsV anyway we can calculate M^-1=dag(V)*1.0/s*dag(U)
     #
     if ns>0 && RLnz
-        #@show "fixing RL_prime" inds(RL_prime) inds(RL)
+        @show "fixing RL_prime" 
+        U#1,s1,V1=svd(M,isvd;cutoff=1e-14) # use low cutoff to get more accurate Minv?
         RL_prime=SolveRLprime(RL,RL_prime,U,s,V,lq,im,ms)
     end
     Mplus=grow(M,lq,im)
@@ -174,6 +177,7 @@ Compress an MPO using block respecting SVD techniques as described in
 
 """
 function truncate!(H::MPO;kwargs...)
+    #@printf "---- start compress ----\n"
     #
     # decide left/right and upper/lower
     #
