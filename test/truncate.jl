@@ -249,7 +249,6 @@ function test_direct_TransIsing(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,obc
     RE=abs((E0l-E2l)/E0l)
     @printf "E0=%.5f Etrunc=%.5f rel. error=%.5e RE/espSVD=%.2f \n" E0l E2l RE RE/epsSVD
     @test (RE/epsSVD)<1.0
-    @assert (RE/epsSVD)<1.0
 
 
     #
@@ -350,7 +349,6 @@ function test_autoMPO(makeH,N::Int64,NNN::Int64,hx::Float64,epsSVD::Float64,eps:
 
 end
 
-
 @testset "Compress full MPO" begin
     hx=0.5
     eps=2e-13
@@ -390,18 +388,19 @@ end
     test_autoMPO_Heisenberg(N,8,hx,epsSVD,eps)
     test_autoMPO_Heisenberg(N,9,hx,epsSVD,eps)
 
-end
- 
+end 
+
 @testset "Try truncating and MPO with open boundary conditions" begin
     hx=0.5
     eps=2e-13
     epsSVD=1e-12
-    epsrr=0.0
+    epsrr=1e-12
     obc=true
 
 #                  V=N sites
 #                    V=Num Nearest Neighbours in H
     test_direct_TransIsing(10,7,hx,lower,obc,epsSVD,epsrr,eps)
+    test_direct_TransIsing(10,7,hx,upper,obc,epsSVD,epsrr,eps)
 end
 
 #

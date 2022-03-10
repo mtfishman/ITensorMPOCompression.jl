@@ -82,7 +82,9 @@ function truncate(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor}
     Q,RL,lq=block_qx(W,ul;epsrr=0.0,kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
     ITensors.@debug_check begin
         @assert is_canonical(Q,ms,eps)
-        @assert is_regular_form(Q,ul,eps)
+        if order(Q)==4
+            @assert is_regular_form(Q,ul,eps)
+        end
     end
 #
 #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
@@ -199,10 +201,10 @@ function truncate!(H::MPO;kwargs...)
     end
     N=length(H)
     if lr==left
-        start = pbc ? 1 : 2
+        start = pbc ? 1 : 1
         rng=start:1:N-1 #sweep left to right
     else #right
-        start = pbc ? N : N-1
+        start = pbc ? N : N
         rng=start:-1:2 #sweep right to left
     end
     for n in rng 

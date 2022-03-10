@@ -69,8 +69,10 @@ function parse_links(A::ITensor)::Tuple{Int64,Int64,Index,Index}
         end
     elseif length(ils)==1
         t=tags(ils[1])
-        n::Int64=tryparse(Int64,String(t[2])[3:end]) # assume second tag is the "l=n" tag
-        if n==1
+        n=tryparse(Int64,String(t[2])[3:end]) # assume second tag is the "l=n" tag
+        if n==Nothing
+            return d,nsite,Index(1),ils[1] #probably a qx link, don;t if row or col
+        elseif n==1
             return d,nsite,Index(1),ils[1] #row vector
         else
             return d,nsite,ils[1],Index(1) #col vector
@@ -115,7 +117,7 @@ function is_canonical(W::ITensor,ms::matrix_state,eps::Float64)::Bool
         Id1=delta(rc,rc')
         is_can = norm(Id-Id1)<eps
     elseif order(Id)==0
-        is_can = abs(scalar(Id)-1.0)<eps
+        is_can = abs(scalar(Id)-d)<eps
     end
     return is_can    
 end
