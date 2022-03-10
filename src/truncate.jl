@@ -90,53 +90,26 @@ function truncate(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor}
 #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
 #
     c=noncommonind(RL,lq) #if size changed the old c is not lnger valid
-    #@show inds(RL),lq,c,"RL="
-    #pprint(lq,RL,c,eps)
     M,RL_prime,im,RLnz=getM(RL,ms,eps) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
-    
-    imm=filterinds(M,tags="m")[1]
-    imq=filterinds(M,tags="qx")[1]
-    #@show "M="
-    #pprint(imq,M,imm,eps)
-    
-    
-    #
+#
 #  At last we can svd and compress M using epsSVD as the cutoff.
 #    
     isvd=findinds(M,tsvd)[1] #decide the left index
     U,s,V=svd(M,isvd;kwargs...) # ns sing. values survive compression
     ns=dim(inds(s)[1])
     #@show diag(array(s))
-    
-    # imm=filterinds(M,tags="m")[1]
-    # imq=filterinds(M,tags="qx")[1]
-    # Minv=getInverse(U,s,V)
-    # Minvm=prime(Minv,imm)
-    
-    #@show inds(Minvm) inds(Minv) inds(M)
-    # @printf "Minv*M-I norm = %.1e \n" norm(prime(Minv,imm)*M-delta(imq,imq'))
-    
-    #@assert false
     #
     #  If RL is rectangular we need to solve RL=M*RL_prime for RL_prime
     #  since we know UsV anyway we can calculate M^-1=dag(V)*1.0/s*dag(U)
     #
     if ns>0 && RLnz
         @show "fixing RL_prime" 
-        U#1,s1,V1=svd(M,isvd;cutoff=1e-14) # use low cutoff to get more accurate Minv?
         RL_prime=SolveRLprime(RL,RL_prime,U,s,V,lq,im,ms)
     end
     Mplus=grow(M,lq,im)
     D=RL-Mplus*RL_prime
     if norm(D)>get(kwargs, :cutoff, 1e-14)
-        #@show  RLnz "RL_prime="
-        #pprint(im,RL_prime,c,eps)
         @printf "High normD(D)=%.1e min(s)=%.1e \n" norm(D) min(diag(array(s))...)
-        #pprint(lq,D,c,eps)
-        #@show D
-        #@assert(false)
-    else
-#        @printf "normD(D)=%.1e min(s)=%.1e \n" norm(D) min(diag(array(s))...)
     end
 
     luv=Index(ns+2,"Link,$tuv") #link for expanded U,US,V,sV matricies.
@@ -201,11 +174,9 @@ function truncate!(H::MPO;kwargs...)
     end
     N=length(H)
     if lr==left
-        start = pbc ? 1 : 1
-        rng=start:1:N-1 #sweep left to right
+        rng=1:1:N-1 #sweep left to right
     else #right
-        start = pbc ? N : N
-        rng=start:-1:2 #sweep right to left
+        rng=N:-1:2 #sweep right to left
     end
     for n in rng 
         nn=n+rng.step #index to neighbour

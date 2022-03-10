@@ -1,11 +1,12 @@
 #
 #  Functions for bringing and MPO into left or right canonical form
 #
-function orthogonalize!(W1::ITensor,W2::ITensor,ul::tri_type,n::Int64;kwargs...)
+function orthogonalize!(W1::ITensor,W2::ITensor,ul::tri_type,kwargs...)
     W1,Lplus=block_qx(W1,ul;kwargs...) 
     W2=Lplus*W2
-    il=filterinds(inds(Lplus),tags="l=$n")[1]
+ 
     iq=filterinds(inds(Lplus),tags="qx")[1]
+    il=noncommonind(Lplus,iq)
     #pprint(iq,Lplus,il,1e-14)
     il=Index(dim(iq),tags(il))
     replaceind!(W1,iq,il)
@@ -18,23 +19,17 @@ function orthogonalize!(W1::ITensor,W2::ITensor,ul::tri_type,n::Int64;kwargs...)
 end
 
 function orthogonalize!(H::MPO,ul::tri_type;kwargs...)
-    pbc = has_pbc(H) 
     lr::orth_type=get(kwargs, :dir, right)
     N=length(H)
     if lr==left
-        start = pbc ? 1 : 1
-        rng=start:1:N-1 #sweep left to right
-        link_offest=0
+        rng=1:1:N-1 #sweep left to right
     else #right
-        start = pbc ? N : N
-        rng=start:-1:2 #sweep right to left
-        link_offest=-1
+        rng=N:-1:2 #sweep right to left
     end
     for n in rng 
         nn=n+rng.step #index to neighbour
-        nl=n+link_offest #index in link tag, l=$nl
         #@show n,nn,nl
-        H[n],H[nn]=orthogonalize!(H[n],H[nn],ul,nl;kwargs...)
+        H[n],H[nn]=orthogonalize!(H[n],H[nn],ul,kwargs...)
     end
 end
 

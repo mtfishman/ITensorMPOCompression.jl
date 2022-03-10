@@ -60,15 +60,15 @@ using Revise
      3.0 0.5  0.5 ;
      4.0 0.5  0.5 ]
      
+    V=ITensor(0.5,Index(3,"Link,l=0"),Index(2,"Link,qx"),is,is')
     W=ITensor(eltype(A),A,Index(4,"Link,l=0"),Index(4,"Link,l=1"),is,is')
     
     W=setV(W,V,matrix_state(lower,right))
    
     @test matrix(slice(W,is=>1,is'=>1)) == 
-    [0.5 0.5 13.0 ; 
-     0.5 0.5 14.0 ;
-     0.5 0.5 15.0 ;
-     4.0 8.0 16.0 ]
+    [0.5   0.5  0.5  0.0 ; 
+     0.5   0.5  0.5  0.0 ;
+     13.0 14.0 15.0 16.0 ]
 
 
     V=ITensor(0.5,Index(2,"Link,qx"),Index(3,"Link,l=1"),is,is')
@@ -83,9 +83,9 @@ using Revise
     W=ITensor(eltype(A),A,Index(4,"Link,l=0"),Index(4,"Link,l=1"),is,is')
     
     W=setV(W,V,matrix_state(lower,right))
-    @test transpose(matrix(slice(W,is=>1,is'=>1))) == 
-    [0.5 0.5  0.5 13.0; 
-     0.5 0.5  0.5 14.0;
+    @test matrix(slice(W,is=>1,is'=>1)) == 
+    [0.5 0.5  0.5 0.0; 
+     0.5 0.5  0.5 0.0;
      4.0 8.0 12.0 16.0]
 
  

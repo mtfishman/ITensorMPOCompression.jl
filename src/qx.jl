@@ -27,7 +27,10 @@ Hilbert space.
 - `iq` the new internal link index between `Q` and `R`/`L`.  tags="Link,qx"
 """
 function block_qx(W_::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor,Index}
-  W=copy(W_)
+  #
+  # Copy so that we don't mess up the original MPO
+  #
+  W=copy(W_) 
   #
   # settle the left/right && upper/lower question
   #
@@ -66,23 +69,7 @@ function block_qx(W_::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor,Ind
   replacetags!(Q ,qx,"qx") #releive client code from the burden dealing ql,lq,qr,rq tags
   replacetags!(RL,qx,"qx")
   W=setV(W,Q,ms) #Q is the new V, stuff Q into W. THis can resize W
-  # @show ms
-  # @show "RL="
-  # if ms.lr==left
-  #   pprint(commonind(RL,Q),RL,il,1e-14)
-  # else
-  #   pprint(il,RL,commonind(RL,Q),1e-14)
-  # end
-  #@show inds(W) ilw inds(RL)
   RLplus,iqx=growRL(RL,ilw,offset) #Now make a full size version of RL
-  #@show inds(RLplus) iqx
-  # @show "RLplus="
-  # if ms.lr==left
-  #   #@show inds(RLplus) iqx ilw
-  #   pprint(iqx,RLplus,ilw,1e-14)
-  # else
-  #   pprint(ilw,RLplus,iqx,1e-14)
-  # end  
   ilw=filterinds(W,tags=tln)[1]
   replaceind!(W,ilw,iqx)  
   @assert hastags(W,"qx")

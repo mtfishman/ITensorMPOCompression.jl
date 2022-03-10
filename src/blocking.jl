@@ -84,11 +84,17 @@ function setV1(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     return W1
 end
 
-
+#
+#  This function is non trivial for 3 reasons:
+#   1) V could have truncted number of rows or columns as a result of rank revealing QX
+#      W then has to re-sized accordingly
+#   2) If W gets resized we need to preserve the last row or column from the old W.
+#   3) V and W should one common link index so we need to find those and pair them together.
+#
 function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
     if length(wils)==1
-        return setV1(W,V,ms)
+        return setV1(W,V,ms) #Handle row/col vectors
     end
     vils=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
     #@show wils vils
@@ -98,9 +104,13 @@ function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     @assert iss==filterinds(inds(V),tags="Site")
     #
     #  these need to loop in the correct order in order to get the W and V indices to line properly.
-    #  one index from each of W & V should be the same, so we just need get these
-    #  indices to loop together.
+    #  one index from each of W & V should have the same tags, so we just need get these
+    #  indices paired up so they can loop together.
     #
+    # this would be perfect but it only looks at the first tag "Link", 
+    # we are interested in the second tag l=$n :(
+    #icom=ITensors.commontags(tags(wils...),tags(vils...))
+
     if tags(wils[1])!=tags(vils[1]) && tags(wils[2])!=tags(vils[2])
         vils=vils[2],vils[1] #swap tags the same on index 1 or 2.
     end
@@ -119,85 +129,35 @@ function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     end
 
     off=V_offsets(ms)
-    resize=false
-    if ms.lr==left
-        if dim(iwqx)>dim(ivqx)+1
-            #@printf "left resize %4i to %4i \n" dim(iwqx) dim(ivqx)
-            #pprint(W,eps)
-            resize=true
-                #we need to rezise W_
-            iw1=Index(dim(ivqx)+1,tags(iwqx))
-            W1=ITensor(0.0,iw1,iwl,iss)
-            others=noncommoninds(W,iwqx)
-            if ms.ul==lower
-                #need to preserve the first column
-                @assert off.o1==1 && off.o1==1
-                for io in eachindval(others...)
-                    W1[iw1=>1,io...]=W[iwqx=>1,io...]
-                end
-                #@show "after column W1="
-                #pprint(W1,eps)
+    resize=dim(iwqx)>dim(ivqx)+1
+    if resize
+        iw1=Index(dim(ivqx)+1,tags(iwqx))
+        W1=ITensor(0.0,iw1,iwl,iss)
+        others=noncommoninds(W,iwqx)
+        @assert off.o1==off.o2
+        if  off.o1==1 #save row or col 1
+            for io in eachindval(others...)
+                W1[iw1=>1,io...]=W[iwqx=>1,io...]
+            end
+        else #off.o1==0 save row or col Dw
+            @assert off.o1==0
+            for io in eachindval(others...)
+                W1[iw1=>dim(iw1),io...]=W[iwqx=>dim(iwqx),io...]
+            end
+        end
 
-            else #upper
-                #need to preserve the last column
-                @assert off.o1==0 && off.o1==0
-                for io in eachindval(others...)
-                    W1[iw1=>dim(iw1),io...]=W[iwqx=>dim(iwqx),io...]
-                end
-                #@show "after column W1="
-                #pprint(W1,eps)
-            end #if lower
-            W=W1
-            wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
-            iwqx=iw1
-        end # if dim
-    else #right
-        if dim(iwqx)>dim(ivqx)+1
-            #@printf "right resize %4i to %4i \n" dim(iwqx) dim(ivqx)
-            #@show "right" iwqx ivqx "W="
-            #pprint(W,eps)
-            #we need to rezise W_
-            resize=true
-            iw1=Index(dim(ivqx)+1,tags(iwqx))
-            W1=ITensor(iwl,iw1,iss)
-            others=noncommoninds(W,iwqx)
-            if ms.ul==lower
-                #need to preserve the bottom row
-                @assert off.o1==0 && off.o1==0
-                for io in eachindval(others...)
-                    W1[iw1=>dim(iw1),io...]=W[iwqx=>dim(iwqx),io...]
-                end
-                others=noncommoninds(W,iwqx,iwl)
-                for io in eachindval(others...)
-                    for j=1:dim(iw1)-1
-                        W1[iwl=>dim(iwl),iw1=>j,io...]=W[iwl=>dim(iwl),iwqx=>j,io...]
-                    end
-                    #W1[iwl=>dim(iwl),iw1=>dim(iw1),io...]=W[iwl=>dim(iwl),iwqx=>dim(iwqx),io...]
-                end
-            else #upper
-                #need to preserve the first column
-                @assert off.o1==1 && off.o1==1
-                for io in eachindval(others...)
-                    W1[iw1=>1,io...]=W[iwqx=>1,io...]
-                end
-            end #if loswer
-            W=W1
-            wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
-            iwqx=iw1
-        end #if dim
-    end #if left
-    
-    #@show "in setV"  inds(W) wils inds(V) vils
+        W=W1
+        wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
+        iwqx=iw1
+    end # if resize
+
     for ilv in eachindval(ivqx,ivl)
         wlv=(IndexVal(iwqx,ilv[1].second+off.o1),IndexVal(iwl,ilv[2].second+off.o2))
         for isv in eachindval(iss)
             W[wlv...,isv...]=V[ilv...,isv...]
         end
     end
-    if resize
-        #@show "after set V W="
-        #pprint(W,eps)
-    end
+    
     return W
 end
 
@@ -237,8 +197,8 @@ end
 #  factor LR such that for
 #       lr=left  LR=M*RM_prime
 #       lr=right LR=RL_primt*M
-#  However becuase of the ITensor index work we don;t need to distinguish between left and 
-#  matrix multiplication in the code.  BUT we do need to worry about upper and lower RL
+#  However becuase of how the ITensor index works we don't need to distinguish between left and 
+#  right matrix multiplication in the code.  BUT we do need to worry about upper and lower RL
 #  matrices when they are rectangular.  For an upper triangular matrix we wnat to grab the
 #  matrix from the right side of R, since that is where the most meat (numerical weight) is
 #  Conversly for the lower tri L we want grab M from left side.  In short we want as few
