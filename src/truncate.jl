@@ -189,6 +189,7 @@ function truncate!(H::MPO;kwargs...)
     end
     @assert !(bl && bu)
     ul::tri_type = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
+    pbc = has_pbc(H) 
     #
     # Now check if H required orthogonalization
     #
@@ -197,21 +198,20 @@ function truncate!(H::MPO;kwargs...)
         orthogonalize!(H,ul;dir=mirror(lr),kwargs...) 
     end
     N=length(H)
-    if ms.lr==left
-        for n in 1:N-1 #sweep right
-            W,RL=truncate(H[n],ul;kwargs...)
-            #@show norm(H[n]-W*RL)
-            H[n]=W
-            H[n+1]=RL*H[n+1]
-            is_regular_form(H[n+1],ms.ul,eps)
-        end
-    else #lr must be right
-        for n in N:-1:2 #sweep left
-            W,RL=truncate(H[n],ul;kwargs...)
-            #@show norm(H[n]-W*RL)
-            H[n]=W
-            H[n-1]=H[n-1]*RL
-            is_regular_form(H[n-1],ms.ul,eps)
-        end
+    if lr==left
+        start = pbc ? 1 : 2
+        rng=start:1:N-1 #sweep left to right
+    else #right
+        start = pbc ? N : N-1
+        rng=start:-1:2 #sweep right to left
     end
+    for n in rng 
+        nn=n+rng.step #index to neighbour
+        W,RL=truncate(H[n],ul;kwargs...)
+        #@show norm(H[n]-W*RL)
+        H[n]=W
+        H[nn]=RL*H[nn]
+        is_regular_form(H[nn],ms.ul,eps)
+    end
+
 end

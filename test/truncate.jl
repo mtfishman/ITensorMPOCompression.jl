@@ -215,7 +215,7 @@ end
     @test abs(E0r-E2r)<eps
 end
 
-function test_direct_TransIsing(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,epsSVD::Float64,epsrr::Float64,eps::Float64)
+function test_direct_TransIsing(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,obc::Bool,epsSVD::Float64,epsrr::Float64,eps::Float64)
     msl=matrix_state(ul,left )
     msr=matrix_state(ul,right)
 
@@ -224,25 +224,26 @@ function test_direct_TransIsing(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,eps
     #
     # Make right canonical, then compress to left canonical
     #
-    H=make_transIsing_MPO(sites,NNN,hx,ul,obc=false)
+    H=make_transIsing_MPO(sites,NNN,hx,ul,obc=obc)
     E0l=inner(psi',to_openbc(H),psi)
     @test is_regular_form(H,ul,eps)
+    @show get_Dw(H)
     orthogonalize!(H;dir=right,epsrr=epsrr)
-    #@show get_Dw(H)
+    @show get_Dw(H)
 
     E1l=inner(psi',to_openbc(H),psi)
     RE=abs((E0l-E1l)/E0l)
-    #@printf "E0=%.5f E1=%.5f rel. error=%.5e RE/espSVD=%.2f \n" E0l E1l RE RE/epsSVD
+    @printf "E0=%.5f E1=%.5f rel. error=%.5e RE/espSVD=%.2f \n" E0l E1l RE RE/epsSVD
     @test RE<2*eps
     @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msr,eps)
 
     truncate!(H;dir=left,cutoff=epsSVD)
-    #@show get_Dw(H)
-    # truncate!(H;dir=right,cutoff=epsSVD)
-    # @show get_Dw(H)
+    @show get_Dw(H)
+     truncate!(H;dir=right,cutoff=epsSVD)
+     @show get_Dw(H)
     @test is_regular_form(H,ul,eps)
-    @test is_canonical(H,msl,eps)
+    @test is_canonical(H,msr,eps)
     # make sure the energy in unchanged
     E2l=inner(psi',to_openbc(H),psi)
     RE=abs((E0l-E2l)/E0l)
@@ -255,7 +256,7 @@ function test_direct_TransIsing(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,eps
     # Make left canonical, then compress to right canonical
     #
     
-    H=make_transIsing_MPO(sites,NNN,hx,ul,obc=false)
+    H=make_transIsing_MPO(sites,NNN,hx,ul,obc=obc)
     E0r=inner(psi',to_openbc(H),psi)
     @test abs(E0l-E0r)<1e-14
     @test is_regular_form(H,ul,eps)
@@ -270,17 +271,16 @@ function test_direct_TransIsing(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,eps
     @test is_canonical(H,msl,eps)
 
     truncate!(H;dir=right,cutoff=epsSVD)
-    #@show get_Dw(H)
-    # truncate!(H;dir=left,cutoff=epsSVD)
-    # @show get_Dw(H)
+    @show get_Dw(H)
+    truncate!(H;dir=left,cutoff=epsSVD)
+    @show get_Dw(H)
     @test is_regular_form(H,ul,eps)
-    @test is_canonical(H,msr,eps)
+    @test is_canonical(H,msl,eps)
     # make sure the energy in unchanged
     E2r=inner(psi',to_openbc(H),psi)
     RE=abs((E0r-E2r)/E0r)
     @printf "E0=%.5f Etrunc=%.5f rel. error=%.5e RE/espSVD=%.2f \n" E0r E2r RE RE/epsSVD
     @test (RE/epsSVD)<1.0
-    @assert (RE/epsSVD)<1.0
 end
 
 function test_autoMPO_TransIsing(N::Int64,NNN::Int64,hx::Float64,epsSVD::Float64,eps::Float64)
@@ -353,28 +353,29 @@ end
 
 @testset "Compress full MPO" begin
     hx=0.5
-    eps=1e-13
+    eps=2e-13
     epsSVD=1e-12
     epsrr=1e-12
+    obc=false
 
 #                  V=N sites
 #                    V=Num Nearest Neighbours in H
-    test_direct_TransIsing(5,1,hx,lower,epsSVD,epsrr,eps)
-    test_direct_TransIsing(5,2,hx,lower,epsSVD,epsrr,eps)
-    test_direct_TransIsing(5,3,hx,lower,epsSVD,epsrr,eps)
-    test_direct_TransIsing(5,4,hx,lower,epsSVD,epsrr,eps)
-    test_direct_TransIsing(5,1,hx,upper,epsSVD,epsrr,eps)
-    test_direct_TransIsing(5,2,hx,upper,epsSVD,epsrr,eps)
-    test_direct_TransIsing(5,3,hx,upper,epsSVD,epsrr,eps) #known unit on diagonal
-    test_direct_TransIsing(5,4,hx,upper,epsSVD,epsrr,eps)
+    test_direct_TransIsing(5,1,hx,lower,obc,epsSVD,epsrr,eps)
+    test_direct_TransIsing(5,2,hx,lower,obc,epsSVD,epsrr,eps)
+    test_direct_TransIsing(5,3,hx,lower,obc,epsSVD,epsrr,eps)
+    test_direct_TransIsing(5,4,hx,lower,obc,epsSVD,epsrr,eps)
+    test_direct_TransIsing(5,1,hx,upper,obc,epsSVD,epsrr,eps)
+    test_direct_TransIsing(5,2,hx,upper,obc,epsSVD,epsrr,eps)
+    test_direct_TransIsing(5,3,hx,upper,obc,epsSVD,epsrr,eps) #known unit on diagonal
+    test_direct_TransIsing(5,4,hx,upper,obc,epsSVD,epsrr,eps)
     epsSVD=.0000001
-    test_direct_TransIsing(10,1,hx,lower,epsSVD,epsrr,eps)
-    test_direct_TransIsing(10,7,hx,lower,epsSVD,epsrr,eps)
-    test_direct_TransIsing(10,8,hx,lower,epsSVD,epsrr,eps) 
-    #test_direct_TransIsing(10,9,hx,lower,epsSVD,epsrr,eps) #know fail high RE/epsSVD
-    test_direct_TransIsing(10,1,hx,upper,epsSVD,epsrr,eps)
-    test_direct_TransIsing(10,7,hx,upper,epsSVD,epsrr,eps)
-    test_direct_TransIsing(10,8,hx,upper,epsSVD,epsrr,eps) 
+    test_direct_TransIsing(10,1,hx,lower,obc,epsSVD,epsrr,eps)
+    test_direct_TransIsing(10,7,hx,lower,obc,epsSVD,epsrr,eps)
+    test_direct_TransIsing(10,8,hx,lower,obc,epsSVD,epsrr,eps) 
+    #test_direct_TransIsing(10,9,hx,lower,obc,epsSVD,epsrr,eps) #know fail high RE/epsSVD
+    test_direct_TransIsing(10,1,hx,upper,obc,epsSVD,epsrr,eps)
+    test_direct_TransIsing(10,7,hx,upper,obc,epsSVD,epsrr,eps)
+    test_direct_TransIsing(10,8,hx,upper,obc,epsSVD,epsrr,eps) 
     #test_direct_TransIsing(10,9,hx,upper,epsSVD,epsrr,eps) #know fail high RE/epsSVD
 
     N=10
@@ -389,6 +390,18 @@ end
     test_autoMPO_Heisenberg(N,8,hx,epsSVD,eps)
     test_autoMPO_Heisenberg(N,9,hx,epsSVD,eps)
 
+end
+ 
+@testset "Try truncating and MPO with open boundary conditions" begin
+    hx=0.5
+    eps=2e-13
+    epsSVD=1e-12
+    epsrr=0.0
+    obc=true
+
+#                  V=N sites
+#                    V=Num Nearest Neighbours in H
+    test_direct_TransIsing(10,7,hx,lower,obc,epsSVD,epsrr,eps)
 end
 
 #
