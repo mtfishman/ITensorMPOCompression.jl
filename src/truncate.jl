@@ -198,9 +198,6 @@ function truncate!(H::MPO;kwargs...)
     end
     N=length(H)
     if ms.lr==left
-        ITensors.@debug_check begin
-            @assert is_canonical(H,mirror(ms),eps)
-        end
         for n in 1:N-1 #sweep right
             W,RL=truncate(H[n],ul;kwargs...)
             #@show norm(H[n]-W*RL)
@@ -209,9 +206,6 @@ function truncate!(H::MPO;kwargs...)
             is_regular_form(H[n+1],ms.ul,eps)
         end
     else #lr must be right
-        ITensors.@debug_check begin
-            @assert is_canonical(H,mirror(ms),eps)#TODO we need not(ms.lr)
-        end
         for n in N:-1:2 #sweep left
             W,RL=truncate(H[n],ul;kwargs...)
             #@show norm(H[n]-W*RL)

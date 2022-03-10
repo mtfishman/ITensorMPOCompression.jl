@@ -2,9 +2,30 @@ using Printf
 #
 # functions for getting and setting V blocks required for block respecting QX and SVD
 #
+# Handles W with only one link index
+function getV1(W::ITensor,off::V_offsets)::ITensor
+    ils=filterinds(inds(W),tags="Link")
+    iss=filterinds(inds(W),tags="Site")
+    @assert length(ils)==1
+    w1=ils[1]
+    v1=Index(dim(w1)-1,tags(ils[1]))
+    V=ITensor(v1,iss...)
+    for ilv in eachindval(v1)
+        wlv=IndexVal(w1,ilv.second+off.o1)
+        for isv in eachindval(iss)
+            V[ilv,isv...]=W[wlv,isv...]
+    
+        end
+    end
+    return V
+end
+
 
 function getV(W::ITensor,off::V_offsets)::ITensor
     ils=filterinds(inds(W),tags="Link")
+    if length(ils)==1
+        return getV1(W,off)
+    end
     iss=filterinds(inds(W),tags="Site")
     w1=ils[1]
     w2=ils[2]

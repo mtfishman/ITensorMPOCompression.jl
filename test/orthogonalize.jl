@@ -53,7 +53,7 @@ println("-----------Start--------------")
     @test !is_lower_regular_form(H,eps)
 
 
-    H=make_transIsing_MPO(sites,NNN,hx,lower,pbc=false) 
+    H=make_transIsing_MPO(sites,NNN,hx,lower,obc=true) 
     @test !has_pbc(H)
     @test is_upper_lower(H[2],lower,eps)
     @test is_upper_lower(H   ,lower,eps)
@@ -70,16 +70,12 @@ println("-----------Start--------------")
     @test is_upper_regular_form(H,eps)
 end
 
-function test_canonical(N::Int64,NNN::Int64,hx::Float64,ms::matrix_state)
+function test_canonical(N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,bobc::Bool)
     eps=1e-14
     sites = siteinds("SpinHalf", N)
     psi=randomMPS(sites)
-    H=make_transIsing_MPO(sites,NNN,hx,ms.ul;obc=false) 
+    H=make_transIsing_MPO(sites,NNN,hx,ms.ul;obc=bobc) 
     #H=make_transIsing_AutoMPO(sites,NNN,hx;obc=false)
-    @test has_pbc(H)
-#    @test is_upper_lower(H[1],ms.ul,eps)
-#    @test is_upper_lower(H   ,ms.ul,eps)
-#    @test is_regular_form(H[1],ms.ul,eps)
     @test is_regular_form(H   ,ms.ul,eps)
     E0=inner(psi',to_openbc(H),psi)
     #@show get_Dw(H)
@@ -87,30 +83,25 @@ function test_canonical(N::Int64,NNN::Int64,hx::Float64,ms::matrix_state)
     #@show get_Dw(H)
     E1=inner(psi',to_openbc(H),psi)
     @test abs(E0-E1)<1e-14
-    #@test is_upper_lower(H,ms.ul,eps)
     @test is_regular_form(H,ms.ul,eps)
     @test  is_canonical(H,ms,eps)
     @test !is_canonical(H,mirror(ms),eps)    
-    #
-    #  two more sweeps just make sure nothing gets messed up.
-    #
-    E2=inner(psi',to_openbc(H),psi)
-    @test abs(E0-E2)<1e-14
-    @test is_regular_form(H,ms.ul,eps)
-    @test !is_canonical(H,mirror(ms),eps)
-    @test  is_canonical(H,ms,eps)
 end
 
 
-@testset "Bring MPO into canonical form" begin
+@testset "Bring pbc MPO into canonical form" begin
   
     N=5
     NNN=3
     hx=0.5
-    test_canonical(N,NNN,hx,matrix_state(lower,left ))
-    test_canonical(N,NNN,hx,matrix_state(lower,right))
-    test_canonical(N,NNN,hx,matrix_state(upper,left ))
-    test_canonical(N,NNN,hx,matrix_state(upper,right))
+    test_canonical(N,NNN,hx,matrix_state(lower,left ),false)
+    test_canonical(N,NNN,hx,matrix_state(lower,right),false)
+    test_canonical(N,NNN,hx,matrix_state(upper,left ),false)
+    test_canonical(N,NNN,hx,matrix_state(upper,right),false)
 
-
+    test_canonical(N,NNN,hx,matrix_state(lower,left ),true)
+    test_canonical(N,NNN,hx,matrix_state(lower,right),true)
+    test_canonical(N,NNN,hx,matrix_state(upper,left ),true)
+    test_canonical(N,NNN,hx,matrix_state(upper,right),true)
+    
 end

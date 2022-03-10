@@ -111,17 +111,27 @@ function is_canonical(W::ITensor,ms::matrix_state,eps::Float64)::Bool
         rc=r
     end
     Id=V*prime(V,rc)/d
-    Id1=delta(rc,rc')
-    return norm(Id-Id1)<eps
+    if order(Id)==2
+        Id1=delta(rc,rc')
+        is_can = norm(Id-Id1)<eps
+    elseif order(Id)==0
+        is_can = abs(scalar(Id)-1.0)<eps
+    end
+    return is_can    
 end
 
 function is_canonical(H::MPO,ms::matrix_state,eps::Float64)::Bool
     N=length(H)
-    if ms.lr==left
-        r=1:N-1
-    else # right
-        r=2:N
+    if has_pbc(H)
+        if ms.lr==left
+            r= 1:N-1
+        else # right
+            r= 2:N 
+        end
+    else
+        r = 2:N-1
     end
+
     ic=true
     for n in r
         ic=ic &&  is_canonical(H[n],ms,eps)
@@ -137,8 +147,8 @@ function has_pbc(H::MPO)::Bool
     nlinkN=length(findinds(H[N],"Link"))
     leftl=hastags(inds(H[1]),"l=0")
     rightl=hastags(inds(H[N]),"l=$N")
-    obc::Bool = nind1==3 && nindN==3 &&  nlink1==1 && nlinkN==1 && leftl==0 && rightl==0
-    pbc::Bool = nind1==4 && nindN==4 &&  nlink1==2 && nlinkN==2 && leftl==1 && rightl==1
+    obc::Bool = nind1==3 && nindN==3 &&  nlink1==1 && nlinkN==1 && !leftl && !rightl
+    pbc::Bool = nind1==4 && nindN==4 &&  nlink1==2 && nlinkN==2 && leftl && rightl
     if !obc && !pbc  #if its not one or the othr something is really messed up!
         @assert false
     end

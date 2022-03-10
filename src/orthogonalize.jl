@@ -18,16 +18,23 @@ function orthogonalize!(W1::ITensor,W2::ITensor,ul::tri_type,n::Int64;kwargs...)
 end
 
 function orthogonalize!(H::MPO,ul::tri_type;kwargs...)
+    pbc = has_pbc(H) 
     lr::orth_type=get(kwargs, :dir, right)
     N=length(H)
     if lr==left
-        for n in 1:N-1 #sweep left to right
-            H[n],H[n+1]=orthogonalize!(H[n],H[n+1],ul,n;kwargs...)
-        end
+        start = pbc ? 1 : 2
+        rng=start:1:N-1 #sweep left to right
+        link_offest=0
     else #right
-        for n in N:-1:2 #sweep right to left
-            H[n],H[n-1]=orthogonalize!(H[n],H[n-1],ul,n-1;kwargs...)
-        end
+        start = pbc ? N : N-1
+        rng=start:-1:2 #sweep right to left
+        link_offest=-1
+    end
+    for n in rng 
+        nn=n+rng.step #index to neighbour
+        nl=n+link_offest #index in link tag, l=$nl
+#        @show n,nn
+        H[n],H[nn]=orthogonalize!(H[n],H[nn],ul,nl;kwargs...)
     end
 end
 
@@ -46,9 +53,6 @@ Bring an MPO into left or right canonical form using block respecting QR decompo
    All rows with max(abs(R[:,j]))<epsrr are considered zero and removed. 
 """
 function orthogonalize!(H::MPO;kwargs...)
-    ITensors.@debug_check begin
-        @assert has_pbc(H)
-    end
     (bl,bu)=detect_regular_form(H,1e-14)
     if !(bl || bu)
         throw(ErrorException("orthogonalize!(H::MPO), H must be in either lower or upper regular form"))
@@ -57,7 +61,7 @@ function orthogonalize!(H::MPO;kwargs...)
     ul::tri_type = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
     nsweep=get(kwargs,:sweeps,0)
 
-    kwargs=Dict(kwargs) #this allws us to set the dir elements
+    kwargs=Dict(kwargs) #this allows us to set the dir elements
     lr=get(kwargs,:dir,right)
     lrm=mirror(lr)
     if nsweep>0
