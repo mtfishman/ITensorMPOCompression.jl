@@ -22,18 +22,18 @@ function orthogonalize!(H::MPO,ul::tri_type;kwargs...)
     lr::orth_type=get(kwargs, :dir, right)
     N=length(H)
     if lr==left
-        start = pbc ? 1 : 2
+        start = pbc ? 1 : 1
         rng=start:1:N-1 #sweep left to right
         link_offest=0
     else #right
-        start = pbc ? N : N-1
+        start = pbc ? N : N
         rng=start:-1:2 #sweep right to left
         link_offest=-1
     end
     for n in rng 
         nn=n+rng.step #index to neighbour
         nl=n+link_offest #index in link tag, l=$nl
-#        @show n,nn
+        #@show n,nn,nl
         H[n],H[nn]=orthogonalize!(H[n],H[nn],ul,nl;kwargs...)
     end
 end

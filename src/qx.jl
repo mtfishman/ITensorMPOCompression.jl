@@ -38,7 +38,7 @@ function block_qx(W_::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor,Ind
   #  decide some strings and variables based on lr.
   #
   (tln,cr)= lr==left ? ("l=$n",c) : ("l=$(n-1)",r)
-  
+
   ilw=filterinds(inds(W),tags=tln)[1] #get the link to the next site
   offset=V_offsets(ms)
   V=getV(W,offset) #extract the V block

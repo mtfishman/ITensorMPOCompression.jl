@@ -71,9 +71,9 @@ function parse_links(A::ITensor)::Tuple{Int64,Int64,Index,Index}
         t=tags(ils[1])
         n::Int64=tryparse(Int64,String(t[2])[3:end]) # assume second tag is the "l=n" tag
         if n==1
-            return d,n,Index(1),ils[1] #row vector
+            return d,nsite,Index(1),ils[1] #row vector
         else
-            return d,n,ils[1],Index(1) #col vector
+            return d,nsite,ils[1],Index(1) #col vector
         end
     else
         @assert false

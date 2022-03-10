@@ -42,8 +42,54 @@ function getV(W::ITensor,off::V_offsets)::ITensor
     return V
 end
 
+# Handles W with only one link index
+function setV1(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
+    wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
+    vils=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
+    @assert length(wils)==1
+    @assert length(vils)==1
+    wil=wils[1]
+    vil=vils[1]
+    iss=filterinds(inds(W),tags="Site")
+    @assert iss==filterinds(inds(V),tags="Site")
+    off=V_offsets(ms)
+    @assert(off.o1==off.o2)
+    if dim(wil)>dim(vil)+1
+        #we need to shrink W
+        wil1=Index(dim(vil)+1,tags(wil))
+        W1=ITensor(0.0,wil1,iss)
+        if off.o1==1
+            #save first element
+            for isv in eachindval(iss)
+                W1[wil1=>1,isv...]=W[wil=>1,isv...]
+            end
+        else
+            #save last element
+            for isv in eachindval(iss)
+                W1[wil1=>dim(wil1),isv...]=W[wil=>dim(wil),isv...]
+            end
+        end
+    else
+        W1=W
+        wil1=wil
+    end
+
+
+    for ilv in eachindval(vil)
+        wlv=IndexVal(wil1,ilv.second+off.o1)
+        for isv in eachindval(iss)
+            W1[wlv,isv...]=V[ilv,isv...]
+        end
+    end
+    return W1
+end
+
+
 function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
+    if length(wils)==1
+        return setV1(W,V,ms)
+    end
     vils=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
     #@show wils vils
     @assert length(wils)==2
