@@ -91,6 +91,39 @@ V_offsets(ms::matrix_state) = begin
     V_offsets(o1_,o2_)
 end
 
+
+struct bond_spectrum
+    spectrum::Vector{Float64}
+    link_number::Int64
+    bond_spectrum(s::ITensor,link::Int64) = begin
+        @assert link>0
+        @assert order(s)==2
+        new(diag(array(s)),link)
+    end
+end
+
+bond_spectrums = Vector{bond_spectrum} 
+
+function max(s::bond_spectrum)::Float64 s.spectrum[1] end
+function min(s::bond_spectrum)::Float64 s.spectrum[end] end
+function max(ss::bond_spectrums)::Float64 
+    ret=max(ss[1])
+    for n in 2:length(ss)
+        ms=max(ss[n]) 
+        if ms>ret ret=ms end
+    end
+    return ret
+end
+
+function min(ss::bond_spectrums)::Float64 
+    ret=min(ss[1])
+    for n in 2:length(ss) 
+        ms=min(ss[n])
+        if ms<ret ret=ms end
+    end
+    return ret
+end
+
 """
     assign!(W::ITensor,i1::IndexVal,i2::IndexVal,op::ITensor)
 

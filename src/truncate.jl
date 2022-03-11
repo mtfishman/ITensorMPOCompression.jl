@@ -1,6 +1,10 @@
 
 using LinearAlgebra
 using Printf
+
+
+
+
 function getInverse(U::ITensor,s::ITensor,V::ITensor)::ITensor
     as=LinearAlgebra.diag(array(s))
     asinv=Vector(as)
@@ -66,7 +70,7 @@ end
 #
 #  Compress one site
 #
-function truncate(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor}
+function truncate(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor,bond_spectrum}
     d,n,r,c=parse_links(W) # W[l=$(n-1)l=$n]=W[r,c]
     lr::orth_type=get(kwargs, :dir, right)
     ms=matrix_state(ul,lr)
@@ -97,6 +101,8 @@ function truncate(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor}
     isvd=findinds(M,tsvd)[1] #decide the left index
     U,s,V=svd(M,isvd;kwargs...) # ns sing. values survive compression
     ns=dim(inds(s)[1])
+
+    spectrum=bond_spectrum(s,n)
     #@show diag(array(s))
     #
     #  If RL is rectangular we need to solve RL=M*RL_prime for RL_prime
@@ -132,7 +138,7 @@ function truncate(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor}
         @assert is_regular_form(W,ul,eps)
         @assert is_canonical(W,ms,eps)
     end
-    return W,RL
+    return W,RL,spectrum
 end
 
 """
@@ -151,7 +157,7 @@ Compress an MPO using block respecting SVD techniques as described in
 - `mindim::Int64` : At least `mindim` singular values will be retained, even if some fall below the cutoff
 
 """
-function truncate!(H::MPO;kwargs...)
+function truncate!(H::MPO;kwargs...)::bond_spectrums
     #@printf "---- start compress ----\n"
     #
     # decide left/right and upper/lower
@@ -173,18 +179,22 @@ function truncate!(H::MPO;kwargs...)
         orthogonalize!(H,ul;dir=mirror(lr),kwargs...) 
     end
     N=length(H)
+    ss=bond_spectrums(undef,N-1)
     if lr==left
         rng=1:1:N-1 #sweep left to right
+        link_offest=0
     else #right
         rng=N:-1:2 #sweep right to left
+        link_offest=-1
     end
     for n in rng 
         nn=n+rng.step #index to neighbour
-        W,RL=truncate(H[n],ul;kwargs...)
+        W,RL,s=truncate(H[n],ul;kwargs...)
         #@show norm(H[n]-W*RL)
         H[n]=W
         H[nn]=RL*H[nn]
         is_regular_form(H[nn],ms.ul,eps)
+        ss[n+link_offest]=s
     end
-
+    return ss
 end

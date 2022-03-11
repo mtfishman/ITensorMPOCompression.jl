@@ -1,8 +1,8 @@
 Done: -make block_qx return link name qx instead of ql,lq,qr,rq
 Done: -calculate getV,setV offsets from matrix_state
 Done: -We need pure upper/lower enums without diagonal and full options
--further simplify the compress H loop
--Need to save SV spectrum somewhere
+Done: -further simplify the compress H loop
+Deon: -Need to save SV spectrum somewhere
 Done: -Look into the MPS compession code for inspiration.
     rename compress! to trunctate! (supprts the svd args)
         cutoff  Using a cutoff allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy.
@@ -13,7 +13,7 @@ Done: -Look into the MPS compession code for inspiration.
     rename canonical! to orthogonalize! and orthogonalize (support left/right rankreveal)
 
 -Get min and max Dw from H
--Figure out how to turn off asserts for performance.
+Done: -Figure out how to turn off asserts for performance.
 -consistent variable names for link indexs r,c,q,u,v or ir,ic,iq,iu,iv ?
 Fixed: #grow(i1,W,i2) relies on index ordering inside W ... is that bad?? (hint:yes!)
 Done: -grow(i1,W,i2) --> grow(W,i1,i2)
@@ -23,16 +23,16 @@ Done -Support upper-tri MPOs
 Done: -Support rank releavling QR,RQ,QL,LQ
 Done: -Clean up canonical and compress code.
 Done: -reduce two block_qx functions to one
--Do we need to copy W in block_qx?
+Done: -Do we need to copy W in block_qx? Yes
 -Comment indices in orthogonalize!(...)
 -use index returned by ql,qr,lq,rq
 Done -We need rank reaving QR/QL/RQ/LQ throughout, otherwise we get zero col/rows away from the edges which causes no end of trouble.
--is_regular is looking along the wrong diagonal for upper rectangular
--for lower,right SetV seems to require the last column(above I)  should be preserved ... 
+-is_regular is looking along the wrong diagonal for upper rectangular.  Not sure any more
+Fixed: -for lower,right SetV seems to require the last column(above I)  should be preserved ... 
   but why?       It should be zeros.  Index ordering?
 -mirror(::matrix_state) should also flip ul ... no?  THen we need reflect to just flip lr.
 Done: -Make rank reaviling an option for block_qx
--For obc MPO try compressing 2..N-1, what do we end up with for W[N].  Then try N..2, what does W[1] look like??  Can we get around PBC issue this way?
+Done: -For obc MPO try compressing 2..N-1, what do we end up with for W[N].  Then try N..2, what does W[1] look like??  Can we get around PBC issue this way?
 -Test canonical with epsrr=0.0 and compare.  need an max_Dw(H::MPO) function.  
 -Use  # Exact energy for transverse field Ising model J=-1, hx=-1
     # with open boundary conditions at criticality
@@ -46,5 +46,5 @@ Plan:
   Test with Fermion/Hubbard  Hamiltonians
   Test with the 3 body hamiltonians used in the Parker paper (If I can figure what they were doing)
   Test with QN's (new area for me)
-  Refactor the code.  A lot of things can be simplified once there are lots of unit tests in place.
-  Done Figure how to disable 100's of asserts for production mode usage.  
+  50% Refactor the code.  A lot of things can be simplified once there are lots of unit tests in place.
+  Done: Figure how to disable 100's of asserts for production mode usage.  

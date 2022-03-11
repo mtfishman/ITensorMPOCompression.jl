@@ -9,7 +9,7 @@ import ITensorMPOCompression.orthogonalize!
 include("hamiltonians.jl")
 
 using Printf
-Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
+Base.show(io::IO, f::Float64) = @printf(io, "%1.5f", f)
 println("-----------Start--------------")
 
 #=
@@ -240,10 +240,11 @@ function test_direct_TransIsing(N::Int64,NNN::Int64,hx::Float64,ul::tri_type,obc
 
     truncate!(H;dir=left,cutoff=epsSVD)
     @show get_Dw(H)
-     truncate!(H;dir=right,cutoff=epsSVD)
-     @show get_Dw(H)
+    ss=truncate!(H;dir=right,cutoff=epsSVD)
+    @show get_Dw(H)
     @test is_regular_form(H,ul,eps)
     @test is_canonical(H,msr,eps)
+    @show min(ss) max(ss)
     # make sure the energy in unchanged
     E2l=inner(psi',to_openbc(H),psi)
     RE=abs((E0l-E2l)/E0l)
@@ -401,6 +402,7 @@ end
 #                    V=Num Nearest Neighbours in H
     test_direct_TransIsing(10,7,hx,lower,obc,epsSVD,epsrr,eps)
     test_direct_TransIsing(10,7,hx,upper,obc,epsSVD,epsrr,eps)
+    
 end
 
 #
