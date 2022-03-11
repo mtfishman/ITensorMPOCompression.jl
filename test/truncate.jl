@@ -47,7 +47,7 @@ function test_truncate(makeH,N::Int64,NNN::Int64,ms::matrix_state,epsSVD::Float6
     # make sure the energy in unchanged
     E2l=inner(psi',H,psi)
     RE=abs((E0l-E2l)/E0l)
-    @printf "E0=%.5f Etrunc=%.5f rel. error=%.5e RE/espSVD=%.2f \n" E0l E2l RE RE/epsSVD
+    @printf "E0=%8.5f Etrunc=%8.5f rel. error=%7.1e RE/espSVD=%6.2f \n" E0l E2l RE RE/epsSVD
     if epsSVD<=1e-12
         @test (RE/epsSVD)<1.0 #typically this will remove any meaning SVs
     else
@@ -56,7 +56,6 @@ function test_truncate(makeH,N::Int64,NNN::Int64,ms::matrix_state,epsSVD::Float6
 end
 
 @testset "Compress full MPO" begin
-    hx=0.5
     eps=2e-13
     epsSVD=1e-12
     epsrr=1e-12
@@ -88,3 +87,52 @@ end
     test_truncate(make_Heisenberg_AutoMPO,10,7,lr,epsSVD,epsrr,eps)
 
 end 
+ 
+@testset "Test ground states" begin
+    eps=2e-13
+    epsSVD=1e-12
+    epsrr=1e-12
+    N=10
+    NNN=5
+    hx=0.5
+    J=1.0
+    db=ITensors.using_debug_checks()
+
+    sites = siteinds("SpinHalf", N)
+    H=make_transIsing_MPO(sites,NNN,J,hx,lower)
+
+    ITensors.ITensors.disable_debug_checks() 
+    E0,psi0=fast_GS(H,sites)
+    if db  ITensors.ITensors.enable_debug_checks() end
+
+    truncate!(H;dir=right,cutoff=epsSVD,epsrr=epsrr)
+
+    ITensors.ITensors.disable_debug_checks() 
+    E1,psi1=fast_GS(H,sites)
+    if db  ITensors.ITensors.enable_debug_checks() end
+
+    overlap=abs(inner(psi0',psi1))
+    RE=abs((E0-E1)/E0)
+    @printf "Trans. Ising E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
+    @test abs(E0-E1)<eps
+    @test abs(overlap-1.0)<eps
+
+    hx=0.0
+    H=make_Heisenberg_AutoMPO(sites,NNN,J,hx,lower)
+
+    ITensors.ITensors.disable_debug_checks() 
+    E0,psi0=fast_GS(H,sites)
+    if db  ITensors.ITensors.enable_debug_checks() end
+
+    truncate!(H;dir=right,cutoff=epsSVD,epsrr=epsrr)
+
+    ITensors.ITensors.disable_debug_checks() 
+    E1,psi1=fast_GS(H,sites)
+    if db  ITensors.ITensors.enable_debug_checks() end
+
+    overlap=abs(inner(psi0',psi1))
+    RE=abs((E0-E1)/E0)
+    @printf "Heisenberg E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
+    @test abs(E0-E1)<eps
+    @test abs(overlap-1.0)<eps
+end
