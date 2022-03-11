@@ -79,11 +79,11 @@ end
 
 
 function ql!(A::StridedMatrix{<:LAPACK.BlasFloat}, ::NoPivot; blocksize=36)
-  tau=similar(A, min(size(A)...))
+  tau=similar(A, Base.min(size(A)...))
   x=LAPACK.geqlf!(A, tau)
   #save L from the lower portion of A, before orgql! mangles it!
   nr,nc=size(A)
-  mn=min(nr,nc)
+  mn=Base.min(nr,nc)
   L=similar(A,(mn,nc))
   for r in 1:mn
     for c in 1:r+nc-mn
@@ -107,11 +107,11 @@ function ql!(A::StridedMatrix{<:LAPACK.BlasFloat}, ::NoPivot; blocksize=36)
 end
 
 function lq!(A::StridedMatrix{<:LAPACK.BlasFloat}, ::NoPivot; blocksize=36)
-  tau=similar(A, min(size(A)...))
+  tau=similar(A, Base.min(size(A)...))
   x=LAPACK.gelqf!(A, tau)
   #save L from the lower portion of A, before orgql! mangles it!
   nr,nc=size(A)
-  mn=min(nr,nc)
+  mn=Base.min(nr,nc)
   L=similar(A,(nr,mn))
   for c in 1:mn
     for r in 1:c-1
@@ -129,11 +129,11 @@ function lq!(A::StridedMatrix{<:LAPACK.BlasFloat}, ::NoPivot; blocksize=36)
 end
 
 function rq!(A::StridedMatrix{<:LAPACK.BlasFloat}, ::NoPivot; blocksize=36)
-  tau=similar(A, min(size(A)...))
+  tau=similar(A, Base.min(size(A)...))
   x=LAPACK.gerqf!(A, tau)
   #save R from the lower portion of A, before orgql! mangles it!
   nr,nc=size(A)
-  mn=min(nr,nc)
+  mn=Base.min(nr,nc)
   R=similar(A,(nr,mn))
   for c in 1:mn
     for r in 1:c+nr-mn

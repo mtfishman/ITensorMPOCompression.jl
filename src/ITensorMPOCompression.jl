@@ -4,9 +4,9 @@ using ITensors
 
 export ql,lq,rq,assign!,getV,setV,growRL,to_openbc,set_scale!,block_qx,orthogonalize!,is_canonical
 export tri_type,orth_type,matrix_state,upper,lower,none,left,right,mirror,parse_links
-export has_pbc,is_regular_form,truncate,truncate!,getM,grow
+export is_regular_form,truncate,truncate!,getM,grow
 export is_lower_regular_form,is_upper_regular_form,V_offsets
-export detect_upper_lower,is_upper_lower,get_Dw
+export detect_upper_lower,is_upper_lower,get_Dw,min,max
 
 """
     @enum tri_type  upper lower

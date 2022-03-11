@@ -80,13 +80,13 @@ function truncate(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor,bond
 
 #
 # Block repecting QR/QL/LQ/RQ factorization.  RL=L or R for upper and lower.
-# here we purposely turn off rank reavealing feature (epsrr=0.0) to (mostly) avoide
-# horizontal rectangular RL matricies which are .
+# here we purposely turn off rank reavealing feature (epsrr=0.0) to (mostly) avoid
+# horizontal rectangular RL matricies which are hard to handle accurately.
 #
     Q,RL,lq=block_qx(W,ul;epsrr=0.0,kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
     ITensors.@debug_check begin
-        @assert is_canonical(Q,ms,eps)
         if order(Q)==4
+            @assert is_canonical(Q,ms,eps)
             @assert is_regular_form(Q,ul,eps)
         end
     end
@@ -115,7 +115,7 @@ function truncate(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor,bond
     Mplus=grow(M,lq,im)
     D=RL-Mplus*RL_prime
     if norm(D)>get(kwargs, :cutoff, 1e-14)
-        @printf "High normD(D)=%.1e min(s)=%.1e \n" norm(D) min(diag(array(s))...)
+        @printf "High normD(D)=%.1e min(s)=%.1e \n" norm(D) Base.min(diag(array(s))...)
     end
 
     luv=Index(ns+2,"Link,$tuv") #link for expanded U,US,V,sV matricies.
@@ -170,7 +170,6 @@ function truncate!(H::MPO;kwargs...)::bond_spectrums
     end
     @assert !(bl && bu)
     ul::tri_type = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
-    pbc = has_pbc(H) 
     #
     # Now check if H required orthogonalization
     #

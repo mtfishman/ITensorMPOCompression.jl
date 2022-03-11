@@ -38,7 +38,8 @@ Done: -For obc MPO try compressing 2..N-1, what do we end up with for W[N].  The
     # with open boundary conditions at criticality
     energy_exact = 1.0 - 1.0 / sin(π / (4 * N + 2))
     @test abs((energy - energy_exact) / energy_exact) < 1e-4
-
+-add Printf for 
+-simplify MPOpbc code
 Plan:
   50% Document what I have so far
   Done Test with fixed autoMPO Hamiltonians (start the heisenberg with arbitrary neighbours)

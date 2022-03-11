@@ -22,12 +22,8 @@ function to_openbc(mpo::MPOpbc)::MPO
 end
 
 function to_openbc(mpo::MPO)::MPO
-    if !has_pbc(mpo)
-        return mpo #no-op
-    else
-        pbc=MPOpbc(mpo)
-        return to_openbc(pbc)
-    end
+    pbc=MPOpbc(mpo)
+    return to_openbc(pbc)
 end
 
 function get_lr_lower(mpo::MPO)::Tuple{ITensor,ITensor}

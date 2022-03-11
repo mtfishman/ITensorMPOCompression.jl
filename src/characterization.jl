@@ -124,37 +124,11 @@ end
 
 function is_canonical(H::MPO,ms::matrix_state,eps::Float64)::Bool
     N=length(H)
-    if has_pbc(H)
-        if ms.lr==left
-            r= 1:N-1
-        else # right
-            r= 2:N 
-        end
-    else
-        r = 2:N-1
-    end
-
     ic=true
-    for n in r
+    for n in 2:N-1 #skip the edge row/col opertors
         ic=ic &&  is_canonical(H[n],ms,eps)
     end
     return ic
-end
-
-function has_pbc(H::MPO)::Bool
-    N=length(H)
-    nind1=length(inds(H[1]))
-    nindN=length(inds(H[N]))
-    nlink1=length(findinds(H[N],"Link"))
-    nlinkN=length(findinds(H[N],"Link"))
-    leftl=hastags(inds(H[1]),"l=0")
-    rightl=hastags(inds(H[N]),"l=$N")
-    obc::Bool = nind1==3 && nindN==3 &&  nlink1==1 && nlinkN==1 && !leftl && !rightl
-    pbc::Bool = nind1==4 && nindN==4 &&  nlink1==2 && nlinkN==2 && leftl && rightl
-    if !obc && !pbc  #if its not one or the othr something is really messed up!
-        @assert false
-    end
-    return pbc
 end
 
 
@@ -169,8 +143,8 @@ function detect_upper_lower(r::Index,W::ITensor,c::Index,eps::Float64)::Tuple{Bo
     @assert ord==4 || ord==2
     zero_upper=true
     zero_lower=true
-    dr=max(0,dim(c)-dim(r))
-    dc=max(0,dim(r)-dim(c))
+    dr=Base.max(0,dim(c)-dim(r))
+    dc=Base.max(0,dim(r)-dim(c))
     for ir in eachindval(r)
         for ic in eachindval(c)
             if ord==4

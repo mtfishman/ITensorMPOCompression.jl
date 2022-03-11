@@ -209,7 +209,7 @@ function getM(RL::ITensor,ms::matrix_state,eps::Float64)::Tuple{ITensor,ITensor,
     iqx=findinds(ils,"qx")[1] #think of this as the row index
     iln=noncommonind(ils,iqx) #think of this as the column index
     Dwq,Dwn=dim(iqx),dim(iln)
-    Dwm=min(Dwq,Dwn)
+    Dwm=Base.min(Dwq,Dwn)
     irm=Index(Dwm,"Link,m") #new common index between Mplus and RL_prime
     imq=Index(Dwq-2,tags(iqx)) #mini version of iqx
     imm=Index(Dwm-2,tags(irm)) #mini version of irm
@@ -217,9 +217,9 @@ function getM(RL::ITensor,ms::matrix_state,eps::Float64)::Tuple{ITensor,ITensor,
     # @show inds(M)
     shift=0
     if ms.ul==lower
-        shift=max(0,Dwn-Dwq) #for upper rectangular R we want M over at the right
+        shift=Base.max(0,Dwn-Dwq) #for upper rectangular R we want M over at the right
     else #upper
-        shift=max(0,Dwq-Dwn)
+        shift=Base.max(0,Dwq-Dwn)
     end
     #@show shift,ms.ul,Dwn,Dwq
     for j1 in 2:Dwq-1

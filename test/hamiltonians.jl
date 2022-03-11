@@ -2,8 +2,30 @@ using ITensors
 import ITensorMPOCompression
 using Revise
 
+#handle case with 1 link index at edges.
+function fix_autoMPO1(W::ITensor)::ITensor
+    ils=filterinds(W,"Link")
+    iss=filterinds(W,"Site")
+    @assert length(ils)==1
+    @assert length(iss)==2
+    il=ils[1] #link index
+    Dw=dim(il)
+    p=collect(1:Dw)
+    p[2],p[Dw]=p[Dw],p[2]
+    W1=ITensor(il,iss...)
+    for js in eachindval(iss)
+        for jl in eachindval(il)
+            W1[il=>p[jl.second],js...]=W[jl,js...]
+        end
+    end
+    return W1
+end
+
 function fix_autoMPO(W::ITensor)::ITensor
     ils=filterinds(W,"Link")
+    if length(ils)==1
+        return fix_autoMPO1(W)
+    end
     iss=filterinds(W,"Site")
     @assert length(ils)==2
     @assert length(iss)==2
@@ -34,61 +56,62 @@ function fix_autoMPO!(H::MPO)
     end
 end
 
-function make_Heisenberg_AutoMPO(sites,NNN::Int64,hx::Float64;kwargs...)::MPO
+make_Heisenberg_AutoMPO(sites,NNN::Int64,J::Float64,hx::Float64,ul::tri_type)::MPO = 
+    make_Heisenberg_AutoMPO(sites,NNN,J,hx)
+
+function make_Heisenberg_AutoMPO(sites,NNN::Int64,J::Float64,hx::Float64)::MPO
     N=length(sites)
+    @assert(N>NNN)
     ampo = OpSum()
     for j=1:N
         add!(ampo, hx   ,"Sz", j)
     end
     for dj=1:NNN
-        f=1.0/dj
+        f=J/dj
         for j=1:N-dj
             add!(ampo, f    ,"Sz", j, "Sz", j+dj)
             add!(ampo, f*0.5,"S+", j, "S-", j+dj)
             add!(ampo, f*0.5,"S-", j, "S+", j+dj)
         end
     end
-    mpo=MPO(ampo,sites;kwargs...)
-    if !get(kwargs,:obc,true)
-        fix_autoMPO!(mpo)
-    end
+    mpo=MPO(ampo,sites)
+    fix_autoMPO!(mpo) #swap row[2]<->row[Dw] and col[2]<->col[Dw]
     return mpo
 end
 
-function make_transIsing_AutoMPO(sites,NNN::Int64,hx::Float64;kwargs...)::MPO
+make_transIsing_AutoMPO(sites,NNN::Int64,J::Float64,hx::Float64,ul::tri_type)::MPO = 
+    make_transIsing_AutoMPO(sites,NNN,J,hx)
+
+function make_transIsing_AutoMPO(sites,NNN::Int64,J::Float64,hx::Float64)::MPO
     N=length(sites)
+    @assert(N>NNN)
     ampo = OpSum()
     for j=1:N
         add!(ampo, hx   ,"Sx", j)
     end
     for dj=1:NNN
-        f=1.0/dj
+        f=J/dj
         for j=1:N-dj
             add!(ampo, f    ,"Sz", j, "Sz", j+dj)
         end
     end
-    mpo=MPO(ampo,sites;kwargs...)
-    if !get(kwargs,:obc,true)
-        fix_autoMPO!(mpo)
-    end
+    mpo=MPO(ampo,sites)
+    fix_autoMPO!(mpo) #swap row[2]<->row[Dw] and col[2]<->col[Dw]
     return mpo
 end
 
-function make_transIsing_MPO(sites,NNN::Int64,hx::Float64,ul::tri_type=lower;kwargs...)::MPO
+function make_transIsing_MPO(sites,NNN::Int64,J::Float64,hx::Float64,ul::tri_type=lower)::MPO
     N=length(sites)
     mpo=MPO(sites) #make and MPO only to get the indices
-    add_edge_links!(mpo)
+    add_edge_links!(mpo) #add in l=0 and l=N edge links ... just so we can remove them later
 
     prev_link=Index(1) #Don't know Dw here so we can't make an l=0 link index
     for n in 1:N
         iset=IndexSet(inds(mpo[n])...)
-        mpo[n]=make_transIsing_op(iset,prev_link,n,NNN,hx,ul)
+        mpo[n]=make_transIsing_op(iset,prev_link,n,NNN,J,hx,ul)
         prev_link=filterinds(inds(mpo[n],"l=$n"))[1]
     end
-    if get(kwargs,:obc,true)
-        mpo=ITensorMPOCompression.to_openbc(mpo) #contract with l* and *r at the edges.
-    end
-    return mpo
+    return ITensorMPOCompression.to_openbc(mpo) #contract with l* and *r at the edges.
 end
 
 function add_edge_links!(mpo::MPO)
@@ -100,10 +123,10 @@ function add_edge_links!(mpo::MPO)
 end
 
 
-    # NNN = Number of Nearest Neighbours, for example
-#    NNN=2 corresponds to nearest neighbour
-#    NNN=3 corresponds to nearest and next nearest neighbour
-function make_transIsing_op(indices::Vector{<:Index},prev_link::Index,nsite::Int64,NNN::Int64,hx::Float64=0.0,ul::tri_type=lower)::ITensor
+# NNN = Number of Nearest Neighbours, for example
+#    NNN=1 corresponds to nearest neighbour
+#    NNN=2 corresponds to nearest and next nearest neighbour
+function make_transIsing_op(indices::Vector{<:Index},prev_link::Index,nsite::Int64,NNN::Int64,J::Float64,hx::Float64=0.0,ul::tri_type=lower)::ITensor
     @assert NNN>=1
     @assert length(indices)==4
     #  It turns out that
@@ -138,7 +161,7 @@ function make_transIsing_op(indices::Vector{<:Index},prev_link::Index,nsite::Int
             for jNN in 1:iNN-1
                 assign!(W,il1=>iblock+1+jNN,il2=>iblock+jNN,unit)
             end
-            Jn=1.0/(iNN) #interactions need to decay with distance in order for H to extensive 
+            Jn=J/(iNN) #interactions need to decay with distance in order for H to extensive 
             assign!(W,il1=>Dw,il2=>iblock+iNN,Jn*Sz)
             iblock+=iNN
         end
@@ -150,7 +173,7 @@ function make_transIsing_op(indices::Vector{<:Index},prev_link::Index,nsite::Int
             for jNN in 1:iNN-1
                 assign!(W,il1=>iblock+jNN,il2=>iblock+1+jNN,unit)
             end
-            Jn=1.0/(iNN) #interactions need to decay with distance in order for H to extensive 
+            Jn=J/(iNN) #interactions need to decay with distance in order for H to extensive 
             assign!(W,il1=>iblock+iNN,il2=>Dw,Jn*Sz)
             iblock+=iNN
         end
