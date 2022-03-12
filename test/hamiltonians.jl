@@ -181,3 +181,11 @@ function make_transIsing_op(indices::Vector{<:Index},prev_link::Index,nsite::Int
     return W
 end
 
+function fast_GS(H::MPO,sites)::Tuple{Float64,MPS}
+    psi0  = randomMPS(sites,length(H))
+    sweeps = Sweeps(5)
+    setmaxdim!(sweeps, 2,4,8,16,32)
+    setcutoff!(sweeps, 1E-10)
+    E,psi= dmrg(H,psi0, sweeps;outputlevel=0)
+    return E,psi
+end

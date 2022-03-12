@@ -2,6 +2,7 @@ using ITensors
 using ITensorMPOCompression
 using Revise
 using Test
+using Printf
 
 import ITensorMPOCompression.truncate!
 import ITensorMPOCompression.truncate
@@ -9,9 +10,7 @@ import ITensorMPOCompression.orthogonalize!
 
 include("hamiltonians.jl")
 
-# using Printf
 # Base.show(io::IO, f::Float64) = @printf(io, "%1.5f", f)
-# println("-----------Start--------------")
 
 function test_truncate(makeH,N::Int64,NNN::Int64,ms::matrix_state,epsSVD::Float64,epsrr::Float64,eps::Float64)
     mlr=mirror(ms.lr)
@@ -51,7 +50,7 @@ function test_truncate(makeH,N::Int64,NNN::Int64,ms::matrix_state,epsSVD::Float6
     if epsSVD<=1e-12
         @test (RE/epsSVD)<1.0 #typically this will remove any meaning SVs
     else
-        @test (RE/epsSVD)<1000.0 #now we may remove real SVs and expect much begger energy errors
+        @test (RE/epsSVD)<1000.0 #now we may remove real SVs and expect much bigger energy errors
     end
 end
 
@@ -89,7 +88,7 @@ end
 end 
  
 @testset "Test ground states" begin
-    eps=2e-13
+    eps=3e-13
     epsSVD=1e-12
     epsrr=1e-12
     N=10

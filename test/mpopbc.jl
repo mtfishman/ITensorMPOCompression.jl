@@ -7,14 +7,6 @@ using Test
 
 include("hamiltonians.jl")
 
-function fast_GS(H::MPO,sites)::Tuple{Float64,MPS}
-    psi0  = randomMPS(sites,length(H))
-    sweeps = Sweeps(5)
-    setmaxdim!(sweeps, 2,4,8,16,32)
-    setcutoff!(sweeps, 1E-10)
-    E,psi= dmrg(H,psi0, sweeps;outputlevel=0)
-    return E,psi
-end
 
 function test_auto_vs_direct(sites,NNN::Int64,J::Float64,hx::Float64,Eexpected::Float64,eps::Float64)
     #
