@@ -125,7 +125,7 @@ literal "false"
 
  that naive compression of Hamiltonian MPOs results in numerical instabilities.
  What happens is that the largest two of the singular values resulting from
- the SVD factorization of an MPO matrix, tend to grow rapidly with lattice
+ the SVD factorization of an MPO matrix tend to grow rapidly with lattice
  size.
  Indeed they diverge in the thermodynamic limit.
  The root of the problem can be traced to the combination of intensive and
@@ -156,9 +156,9 @@ literal "false"
 \end_inset
 
  contains a number of proofs and detailed derivations.
- The purpose of this document not to repeat those important insights, but
- to simply restate the algorithms, and add any extra detail required for
- coding MPO compression into a generally useful 
+ The purpose of this document is not to repeat those important insights,
+ but to simply restate the algorithms, and add any extra detail required
+ for coding MPO compression into a generally useful 
 \family typewriter
 ITensor
 \family default
@@ -189,7 +189,7 @@ ITensor
 \family default
  libraries (C++ and Julia) relieves the user from worrying about index order
  and as a result even matrix multiplication order.
- So for example accessing a tensor element
+ For example accessing a tensor element
 \family roman
 \series medium
 \shape up
@@ -238,7 +238,7 @@ ITensor
 
 \begin_layout Standard
 In order to proceed we need some sort of convention for index ordering.
- A typical operator valued matrix, 
+ A typical operator-valued matrix, 
 \begin_inset Formula $\hat{W}$
 \end_inset
 
@@ -407,7 +407,7 @@ For site
 \begin_inset Formula $n$
 \end_inset
 
- the left link ihas tag 
+ the left link has tag 
 \emph on
 l=$
 \emph default
@@ -981,7 +981,7 @@ ITensor
 \end_layout
 
 \begin_layout Standard
-There are a number details not mentioned above, that the code must also
+There are a number of details not mentioned above that the code must also
  handle
 \end_layout
 
@@ -2628,7 +2628,7 @@ R=\begin{bmatrix}1 & t_{2} & t_{1} & 0\\
 
 \end_inset
 
-were 
+where 
 \begin_inset Formula $\mathsf{M}$
 \end_inset
 
@@ -2670,7 +2670,7 @@ for
  will be close to or even fully singular.
  Indeed that is the whole point of compressing.
  So standard linear solvers and/or matrix inversions are going to fail spectacul
-arly! Again SVD comes to rescue:
+arly! Again SVD comes to the rescue:
 \begin_inset Formula 
 \begin{equation}
 \mathsf{\mathsf{R^{\prime}}_{2}}\approx\tilde{\mathsf{M}}^{-1}\mathsf{R}_{2}=\tilde{V}\mathsf{\frac{1}{\tilde{s}}\tilde{U^{\dagger}}}\label{eq:R2 solution}
@@ -2727,7 +2727,7 @@ noprefix "false"
 \begin_inset Formula $\mathsf{M}$
 \end_inset
 
- and is little as possible in 
+ and as little as possible in 
 \begin_inset Formula $\mathsf{R}_{2}$
 \end_inset
 
@@ -2769,7 +2769,7 @@ noprefix "false"
 
 \end_inset
 
- is poorly satisfied introducing large gauge errors, and ultimately degrading
+ is poorly satisfied, introducing large gauge errors and ultimately degrading
  energy expectation values.
  Perhaps some iterative techniques will be required to improve the accuracy
  of eq.

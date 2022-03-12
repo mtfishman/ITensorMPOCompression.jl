@@ -183,9 +183,12 @@ ITensor considerations
 \end_layout
 
 \begin_layout Standard
-The indexing methodology used in the ITensor libraries (C++ and Julia) relieves
- the user from worrying about index order and as a result even matrix multiplica
-tion order.
+The indexing methodology used in the 
+\family typewriter
+ITensor
+\family default
+ libraries (C++ and Julia) relieves the user from worrying about index order
+ and as a result even matrix multiplication order.
  So for example accessing a tensor element
 \family roman
 \series medium
@@ -228,9 +231,13 @@ ITensor
 \family typewriter
 ITensor
 \family default
- as being either upper or lower triangular is also meaning less.
+ as being either upper or lower triangular is also meaningless.
  We can say it is triangular but not upper or lower.
- In order to proceed we need some sort of convention for index ordering.
+ 
+\end_layout
+
+\begin_layout Standard
+In order to proceed we need some sort of convention for index ordering.
  A typical operator valued matrix, 
 \begin_inset Formula $\hat{W}$
 \end_inset
@@ -279,7 +286,7 @@ A primed version of the site index.
 l=1
 \emph default
  index is for columns.
- With this definition we declare 
+ With this definition we can declare 
 \begin_inset Formula $\hat{W}$
 \end_inset
 
@@ -313,7 +320,17 @@ ITensor
  object is arbitrary, and therefore of no use in identifying indices.
  The code relies solely on tags and tag conventions for identifying and
  matching indices.
- The following conventions are used extensively in the code:
+ The conventions in table 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "tab:ITensor-tag-conventions"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ are used extensively in the code:
 \begin_inset Float table
 wide false
 sideways false
@@ -592,6 +609,12 @@ internal link between
 \begin_layout Plain Layout
 
 \family typewriter
+\begin_inset CommandInset label
+LatexCommand label
+name "tab:ITensor-tag-conventions"
+
+\end_inset
+
 ITensor
 \family default
  tag conventions assumed in the MPO compression code
@@ -618,7 +641,7 @@ Definition of regular form
 \end_layout
 
 \begin_layout Standard
-For a matrix operator of dimension 
+For a matrix operator of internal dimension 
 \begin_inset Formula $D_{w}\times D_{w}^{\prime}=\left(\chi+2\right)\times\left(\chi^{\prime}+2\right)$
 \end_inset
 
@@ -656,10 +679,10 @@ where
 \begin_inset Formula $\hat{\boldsymbol{A}}$
 \end_inset
 
- must be upper triangular.
- Hamiltonian MPOs are always either upper or lower triangular, but as we
- shall see SVD compression will not guarantee preservation of the triangular
- form.
+ must be triangular.
+ Hand generated Hamiltonian MPOs are always either upper or lower triangular,
+ but as we shall see SVD compression will not guarantee preservation of
+ the triangular form.
 \end_layout
 
 \begin_layout Subsection
@@ -669,8 +692,8 @@ MPOs for open and periodic boundary conditions
 \begin_layout Standard
 Just like the MPS structure for open boundary conditions, MPOs are capped
  at each end with row and column vectors.
- For rarely used periodic boundary conditions full operator matrices are
- used throughout since there really are not any ends to the tensor chain.
+ For rarely used periodic boundary conditions, full operator matrices are
+ used throughout since there really are no ends to the tensor chain.
  MPO compression also requires full tensors (or operator valued matrices)
  at the ends, but this has nothing to do with periodic boundary conditions.
  In the paper they write the Hamiltonian as follows:
@@ -798,7 +821,7 @@ This section applies to upper regular form of
 \begin_inset Formula $\hat{W}$
 \end_inset
 
- targeting left canonical form.
+ targeting the left canonical form.
  The first step is to isolate the so called left V-block:
 \begin_inset Formula 
 \[
@@ -874,8 +897,11 @@ By the definition of how
 \begin_inset Formula $\hat{Q}$
 \end_inset
 
- will have orthogonal columns, and it also happens to be upper triangular
- (as long as 
+ will have orthogonal columns so that 
+\begin_inset Formula $Q^{\dagger}Q=I$
+\end_inset
+
+, and it also happens to be upper triangular (as long as 
 \begin_inset Formula $\hat{\boldsymbol{A}}$
 \end_inset
 
@@ -1062,7 +1088,11 @@ Float64
 \family typewriter
 lapack 
 \family default
-so must add it at to 
+so must add this feature to that 
+\begin_inset Formula $QX$
+\end_inset
+
+ routines in 
 \family typewriter
 ITensor.
  
@@ -1161,6 +1191,7 @@ noprefix "false"
 
 \end_inset
 
+.
  All of the 
 \begin_inset Formula $R_{+}/L_{+}$
 \end_inset
@@ -1175,12 +1206,12 @@ noprefix "false"
 
 \end_inset
 
- because it is easy (for me) to mix up where the 
+, because it is easy (for me) to mix up where the 
 \begin_inset Formula $t$
 \end_inset
 
 's go.
- Adn finally we write all the orthogonality conditions that the canonical
+ And finally we write all the orthogonality conditions that the canonical
  form satisfies in table 
 \begin_inset CommandInset ref
 LatexCommand ref
@@ -1191,7 +1222,7 @@ noprefix "false"
 
 \end_inset
 
- where the operator orthogonaly condition is defines as (watch the cancelling
+ where the operator orthogonaly condition is defined as (watch the cancelling
  daggers!)
 \begin_inset Formula 
 \begin{equation}
@@ -2191,7 +2222,7 @@ QR version in detail
 
 \begin_layout Standard
 In this example we will assume the MPO is right canonical, upper triangular,
- which means were again doing a sweep from left to right.
+ which means we are again doing a sweep from left to right.
  We start by doing a block respecting 
 \begin_inset Formula $QR$
 \end_inset
@@ -2304,7 +2335,7 @@ literal "false"
 \end_inset
 
  is left/right neutral so to speak.
- Also we should notice that matrices in eq.
+ We should notice that matrices in eq.
  
 \begin_inset CommandInset ref
 LatexCommand ref
@@ -2436,20 +2467,20 @@ M\sim\begin{bmatrix}1 & 0 & 0\\
 \end{bmatrix}\begin{bmatrix}1 & 0 & 0\\
 0 & \mathsf{\tilde{s}\tilde{V}^{\dagger}} & 0\\
 0 & 0 & 1
-\end{bmatrix}=UV.
+\end{bmatrix}=UT.
 \]
 
 \end_inset
 
 Where the singular values are absorbed into 
-\begin_inset Formula $V$
+\begin_inset Formula $T$
 \end_inset
 
 .
  Putting it all together we get
 \begin_inset Formula 
 \[
-\hat{W}=\hat{Q}_{+}R_{+}=\hat{Q}_{+}MR^{\prime}\sim\hat{Q}_{+}UVR^{\prime}
+\hat{W}=\hat{Q}_{+}R_{+}=\hat{Q}_{+}MR^{\prime}\sim\hat{Q}_{+}UTR^{\prime}
 \]
 
 \end_inset
@@ -2538,7 +2569,7 @@ This process is conceptually straightforward but it is tricky to code correctly
 \begin_inset Formula $\hat{\boldsymbol{A}}$
 \end_inset
 
-block that loses its 
+ block that loses its 
 \begin_inset Quotes eld
 \end_inset
 
@@ -3588,7 +3619,7 @@ Explicit structure of all four
 \end_layout
 
 \begin_layout Section
-Infiniote lattice MPO compression
+Infinite lattice MPO compression
 \end_layout
 
 \begin_layout Standard
