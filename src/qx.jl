@@ -2,14 +2,15 @@ using ITensorMPOCompression
 using LinearAlgebra
 using ITensors
 
-"""
+@doc """
   `block_qx(W_::ITensor,ul::tri_type)::Tuple{ITensor,ITensor,Index}`
 
 Perform a block respecting QX decomposition of the operator valued matrix `W`. 
-The appropriate decomposition, QR, RQ, QL, LQ is selected based on the `matrix_state` `ms`.
+The appropriate decomposition, QR, RQ, QL, LQ is selected based on the `tri_type` `ul` 
+and the `dir` keyword argument.
 The new internal `Index` between Q and R/L is modified so that the tags are "Link,qx" instead
 "Link,qr" etc. returned by the qr/rq/ql/lq routines.  Q and R are also gauge fixed so that 
-the corner element of R is 1.0 and Q†Q=d x 𝕀 where d in the dimensionality of the local
+the corner element of R is 1.0 and Q†Q=d𝕀 where d in the dimensionality of the local
 Hilbert space.
 
 # Arguments
@@ -18,13 +19,13 @@ Hilbert space.
 
 # Keywords
 - `dir::orth_type = right` : choose `left` or `right` canonical form
-- `epsrr::Foat64 = 1e-14` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
+- `epsrr::Float64 = 1e-14` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
    All rows with max(abs(R[:,j]))<epsrr are considered zero and removed.  epsrr==0.0 indicates no rank reduction.
 
 # Returns a Tuple containing
 - `Q` with orthonormal columns or rows depending on left/right, dimensions: (χ+1)x(χ\'+1)
-- `R` or `L` depending on `ms.ul`, dimensions: (χ+2)x(χ\'+2)
-- `iq` the new internal link index between `Q` and `R`/`L`.  tags="Link,qx"
+- `R` or `L` depending on `ul` with dimensions: (χ+2)x(χ\'+2)
+- `iq` the new internal link index between `Q` and `R`/`L` with tags="Link,qx"
 """
 function block_qx(W_::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor,Index}
   #
