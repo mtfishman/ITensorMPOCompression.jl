@@ -1,20 +1,21 @@
 using ITensors
 
-function slice(A::ITensor,iv::IndexVal...)::ITensor
-    iss=Tuple(noncommoninds(inds(A),map(first,iv)))
-    Sl=ITensor(iss)
-    for isv in eachindval(iss)
-        Sl[isv...]=A[iv...,isv...]
-    end
-    return Sl
-end
-
 function is_unit(O::ITensor,eps::Float64)::Bool
     s=inds(O)
     @ITensors.debug_check begin
         @assert(length(s)==2)
     end
-    norm(O-delta(s[1],s[2]))<eps
+    Id=delta(s[1],s[2])
+    if hasqns(s)
+        nm=0.0
+        for b in eachnzblock(Id)
+            isv=[s[i]=>b[i] for i in 1:length(b)]
+            nm+=abs(O[isv...]-Id[isv...])
+        end
+        return nm<eps
+    else
+        return norm(O-Id)<eps
+    end
 end
 
 function to_char(O::ITensor,eps::Float64)::Char

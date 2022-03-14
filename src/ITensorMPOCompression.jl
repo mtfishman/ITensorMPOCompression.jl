@@ -1,6 +1,7 @@
 module ITensorMPOCompression
 
 using ITensors
+using ITensors.NDTensors
 
 export ql,lq,rq,assign!,getV,setV,growRL,to_openbc,set_scale!,block_qx,orthogonalize!,is_canonical
 export tri_type,orth_type,matrix_state,upper,lower,none,left,right,mirror,parse_links
@@ -124,18 +125,47 @@ function min(ss::bond_spectrums)::Float64
     return ret
 end
 
+
+
+function slice(A::ITensor,iv::IndexVal...)::ITensor
+    iv_dagger=[dag(x.first)=>x.second for x in iv]
+    return A*onehot(iv_dagger...)
+end
+
+
 """
     assign!(W::ITensor,i1::IndexVal,i2::IndexVal,op::ITensor)
 
 Assign an operator to an element of the operator valued matrix W
     W[i1,i2]=op
 """
-function assign!(W::ITensor,i1::IndexVal,i2::IndexVal,op::ITensor)
-    is=inds(op)
-    for s in eachindval(is)
-        W[i1,i2,s...]=op[s...]
+function assign!(W::ITensor,op::ITensor,ivs::IndexVal...)
+    assign!(W,tensor(op),ivs...)
+end 
+
+function assign!(W::ITensor,op::DenseTensor{ElT,N},ivs::IndexVal...) where {ElT,N}
+    iss=inds(op)
+    for s in eachindval(iss)
+        s2=[x.second for x in s]
+        W[ivs...,s...]=op[s2...]
     end
 end
+
+
+function assign!(W::ITensor,op::BlockSparseTensor{ElT,N},ivs::IndexVal...) where {ElT,N}
+    iss=inds(op)
+    for b in eachnzblock(op)
+        isv=[iss[i]=>b[i] for i in 1:length(b)]
+        W[ivs...,isv...]=op[b][1] #not sure why we need [1] here
+    end
+end
+
+# function assign!(W::ITensor,i1::IndexVal,i2::IndexVal,op::ITensor)
+#     is=inds(op)
+#     for s in eachindval(is)
+#         W[i1,i2,s...]=op[s...]
+#     end
+# end
 
 """
     set_scale!(RL::ITensor,Q::ITensor,off::V_offsets)

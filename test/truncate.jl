@@ -10,6 +10,7 @@ import ITensorMPOCompression.orthogonalize!
 
 include("hamiltonians.jl")
 
+#brute force method to control the default float display format.
 # Base.show(io::IO, f::Float64) = @printf(io, "%1.5f", f)
 
 function test_truncate(makeH,N::Int64,NNN::Int64,ms::matrix_state,epsSVD::Float64,epsrr::Float64,eps::Float64)
@@ -134,4 +135,23 @@ end
     @printf "Heisenberg E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
     @test abs(E0-E1)<eps
     @test abs(overlap-1.0)<eps
+end 
+#= 
+@testset "Test with conserved QNs" begin
+    N = 10
+    NNN = 3
+    hx=0.0 #can't make and sx op with QNs in play
+    J=1.0
+    sites = siteinds("S=1/2",N;conserve_qns=true)
+    # to build our own MPO we need to put QNs on all the link indices.
+    # from autoMPO we see QN("Sz",0) => 3 as the qn for a link index.
+    #H=make_transIsing_MPO(sites,NNN,J,hx,lower)
+    H=make_transIsing_AutoMPO(sites,NNN,J,hx,lower)
+    pprint(H[2],1e-14)
+    #orthogonalize!(H)
+    #pprint(H[2],1e-14)
+    #@show H[2]
+    #i=Index(QN("Sz",0)=>3;dir=ITensors.In,tags="Link,l=1")
+    #@show i
 end
+=#

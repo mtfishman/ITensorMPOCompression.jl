@@ -4,7 +4,7 @@ Done: -We need pure upper/lower enums without diagonal and full options
 Done: -further simplify the compress H loop
 Deon: -Need to save SV spectrum somewhere
 Done: -Look into the MPS compession code for inspiration.
-    rename compress! to trunctate! (supprts the svd args)
+Done:    rename compress! to trunctate! (supprts the svd args)
         cutoff  Using a cutoff allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy.
 
         maxdim –- integer M. If the number of singular values exceeds M, only the largest M will be retained.
@@ -33,19 +33,22 @@ Fixed: -for lower,right SetV seems to require the last column(above I)  should b
 -mirror(::matrix_state) should also flip ul ... no?  THen we need reflect to just flip lr.
 Done: -Make rank reaviling an option for block_qx
 Done: -For obc MPO try compressing 2..N-1, what do we end up with for W[N].  Then try N..2, what does W[1] look like??  Can we get around PBC issue this way?
--Test canonical with epsrr=0.0 and compare.  need an max_Dw(H::MPO) function.  
+Done: -Test canonical with epsrr=0.0 and compare.  need an max_Dw(H::MPO) function.  
 -Use  # Exact energy for transverse field Ising model J=-1, hx=-1
     # with open boundary conditions at criticality
     energy_exact = 1.0 - 1.0 / sin(π / (4 * N + 2))
     @test abs((energy - energy_exact) / energy_exact) < 1e-4
--add Printf for 
--simplify MPOpbc code
+Done: -add Printf for 
+Deon: -simplify MPOpbc code
 Plan:
-  50% Document what I have so far
+  80% Document what I have so far
   Done Test with fixed autoMPO Hamiltonians (start the heisenberg with arbitrary neighbours)
-  Test with DMRG GS calculations (should just work, but who knows right?)
+  Done: Test with DMRG GS calculations (should just work, but who knows right?)
   Test with Fermion/Hubbard  Hamiltonians
   Test with the 3 body hamiltonians used in the Parker paper (If I can figure what they were doing)
   Test with QN's (new area for me)
   50% Refactor the code.  A lot of things can be simplified once there are lots of unit tests in place.
   Done: Figure how to disable 100's of asserts for production mode usage.  
+  INcoroprate make_Ham functions into module
+  Organize exports
+  Add examples to docs (needs make_Ham functions)
