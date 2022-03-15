@@ -27,25 +27,25 @@ println("-----------Start--------------")
     d,n,r,c=parse_links(W)
     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
     Sz=op(is,"Sz")
-    assign!(W,r=>1,c=>2,Sz) #stuff any op on the top row
+    assign!(W,Sz,r=>1,c=>2) #stuff any op on the top row
     @test !is_lower_regular_form(W,eps)
     W=H[3]
     d,n,r,c=parse_links(W)
     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
     Sz=op(is,"Sz")
-    assign!(W,r=>2,c=>dim(c),Sz) #stuff any op on the right column
+    assign!(W,Sz,r=>2,c=>dim(c)) #stuff any op on the right column
     @test !is_lower_regular_form(W,eps)
     W=H[4]
     d,n,r,c=parse_links(W)
     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
     Sz=op(is,"Sz")
-    assign!(W,r=>2,c=>2,Sz) #stuff any op on the diag
+    assign!(W,Sz,r=>2,c=>2) #stuff any op on the diag
     @test is_lower_regular_form(W,eps) #this one should still be regular
     W=H[5]
     d,n,r,c=parse_links(W)
     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
-    Id=delta(is,is')
-    assign!(W,r=>2,c=>2,Id) #stuff unit op on the diag
+    Id=op(is,"Id")
+    assign!(W,Id,r=>2,c=>2) #stuff unit op on the diag
     @test is_lower_regular_form(W,eps) #this one should still be regular, but should see a warning
     # at this point the whole H should fail since we stuffed ops in the all wrong places.
     @test !is_lower_regular_form(H,eps)

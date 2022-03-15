@@ -32,11 +32,11 @@ function get_lr_lower(mpo::MPO)::Tuple{ITensor,ITensor}
     N=length(mpo)
     W1=mpo[1]
     llink=filterinds(inds(W1),tags="l=0")[1]
-    l=ITensor(0.0,llink)
+    l=ITensor(0.0,dag(llink))
 
     WN=mpo[N]
     rlink=filterinds(inds(WN),tags="l=$N")[1]
-    r=ITensor(0.0,rlink)
+    r=ITensor(0.0,dag(rlink))
     if ul==lower
         l[llink=>dim(llink)]=1.0
         r[rlink=>1]=1.0

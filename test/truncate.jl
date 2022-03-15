@@ -55,6 +55,8 @@ function test_truncate(makeH,N::Int64,NNN::Int64,ms::matrix_state,epsSVD::Float6
     end
 end
 
+
+
 @testset "Compress full MPO" begin
     eps=2e-13
     epsSVD=1e-12
@@ -139,19 +141,19 @@ end
 #= 
 @testset "Test with conserved QNs" begin
     N = 10
-    NNN = 3
+    NNN = 1
     hx=0.0 #can't make and sx op with QNs in play
     J=1.0
     sites = siteinds("S=1/2",N;conserve_qns=true)
     # to build our own MPO we need to put QNs on all the link indices.
     # from autoMPO we see QN("Sz",0) => 3 as the qn for a link index.
-    #H=make_transIsing_MPO(sites,NNN,J,hx,lower)
-    H=make_transIsing_AutoMPO(sites,NNN,J,hx,lower)
+    H=make_transIsing_MPO(sites,NNN,J,hx,upper)
+    #H=make_transIsing_AutoMPO(sites,NNN,J,hx,lower)
     pprint(H[2],1e-14)
-    #orthogonalize!(H)
+    orthogonalize!(H)
     #pprint(H[2],1e-14)
     #@show H[2]
     #i=Index(QN("Sz",0)=>3;dir=ITensors.In,tags="Link,l=1")
     #@show i
 end
-=#
+ =#

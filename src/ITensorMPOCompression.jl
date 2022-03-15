@@ -3,11 +3,13 @@ module ITensorMPOCompression
 using ITensors
 using ITensors.NDTensors
 
+import ITensors.BlockSparseTensor,ITensors.DenseTensor,ITensors.tensor
+
 export ql,lq,rq,assign!,getV,setV,growRL,to_openbc,set_scale!,block_qx,orthogonalize!,is_canonical
 export tri_type,orth_type,matrix_state,upper,lower,none,left,right,mirror,parse_links
 export is_regular_form,truncate,truncate!,getM,grow
 export is_lower_regular_form,is_upper_regular_form,V_offsets
-export detect_upper_lower,is_upper_lower,get_Dw,min,max
+export detect_upper_lower,is_upper_lower,get_Dw,min,max,redim
 
 """
     @enum tri_type  upper lower
@@ -157,6 +159,22 @@ function assign!(W::ITensor,op::BlockSparseTensor{ElT,N},ivs::IndexVal...) where
     for b in eachnzblock(op)
         isv=[iss[i]=>b[i] for i in 1:length(b)]
         W[ivs...,isv...]=op[b][1] #not sure why we need [1] here
+    end
+end
+
+"""
+    function redim(i::Index,Dw::Int64)::Index
+    
+    Create an index with the same tags ans plev, but different dimension(s) and and id 
+"""
+function redim(i::Index,Dw::Int64...)::Index
+    @assert length(Dw)==nblocks(i)
+    if hasqns(i)
+        j=0
+        new_qns=[(j+=1;q.first=>Dw[j]) for q in space(i)]
+        return Index(new_qns...;dir=dir(i),tags=tags(i),plev=plev(i))
+    else
+        return Index(Dw[1];tags=tags(i),plev=plev(i))
     end
 end
 

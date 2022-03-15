@@ -16,8 +16,7 @@ function fix_autoMPO1(W::ITensor)::ITensor
     for js in eachindval(iss)
         for jl in eachindval(il)
             Sl=slice(W,jl)
-            assign(W1,Sl,il=>p[jl.second])
-            #W1[il=>p[jl.second],js...]=W[jl,js...]
+            assign!(W1,Sl,il=>p[jl.second])
         end
     end
     return W1
@@ -41,45 +40,15 @@ function fix_autoMPO(W::ITensor)::ITensor
     pr[2],pr[Dw1]=pr[Dw1],pr[2]
     pc[2],pc[Dw2]=pc[Dw2],pc[2]
     W1=ITensor(r,c,iss...)
-#    for js in eachindval(iss)
-        for jr in eachindval(r)
-            for jc in eachindval(c)
-                sl=slice(W,jr,jc)
-                assign(W1,sl,r=>pr[jr.second],c=>pc[jc.second])
-#                W1[r=>pr[jr.second],c=>pc[jc.second],js...]=W[jr,jc,js...]
-            end
+    for jr in eachindval(r)
+        for jc in eachindval(c)
+            sl=slice(W,jr,jc)
+            assign!(W1,sl,r=>pr[jr.second],c=>pc[jc.second])
         end
- #   end
+    end
     return W1
 end
 
-function assign(T1::ITensor,T2::ITensor,iv1::IndexVal...)
-    i1=map(first,iv1)
-    iss=noncommoninds(T1,i1)
-    @assert length(noncommoninds(iss,inds(T2)))==0
-    @assert iss[1]==inds(T2)[1]
-    @assert iss[2]==inds(T2)[2]
-    assign(T1,tensor(T2),iss,iv1...)
-    # for js in eachindval(iss...)
-    #     T1[iv1...,js...]=T2[js...]
-    # end
-end
-function assign(T1::ITensor,T2::DenseTensor{ElT,N},iss::Vector{Index{Int64}},iv1::IndexVal...) where {ElT,N}
-    for js in eachindval(iss...)
-        js2=[x.second for x in js]
-        T1[iv1...,js...]=T2[js2...]
-    end
-end
-
-function assign(T1::ITensor,T2::BlockSparseTensor{ElT,N},iss::Any,iv1::IndexVal...) where {ElT,N}
-    #@show typeof(iss)
-    for b in eachnzblock(T2)
-        isv=[iss[i]=>b[i] for i in 1:length(b)]
-        s=T2[b][1]
-        #@show 
-        T1[iv1...,isv...]=s
-    end
-end
 
 function fix_autoMPO!(H::MPO)
     N=length(H)
@@ -196,41 +165,41 @@ function make_transIsing_op(indices::Vector{<:Index},prev_link::Index,nsite::Int
         il2=Index(Dw,tags(indl2[1]))
     end
     W=ITensor(il1,dag(il2),is,dag(is'))
-    unit=delta(is,dag(is')) #make a unit matrix
+    unit=op(is,"Id")
     Sz=op(is,"Sz")
     if do_field
         Sx=op(is,"Sx")
     end
-    assign!(W,il1=>1 ,il2=>1 ,unit)
-    assign!(W,il1=>Dw,il2=>Dw,unit)
+    assign!(W,unit,il1=>1 ,il2=>1 )
+    assign!(W,unit,il1=>Dw,il2=>Dw)
     #loop below is coded for lower, just swap indexes to get upper
     
     if ul==lower
         if do_field
-            assign!(W,il1=>Dw,il2=>1 ,hx*Sx); #add field term
+            assign!(W ,hx*Sx,il1=>Dw,il2=>1); #add field term
         end
         #very hard to explain this without a diagram.
         for iNN in 1:NNN
-            assign!(W,il1=>iblock+1,il2=>1,Sz)
+            assign!(W,Sz,il1=>iblock+1,il2=>1)
             for jNN in 1:iNN-1
-                assign!(W,il1=>iblock+1+jNN,il2=>iblock+jNN,unit)
+                assign!(W,unit,il1=>iblock+1+jNN,il2=>iblock+jNN)
             end
             Jn=J/(iNN) #interactions need to decay with distance in order for H to extensive 
-            assign!(W,il1=>Dw,il2=>iblock+iNN,Jn*Sz)
+            assign!(W,Jn*Sz,il1=>Dw,il2=>iblock+iNN)
             iblock+=iNN
         end
     else
         if do_field
-            assign!(W,il1=>1,il2=>Dw ,hx*Sx); #add field term
+            assign!(W,hx*Sx,il1=>1,il2=>Dw ); #add field term
         end
         #very hard to explain this without a diagram.
         for iNN in 1:NNN
-            assign!(W,il1=>1,il2=>iblock+1,Sz)
+            assign!(W,Sz,il1=>1,il2=>iblock+1)
             for jNN in 1:iNN-1
-                assign!(W,il1=>iblock+jNN,il2=>iblock+1+jNN,unit)
+                assign!(W,unit,il1=>iblock+jNN,il2=>iblock+1+jNN)
             end
             Jn=J/(iNN) #interactions need to decay with distance in order for H to extensive 
-            assign!(W,il1=>iblock+iNN,il2=>Dw,Jn*Sz)
+            assign!(W,Jn*Sz,il1=>iblock+iNN,il2=>Dw)
             iblock+=iNN
         end
     end

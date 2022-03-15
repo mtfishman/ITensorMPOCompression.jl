@@ -8,14 +8,12 @@ function getV1(W::ITensor,off::V_offsets)::ITensor
     iss=filterinds(inds(W),tags="Site")
     @assert length(ils)==1
     w1=ils[1]
-    v1=Index(dim(w1)-1,tags(ils[1]))
-    V=ITensor(v1,iss...)
+    v1=redim(w1,dim(w1)-1) 
+    V=ITensor(0.0,v1,iss...)
     for ilv in eachindval(v1)
         wlv=IndexVal(w1,ilv.second+off.o1)
-        for isv in eachindval(iss)
-            V[ilv,isv...]=W[wlv,isv...]
-    
-        end
+        s=slice(W,wlv)
+        assign!(V,s,ilv)
     end
     return V
 end
@@ -29,15 +27,13 @@ function getV(W::ITensor,off::V_offsets)::ITensor
     iss=filterinds(inds(W),tags="Site")
     w1=ils[1]
     w2=ils[2]
-    v1=Index(dim(w1)-1,tags(ils[1]))
-    v2=Index(dim(w2)-1,tags(ils[2]))
+    v1=redim(w1,dim(w1)-1) 
+    v2=redim(w2,dim(w2)-1) 
     V=ITensor(v1,v2,iss...)
     for ilv in eachindval(v1,v2)
         wlv=(IndexVal(w1,ilv[1].second+off.o1),IndexVal(w2,ilv[2].second+off.o2))
-        for isv in eachindval(iss)
-            V[ilv...,isv...]=W[wlv...,isv...]
-    
-        end
+        s=slice(W,wlv...)
+        assign!(V,s,ilv...)
     end
     return V
 end
