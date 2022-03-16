@@ -1,4 +1,3 @@
-using ITensors
 
 function is_unit(O::ITensor,eps::Float64)::Bool
     s=inds(O)

@@ -1,12 +1,10 @@
-using ITensorMPOCompression
 using LinearAlgebra
-using ITensors
 
 @doc """
-  `block_qx(W_::ITensor,ul::tri_type)::Tuple{ITensor,ITensor,Index}`
+  `block_qx(W::ITensor,ul::reg_form)::Tuple{ITensor,ITensor,Index}`
 
 Perform a block respecting QX decomposition of the operator valued matrix `W`. 
-The appropriate decomposition, QR, RQ, QL, LQ is selected based on the `tri_type` `ul` 
+The appropriate decomposition, QR, RQ, QL, LQ is selected based on the `reg_form` `ul` 
 and the `dir` keyword argument.
 The new internal `Index` between Q and R/L is modified so that the tags are "Link,qx" instead
 "Link,qr" etc. returned by the qr/rq/ql/lq routines.  Q and R are also gauge fixed so that 
@@ -15,19 +13,19 @@ Hilbert space.
 
 # Arguments
 - `W` Opertor valued matrix for decomposition.
-- `ul` upper/lower state of `W`. We can auto detect here, but is more efficitent if this is done by the higher level calling routines.
+- `ul` upper/lower regular form of `W`. We can auto detect here, but is more efficient if this is done by the higher level calling routines.
 
 # Keywords
-- `dir::orth_type = right` : choose `left` or `right` canonical form
+- `orth::orth_type = right` : choose `left` or `right` orthogonal (canonical) form
 - `epsrr::Float64 = 1e-14` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
    All rows with max(abs(R[:,j]))<epsrr are considered zero and removed.  epsrr==0.0 indicates no rank reduction.
 
 # Returns a Tuple containing
-- `Q` with orthonormal columns or rows depending on left/right, dimensions: (χ+1)x(χ\'+1)
+- `Q` with orthonormal columns or rows depending on orth=left/right, dimensions: (χ+1)x(χ\'+1)
 - `R` or `L` depending on `ul` with dimensions: (χ+2)x(χ\'+2)
 - `iq` the new internal link index between `Q` and `R`/`L` with tags="Link,qx"
 """
-function block_qx(W_::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor,Index}
+function block_qx(W_::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Index}
   #
   # Copy so that we don't mess up the original MPO
   #
@@ -35,7 +33,7 @@ function block_qx(W_::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor,Ind
   #
   # settle the left/right && upper/lower question
   #
-  lr::orth_type=get(kwargs, :dir, right)
+  lr::orth_type=get(kwargs, :orth, right)
   ms=matrix_state(ul,lr)
   d,n,r,c=parse_links(W)
   #

@@ -2,9 +2,6 @@
 using LinearAlgebra
 using Printf
 
-
-
-
 function getInverse(U::ITensor,s::ITensor,V::ITensor)::ITensor
     as=LinearAlgebra.diag(array(s))
     asinv=Vector(as)
@@ -70,9 +67,9 @@ end
 #
 #  Compress one site
 #
-function truncate(W::ITensor,ul::tri_type;kwargs...)::Tuple{ITensor,ITensor,bond_spectrum}
+function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,bond_spectrum}
     d,n,r,c=parse_links(W) # W[l=$(n-1)l=$n]=W[r,c]
-    lr::orth_type=get(kwargs, :dir, right)
+    lr::orth_type=get(kwargs, :orth, right)
     ms=matrix_state(ul,lr)
     eps=1e-14 #relax used for testing upper/lower/regular-form etc.
     # establish some tag strings then depend on lr.
@@ -151,7 +148,7 @@ Compress an MPO using block respecting SVD techniques as described in
 - `H` MPO for decomposition. If H is not already in the correct canonical form for compression, it will automatically be put into the correct form prior to compression.
 
 # Keywords
-- `dir::orth_type = right` : choose `left` or `right` canonical form for the final output. 
+- `orth::orth_type = right` : choose `left` or `right` canonical form for the final output. 
 - `cutoff::Foat64` : Using a `cutoff` allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy. 
 - `maxdim::Int64` : If the number of singular values exceeds `maxdim`, only the largest `maxdim` will be retained.
 - `mindim::Int64` : At least `mindim` singular values will be retained, even if some fall below the cutoff
@@ -163,19 +160,19 @@ function truncate!(H::MPO;kwargs...)::bond_spectrums
     # decide left/right and upper/lower
     #
     eps=1e-14 #relax used for testing upper/lower/regular-form etc.
-    lr::orth_type=get(kwargs, :dir, right)
+    lr::orth_type=get(kwargs, :orth, right)
     (bl,bu)=detect_regular_form(H,eps)
     if !(bl || bu)
         throw(ErrorException("truncate!(H::MPO), H must be in either lower or upper regular form"))
     end
     @assert !(bl && bu)
-    ul::tri_type = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
+    ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
     #
     # Now check if H required orthogonalization
     #
     ms=matrix_state(ul,lr)
     if !is_canonical(H,mirror(ms),eps) 
-        orthogonalize!(H,ul;dir=mirror(lr),kwargs...) 
+        orthogonalize!(H,ul;orth=mirror(lr),kwargs...) 
     end
     N=length(H)
     ss=bond_spectrums(undef,N-1)

@@ -6,18 +6,19 @@ using ITensors.NDTensors
 import ITensors.BlockSparseTensor,ITensors.DenseTensor,ITensors.tensor
 
 export ql,lq,rq,assign!,getV,setV,growRL,to_openbc,set_scale!,block_qx,orthogonalize!,is_canonical
-export tri_type,orth_type,matrix_state,upper,lower,none,left,right,mirror,parse_links
+export reg_form,orth_type,matrix_state,upper,lower,none,left,right,mirror,parse_links
 export is_regular_form,truncate,truncate!,getM,grow
 export is_lower_regular_form,is_upper_regular_form,V_offsets
 export detect_upper_lower,is_upper_lower,get_Dw,min,max,redim
+export make_transIsing_MPO,make_Heisenberg_AutoMPO,make_transIsing_AutoMPO,fast_GS
 
 """
-    @enum tri_type  upper lower
+    @enum reg_form  upper lower
     Indicates if an MPO matrix has either an `upper` or `lower` triangular form.
     This becomes non-trival for rectangular matrices.
     See also [`detect_upper_lower`](@ref)
 """
-@enum tri_type  upper lower 
+@enum reg_form  upper lower 
 
 """
     @enum orth_type none left right
@@ -39,11 +40,11 @@ function mirror(lr::orth_type)::orth_type
 end
 
  """
-     Indicates both the `orth_type` and `tri_type` of an MPO
-     See also [`orth_type`](@ref) [`tri_type`](@ref)
+     Indicates both the `orth_type` and `reg_form` of an MPO
+     See also [`orth_type`](@ref) [`reg_form`](@ref)
  """
 struct matrix_state
-    ul::tri_type
+    ul::reg_form
     lr::orth_type
 end
 
@@ -178,13 +179,6 @@ function redim(i::Index,Dw::Int64...)::Index
     end
 end
 
-# function assign!(W::ITensor,i1::IndexVal,i2::IndexVal,op::ITensor)
-#     is=inds(op)
-#     for s in eachindval(is)
-#         W[i1,i2,s...]=op[s...]
-#     end
-# end
-
 """
     set_scale!(RL::ITensor,Q::ITensor,off::V_offsets)
 
@@ -204,6 +198,7 @@ function set_scale!(RL::ITensor,Q::ITensor,off::V_offsets)
 end
 
 include("util.jl")
+include("hamiltonians.jl")
 include("qx.jl")
 include("characterization.jl") 
 include("blocking.jl")

@@ -164,7 +164,7 @@ function detect_upper_lower(r::Index,W::ITensor,c::Index,eps::Float64)::Tuple{Bo
     return zero_upper,zero_lower
 end
 
-function is_upper_lower(r::Index,W::ITensor,c::Index,ul::tri_type,eps::Float64)::Bool
+function is_upper_lower(r::Index,W::ITensor,c::Index,ul::reg_form,eps::Float64)::Bool
     l,u=detect_upper_lower(r,W,c,eps)
     ul==lower ? l : u
 end
@@ -177,7 +177,7 @@ function detect_upper_lower(W::ITensor,eps::Float64)::Tuple{Bool,Bool}
     return detect_upper_lower(r,W,c,eps)
 end
 
-function is_upper_lower(W::ITensor,ul::tri_type,eps::Float64)::Bool 
+function is_upper_lower(W::ITensor,ul::reg_form,eps::Float64)::Bool 
     l,u=detect_upper_lower(W,eps)
     ul==lower ? l : u
 end
@@ -197,7 +197,7 @@ function detect_upper_lower(H::MPO,eps::Float64)::Tuple{Bool,Bool}
     return l,u
 end
 
-function is_upper_lower(H::MPO,ul::tri_type,eps::Float64)::Bool 
+function is_upper_lower(H::MPO,ul::reg_form,eps::Float64)::Bool 
     l,u=detect_upper_lower(H,eps)
     ul==lower ? l : u
 end
@@ -275,7 +275,7 @@ function detect_regular_form(W::ITensor,eps::Float64)::Tuple{Bool,Bool}
     return reg_lower,reg_upper
 end
 
-function is_regular_form(W::ITensor,ul::tri_type,eps::Float64)::Bool
+function is_regular_form(W::ITensor,ul::reg_form,eps::Float64)::Bool
     i = ul==lower ? 1 : 2
     return detect_regular_form(W,eps)[i]
 end
@@ -300,7 +300,7 @@ function is_regular_form(H::MPO,eps::Float64)::Bool
     return lrf || url
 end
 
-function is_regular_form(H::MPO,ul::tri_type,eps::Float64)::Bool
+function is_regular_form(H::MPO,ul::reg_form,eps::Float64)::Bool
     N=length(H)
     irf=true
     for n in 1:N

@@ -27,7 +27,7 @@ function to_openbc(mpo::MPO)::MPO
 end
 
 function get_lr_lower(mpo::MPO)::Tuple{ITensor,ITensor}
-    ul::tri_type = is_lower_regular_form(mpo,1e-14) ? lower : upper
+    ul::reg_form = is_lower_regular_form(mpo,1e-14) ? lower : upper
  
     N=length(mpo)
     W1=mpo[1]

@@ -3,11 +3,6 @@ using ITensorMPOCompression
 using Revise
 using Test
 
-#ITensors.ITensors.enable_debug_checks()
-
-include("hamiltonians.jl")
-
-
 function test_auto_vs_direct(sites,NNN::Int64,J::Float64,hx::Float64,Eexpected::Float64,eps::Float64)
     #
     #  Use autoMPO to make H

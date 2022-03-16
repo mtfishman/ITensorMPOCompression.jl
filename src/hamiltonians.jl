@@ -1,6 +1,3 @@
-using ITensors
-import ITensorMPOCompression
-using Revise
 
 #handle case with 1 link index at edges.
 function fix_autoMPO1(W::ITensor)::ITensor
@@ -57,7 +54,7 @@ function fix_autoMPO!(H::MPO)
     end
 end
 
-make_Heisenberg_AutoMPO(sites,NNN::Int64,J::Float64,hx::Float64,ul::tri_type)::MPO = 
+make_Heisenberg_AutoMPO(sites,NNN::Int64,J::Float64,hx::Float64,ul::reg_form)::MPO = 
     make_Heisenberg_AutoMPO(sites,NNN,J,hx)
 
 function make_Heisenberg_AutoMPO(sites,NNN::Int64,J::Float64,hx::Float64)::MPO
@@ -82,7 +79,7 @@ end
 
 
 
-make_transIsing_AutoMPO(sites,NNN::Int64,J::Float64,hx::Float64,ul::tri_type)::MPO = 
+make_transIsing_AutoMPO(sites,NNN::Int64,J::Float64,hx::Float64,ul::reg_form)::MPO = 
     make_transIsing_AutoMPO(sites,NNN,J,hx)
 
 function make_transIsing_AutoMPO(sites,NNN::Int64,J::Float64,hx::Float64)::MPO
@@ -107,7 +104,7 @@ function make_transIsing_AutoMPO(sites,NNN::Int64,J::Float64,hx::Float64)::MPO
 end
 
 
-function make_transIsing_MPO(sites,NNN::Int64,J::Float64,hx::Float64,ul::tri_type=lower)::MPO
+function make_transIsing_MPO(sites,NNN::Int64,J::Float64,hx::Float64,ul::reg_form=lower)::MPO
     use_qn=hasqns(sites[1])
     N=length(sites)
     mpo=MPO(sites) #make and MPO only to get the indices
@@ -145,7 +142,7 @@ end
 # NNN = Number of Nearest Neighbours, for example
 #    NNN=1 corresponds to nearest neighbour
 #    NNN=2 corresponds to nearest and next nearest neighbour
-function make_transIsing_op(indices::Vector{<:Index},prev_link::Index,nsite::Int64,NNN::Int64,J::Float64,hx::Float64=0.0,ul::tri_type=lower)::ITensor
+function make_transIsing_op(indices::Vector{<:Index},prev_link::Index,nsite::Int64,NNN::Int64,J::Float64,hx::Float64=0.0,ul::reg_form=lower)::ITensor
     @assert NNN>=1
     @assert length(indices)==4
     do_field = hx!=0.0

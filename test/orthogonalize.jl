@@ -3,11 +3,9 @@ using Revise
 using Test
 import ITensorMPOCompression.orthogonalize!
 
-include("hamiltonians.jl")
-
-using Printf
-Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
-println("-----------Start--------------")
+# using Printf
+# Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
+# println("-----------Start--------------")
 
 
 @testset "Upper, lower, regular detections" begin
@@ -62,7 +60,7 @@ function test_canonical(makeH,N::Int64,NNN::Int64,ms::matrix_state)
     H=makeH(sites,NNN,J,hx,ms.ul) 
     @test is_regular_form(H   ,ms.ul,eps)
     E0=inner(psi',H,psi)
-    orthogonalize!(H;dir=ms.lr,epsrr=1e-12)
+    orthogonalize!(H;orth=ms.lr,epsrr=1e-12)
     E1=inner(psi',H,psi)
     @test abs(E0-E1)<1e-14
     @test is_regular_form(H,ms.ul,eps)

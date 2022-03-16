@@ -3,8 +3,6 @@ using ITensorMPOCompression
 using Test
 using Printf
 
-include("hamiltonians.jl")
-
 #
 # Single index tests
 #
@@ -99,8 +97,6 @@ end
 #
 #  Test multiple indicies using MPO matrices
 #
-
-
 @testset "QR,QL,LQ,RQ decomposition fo MPO matrices" begin
     N=5
     NNN=4
@@ -172,7 +168,6 @@ end
     R,Q=rq(W,Rind;positive=true,rank=true)
     iq=commonindex(Q,R)
     @printf "RQ decomposition %4i rows were removed from R\n" dim(c)-dim(iq)
-    #@assert dim(iq)<dim(c) #make sure some rows got removed
     Id=Q*prime(Q,iq)
     Idq=delta(iq,iq')
     @test norm(Id-Idq)<eps
@@ -182,9 +177,7 @@ end
     #
     Q,L=ql(W,Rind;positive=true,rank=true)
     iq=commonindex(Q,L)
-#    @show L
     @printf "QL decomposition %4i rows were removed from L\n" dim(c)-dim(iq)
-#    @assert dim(iq)<dim(c) #make sure some rows got removed
     Id=Q*prime(Q,iq)
     Idq=delta(iq,iq')
     @test norm(Id-Idq)<eps
@@ -217,7 +210,6 @@ end
     L,Q=lq(W,Rind;positive=true,rank=true)
     iq=commonindex(Q,L)
     @printf "LQ decomposition %4i rows were removed from L\n" dim(c)-dim(iq)
-#    @assert dim(iq)<dim(c) #make sure some rows got removed
     Id=Q*prime(Q,iq)
     Idq=delta(iq,iq')
     @test norm(Id-Idq)<eps

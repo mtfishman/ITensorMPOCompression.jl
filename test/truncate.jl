@@ -8,8 +8,6 @@ import ITensorMPOCompression.truncate!
 import ITensorMPOCompression.truncate
 import ITensorMPOCompression.orthogonalize!
 
-include("hamiltonians.jl")
-
 #brute force method to control the default float display format.
 # Base.show(io::IO, f::Float64) = @printf(io, "%1.5f", f)
 
@@ -27,7 +25,7 @@ function test_truncate(makeH,N::Int64,NNN::Int64,ms::matrix_state,epsSVD::Float6
     E0l=inner(psi',H,psi)
     @test is_regular_form(H,ms.ul,eps)
     #@show get_Dw(H)
-    orthogonalize!(H;dir=ms.lr,epsrr=epsrr)
+    orthogonalize!(H;orth=ms.lr,epsrr=epsrr)
     #@show get_Dw(H)
 
     E1l=inner(psi',H,psi)
@@ -37,9 +35,9 @@ function test_truncate(makeH,N::Int64,NNN::Int64,ms::matrix_state,epsSVD::Float6
     @test is_regular_form(H,ms.ul,eps)
     @test is_canonical(H,ms,eps)
 
-    truncate!(H;dir=mlr,cutoff=epsSVD)
+    truncate!(H;orth=mlr,cutoff=epsSVD)
     #@show get_Dw(H)
-    ss=truncate!(H;dir=ms.lr,cutoff=epsSVD)
+    ss=truncate!(H;orth=ms.lr,cutoff=epsSVD)
     #@show get_Dw(H)
     @test is_regular_form(H,ms.ul,eps)
     @test is_canonical(H,ms,eps)
@@ -107,7 +105,7 @@ end
     E0,psi0=fast_GS(H,sites)
     if db  ITensors.ITensors.enable_debug_checks() end
 
-    truncate!(H;dir=right,cutoff=epsSVD,epsrr=epsrr)
+    truncate!(H;orth=right,cutoff=epsSVD,epsrr=epsrr)
 
     ITensors.ITensors.disable_debug_checks() 
     E1,psi1=fast_GS(H,sites)
@@ -126,7 +124,7 @@ end
     E0,psi0=fast_GS(H,sites)
     if db  ITensors.ITensors.enable_debug_checks() end
 
-    truncate!(H;dir=right,cutoff=epsSVD,epsrr=epsrr)
+    truncate!(H;orth=right,cutoff=epsSVD,epsrr=epsrr)
 
     ITensors.ITensors.disable_debug_checks() 
     E1,psi1=fast_GS(H,sites)
