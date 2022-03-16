@@ -2,8 +2,8 @@
 ITensorMPOCompression is a Julia language module based in the [ITensors](https://itensor.org/) library.  In general compression of Hamiltonian MPOs must be treated differntly than standard MPS compression.  The root of the problem can be traced to the combination of both extensive and intensive degrees of freedom in Hamiltonian operators.  If conventional compression methods are applied of Hamiltonain MPOs, one finds that two of the singular values will diverge as the lattice size increases, resulting in severe numerical instabilities.
 The recent paper 
 > *Local Matrix Product Operators:Canonical Form, Compression, and Control Theory* Daniel E. Parker, Xiangyu Cao, and Michael P. Zaletel **Phys. Rev. B** 102, 035147
-contains a number of important insights for the handling of finite and infinite lattice MPOs. They show that the intensive degrees of freedom can be isolated from the extensive ones. If one only compresses the intensive portions of the Hamiltonian then the divergent singular values are removed from the problem.  This module attempts to implement the algorithms described in *Parker et. al.* paper.  The initial release will support orthogonalization (canonical form) and truncation (SVD compression) of the finite lattice operators.  A future releast will add support for handling iMPOs, or infinate lattice MPOs with a repeating unit cell.
-The techincal details are presented in the pdf document provided with this module: [TechnicalDetails.pdf](file://docs/TechnicalDetails.pdf). A brief summary fo the key functions of this module follows.
+contains a number of important insights for the handling of finite and infinite lattice MPOs. They show that the intensive degrees of freedom can be isolated from the extensive ones. If one only compresses the intensive portions of the Hamiltonian then the divergent singular values are removed from the problem.  This module attempts to implement the algorithms described in the *Parker et. al.* paper.  The initial release will support orthogonalization (canonical form) and truncation (SVD compression) of the finite lattice MPOs.  A future releast will add support for handling iMPOs, or infinate lattice MPOs with a repeating unit cell.
+The techincal details are presented in the pdf document provided with this module: [TechnicalDetails.pdf](./docs/TechnicalDetails.pdf). A brief summary of the key functions of this module follows.
 
 ## Block respecting QX decomposition
 ### Finite MPO
@@ -11,9 +11,9 @@ A finite lattice MPO with *N* sites can expressed as
 ```math
 \hat{H}=\hat{W}^{1}\hat{W}^{2}\hat{W}^{3}\cdots\hat{W}^{N-1}\hat{W}^{N}
 ```
-where each ``\\\hat{W}^{n}`` is a operator-valued matrix on site *n*
+where each ``\\\hat{W}^{n}`` is an operator-valued matrix on site *n*
 ### Regular Form
-MPOs must be in the so called regular form in for orthogonalization and compression to succeed. These forms are defined as follows:
+MPOs must be in the so called regular form in order for orthogonalization and compression to succeed. These forms are defined as follows:
 ```math
 \hat{W}_{upper}=\begin{bmatrix}\hat{\mathbb{I}} & \hat{\boldsymbol{c}} & \hat{d}\\
 0 & \hat{\boldsymbol{A}} & \hat{\boldsymbol{b}}\\
