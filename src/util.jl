@@ -46,7 +46,7 @@ function pprint(W::ITensor,r::Index,eps::Float64=default_eps)
     @assert length(c)==1
     pprint(r,W,c[1],eps)
 end
-function pprint(r::Index,W::ITensor,c::Index,eps::Float64)
+function pprint(r::Index,W::ITensor,c::Index,eps::Float64=default_eps)
     @assert hasind(W,r)
     @assert hasind(W,c)
     isl=filterinds(W,tags="Link")
@@ -74,6 +74,21 @@ function pprint(r::Index,W::ITensor,c::Index,eps::Float64)
         Base.print("\n")
     end
     Base.print("\n")
+end
+
+#
+#  In general it is useful to pass kwargs from a parent function to a child
+#  in addition in the parent function we may want add or replace and existing key=>val parse_links
+#  for some reason this seems to be a nasty uphill battle, especially if kwargs is empty.
+#
+function add_or_replace(kwargs,key::Any,val::Any)
+    if length(kwargs)>0
+        kwargs=Dict{Symbol, Any}(kwargs) #this allows us to set an element
+        kwargs[key]=val
+    else
+        kwargs=Dict{Symbol, Any}(key => val)
+    end
+    return kwargs
 end
 
 export pprint,is_unit,slice

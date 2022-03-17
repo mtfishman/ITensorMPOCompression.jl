@@ -74,8 +74,8 @@ end
     test_truncate(make_transIsing_MPO,15,10,lr,epsSVD,epsrr,eps) 
 
     epsSVD=.00001
-    #test_truncate(make_transIsing_MPO,10,7,ll,epsSVD,epsrr,eps) very high dE/epsSVD
-    #test_truncate(make_transIsing_MPO,10,7,lr,epsSVD,epsrr,eps) #very high dE/epsSVD
+    test_truncate(make_transIsing_MPO,10,7,ll,epsSVD,epsrr,eps) #very high dE/epsSVD
+    test_truncate(make_transIsing_MPO,10,7,lr,epsSVD,epsrr,eps) 
     test_truncate(make_transIsing_MPO,10,7,ur,epsSVD,epsrr,eps)
     test_truncate(make_transIsing_MPO,10,7,ul,epsSVD,epsrr,eps)
 
@@ -102,7 +102,6 @@ end
     ITensors.ITensors.disable_debug_checks() 
     E0,psi0=fast_GS(H,sites)
     if db  ITensors.ITensors.enable_debug_checks() end
-
     truncate!(H;orth=left,cutoff=epsSVD,epsrr=epsrr)
 
     ITensors.ITensors.disable_debug_checks() 

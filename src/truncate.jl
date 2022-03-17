@@ -95,6 +95,10 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,bond
 #
 #  At last we can svd and compress M using epsSVD as the cutoff.
 #    
+    min_cutoff=1e-12
+    cutoff=get(kwargs,:cutoff,min_cutoff)
+    cutoff=cutoff<min_cutoff ? min_cutoff : cutoff
+    kwargs=add_or_replace(kwargs,:cutoff,cutoff) #make sure cutoff is not zero.
     isvd=findinds(M,tsvd)[1] #decide the left index
     U,s,V=svd(M,isvd;kwargs...) # ns sing. values survive compression
     ns=dim(inds(s)[1])
@@ -138,7 +142,7 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,bond
     return W,RL,spectrum
 end
 
-"""
+@doc """
     truncate!(H::MPO)
 
 Compress an MPO using block respecting SVD techniques as described in 
@@ -149,19 +153,81 @@ Compress an MPO using block respecting SVD techniques as described in
 
 # Keywords
 - `orth::orth_type = right` : choose `left` or `right` canonical form for the final output. 
-- `cutoff::Foat64` : Using a `cutoff` allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy. 
+- `cutoff::Foat64 = 1e-14` : Using a `cutoff` allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy. 
 - `maxdim::Int64` : If the number of singular values exceeds `maxdim`, only the largest `maxdim` will be retained.
 - `mindim::Int64` : At least `mindim` singular values will be retained, even if some fall below the cutoff
 
+# Example
+```julia
+julia> using ITensors
+julia> using ITensorMPOCompression
+julia> N=10; #10 sites
+julia> NNN=7; #Include up to 7th nearest neighbour interactions
+julia> sites = siteinds("S=1/2",N);
+#
+# This makes H directly, bypassing autoMPO.  (AutoMPO is too smart for this
+# demo, it makes maximally reduced MPOs right out of the box!)
+#
+julia> H=make_transIsing_MPO(sites,NNN);
+#
+#  Make sure we have a regular form or truncate! won't work.
+#
+julia> is_lower_regular_form(H)==true
+true
+
+#
+#  Now we can truncate with defaults of left orthogonal cutoff=1e-14.
+#  truncate! returns the spectrum of singular values at each bond.  The largest singular
+#  values are remaining well under control.  i.e. no sign of divergences.
+#
+julia> truncate!(H)
+9-element Vector{bond_spectrum}:
+ bond_spectrum([0.307], 1)
+ bond_spectrum([0.354, 0.035], 2)
+ bond_spectrum([0.375, 0.045, 0.021], 3)
+ bond_spectrum([0.385, 0.044, 0.026, 0.018], 4)
+ bond_spectrum([0.388, 0.043, 0.031, 0.019, 0.001], 5)
+ bond_spectrum([0.385, 0.044, 0.026, 0.018], 6)
+ bond_spectrum([0.375, 0.045, 0.021], 7)
+ bond_spectrum([0.354, 0.035], 8)
+ bond_spectrum([0.307], 9)
+
+julia> pprint(H[2])
+I 0 0 0 
+S S S 0 
+0 S S I 
+
+#
+#  We can see that bond dimensions have been drastically reduced.
+#
+julia> get_Dw(H)
+9-element Vector{Int64}:
+ 3
+ 4
+ 5
+ 6
+ 7
+ 6
+ 5
+ 4
+ 3
+
+julia> is_lower_regular_form(H)==true
+true
+
+julia> is_orthogonal(H,left)==true
+true
+
+```
 """
 function truncate!(H::MPO;kwargs...)::bond_spectrums
     #@printf "---- start compress ----\n"
     #
     # decide left/right and upper/lower
     #
-    eps=1e-14 #relax used for testing upper/lower/regular-form etc.
-    lr::orth_type=get(kwargs, :orth, right)
-    (bl,bu)=detect_regular_form(H,eps)
+    lr::orth_type=get(kwargs, :orth, left)
+    kwargs=add_or_replace(kwargs,:orth,lr) #if lr is not yet in kwargs, we need to stuff in there
+    (bl,bu)=detect_regular_form(H)
     if !(bl || bu)
         throw(ErrorException("truncate!(H::MPO), H must be in either lower or upper regular form"))
     end
@@ -171,9 +237,10 @@ function truncate!(H::MPO;kwargs...)::bond_spectrums
     # Now check if H required orthogonalization
     #
     ms=matrix_state(ul,lr)
-    if !is_canonical(H,mirror(ms),eps) 
-        #@show "auto orth"
-        orthogonalize!(H,ul;orth=mirror(lr),kwargs...) 
+    if !is_canonical(H,mirror(ms))
+        epsrr=get(kwargs,:epsrr,1e-12)
+        epsrr= epsrr==0 ? 1e-12 : epsrr #0.0 not allwed here.
+        orthogonalize!(H,epsrr=epsrr,orth=mirror(lr)) #TODO why fail if spec ul here??
     end
     N=length(H)
     ss=bond_spectrums(undef,N-1)
@@ -187,10 +254,9 @@ function truncate!(H::MPO;kwargs...)::bond_spectrums
     for n in rng 
         nn=n+rng.step #index to neighbour
         W,RL,s=truncate(H[n],ul;kwargs...)
-        #@show norm(H[n]-W*RL)
         H[n]=W
         H[nn]=RL*H[nn]
-        is_regular_form(H[nn],ms.ul,eps)
+        is_regular_form(H[nn],ms.ul)
         ss[n+link_offest]=s
     end
     return ss

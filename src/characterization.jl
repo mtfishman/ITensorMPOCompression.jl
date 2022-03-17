@@ -371,7 +371,7 @@ function get_traits(W::ITensor,eps::Float64)
     return Dw1,Dw2,d,l,u,lr
 end
     
-function pprint(H::MPO,eps::Float64)
+function pprint(H::MPO,eps::Float64=default_eps)
     N=length(H)
     println(" n   Dw1   Dw2   d   U/L   L/R")
     for n in 1:N

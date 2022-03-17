@@ -39,7 +39,9 @@ Done: -Test canonical with epsrr=0.0 and compare.  need an max_Dw(H::MPO) functi
     energy_exact = 1.0 - 1.0 / sin(π / (4 * N + 2))
     @test abs((energy - energy_exact) / energy_exact) < 1e-4
 Done: -add Printf for 
-Deon: -simplify MPOpbc code
+Done: -simplify MPOpbc code
+-Get rid MPOpbs struct.
+-Preven Documter.jl from showing ITensor docs.
 Plan:
   80% Document what I have so far
   Done Test with fixed autoMPO Hamiltonians (start the heisenberg with arbitrary neighbours)

@@ -55,12 +55,12 @@ julia> N=10; #10 sites
 julia> NNN=7; #Include up to 7th nearest neighbour interactions
 julia> sites = siteinds("S=1/2",N);
 #
-# This makes H directly bypassing autoMPO.  (AutoMPO is too smart for this
+# This makes H directly, bypassing autoMPO.  (AutoMPO is too smart for this
 # demo, it makes maximally reduced MPOs right out of the box!)
 #
 julia> H=make_transIsing_MPO(sites,NNN);
 #
-#  Make sure we have a regular form or orhtogonalize won't work.
+#  Make sure we have a regular form or orhtogonalize! won't work.
 #
 julia> is_lower_regular_form(H)==true
 true
