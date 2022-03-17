@@ -3,7 +3,7 @@ ITensorMPOCompression is a Julia language module based in the [ITensors](https:/
 The recent paper 
 > *Local Matrix Product Operators:Canonical Form, Compression, and Control Theory* Daniel E. Parker, Xiangyu Cao, and Michael P. Zaletel **Phys. Rev. B** 102, 035147
 contains a number of important insights for the handling of finite and infinite lattice MPOs. They show that the intensive degrees of freedom can be isolated from the extensive ones. If one only compresses the intensive portions of the Hamiltonian then the divergent singular values are removed from the problem.  This module attempts to implement the algorithms described in the *Parker et. al.* paper.  The initial release will support orthogonalization (canonical form) and truncation (SVD compression) of the finite lattice MPOs.  A future releast will add support for handling iMPOs, or infinate lattice MPOs with a repeating unit cell.
-The techincal details are presented in the pdf document provided with this module: [TechnicalDetails.pdf](./docs/TechnicalDetails.pdf). A brief summary of the key functions of this module follows.
+The techincal details are presented in the pdf document provided with this module: [TechnicalDetails.pdf](../TechnicalDetails.pdf). A brief summary of the key functions of this module follows.
 
 ## Block respecting QX decomposition
 ### Finite MPO
@@ -72,7 +72,7 @@ block_qx
 # Orthogonalization
 This is achieved by simply sweeping through the lattice and carrying out block respecting *QX* steps described above.  For left canoncical form one starts at the left and sweeps right, and the converse applies for right canonical form.
 ```@docs
-orthogonalize!
+ITensorMPOCompression.orthogonalize!
 ```
 # Truncation
 Prior to truncation the MPO must first be rendered into canoncial form using the orthogonalize! function described above.  If for example the MPO is right-lower canonical form then a truncation sweep starts do doing a block repsecting *QL* decomposition on site 1:

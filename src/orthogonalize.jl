@@ -19,7 +19,7 @@ function orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form,kwargs...)
 end
 
 function orthogonalize!(H::MPO,ul::reg_form;kwargs...)
-    lr::orth_type=get(kwargs, :orth, right)
+    lr::orth_type=get(kwargs, :orth, left)
     N=length(H)
     if lr==left
         rng=1:1:N-1 #sweep left to right
@@ -34,7 +34,7 @@ function orthogonalize!(H::MPO,ul::reg_form;kwargs...)
 end
 
 
-"""
+@doc """
     orthogonalize!(H::MPO)
 
 Bring an MPO into left or right canonical form using block respecting QR decomposition
@@ -42,10 +42,79 @@ Bring an MPO into left or right canonical form using block respecting QR decompo
 > Daniel E. Parker, Xiangyu Cao, and Michael P. Zaletel Phys. Rev. B 102, 035147
 
 # Keywords
-- `orth::orth_type = right` : choose `left` or `right` canonical form
+- `orth::orth_type = left` : choose `left` or `right` canonical form
 - `sweeps::Int64` : number of sweeps to perform. If sweeps is zero or not set then sweeps continue until there is no change in the internal dimensions from rank revelaing QR. 
 - `epsrr::Float64 = 1e-14` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
    All rows with max(abs(R[:,j]))<epsrr are considered zero and removed. 
+
+# Examples
+```julia
+julia> using ITensors
+julia> using ITensorMPOCompression
+julia> N=10; #10 sites
+julia> NNN=7; #Include up to 7th nearest neighbour interactions
+julia> sites = siteinds("S=1/2",N);
+#
+# This makes H directly bypassing autoMPO.  (AutoMPO is too smart for this
+# demo, it makes maximally reduced MPOs right out of the box!)
+#
+julia> H=make_transIsing_MPO(sites,NNN);
+#
+#  Make sure we have a regular form or orhtogonalize won't work.
+#
+julia> is_lower_regular_form(H)==true
+true
+#
+#  Let's see what the second site for the MPO looks like.
+#  I = unit operator, and S = any other operator
+#
+julia> pprint(H[2])
+I 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+S 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
+.
+.
+.
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 I 0 0 
+0 S 0 S 0 0 S 0 0 0 S 0 0 0 0 S 0 0 0 0 0 S 0 0 0 0 0 0 S I 
+#
+#  Now we can orthogonalize or bring it into canonical form.
+#  Defaults are left orthogonal with rank reduction.
+#
+julia> orthogonalize!(H)
+#
+#  Wahoo .. rank reduction knocked the size of H way down, and we haven't
+#  tried compressing yet!
+#
+julia> pprint(H[2])
+I 0 0 0 0 
+S S S 0 0 
+0 0 0 S I 
+#
+#  What do all the boond dimansions of H look like?  We will need compression (truncation)
+#  in order to further bang down the size of H
+#
+julia> get_Dw(H)
+9-element Vector{Int64}:
+  3
+  5
+  9
+ 13
+ 12
+  9
+  6
+  4
+  3
+#
+#  wrap up with two more checks on the structure of H
+#
+julia> is_lower_regular_form(H)==true
+true
+julia> is_orthogonal(H,left)==true
+true
+
+
+```
+
 """
 function orthogonalize!(H::MPO;kwargs...)
     (bl,bu)=detect_regular_form(H,1e-14)
@@ -58,9 +127,9 @@ function orthogonalize!(H::MPO;kwargs...)
     if length(kwargs)>0
         kwargs=Dict(kwargs) #this allows us to set the dir elements
     else
-        kwargs=Dict{Symbol, Any}(:orth => right)
+        kwargs=Dict{Symbol, Any}(:orth => left)
     end
-    lr=get(kwargs,:orth,right)
+    lr=get(kwargs,:orth,left)
     lrm=mirror(lr)
     if nsweep>0
         for isweep in 1:nsweep

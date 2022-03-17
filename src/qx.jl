@@ -24,8 +24,53 @@ Hilbert space.
 - `Q` with orthonormal columns or rows depending on orth=left/right, dimensions: (χ+1)x(χ\'+1)
 - `R` or `L` depending on `ul` with dimensions: (χ+2)x(χ\'+2)
 - `iq` the new internal link index between `Q` and `R`/`L` with tags="Link,qx"
+
+# Example
+```julia
+julia>using ITensors
+julia>using ITensorMPOCompression
+julia>N=5; #5 sites
+julia>NNN=2; #Include 2nd nearest neighbour interactions
+julia>sites = siteinds("S=1/2",N);
+#
+#  Make a Hamiltonian directly, i.e. no using autoMPO
+#
+julia>H=make_transIsing_MPO(sites,NNN);
+#
+#  Use pprint to see the sructure for site #2. I = unit operator and S = any other operator
+#
+julia>pprint(H[2]) #H[1] is a row vector, so let's see what H[2] looks like
+I 0 0 0 0 
+S 0 0 0 0 
+S 0 0 0 0 
+0 0 I 0 0 
+0 S 0 S I 
+#
+#  Now do a block respecting QX decomposition. QL decomposition is chosen because
+#  H[2] is in lower regular form and the default ortho direction if left.
+#
+julia>Q,L,iq=block_qx(H[2]); #Block respecting QL
+#
+#  The first column of Q is unchanged because it is outside the V-block.
+#  Also one column was removed because rank revealing QX is the default algorithm.
+#
+julia>pprint(Q)
+I 0 0 0 
+S 0 0 0 
+S 0 0 0 
+0 I 0 0 
+0 0 S I 
+#
+#  Similarly L is missing one row due to rank revealing QX algorithm
+#
+julia>pprint(L,iq) #we need to tell pprint which index is the row index.
+I 0 0 0 0 
+0 0 I 0 0 
+0 S 0 S 0 
+0 0 0 0 I 
+```
 """
-function block_qx(W_::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Index}
+function block_qx(W_::ITensor,ul::reg_form=lower;kwargs...)::Tuple{ITensor,ITensor,Index}
   #
   # Copy so that we don't mess up the original MPO
   #
@@ -33,7 +78,7 @@ function block_qx(W_::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Ind
   #
   # settle the left/right && upper/lower question
   #
-  lr::orth_type=get(kwargs, :orth, right)
+  lr::orth_type=get(kwargs, :orth, left)
   ms=matrix_state(ul,lr)
   d,n,r,c=parse_links(W)
   #
@@ -289,7 +334,7 @@ function ql(T::NDTensors.DenseTensor{ElT,2,IndsT}; kwargs...) where {ElT,IndsT}
     return R, Q
   end
 
-# ql decomposition of an order-n tensor according to 
+# ql decomposition of an order-n dense tensor according to 
 # positions Lpos and Rpos 
 function ql(
   T::NDTensors.DenseTensor{<:Number,N,IndsT}, 
@@ -309,6 +354,78 @@ function ql(
   Rinds = NDTensors.pushfirst(Rinds, l)
   L = NDTensors.reshape(LM, Rinds)
   return Q, L
+end
+# ql decomposition of an order-n block sparse tensor according to 
+# positions Lpos and Rpos 
+function ql(
+  T::NDTensors.BlockSparseTensor{Elt,N,IndsT}, 
+  Lpos::NTuple{NL,Int}, 
+  Rpos::NTuple{NR,Int}; 
+  kwargs...
+) where {Elt,N,IndsT,NL,NR}
+
+  nb=nnzblocks(T)
+  Qs = Vector{DenseTensor{Elt,NL+1,NTuple{NL+1, Int64},<:NDTensors.Dense}}(undef, nb)
+  Ls = Vector{DenseTensor{Elt,NR+1,NTuple{NR+1, Int64},<:NDTensors.Dense}}(undef, nb)
+  
+  #@show Lpos Rpos inds(T) dim(T,1) dim(T,2)
+  #
+  @show "in ql block sparse" Lpos Rpos
+  for (n, b) in enumerate(eachnzblock(T))
+    blockT = blockview(T, b) #this is a DenseTensor so we call the dense ql for each block.
+    Qs[n],Ls[n] = ql(blockT,Lpos,Rpos;kwargs...) #All reshaping is taken care of in this call.
+    @show blockT Qs[n] Ls[n]
+  end
+
+  #
+  #  We need to figure out what is the index between Q and L this code is stolen from
+  #  ITensors/NDTensors/src/blocksparse/linearalgebra.jl line ~107 in 
+  #  function LinearAlgebra.svd(T::BlockSparseMatrix{ElT}; kwargs...)
+  #  I don;t know what it is supposed to be doing
+  #
+  nb1_lt_nb2 = (
+    nblocks(T)[1] < nblocks(T)[2] ||
+    (nblocks(T)[1] == nblocks(T)[2] && dim(T, 1) < dim(T, 2))
+  )
+
+  if nb1_lt_nb2
+    qind = sim(ind(T, 1))
+  else
+    qind = sim(ind(T, 2))
+  end
+   # qind may have too many blocks ... really why?
+  if nblocks(qind) > nb
+    resize!(qind, nb)
+  end
+  
+  if dir(qind) != dir(inds(T)[1])
+    qind = dag(qind)
+  end
+  indsQ = setindex(inds(T), qind, 2) 
+  @show indsQ
+  indsL = dag(qind),inds(T)[2]
+  @show indsL typeof(indsL)
+  nzblocksQ = Vector{Block{4}}(undef, nb)
+  nzblocksL = Vector{Block{2}}(undef, nb)
+  for n in 1:nb
+    blockT=nzblocks(T)[n]
+    @show blockT
+    blockQ = (blockT[Lpos[1]],UInt(1), blockT[Lpos[2]],blockT[Lpos[3]] )
+    @show blockQ
+    nzblocksQ[n]=blockQ
+    blockL = (blockT[Rpos[1]], UInt(1))
+    @show blockL
+    nzblocksL[n]=blockL
+  end
+  Q = BlockSparseTensor(Elt, undef, nzblocksQ, indsQ)
+  L = BlockSparseTensor(Elt, undef, nzblocksL, indsL)
+  for n in 1:nb
+    blockview(Q, nzblocksQ[n]) .= Qs[n]
+    blockview(L, nzblocksL[n]) .= Ls[n]
+  end
+  @show Q
+  @show L
+  return Q,L
 end
 
 # lq decomposition of an order-n tensor according to 

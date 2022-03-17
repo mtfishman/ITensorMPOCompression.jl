@@ -172,6 +172,7 @@ function truncate!(H::MPO;kwargs...)::bond_spectrums
     #
     ms=matrix_state(ul,lr)
     if !is_canonical(H,mirror(ms),eps) 
+        #@show "auto orth"
         orthogonalize!(H,ul;orth=mirror(lr),kwargs...) 
     end
     N=length(H)

@@ -54,10 +54,10 @@ function fix_autoMPO!(H::MPO)
     end
 end
 
-make_Heisenberg_AutoMPO(sites,NNN::Int64,J::Float64,hx::Float64,ul::reg_form)::MPO = 
-    make_Heisenberg_AutoMPO(sites,NNN,J,hx)
+make_Heisenberg_AutoMPO(sites,NNN::Int64,hx::Float64,ul::reg_form,J::Float64=1.0)::MPO = 
+    make_Heisenberg_AutoMPO(sites,NNN,hx,J)
 
-function make_Heisenberg_AutoMPO(sites,NNN::Int64,J::Float64,hx::Float64)::MPO
+function make_Heisenberg_AutoMPO(sites,NNN::Int64,hx::Float64,J::Float64)::MPO
     N=length(sites)
     @assert(N>NNN)
     ampo = OpSum()
@@ -79,10 +79,10 @@ end
 
 
 
-make_transIsing_AutoMPO(sites,NNN::Int64,J::Float64,hx::Float64,ul::reg_form)::MPO = 
-    make_transIsing_AutoMPO(sites,NNN,J,hx)
+make_transIsing_AutoMPO(sites,NNN::Int64,hx::Float64,ul::reg_form,J::Float64=1.0)::MPO = 
+     make_transIsing_AutoMPO(sites,NNN,hx,J)
 
-function make_transIsing_AutoMPO(sites,NNN::Int64,J::Float64,hx::Float64)::MPO
+function make_transIsing_AutoMPO(sites,NNN::Int64,hx::Float64,J::Float64)::MPO
     do_field = hx!=0.0
     N=length(sites)
     @assert(N>NNN)
@@ -104,7 +104,7 @@ function make_transIsing_AutoMPO(sites,NNN::Int64,J::Float64,hx::Float64)::MPO
 end
 
 
-function make_transIsing_MPO(sites,NNN::Int64,J::Float64,hx::Float64,ul::reg_form=lower)::MPO
+function make_transIsing_MPO(sites,NNN::Int64=1,hx::Float64=0.0,ul::reg_form=lower,J::Float64=1.0)::MPO
     use_qn=hasqns(sites[1])
     N=length(sites)
     mpo=MPO(sites) #make and MPO only to get the indices

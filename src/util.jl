@@ -36,11 +36,16 @@ function to_char(O::Float64,eps::Float64)::Char
     c
 end
  
-function pprint(W::ITensor,eps::Float64)
+function pprint(W::ITensor,eps::Float64=default_eps)
     d,n,r,c=parse_links(W)
     pprint(r,W,c,eps)
 end
 
+function pprint(W::ITensor,r::Index,eps::Float64=default_eps)
+    c=noncommoninds(W,r)
+    @assert length(c)==1
+    pprint(r,W,c[1],eps)
+end
 function pprint(r::Index,W::ITensor,c::Index,eps::Float64)
     @assert hasind(W,r)
     @assert hasind(W,c)

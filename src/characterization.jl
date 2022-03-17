@@ -82,7 +82,7 @@ function parse_links(A::ITensor)::Tuple{Int64,Int64,Index,Index}
     end
 end
 
-function is_canonical(r::Index,W::ITensor,c::Index,d::Int64,ms::matrix_state,eps::Float64)::Bool
+function is_canonical(r::Index,W::ITensor,c::Index,d::Int64,ms::matrix_state,eps::Float64=default_eps)::Bool
     V=getV(W,V_offsets(ms))
     rv=findinds(V,tags(r))[1]
     cv=findinds(V,tags(c))[1]
@@ -104,7 +104,7 @@ function is_canonical(r::Index,W::ITensor,c::Index,d::Int64,ms::matrix_state,eps
 end
 
 
-function is_canonical(W::ITensor,ms::matrix_state,eps::Float64)::Bool
+function is_canonical(W::ITensor,ms::matrix_state,eps::Float64=default_eps)::Bool
     V=getV(W,V_offsets(ms))
     d,n,r,c=parse_links(V)
     if ms.lr==left
@@ -122,7 +122,7 @@ function is_canonical(W::ITensor,ms::matrix_state,eps::Float64)::Bool
     return is_can    
 end
 
-function is_canonical(H::MPO,ms::matrix_state,eps::Float64)::Bool
+function is_canonical(H::MPO,ms::matrix_state,eps::Float64=default_eps)::Bool
     N=length(H)
     ic=true
     for n in 2:N-1 #skip the edge row/col opertors
@@ -131,12 +131,20 @@ function is_canonical(H::MPO,ms::matrix_state,eps::Float64)::Bool
     return ic
 end
 
+function is_canonical(H::MPO,lr::orth_type,eps::Float64=default_eps)::Bool
+    l,u=detect_regular_form(H)
+    @assert u || l
+    ul = u ? upper : lower
+    return is_canonical(H,matrix_state(ul,lr),eps)
+end
+
+is_orthogonal(H::MPO,lr::orth_type,eps::Float64=default_eps)::Bool = is_canonical(H,lr,eps)
 
 #
 # It could be both or neither, so we return two Bools corresponding to
 # (lower,upper) triangular
 #
-function detect_upper_lower(r::Index,W::ITensor,c::Index,eps::Float64)::Tuple{Bool,Bool}
+function detect_upper_lower(r::Index,W::ITensor,c::Index,eps::Float64=default_eps)::Tuple{Bool,Bool}
     @assert hasind(W,r)
     @assert hasind(W,c)
     ord=order(W)
@@ -164,29 +172,29 @@ function detect_upper_lower(r::Index,W::ITensor,c::Index,eps::Float64)::Tuple{Bo
     return zero_upper,zero_lower
 end
 
-function is_upper_lower(r::Index,W::ITensor,c::Index,ul::reg_form,eps::Float64)::Bool
+function is_upper_lower(r::Index,W::ITensor,c::Index,ul::reg_form,eps::Float64=default_eps)::Bool
     l,u=detect_upper_lower(r,W,c,eps)
     ul==lower ? l : u
 end
 
-is_lower(r::Index,W::ITensor,c::Index,eps::Float64) = is_upper_lower(r,W,c,lower,eps)
-is_upper(r::Index,W::ITensor,c::Index,eps::Float64) = is_upper_lower(r,W,c,upper,eps)
+is_lower(r::Index,W::ITensor,c::Index,eps::Float64=default_eps) = is_upper_lower(r,W,c,lower,eps)
+is_upper(r::Index,W::ITensor,c::Index,eps::Float64=default_eps) = is_upper_lower(r,W,c,upper,eps)
 
-function detect_upper_lower(W::ITensor,eps::Float64)::Tuple{Bool,Bool}
+function detect_upper_lower(W::ITensor,eps::Float64=default_eps)::Tuple{Bool,Bool}
     d,n,r,c=parse_links(W)
     return detect_upper_lower(r,W,c,eps)
 end
 
-function is_upper_lower(W::ITensor,ul::reg_form,eps::Float64)::Bool 
+function is_upper_lower(W::ITensor,ul::reg_form,eps::Float64=default_eps)::Bool 
     l,u=detect_upper_lower(W,eps)
     ul==lower ? l : u
 end
 
-is_lower(W::ITensor,eps::Float64)::Bool = is_upper_lower(W,lower,eps) 
-is_upper(W::ITensor,eps::Float64)::Bool = is_upper_lower(W,upper,eps) 
+is_lower(W::ITensor,eps::Float64=default_eps)::Bool = is_upper_lower(W,lower,eps) 
+is_upper(W::ITensor,eps::Float64=default_eps)::Bool = is_upper_lower(W,upper,eps) 
     
 
-function detect_upper_lower(H::MPO,eps::Float64)::Tuple{Bool,Bool}
+function detect_upper_lower(H::MPO,eps::Float64=default_eps)::Tuple{Bool,Bool}
     @assert length(H)>1
     l,u=detect_upper_lower(H[2],eps) #skip left and right sites in case MPO is obc
     for n in 3:length(H)-1
@@ -197,13 +205,13 @@ function detect_upper_lower(H::MPO,eps::Float64)::Tuple{Bool,Bool}
     return l,u
 end
 
-function is_upper_lower(H::MPO,ul::reg_form,eps::Float64)::Bool 
+function is_upper_lower(H::MPO,ul::reg_form,eps::Float64=default_eps)::Bool 
     l,u=detect_upper_lower(H,eps)
     ul==lower ? l : u
 end
 
-is_lower(H::MPO,eps::Float64)::Bool = is_upper_lower(H,lower,eps) 
-is_upper(H::MPO,eps::Float64)::Bool = is_upper_lower(H,upper,eps) 
+is_lower(H::MPO,eps::Float64=default_eps)::Bool = is_upper_lower(H,lower,eps) 
+is_upper(H::MPO,eps::Float64=default_eps)::Bool = is_upper_lower(H,upper,eps) 
 
 #
 # This test is complicated by two things
@@ -214,7 +222,7 @@ is_upper(H::MPO,eps::Float64)::Bool = is_upper_lower(H,upper,eps)
 #   2) As a consequence of 1, we cannot decide in advance whether to test for upper or lower regular forms.
 #      We must therefore test for both and return true if either one is true. 
 #
-function detect_regular_form(W::ITensor,eps::Float64)::Tuple{Bool,Bool}
+function detect_regular_form(W::ITensor,eps::Float64=default_eps)::Tuple{Bool,Bool}
     d,n,r,c=parse_links(W)
     Dw1,Dw2=dim(r),dim(c)
     #handle edge row and col vectors
@@ -275,21 +283,21 @@ function detect_regular_form(W::ITensor,eps::Float64)::Tuple{Bool,Bool}
     return reg_lower,reg_upper
 end
 
-function is_regular_form(W::ITensor,ul::reg_form,eps::Float64)::Bool
+function is_regular_form(W::ITensor,ul::reg_form,eps::Float64=default_eps)::Bool
     i = ul==lower ? 1 : 2
     return detect_regular_form(W,eps)[i]
 end
 
-function is_lower_regular_form(W::ITensor,eps::Float64)::Bool
+function is_lower_regular_form(W::ITensor,eps::Float64=default_eps)::Bool
     return detect_regular_form(W,eps)[1]
 end
 
-function is_upper_regular_form(W::ITensor,eps::Float64)::Bool
+function is_upper_regular_form(W::ITensor,eps::Float64=default_eps)::Bool
     return detect_regular_form(W,eps)[2]
 end
 
 
-function is_regular_form(H::MPO,eps::Float64)::Bool
+function is_regular_form(H::MPO,eps::Float64=default_eps)::Bool
     N=length(H)
     lrf,urf=true,true
     for n in 1:N
@@ -300,7 +308,7 @@ function is_regular_form(H::MPO,eps::Float64)::Bool
     return lrf || url
 end
 
-function is_regular_form(H::MPO,ul::reg_form,eps::Float64)::Bool
+function is_regular_form(H::MPO,ul::reg_form,eps::Float64=default_eps)::Bool
     N=length(H)
     irf=true
     for n in 1:N
@@ -309,7 +317,7 @@ function is_regular_form(H::MPO,ul::reg_form,eps::Float64)::Bool
     return irf
 end
 
-function detect_regular_form(H::MPO,eps::Float64)::Tuple{Bool,Bool}
+function detect_regular_form(H::MPO,eps::Float64=default_eps)::Tuple{Bool,Bool}
     N=length(H)
     l,u=true,true
     for n in 1:N
@@ -320,11 +328,11 @@ function detect_regular_form(H::MPO,eps::Float64)::Tuple{Bool,Bool}
     return l,u
 end
 
-function is_lower_regular_form(H::MPO,eps::Float64)::Bool
+function is_lower_regular_form(H::MPO,eps::Float64=default_eps)::Bool
     return is_regular_form(H,lower,eps)
 end
 
-function is_upper_regular_form(H::MPO,eps::Float64)::Bool
+function is_upper_regular_form(H::MPO,eps::Float64=default_eps)::Bool
     return is_regular_form(H,upper,eps)
 end
 

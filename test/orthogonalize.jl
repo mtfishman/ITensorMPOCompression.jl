@@ -12,13 +12,12 @@ import ITensorMPOCompression.orthogonalize!
     N=6
     NNN=4
     hx=0.5
-    J=1.0
     eps=1e-15
     sites = siteinds("SpinHalf", N)
     #
     #  test lower triangular MPO 
     #
-    H=make_transIsing_MPO(sites,NNN,J,hx,lower) 
+    H=make_transIsing_MPO(sites,NNN,hx,lower) 
     @test is_upper_lower(H   ,lower,eps)
     @test is_lower_regular_form(H,eps)
     W=H[2]
@@ -53,11 +52,10 @@ end
 
 function test_canonical(makeH,N::Int64,NNN::Int64,ms::matrix_state)
     eps=1e-14
-    J=1.0
     hx=0.5
     sites = siteinds("SpinHalf", N)
     psi=randomMPS(sites)
-    H=makeH(sites,NNN,J,hx,ms.ul) 
+    H=makeH(sites,NNN,hx,ms.ul) 
     @test is_regular_form(H   ,ms.ul,eps)
     E0=inner(psi',H,psi)
     orthogonalize!(H;orth=ms.lr,epsrr=1e-12)

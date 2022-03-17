@@ -3,14 +3,16 @@ module ITensorMPOCompression
 using ITensors
 using ITensors.NDTensors
 
-import ITensors.BlockSparseTensor,ITensors.DenseTensor,ITensors.tensor
-
-export ql,lq,rq,assign!,getV,setV,growRL,to_openbc,set_scale!,block_qx,orthogonalize!,is_canonical
+import ITensors.BlockSparseTensor,ITensors.DenseTensor,ITensors.tensor,ITensors.orthogonalize!
+                                                                    
+export ql,lq,rq,assign!,getV,setV,growRL,to_openbc,set_scale!,block_qx,orthogonalize!,is_canonical,is_orthogonal
 export reg_form,orth_type,matrix_state,upper,lower,none,left,right,mirror,parse_links
-export is_regular_form,truncate,truncate!,getM,grow
+export is_regular_form,truncate,truncate!,getM,grow,detect_regular_form
 export is_lower_regular_form,is_upper_regular_form,V_offsets
 export detect_upper_lower,is_upper_lower,get_Dw,min,max,redim
 export make_transIsing_MPO,make_Heisenberg_AutoMPO,make_transIsing_AutoMPO,fast_GS
+
+default_eps=1e-14 #floats <default_eps are considered to be zero.
 
 """
     @enum reg_form  upper lower

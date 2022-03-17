@@ -101,10 +101,9 @@ end
     N=5
     NNN=4
     hx=0.5
-    J=1.0
     eps=2e-15
     sites = siteinds("SpinHalf", N)
-    H=make_transIsing_MPO(sites,NNN,J,hx)
+    H=make_transIsing_MPO(sites,NNN,hx)
     W=H[2]
     d,n,r,c=parse_links(W)
 
@@ -149,13 +148,12 @@ end
     N=10
     NNN=6
     hx=0.5
-    J=1.0
     eps=2e-15
     sites = siteinds("SpinHalf", N)
     #
     #  use lower tri MPO to get some zero pivots for QL and RQ.
     #
-    H=make_transIsing_MPO(sites,NNN,J,hx,lower)
+    H=make_transIsing_MPO(sites,NNN,hx,lower)
     W=H[2]
     d,n,r,c=parse_links(W)
 
@@ -186,7 +184,7 @@ end
     #
     #  use upper tri MPO to get some zero pivots for LQ and QR.
     #
-    H=make_transIsing_MPO(sites,NNN,J,hx,upper)
+    H=make_transIsing_MPO(sites,NNN,hx,upper)
     W=H[2]
     d,n,r,c=parse_links(W)
 
@@ -218,3 +216,40 @@ end
     
 
 end
+ #= 
+@testset "QR,QL,LQ,RQ decomposition for block sparse matrices" begin
+    N=5
+    NNN=2
+    Dw=3
+    hx=0.0 #can't make and sx op with QNs in play
+    ul=lower
+    lr=left
+    ms=matrix_state(ul,lr)
+
+    rowq=Index(QN("Sz",0)=>Dw;dir=ITensors.In,tags="Link,l=1") #link index with qn's
+    colq=Index(QN("Sz",0)=>Dw;dir=ITensors.Out,tags="Link,l=2")
+    sites = siteinds("S=1/2",N;conserve_qns=true) #sites with qn's
+    H=make_transIsing_MPO(sites,NNN,hx,ul)
+    W=H[2]
+    pprint(W,1e-14)
+    # Q,R,lq=block_qx(W,ul;orth=lr)
+    
+    off=V_offsets(ms)
+    Vblock=getV(W,off)
+    Rind=filterinds(Vblock,tags="l=2")
+    Linds=noncommoninds(Vblock,Rind)
+    Vd=dense(Vblock)
+    Qd,Ld,iq=ql(Vd,Linds;positive=true,epsrr=0.0)
+    set_scale!(Ld,Qd,off) #rescale so the L(n,n)==1.0
+    pprint(Qd,1e-14)
+    # @show Qd Ld
+
+    # Vt=NDTensors.tensor(Vblock)
+    # for b in eachnzblock(Vt)
+    #     bl=NDTensors.blockview(Vt, b)
+    #     @show Vt
+    # end
+    Q,L,iq=ql(Vblock,Linds;positive=true,epsrr=0.0)
+    # U,s,V,iu,iv=svd(Vblock,Linds)
+    #@show U V
+end =#
