@@ -45,6 +45,7 @@ Done: -Get rid of MPOpbs struct.
 Done: -Prevent Documter.jl from showing ITensor docs.
 Done: -Seeing flakey GS tests.  probably need to seed the randomMPS for consistency.
 -Add a big lattice test and look at SVs
+-make truncate, and orthogonalize that work on copies.
 Plan:
   80% Document what I have so far
   Done Test with fixed autoMPO Hamiltonians (start the heisenberg with arbitrary neighbours)
@@ -54,6 +55,6 @@ Plan:
   Test with QN's (new area for me)
   50% Refactor the code.  A lot of things can be simplified once there are lots of unit tests in place.
   Done: Figure how to disable 100's of asserts for production mode usage.  
-  Done: INcoroprate make_Ham functions into module
-  Organize exports
+  Done: Incoroprate make_Ham functions into module
+  Done: Organize exports
   50% Add examples to docs (needs make_Ham functions)

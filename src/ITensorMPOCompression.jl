@@ -3,31 +3,44 @@ module ITensorMPOCompression
 using ITensors
 using ITensors.NDTensors
 
-import ITensors.BlockSparseTensor,ITensors.DenseTensor,ITensors.tensor,ITensors.orthogonalize!,ITensors.truncate!
+import ITensors.BlockSparseTensor,ITensors.DenseTensor,ITensors.tensor
+# For some reason we import these in order for the mere existence of
+# the ITensorMPOCompression versions to be acknowledged!?!?
+import ITensors.orthogonalize!,ITensors.truncate!
                                                                     
-export ql,lq,rq,assign!,getV,setV,growRL,to_openbc,set_scale!,block_qx,orthogonalize!,is_canonical,is_orthogonal
-export reg_form,orth_type,matrix_state,upper,lower,none,left,right,mirror,parse_links
-export is_regular_form,truncate,truncate!,getM,grow,detect_regular_form
-export is_lower_regular_form,is_upper_regular_form,V_offsets
-export detect_upper_lower,is_upper_lower,get_Dw,min,max,redim
-export make_transIsing_MPO,make_Heisenberg_AutoMPO,make_transIsing_AutoMPO,fast_GS
-export bond_spectrum,bond_spectrums,add_or_replace
+export block_qx,ql,lq,rq,set_scale! #qx related
+export slice,assign!,redim #operator handling
+export getV,setV,growRL,V_offsets #blocking related
+# lots of characterization functions
+export reg_form,orth_type,matrix_state,upper,lower,left,right,mirror
+export parse_links,is_regular_form,getM,grow,detect_regular_form
+export is_lower_regular_form,is_upper_regular_form,is_canonical,is_orthogonal
+export detect_upper_lower,is_upper_lower
+# Hamiltonian related
+export make_transIsing_MPO,make_Heisenberg_AutoMPO,make_transIsing_AutoMPO,to_openbc,fast_GS
+# MPO and bond spectrum
+export get_Dw,min,max
+export bond_spectrum,bond_spectrums
 
-default_eps=1e-14 #floats <default_eps are considered to be zero.
+export add_or_replace # Handle inpenetrable kwargs
+
+export orthogonalize!,truncate,truncate! #the punchline
+
+default_eps=1e-14 #for characterization routines, floats abs()<default_eps are considered to be zero.
 
 """
     @enum reg_form  upper lower
-    Indicates if an MPO matrix has either an `upper` or `lower` triangular form.
+    Indicates if an MPO matrix has either an `upper` or `lower` regular form.
     This becomes non-trival for rectangular matrices.
     See also [`detect_upper_lower`](@ref)
 """
 @enum reg_form  upper lower 
 
 """
-    @enum orth_type none left right
+    @enum orth_type left right
     Indicates of an MPO matrix satisfies the conditions for `left` or `right` canonical form     
 """
-@enum orth_type none left right
+@enum orth_type left right
 
 # """
 #     mirror(lr::orth_type)::orth_type
