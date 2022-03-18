@@ -12,7 +12,7 @@ A finite lattice MPO with *N* sites can expressed as
 \hat{H}=\hat{W}^{1}\hat{W}^{2}\hat{W}^{3}\cdots\hat{W}^{N-1}\hat{W}^{N}
 ```
 where each ``\\\hat{W}^{n}`` is an operator-valued matrix on site *n*
-### Regular Form
+### Regular Forms
 MPOs must be in the so called regular form in order for orthogonalization and compression to succeed. These forms are defined as follows:
 ```math
 \hat{W}_{upper}=\begin{bmatrix}\hat{\mathbb{I}} & \hat{\boldsymbol{c}} & \hat{d}\\
@@ -69,12 +69,12 @@ Fortunately, under the hood,  ITensor takes care all the reshaping for us. After
 ```@docs
 block_qx
 ```
-# Orthogonalization
+# Orthogonalization (Canonical forms)
 This is achieved by simply sweeping through the lattice and carrying out block respecting *QX* steps described above.  For left canoncical form one starts at the left and sweeps right, and the converse applies for right canonical form.
 ```@docs
 ITensorMPOCompression.orthogonalize!
 ```
-# Truncation
+# Truncation (SVD compression)
 Prior to truncation the MPO must first be rendered into canoncial form using the orthogonalize! function described above.  If for example the MPO is right-lower canonical form then a truncation sweep starts do doing a block repsecting *QL* decomposition on site 1:
 ```math
 \hat{W}^{1}\rightarrow\hat{Q}^{1}L^{1}
@@ -96,4 +96,20 @@ where internal sans-M matrix is what gets decomposed with SVD.  Picking out this
 
 ```@docs
 truncate!
+```
+
+# Characterizations
+
+The module has a number of functions for characterization of MPOs and operator-valued matrices.
+
+## Regular forms
+
+Regular forms are defined above in section [Regular Forms](@ref)
+
+```@docs
+reg_form
+detect_regular_form
+is_regular_form
+is_lower_regular_form
+is_upper_regular_form
 ```

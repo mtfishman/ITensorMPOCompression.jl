@@ -30,15 +30,17 @@ default_eps=1e-14 #for characterization routines, floats abs()<default_eps are c
 
 """
     @enum reg_form  upper lower
-    Indicates if an MPO matrix has either an `upper` or `lower` regular form.
-    This becomes non-trival for rectangular matrices.
-    See also [`detect_upper_lower`](@ref)
+    
+Indicates that an MPO or operator-valued matrix has either an `upper` or `lower` regular form.
+This becomes non-trival for rectangular matrices.
+See also [`detect_regular_form`](@ref) and related functions
 """
 @enum reg_form  upper lower 
 
 """
     @enum orth_type left right
-    Indicates of an MPO matrix satisfies the conditions for `left` or `right` canonical form     
+
+Indicates that an MPO matrix satisfies the conditions for `left` or `right` canonical form     
 """
 @enum orth_type left right
 
