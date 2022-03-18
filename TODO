@@ -41,7 +41,8 @@ Done: -Test canonical with epsrr=0.0 and compare.  need an max_Dw(H::MPO) functi
 Done: -add Printf for 
 Done: -simplify MPOpbc code
 -Get rid MPOpbs struct.
--Preven Documter.jl from showing ITensor docs.
+-Prevent Documter.jl from showing ITensor docs.
+Done: -Seeing flakey GS tests.  probably need to seed the randomMPS for consistency.
 Plan:
   80% Document what I have so far
   Done Test with fixed autoMPO Hamiltonians (start the heisenberg with arbitrary neighbours)
@@ -51,6 +52,6 @@ Plan:
   Test with QN's (new area for me)
   50% Refactor the code.  A lot of things can be simplified once there are lots of unit tests in place.
   Done: Figure how to disable 100's of asserts for production mode usage.  
-  INcoroprate make_Ham functions into module
+  Done: INcoroprate make_Ham functions into module
   Organize exports
-  Add examples to docs (needs make_Ham functions)
+  50% Add examples to docs (needs make_Ham functions)

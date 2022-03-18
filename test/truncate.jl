@@ -11,6 +11,14 @@ import ITensorMPOCompression.orthogonalize!
 #brute force method to control the default float display format.
 # Base.show(io::IO, f::Float64) = @printf(io, "%1.5f", f)
 
+#
+#  We need consistent output from randomMPS in order to avoid flakey unit testset
+#  So we just pick any seed so that randomMPS (hopefull) gives us the same 
+#  pseudo-random output for each test run.
+#
+using Random
+Random.Random.seed!(12345);
+
 function test_truncate(makeH,N::Int64,NNN::Int64,ms::matrix_state,epsSVD::Float64,epsrr::Float64,eps::Float64)
     mlr=mirror(ms.lr)
     hx=0.5
@@ -74,7 +82,7 @@ end
     test_truncate(make_transIsing_MPO,15,10,lr,epsSVD,epsrr,eps) 
 
     epsSVD=.00001
-    test_truncate(make_transIsing_MPO,10,7,ll,epsSVD,epsrr,eps) #very high dE/epsSVD
+    test_truncate(make_transIsing_MPO,10,7,ll,epsSVD,epsrr,eps) 
     test_truncate(make_transIsing_MPO,10,7,lr,epsSVD,epsrr,eps) 
     test_truncate(make_transIsing_MPO,10,7,ur,epsSVD,epsrr,eps)
     test_truncate(make_transIsing_MPO,10,7,ul,epsSVD,epsrr,eps)
@@ -103,7 +111,7 @@ end
     E0,psi0=fast_GS(H,sites)
     if db  ITensors.ITensors.enable_debug_checks() end
     truncate!(H;orth=left,cutoff=epsSVD,epsrr=epsrr)
-
+    
     ITensors.ITensors.disable_debug_checks() 
     E1,psi1=fast_GS(H,sites)
     if db  ITensors.ITensors.enable_debug_checks() end
@@ -112,7 +120,7 @@ end
     RE=abs((E0-E1)/E0)
     @printf "Trans. Ising E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
     @test abs(E0-E1)<eps
-    @test abs(overlap-1.0)<2*eps
+    @test abs(overlap-1.0)<eps
 
     hx=0.0
     H=make_Heisenberg_AutoMPO(sites,NNN,hx,lower)
@@ -121,7 +129,7 @@ end
     E0,psi0=fast_GS(H,sites)
     if db  ITensors.ITensors.enable_debug_checks() end
 
-    truncate!(H;orth=left,cutoff=epsSVD,epsrr=epsrr)
+    truncate!(H;orth=right,cutoff=epsSVD,epsrr=epsrr)
 
     ITensors.ITensors.disable_debug_checks() 
     E1,psi1=fast_GS(H,sites)
