@@ -41,7 +41,7 @@ Done: -Test canonical with epsrr=0.0 and compare.  need an max_Dw(H::MPO) functi
 Done: -add Printf for 
 Done: -simplify MPOpbc code
 -Get rid MPOpbs struct.
--Prevent Documter.jl from showing ITensor docs.
+Done: -Prevent Documter.jl from showing ITensor docs.
 Done: -Seeing flakey GS tests.  probably need to seed the randomMPS for consistency.
 Plan:
   80% Document what I have so far
