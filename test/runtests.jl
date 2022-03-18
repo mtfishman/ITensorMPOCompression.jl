@@ -13,5 +13,6 @@ ITensors.ITensors.enable_debug_checks()
     include("orthogonalize.jl")
     include("truncate.jl")
 end
+Nothing #suppress messy dump from Test
 
 #@time run_tests()
