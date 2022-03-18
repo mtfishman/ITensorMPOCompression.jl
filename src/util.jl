@@ -35,7 +35,31 @@ function to_char(O::Float64,eps::Float64)::Char
     end
     c
 end
- 
+
+@doc """
+pprint(W[,eps])
+
+Show (pretty print) a schematic view of an operator-valued matrix.  In order to display any `ITensor`
+as a matrix one must decide which index to use as the row index, and simiarly for the column index. 
+`pprint` does this by inspecting the indices with "Site" tags to get the site number, and uses the 
+"Link" indices `l=\$n` as the column and `\$(n-1)` as the row. The output symbols I,0,S have the obvious 
+interpretations and S just means any (non zero) operator that is not I.  This function can obviously 
+be enchanced to recognize and display other symbols like X,Y,Z ... instead of just S.
+
+# Arguments
+- `W::ITensor` : Operator-valued matrix for display.
+- `eps::Float64 = 1e-14` : operators inside W with norm(W[i,j])<eps are assumed to be zero.
+
+# Examples
+```julia
+julia>pprint(W) 
+I 0 0 0 0 
+S 0 0 0 0 
+S 0 0 0 0 
+0 0 I 0 0 
+0 S 0 S I 
+```
+"""
 function pprint(W::ITensor,eps::Float64=default_eps)
     d,n,r,c=parse_links(W)
     pprint(r,W,c,eps)
@@ -46,6 +70,7 @@ function pprint(W::ITensor,r::Index,eps::Float64=default_eps)
     @assert length(c)==1
     pprint(r,W,c[1],eps)
 end
+
 function pprint(r::Index,W::ITensor,c::Index,eps::Float64=default_eps)
     @assert hasind(W,r)
     @assert hasind(W,c)

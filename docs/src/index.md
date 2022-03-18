@@ -100,7 +100,14 @@ truncate!
 
 # Characterizations
 
-The module has a number of functions for characterization of MPOs and operator-valued matrices.
+The module has a number of functions for characterization of MPOs and operator-valued matrices. Some
+points to keep in mind:
+1. An MPO must be in one of the regular forms in order for orthogonalization to work.
+2. An MPO must be in one fo the orthononal (canonical) forms prior to SVD truncation (compression). However the truncate! function will detect this and do the orthogonalization if needed.
+3. Lower (upper) regular form does not mean that the MPO is lower (upper) triangular.  As explained in the [Technical Notes](../TechnicalDetails.pdf) the `A`-block does not need to be triangular.
+4. Having said all that, most common hand constructed MPOs are either lower or upper triangular. Lower happens to be the more common convention.
+5. The orthogonalize! operation just happens preserve lower (upper) trianglur form.  However truncation (SVD) does not preserve triangular form.
+6. At the moment autoMPO outputs (after a simple 2<-->Dw row & col swap [`fix_autoMPO!`](@ref)) lower *regular* form, but not lower *triangular* form (the `A` block is not triangular).
 
 ## Regular forms
 
@@ -112,4 +119,25 @@ detect_regular_form
 is_regular_form
 is_lower_regular_form
 is_upper_regular_form
+```
+
+# Orthogonal forms
+
+The definition of orthogonal forms MPOs or operator-valued matrices are more complicated than those for MPSs.  First we must defin inner product of two operator-valued matrices:
+
+```math
+\sum\left\langle \hat{W}_{ab}^{\dagger},\hat{W}_{ac}\right\rangle =\frac{\sum_{}^{}Tr\left[\hat{W}_{ab}\hat{W}_{ac}\right]}{Tr\left[\hat{\mathbb{I}}\right]}=\delta_{bc}
+```
+Where the summation limits depend on where the V-block is for `left`/`right` and `lower`/`upper`.  The specifics are shown in table 6 in the [Technical Notes](../TechnicalDetails.pdf)
+
+```@docs
+orth_type
+is_orthogonal
+```
+
+# Some utility functions
+One of the difficult aspects of working with operator-valued matrices is that they have four indices and if one just does a naive @show W to see what's in there, you see a volumous output that is hard to read because of the default slicing selected by the @show overload. The pprint(W) (pretty print) function attempts solve this problem by simply showing you where the zero, unit and other operators reside.
+```@docs
+pprint(::ITensor)
+fix_autoMPO!(::MPO)
 ```

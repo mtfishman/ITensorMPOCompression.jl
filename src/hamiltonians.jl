@@ -19,7 +19,7 @@ function fix_autoMPO1(W::ITensor)::ITensor
     return W1
 end
 
-function fix_autoMPO(W::ITensor)::ITensor
+function fix_autoMPO2(W::ITensor)::ITensor
     ils=filterinds(W,"Link")
     if length(ils)==1
         return fix_autoMPO1(W)
@@ -46,11 +46,53 @@ function fix_autoMPO(W::ITensor)::ITensor
     return W1
 end
 
+@doc """
+    fix_autoMPO!(H::MPO)
 
+Convert AutoMPO output into lower regular form.  If Dw x Dw' are the dimensions of 
+the Link indices for any site then this routine simply does 2 swaps:
+1. Swap row 2 with row Dw
+2. Swap column 2 with column Dw'
+    
+# Arguments
+- `H::MPO` : MPO to be characterized.
+    
+MPO is modified in place into lower regular form
+
+# Examples
+
+```julia
+julia> using ITensors
+julia> using ITensorMPOCompression
+julia> N=5
+julia> sites = siteinds("S=1/2",5);
+julia> ampo = OpSum();
+julia> for j=1:N-1
+julia>     add!(ampo,1.0, "Sz", j, "Sz", j+1);
+julia>     add!(ampo,0.5, "S+", j, "S-", j+1);
+julia>     add!(ampo,0.5, "S-", j, "S+", j+1);
+julia> end
+julia> H=MPO(ampo,sites);
+julia> pprint(H[2])
+I 0 0 0 0 
+0 I S S S 
+S 0 0 0 0 
+S 0 0 0 0 
+S 0 0 0 0 
+
+julia> fix_autoMPO!(H)
+julia> pprint(H[2])
+I 0 0 0 0 
+S 0 0 0 0 
+S 0 0 0 0 
+S 0 0 0 0 
+0 S S S I 
+```
+"""
 function fix_autoMPO!(H::MPO)
     N=length(H)
     for n in 1:N
-        H[n]=fix_autoMPO(H[n])
+        H[n]=fix_autoMPO2(H[n])
     end
 end
 

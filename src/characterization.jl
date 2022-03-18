@@ -142,6 +142,18 @@ function is_canonical(H::MPO,lr::orth_type,eps::Float64=default_eps)::Bool
     return is_canonical(H,matrix_state(ul,lr),eps)
 end
 
+@doc """
+is_orthogonal(H,lr[,eps])::Bool
+
+Test if all sites in an MPO statisfty the condition for `lr` orthogonal (canonical) form.
+
+# Arguments
+- `H:MPO` : MPO to be characterized.
+- `lr::orth_type` : choose `left` or `right` orthogonality condition to test for.
+- `eps::Float64 = 1e-14` : operators inside H with norm(W[i,j])<eps are assumed to be zero.
+
+Returns `true` of the MPO is in orthongal (canonical) form
+"""
 is_orthogonal(H::MPO,lr::orth_type,eps::Float64=default_eps)::Bool = is_canonical(H,lr,eps)
 
 #-
