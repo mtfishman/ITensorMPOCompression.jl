@@ -105,31 +105,13 @@ end
 
 
 function make_transIsing_MPO(sites,NNN::Int64=1,hx::Float64=0.0,ul::reg_form=lower,J::Float64=1.0)::MPO
-    use_qn=hasqns(sites[1])
-    N=length(sites)
     mpo=MPO(sites) #make and MPO only to get the indices
-    add_edge_links!(mpo) #add in l=0 and l=N edge links ... just so we can remove them later
-    Dw::Int64=transIsing_Dw(NNN)
-    if (use_qn)
-        prev_link=Index(QN("Sz",0)=>Dw;dir=ITensors.In,tags="Link,l=0")
-    else
-        prev_link=Index(Dw,"Link,l=0") 
-    end
-
-    for n in 1:N
-        iset=IndexSet(inds(mpo[n])...)
-        mpo[n]=make_transIsing_op(iset,prev_link,n,NNN,J,hx,ul)
-        prev_link=filterinds(inds(mpo[n],"l=$n"))[1]
+    prev_link=Nothing
+    for n in 1:length(sites)
+        mpo[n]=make_transIsing_op(mpo[n],prev_link,NNN,J,hx,ul)
+        prev_link=filterinds(mpo[n],tags="Link,l=$n")[1]
     end
     return ITensorMPOCompression.to_openbc(mpo) #contract with l* and *r at the edges.
-end
-
-function add_edge_links!(mpo::MPO)
-    N=length(mpo)
-    i1s=(inds(mpo[1])...,Index(1,"Link,l=0"))
-    mpo[1]=ITensor(i1s)
-    ins=(inds(mpo[N])...,Index(1,"Link,l=$N"))
-    mpo[N]=ITensor(ins)
 end
 
 #  It turns out that the trans-Ising model
@@ -139,69 +121,110 @@ function transIsing_Dw(NNN::Int64)::Int64
     return 2+NNN*(NNN+1)/2
 end
 
+function make_Ising_index(Dw::Int64,tags::String,use_qn::Bool,dir)
+    if (use_qn)
+        ind=Index(QN("Sz",0)=>Dw;dir=dir,tags=tags)
+    else
+        ind=Index(Dw,tags)
+    end
+    return ind
+end
+
 # NNN = Number of Nearest Neighbours, for example
 #    NNN=1 corresponds to nearest neighbour
 #    NNN=2 corresponds to nearest and next nearest neighbour
-function make_transIsing_op(indices::Vector{<:Index},prev_link::Index,nsite::Int64,NNN::Int64,J::Float64,hx::Float64=0.0,ul::reg_form=lower)::ITensor
+function make_transIsing_op(Wref::ITensor,prev_link,NNN::Int64,J::Float64,hx::Float64=0.0,ul::reg_form=lower)::ITensor
     @assert NNN>=1
-    @assert length(indices)==4
     do_field = hx!=0.0
-   
     Dw::Int64=transIsing_Dw(NNN)
-    iblock=1;
-    is=filterinds(indices,tags="Site")[1] #get any site index for generating operators
+    is=filterinds(Wref,tags="Site")[1] #get any site index for generating operators
     use_qn=hasqns(is)
-    #@show indices
-    
-    il1=prev_link
-    indl2=filterinds(indices,tags="l=$nsite"    )
-    @assert length(indl2)==1
-    if (use_qn)
-        il2=Index(QN("Sz",0)=>Dw;dir=ITensors.In,tags=tags(indl2[1]))
+    d,n,r,c=parse_links(Wref)
+    if tags(r)==TagSet("")
+        r=make_Ising_index(Dw,"Link,l=$(n-1)",use_qn,ITensors.In)
     else
-        il2=Index(Dw,tags(indl2[1]))
+        r=prev_link
     end
-    W=ITensor(il1,dag(il2),is,dag(is'))
-    unit=op(is,"Id")
+    if tags(c)==TagSet("")
+        c=make_Ising_index(Dw,"Link,l=$n",use_qn,ITensors.Out)
+    else
+        c=redim(c,Dw)
+    end
+    iblock=1;
+   
+    W=ITensor(r,dag(c),is,dag(is'))
+    Id=op(is,"Id")
     Sz=op(is,"Sz")
     if do_field
         Sx=op(is,"Sx")
     end
-    assign!(W,unit,il1=>1 ,il2=>1 )
-    assign!(W,unit,il1=>Dw,il2=>Dw)
-    #loop below is coded for lower, just swap indexes to get upper
+    assign!(W,Id,r=>1 ,c=>1 )
+    assign!(W,Id,r=>Dw,c=>Dw)
     
     if ul==lower
         if do_field
-            assign!(W ,hx*Sx,il1=>Dw,il2=>1); #add field term
+            assign!(W ,hx*Sx,r=>Dw,c=>1); #add field term
         end
         #very hard to explain this without a diagram.
         for iNN in 1:NNN
-            assign!(W,Sz,il1=>iblock+1,il2=>1)
+            assign!(W,Sz,r=>iblock+1,c=>1)
             for jNN in 1:iNN-1
-                assign!(W,unit,il1=>iblock+1+jNN,il2=>iblock+jNN)
+                assign!(W,Id,r=>iblock+1+jNN,c=>iblock+jNN)
             end
             Jn=J/(iNN) #interactions need to decay with distance in order for H to extensive 
-            assign!(W,Jn*Sz,il1=>Dw,il2=>iblock+iNN)
+            assign!(W,Jn*Sz,r=>Dw,c=>iblock+iNN)
             iblock+=iNN
         end
     else
         if do_field
-            assign!(W,hx*Sx,il1=>1,il2=>Dw ); #add field term
+            assign!(W,hx*Sx,r=>1,c=>Dw ); #add field term
         end
         #very hard to explain this without a diagram.
         for iNN in 1:NNN
-            assign!(W,Sz,il1=>1,il2=>iblock+1)
+            assign!(W,Sz,r=>1,c=>iblock+1)
             for jNN in 1:iNN-1
-                assign!(W,unit,il1=>iblock+jNN,il2=>iblock+1+jNN)
+                assign!(W,Id,r=>iblock+jNN,c=>iblock+1+jNN)
             end
             Jn=J/(iNN) #interactions need to decay with distance in order for H to extensive 
-            assign!(W,Jn*Sz,il1=>iblock+iNN,il2=>Dw)
+            assign!(W,Jn*Sz,r=>iblock+iNN,c=>Dw)
             iblock+=iNN
         end
     end
     return W
 end
+
+function to_openbc(mpo::MPO)::MPO
+    N=length(mpo)
+    l,r=get_lr(mpo)    
+    mpo[1]=l*mpo[1]
+    mpo[N]=mpo[N]*r
+    @assert length(filterinds(inds(mpo[1]),tags="Link"))==1
+    @assert length(filterinds(inds(mpo[N]),tags="Link"))==1
+    return mpo
+end
+
+function get_lr(mpo::MPO)::Tuple{ITensor,ITensor}
+    ul::reg_form = is_lower_regular_form(mpo,1e-14) ? lower : upper
+ 
+    N=length(mpo)
+    W1=mpo[1]
+    llink=filterinds(inds(W1),tags="l=0")[1]
+    l=ITensor(0.0,dag(llink))
+
+    WN=mpo[N]
+    rlink=filterinds(inds(WN),tags="l=$N")[1]
+    r=ITensor(0.0,dag(rlink))
+    if ul==lower
+        l[llink=>dim(llink)]=1.0
+        r[rlink=>1]=1.0
+    else
+        l[llink=>1]=1.0
+        r[rlink=>dim(rlink)]=1.0
+    end
+
+    return l,r
+end
+
 
 function fast_GS(H::MPO,sites)::Tuple{Float64,MPS}
     psi0  = randomMPS(sites,length(H))

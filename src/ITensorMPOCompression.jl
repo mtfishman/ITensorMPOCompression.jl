@@ -205,7 +205,6 @@ include("hamiltonians.jl")
 include("qx.jl")
 include("characterization.jl") 
 include("blocking.jl")
-include("MPOpbc.jl")
 include("orthogonalize.jl")
 include("truncate.jl")
 

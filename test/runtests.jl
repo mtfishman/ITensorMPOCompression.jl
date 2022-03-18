@@ -9,7 +9,7 @@ ITensors.ITensors.enable_debug_checks()
 @testset "ITensorMPOCompression.jl" begin
     include("qx_unittests.jl")
     include("blocking.jl")
-    include("mpopbc.jl")
+    include("hamiltonians.jl")
     include("orthogonalize.jl")
     include("truncate.jl")
 end

@@ -40,9 +40,11 @@ Done: -Test canonical with epsrr=0.0 and compare.  need an max_Dw(H::MPO) functi
     @test abs((energy - energy_exact) / energy_exact) < 1e-4
 Done: -add Printf for 
 Done: -simplify MPOpbc code
--Get rid MPOpbs struct.
+Done: -Get rid of MPOpbs struct.
+-Add conserve_qns=true test to mpopbc tests.
 Done: -Prevent Documter.jl from showing ITensor docs.
 Done: -Seeing flakey GS tests.  probably need to seed the randomMPS for consistency.
+-Add a big lattice test and look at SVs
 Plan:
   80% Document what I have so far
   Done Test with fixed autoMPO Hamiltonians (start the heisenberg with arbitrary neighbours)
