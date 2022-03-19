@@ -141,6 +141,28 @@ end
     @test abs(E0-E1)<eps
     @test abs(overlap-1.0)<eps
 end 
+
+@testset "Look at bond singular values for large lattices" begin
+    NNN=5
+    hx=0.5
+
+    @printf "                 max(sv)           min(sv)\n"
+    @printf "  N    Dw  left     mid    right   mid\n"
+    for N in [6,8,10,12,18,20,40,80]
+        sites = siteinds("SpinHalf", N)
+        H=make_transIsing_MPO(sites,NNN,hx,lower)
+        specs=truncate!(H,cutoff=1e-10)
+        imid::Int64=N/2-1
+        max_1  =specs[1   ].spectrum[1]
+        max_mid=specs[imid].spectrum[1]
+        max_N  =specs[N-1 ].spectrum[1]
+        min_mid=specs[imid].spectrum[end]
+        Dw=maximum(get_Dw(H))
+        @printf "%4i %4i %1.5f %1.5f %1.5f %1.5f\n" N Dw  max_1 max_mid max_N min_mid
+        @test (max_1-max_N)<1e-10
+        @test max_mid<1.0
+    end
+end
 #= 
 @testset "Test with conserved QNs" begin
     N = 10

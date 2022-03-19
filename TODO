@@ -2,7 +2,7 @@ Done: -make block_qx return link name qx instead of ql,lq,qr,rq
 Done: -calculate getV,setV offsets from matrix_state
 Done: -We need pure upper/lower enums without diagonal and full options
 Done: -further simplify the compress H loop
-Deon: -Need to save SV spectrum somewhere
+Doen: -Need to save SV spectrum somewhere
 Done: -Look into the MPS compession code for inspiration.
 Done:    rename compress! to trunctate! (supprts the svd args)
         cutoff  Using a cutoff allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy.
@@ -14,7 +14,7 @@ Done:    rename compress! to trunctate! (supprts the svd args)
 
 -Get min and max Dw from H
 Done: -Figure out how to turn off asserts for performance.
--consistent variable names for link indexs r,c,q,u,v or ir,ic,iq,iu,iv ?
+-consistent variable names for link indexs: ir,ic,iq,iu,iv ?
 Fixed: #grow(i1,W,i2) relies on index ordering inside W ... is that bad?? (hint:yes!)
 Done: -grow(i1,W,i2) --> grow(W,i1,i2)
 Done: -Fix known fail for compressing when H has 8 NNN  Do tidy up items first.
@@ -38,17 +38,18 @@ Done: -Test canonical with epsrr=0.0 and compare.  need an max_Dw(H::MPO) functi
     # with open boundary conditions at criticality
     energy_exact = 1.0 - 1.0 / sin(π / (4 * N + 2))
     @test abs((energy - energy_exact) / energy_exact) < 1e-4
+    Can we get fast convergence for small lattices?
 Done: -add Printf for 
 Done: -simplify MPOpbc code
 Done: -Get rid of MPOpbs struct.
 -Add conserve_qns=true test to mpopbc tests.
 Done: -Prevent Documter.jl from showing ITensor docs.
 Done: -Seeing flakey GS tests.  probably need to seed the randomMPS for consistency.
--Add a big lattice test and look at SVs
+Done: -Add a big lattice test and look at SVs
 -make truncate, and orthogonalize that work on copies.
 Plan:
-  80% Document what I have so far
-  Done Test with fixed autoMPO Hamiltonians (start the heisenberg with arbitrary neighbours)
+  90% Document what I have so far
+  Done: Test with fixed autoMPO Hamiltonians (start the heisenberg with arbitrary neighbours)
   Done: Test with DMRG GS calculations (should just work, but who knows right?)
   Test with Fermion/Hubbard  Hamiltonians
   Test with the 3 body hamiltonians used in the Parker paper (If I can figure what they were doing)
@@ -57,7 +58,7 @@ Plan:
   Done: Figure how to disable 100's of asserts for production mode usage.  
   Done: Incoroprate make_Ham functions into module
   Done: Organize exports
-  70% Add examples to docs (needs make_Ham functions)
+  90% Add examples to docs (needs make_Ham functions)
 
 
 

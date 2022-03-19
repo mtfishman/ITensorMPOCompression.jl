@@ -121,7 +121,7 @@ is_lower_regular_form
 is_upper_regular_form
 ```
 
-# Orthogonal forms
+## Orthogonal forms
 
 The definition of orthogonal forms MPOs or operator-valued matrices are more complicated than those for MPSs.  First we must defin inner product of two operator-valued matrices:
 
