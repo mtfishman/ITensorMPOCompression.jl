@@ -138,6 +138,6 @@ is_orthogonal
 # Some utility functions
 One of the difficult aspects of working with operator-valued matrices is that they have four indices and if one just does a naive @show W to see what's in there, you see a volumous output that is hard to read because of the default slicing selected by the @show overload. The pprint(W) (pretty print) function attempts solve this problem by simply showing you where the zero, unit and other operators reside.
 ```@docs
-pprint(::ITensor)
+pprint
 fix_autoMPO!(::MPO)
 ```

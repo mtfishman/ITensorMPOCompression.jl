@@ -167,11 +167,15 @@ is_orthogonal(H::MPO,lr::orth_type,eps::Float64=default_eps)::Bool = is_canonica
 # It could be both or neither, so we return two Bools corresponding to
 # (lower,upper) triangular
 #
-function detect_upper_lower(r::Index,W::ITensor,c::Index,eps::Float64=default_eps)::Tuple{Bool,Bool}
-    @assert hasind(W,r)
-    @assert hasind(W,c)
+function detect_upper_lower(r::Index,W::ITensor,c::Index,eps::Float64=default_eps)::Tuple{Bool,Bool,Char}
+    if dim(r)==1 && dim(c)==1
+        return true,true,'1'
+    elseif dim(r)==1
+        return true,true,'R'
+    elseif dim(c)==1
+        return true,true,'C'
+    end
     ord=order(W)
-    @assert ord==4 || ord==2
     zero_upper=true
     zero_lower=true
     dr=Base.max(0,dim(c)-dim(r))
@@ -192,7 +196,7 @@ function detect_upper_lower(r::Index,W::ITensor,c::Index,eps::Float64=default_ep
             end
         end
     end
-    return zero_upper,zero_lower
+    return zero_upper,zero_lower,' '
 end
 
 function is_upper_lower(r::Index,W::ITensor,c::Index,ul::reg_form,eps::Float64=default_eps)::Bool
@@ -203,7 +207,7 @@ end
 is_lower(r::Index,W::ITensor,c::Index,eps::Float64=default_eps) = is_upper_lower(r,W,c,lower,eps)
 is_upper(r::Index,W::ITensor,c::Index,eps::Float64=default_eps) = is_upper_lower(r,W,c,upper,eps)
 
-function detect_upper_lower(W::ITensor,eps::Float64=default_eps)::Tuple{Bool,Bool}
+function detect_upper_lower(W::ITensor,eps::Float64=default_eps)::Tuple{Bool,Bool,Char}
     d,n,r,c=parse_links(W)
     return detect_upper_lower(r,W,c,eps)
 end
@@ -514,6 +518,13 @@ function get_traits(W::ITensor,eps::Float64)
     bl,bu = detect_regular_form(W,eps)
     l= bl ? 'L' : ' '
     u= bu ? 'U' : ' '
+    if bl && bu
+        l='D'
+        u=' '
+    elseif !(bl || bu)
+        l='N'
+        u='o'
+    end
 
     tri = bl ? lower : upper
     msl=matrix_state(tri,left)
@@ -521,7 +532,7 @@ function get_traits(W::ITensor,eps::Float64)
     is__left=is_canonical(W,msl,eps)
     is_right=is_canonical(W,msr,eps)
     if is__left && is_right
-        lr='I'
+        lr='B'
     elseif is__left && !is_right
         lr='L'
     elseif !is__left && is_right
@@ -530,14 +541,19 @@ function get_traits(W::ITensor,eps::Float64)
         lr='M'
     end
 
-    return Dw1,Dw2,d,l,u,lr
+    bl,bu,RC=detect_upper_lower(W)
+    lt= bl ? 'L' : ' '
+    ut= bu ? 'U' : ' '
+    if RC!=' '
+        lt=RC
+        ut=' '
+    elseif bl && bu
+        lt='D'
+        ut=' '
+    elseif !(bl || bu)
+        lt='F'
+        ut=' '
+    end
+    return Dw1,Dw2,d,l,u,lr,lt,ut
 end
     
-function pprint(H::MPO,eps::Float64=default_eps)
-    N=length(H)
-    println(" n   Dw1   Dw2   d   U/L   L/R")
-    for n in 1:N
-        Dw1,Dw2,d,l,u,lr=get_traits(H[n],eps)
-        println(" $n    $Dw1     $Dw2    $d    $l$u     $lr")
-    end
-end

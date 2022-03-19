@@ -1,3 +1,4 @@
+using Printf
 
 function is_unit(O::ITensor,eps::Float64)::Bool
     s=inds(O)
@@ -52,7 +53,7 @@ be enchanced to recognize and display other symbols like X,Y,Z ... instead of ju
 
 # Examples
 ```julia
-julia>pprint(W) 
+julia> pprint(W) 
 I 0 0 0 0 
 S 0 0 0 0 
 S 0 0 0 0 
@@ -99,6 +100,86 @@ function pprint(r::Index,W::ITensor,c::Index,eps::Float64=default_eps)
         Base.print("\n")
     end
     Base.print("\n")
+end
+
+@doc """
+    pprint(H[,eps])
+
+Display the structure of an MPO, one line for each lattice site. For each site the table lists
+- n   : lattice site number
+- Dw1 : dimension of the row index (left link index)
+- Dw2 : dimension of the column index (right link index)
+- d   : dimension of the local Hilbert space
+- Reg. Form  : U=upper, L=lower, D=diagonal, No = Not reg. form.
+- Orth. Form : L=left, R=right, M=not orthogonal, B=both left and right.
+- Tri. Form  : U=upper triangular, L=lower triangular, F=full (not triangular), D=diagonal, R=row, C=column
+
+# Arguments
+- `H::MPO` : MPO for display.
+- `eps::Float64 = 1e-14` : operators inside H with norm(W[i,j])<eps are assumed to be zero.
+
+# Examples
+```julia
+julia> using ITensors
+julia> using ITensorMPOCompression
+julia> N=10; #10 sites
+julia> NNN=7; #Include up to 7th nearest neighbour interactions
+julia> sites = siteinds("S=1/2",N);
+julia> H=make_transIsing_MPO(sites,NNN);
+julia> pprint(H)
+n    Dw1  Dw2   d   Reg.  Orth.  Tri.
+                    Form  Form   Form
+ 1    1   30    2    L      M     R 
+ 2   30   30    2    L      M     L 
+ 3   30   30    2    L      M     L 
+ 4   30   30    2    L      M     L 
+ 5   30   30    2    L      M     L 
+ 6   30   30    2    L      M     L 
+ 7   30   30    2    L      M     L 
+ 8   30   30    2    L      M     L 
+ 9   30   30    2    L      M     L 
+10   30    1    2    L      M     C 
+
+julia> orthogonalize!(H,orth=right)
+julia> pprint(H)
+n    Dw1  Dw2   d   Reg.  Orth.  Tri.
+                    Form  Form   Form
+ 1    1    3    2    L      M     R 
+ 2    3    4    2    L      R     L 
+ 3    4    5    2    L      R     L 
+ 4    5    6    2    L      R     L 
+ 5    6    7    2    L      R     L 
+ 6    7    6    2    L      R     L 
+ 7    6    5    2    L      R     L 
+ 8    5    4    2    L      R     L 
+ 9    4    3    2    L      R     L 
+10    3    1    2    L      R     C 
+julia> truncate!(H,orth=left)
+julia> pprint(H)
+n    Dw1  Dw2   d   Reg.  Orth.  Tri.
+                    Form  Form   Form
+ 1    1    3    2    L      L     R 
+ 2    3    4    2    L      L     L 
+ 3    4    5    2    L      L     F 
+ 4    5    6    2    L      L     F 
+ 5    6    7    2    L      L     F 
+ 6    7    6    2    L      L     F 
+ 7    6    5    2    L      L     F 
+ 8    5    4    2    L      L     F 
+ 9    4    3    2    L      L     L 
+10    3    1    2    L      M     C 
+```
+"""
+function pprint(H::MPO,eps::Float64=default_eps)
+    N=length(H)
+    println("  n    Dw1  Dw2   d   Reg.  Orth.  Tri.")
+    println("                      Form  Form   Form")
+    
+    for n in 1:N
+        Dw1,Dw2,d,l,u,lr,lt,ut=get_traits(H[n],eps)
+        #println(" $n    $Dw1    $Dw2    $d    $l$u     $lr   $lt$ut")
+        @printf "%4i %4i %4i %4i    %s%s     %s     %s%s\n" n Dw1 Dw2 d l u lr lt ut
+    end
 end
 
 #
