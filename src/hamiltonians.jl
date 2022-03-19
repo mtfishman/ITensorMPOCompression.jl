@@ -96,15 +96,29 @@ function fix_autoMPO!(H::MPO)
     end
 end
 
-make_Heisenberg_AutoMPO(sites,NNN::Int64,hx::Float64,ul::reg_form,J::Float64=1.0)::MPO = 
-    make_Heisenberg_AutoMPO(sites,NNN,hx,J)
+make_Heisenberg_AutoMPO(sites,NNN::Int64,hz::Float64,ul::reg_form,J::Float64=1.0)::MPO = 
+    make_Heisenberg_AutoMPO(sites,NNN,hz,J)
 
-function make_Heisenberg_AutoMPO(sites,NNN::Int64,hx::Float64,J::Float64)::MPO
+@doc """
+    make_Heisenberg_AutoMPO(sites,[NNN=1[,hz=0.0[,J=1.0]]])
+
+Use `ITensor.autoMPO` to build up a Heisenberg model Hamiltonian with up NNN neighbour
+interactions.  The interactions are hard coded to decay like J/(i-j) between sites `i` and `j`.
+The MPO is returned in lower regular form.
+    
+# Arguments
+- `sites` : Site set defining the lattice of sites.
+- `NNN::Int64` : Number of nearest neighbour interactions to include in H
+- `hz::Float64=0.0` : External magnetic field in `z` direction.
+- `J::Float64=1.0` : Nearest neighbour interaction strength.
+
+"""
+function make_Heisenberg_AutoMPO(sites,NNN::Int64=1,hz::Float64=0.0,J::Float64=1.0)::MPO
     N=length(sites)
     @assert(N>NNN)
     ampo = OpSum()
     for j=1:N
-        add!(ampo, hx   ,"Sz", j)
+        add!(ampo, hz   ,"Sz", j)
     end
     for dj=1:NNN
         f=J/dj
@@ -124,7 +138,21 @@ end
 make_transIsing_AutoMPO(sites,NNN::Int64,hx::Float64,ul::reg_form,J::Float64=1.0)::MPO = 
      make_transIsing_AutoMPO(sites,NNN,hx,J)
 
-function make_transIsing_AutoMPO(sites,NNN::Int64,hx::Float64,J::Float64)::MPO
+@doc """
+    make\\_transIsing\\_AutoMPO(sites,NNN[,hx=0.0[,J=1.0]])
+ 
+ Use `ITensor.autoMPO` to build up a transverse Ising model Hamiltonian with up NNN neighbour
+ interactions.  The interactions are hard coded to decay like J/(i-j) between sites `i` and `j`.
+ The MPO is returned in lower regular form.
+     
+ # Arguments
+ - `sites` : Site set defining the lattice of sites.
+ - `NNN::Int64` : Number of nearest neighbour interactions to include in H
+ - `hx::Float64=0.0` : External magnetic field in `x` direction.
+ - `J::Float64=1.0` : Nearest neighbour interaction strength.
+ 
+ """
+function make_transIsing_AutoMPO(sites,NNN::Int64=1,hx::Float64=0.0,J::Float64=1.0)::MPO
     do_field = hx!=0.0
     N=length(sites)
     @assert(N>NNN)
@@ -146,6 +174,20 @@ function make_transIsing_AutoMPO(sites,NNN::Int64,hx::Float64,J::Float64)::MPO
 end
 
 
+@doc """
+    make_transIsing_MPO(sites[,NNN=1[,hx=0.0[,ul=lower[,J=1.0]]]])
+ 
+Directly coded build up a transverse Ising model Hamiltonian with up NNN neighbour
+interactions.  The interactions are hard coded to decay like J/(i-j) between sites `i` and `j`.
+     
+# Arguments
+- `sites` : Site set defining the lattice of sites.
+- `NNN::Int64=1` : Number of nearest neighbour interactions to include in H
+- `hx::Float64=0.0` : External magnetic field in `x` direction.
+- `ul::reg_form=lower` : build H with lower or upper regular form.
+- `J::Float64=1.0` : Nearest neighbour interaction strength.
+
+"""
 function make_transIsing_MPO(sites,NNN::Int64=1,hx::Float64=0.0,ul::reg_form=lower,J::Float64=1.0)::MPO
     mpo=MPO(sites) #make and MPO only to get the indices
     prev_link=Nothing

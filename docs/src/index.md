@@ -139,5 +139,18 @@ is_orthogonal
 One of the difficult aspects of working with operator-valued matrices is that they have four indices and if one just does a naive @show W to see what's in there, you see a volumous output that is hard to read because of the default slicing selected by the @show overload. The pprint(W) (pretty print) function attempts solve this problem by simply showing you where the zero, unit and other operators reside.
 ```@docs
 pprint
+```
+# Test Hamiltonians
+For development and demo purposes it is useful to have a quick way to make Hamiltonian
+MPOs for various models.  Right now we have three Hamiltonians available
+1. Direct transverse Ising model with arbitrary neighbour interactions
+2. autoMPO transverse Ising model with arbitrary neighbour interactions
+3. autoMPO Heisenberg model with arbitrary neighbour interactions
+The autoMPO MPOs come pre-truncated to they are not useful testing truncation.
+
+```@docs
+make_transIsing_MPO
+make_transIsing_AutoMPO
+make_Heisenberg_AutoMPO
 fix_autoMPO!(::MPO)
 ```

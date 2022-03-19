@@ -137,7 +137,7 @@ end
 
     overlap=abs(inner(psi0',psi1))
     RE=abs((E0-E1)/E0)
-    @printf "Heisenberg E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
+    @printf "Heisenberg   E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
     @test abs(E0-E1)<eps
     @test abs(overlap-1.0)<eps
 end 
