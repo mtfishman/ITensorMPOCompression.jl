@@ -1,9 +1,9 @@
 # ITensorMPOCompression
-ITensorMPOCompression is a Julia language module based in the [ITensors](https://itensor.org/) library.  In general compression of Hamiltonian MPOs must be treated differntly than standard MPS compression.  The root of the problem can be traced to the combination of both extensive and intensive degrees of freedom in Hamiltonian operators.  If conventional compression methods are applied of Hamiltonain MPOs, one finds that two of the singular values will diverge as the lattice size increases, resulting in severe numerical instabilities.
+ITensorMPOCompression is a Julia language module based in the [ITensors](https://itensor.org/) library.  In general, compression of Hamiltonian MPOs must be treated differently than standard MPS compression.  The root of the problem can be traced to the combination of both extensive and intensive degrees of freedom in Hamiltonian operators.  If conventional compression methods are applied of Hamiltonain MPOs, one finds that two of the singular values will diverge as the lattice size increases, resulting in severe numerical instabilities.
 The recent paper 
 > *Local Matrix Product Operators:Canonical Form, Compression, and Control Theory* Daniel E. Parker, Xiangyu Cao, and Michael P. Zaletel **Phys. Rev. B** 102, 035147
-contains a number of important insights for the handling of finite and infinite lattice MPOs. They show that the intensive degrees of freedom can be isolated from the extensive ones. If one only compresses the intensive portions of the Hamiltonian then the divergent singular values are removed from the problem.  This module attempts to implement the algorithms described in the *Parker et. al.* paper.  The initial release will support orthogonalization (canonical form) and truncation (SVD compression) of the finite lattice MPOs.  A future releast will add support for handling iMPOs, or infinate lattice MPOs with a repeating unit cell.
-The techincal details are presented in the pdf document provided with this module: [TechnicalDetails.pdf](../TechnicalDetails.pdf). A brief summary of the key functions of this module follows.
+contains a number of important insights for the handling of finite and infinite lattice MPOs. They show that the intensive degrees of freedom can be isolated from the extensive ones. If one only compresses the intensive portions of the Hamiltonian then the divergent singular values are removed from the problem.  This module attempts to implement the algorithms described in the *Parker et. al.* paper.  The initial release will support orthogonalization (canonical form) and truncation (SVD compression) of the finite lattice MPOs.  A future release will add support for handling iMPOs, or infinite lattice MPOs with a repeating unit cell.
+The techincal details are presented in a document provided with this module: [TechnicalDetails.pdf](../TechnicalDetails.pdf). A brief summary of the key functions of this module follows.
 
 ## Block respecting QX decomposition
 ### Finite MPO
@@ -27,10 +27,10 @@ MPOs must be in the so called regular form in order for orthogonalization and co
 \end{bmatrix}
 ```
 Where:
-``\\\hat{b}\quad and\quad\hat{c}`` are operator-valued vectors and
-``\\\hat{A}`` is an operator-valued matrix which is *not nessecarily either upper or lower triangular*. 
+``\\\hat{\boldsymbol{b}}\quad and\quad\hat{\boldsymbol{c}}`` are operator-valued vectors and
+``\\\hat{\boldsymbol{A}}`` is an operator-valued matrix which is *not nessecarily triangular*. 
 
-In order to handle all combinations of upper and lower regular form in conjunction with left and right canonical (orhtogonal) forms we must extend ITensors *QR* decomposition capabilities to also include *QL*, *RQ* and *LQ* decomposition.  Below and in the code these will be generically referred to as *QX* decomposition.
+In order to handle all combinations of upper and lower regular forms in conjunction with left and right canonical (orthogonal) forms we must extend ITensors *QR* decomposition capabilities to also include *QL*, *RQ* and *LQ* decomposition.  Below and in the code these will be generically referred to as *QX* decomposition.
 ### The V-block
 For lower regular form the V-blocks are:
 ```math
@@ -43,7 +43,7 @@ For lower regular form the V-blocks are:
 \hat{\boldsymbol{b}}_{L} & \hat{\boldsymbol{A}}_{L}
 \end{bmatrix}
 ```
-
+where the `L` and `R` subscripts refer to `left` and `right` orthogonal forms being targeted.
 ### QX decomposition of the V-block
 Block respecting *QL* decomposition is defined as *QL* decomposition of the of corresponding V-block:
 
@@ -65,7 +65,7 @@ Q_{\left(mna\right)k}\rightarrow\hat{Q}_{ak}
 ```math
 \hat{W}^{\left(i+1\right)}\rightarrow L\hat{W}^{\left(i+1\right)}
 ``` 
-Fortunately, under the hood,  ITensor takes care all the reshaping for us. After this process *W* will now be in left canonical form.  Other cases and some additional details are described in tech notes.
+Fortunately, under the hood,  ITensor takes care of all the reshaping for us. After this process *W* will now be in left canonical form.  Other cases and some additional details are described in tech notes.
 ```@docs
 block_qx
 ```
@@ -75,7 +75,7 @@ This is achieved by simply sweeping through the lattice and carrying out block r
 ITensorMPOCompression.orthogonalize!
 ```
 # Truncation (SVD compression)
-Prior to truncation the MPO must first be rendered into canoncial form using the orthogonalize! function described above.  If for example the MPO is right-lower canonical form then a truncation sweep starts do doing a block repsecting *QL* decomposition on site 1:
+Prior to truncation the MPO must first be rendered into canoncial form using the orthogonalize! function described above.  If for example the MPO is right-lower canonical form then a truncation sweep starts by doing a block repsecting *QL* decomposition on site 1:
 ```math
 \hat{W}^{1}\rightarrow\hat{Q}^{1}L^{1}
 ```
@@ -92,7 +92,7 @@ L=\begin{bmatrix}1 & 0 & 0\\
 0 & t & 1
 \end{bmatrix}
 ```
-where internal sans-M matrix is what gets decomposed with SVD.  Picking out this internal matrix is really the secret sauce for avoiding diverging singular values when the lattice size grows.  After deomposition the *U* matrix is absorbed to the left sunch that W=QU which is left canoncial. *sV* gets combined with L' and transfered to next site to the right.  There are many details to consider and these are explained in the technical notes.
+where internal sans-M matrix is what gets decomposed with SVD.  Picking out this internal matrix is really the secret sauce for avoiding diverging singular values when the lattice size grows.  After decomposition `M=UsV` the `U` matrix is absorbed to the left such that `W=QU` which is left canoncial. *sV* gets combined with L' and transfered to next site to the right.  There are many details to consider and these are explained in the technical notes.
 
 ```@docs
 truncate!
@@ -103,10 +103,10 @@ truncate!
 The module has a number of functions for characterization of MPOs and operator-valued matrices. Some
 points to keep in mind:
 1. An MPO must be in one of the regular forms in order for orthogonalization to work.
-2. An MPO must be in one fo the orthononal (canonical) forms prior to SVD truncation (compression). However the truncate! function will detect this and do the orthogonalization if needed.
+2. An MPO must be in one ot the orthonormal (canonical) forms prior to SVD truncation (compression). However the truncate! function will detect this and do the orthogonalization if needed.
 3. Lower (upper) regular form does not mean that the MPO is lower (upper) triangular.  As explained in the [Technical Notes](../TechnicalDetails.pdf) the `A`-block does not need to be triangular.
 4. Having said all that, most common hand constructed MPOs are either lower or upper triangular. Lower happens to be the more common convention.
-5. The orthogonalize! operation just happens preserve lower (upper) trianglur form.  However truncation (SVD) does not preserve triangular form.
+5. The orthogonalize! operation just happens to preserve lower (upper) trianglur form.  However truncation (SVD) does not preserve triangular form.
 6. At the moment autoMPO outputs (after a simple 2<-->Dw row & col swap [`fix_autoMPO!`](@ref)) lower *regular* form, but not lower *triangular* form (the `A` block is not triangular).
 
 ## Regular forms
@@ -123,12 +123,12 @@ is_upper_regular_form
 
 ## Orthogonal forms
 
-The definition of orthogonal forms MPOs or operator-valued matrices are more complicated than those for MPSs.  First we must defin inner product of two operator-valued matrices:
+The definition of orthogonal forms for MPOs or operator-valued matrices are more complicated than those for MPSs.  First we must define the inner product of two operator-valued matrices. For the case of orthogonal columns this looks like:
 
 ```math
-\sum\left\langle \hat{W}_{ab}^{\dagger},\hat{W}_{ac}\right\rangle =\frac{\sum_{}^{}Tr\left[\hat{W}_{ab}\hat{W}_{ac}\right]}{Tr\left[\hat{\mathbb{I}}\right]}=\delta_{bc}
+\sum_{a}\left\langle \hat{W}_{ab}^{\dagger},\hat{W}_{ac}\right\rangle =\frac{\sum_{a}^{}Tr\left[\hat{W}_{ab}\hat{W}_{ac}\right]}{Tr\left[\hat{\mathbb{I}}\right]}=\delta_{bc}
 ```
-Where the summation limits depend on where the V-block is for `left`/`right` and `lower`/`upper`.  The specifics are shown in table 6 in the [Technical Notes](../TechnicalDetails.pdf)
+Where the summation limits depend on where the V-block is for `left`/`right` and `lower`/`upper`.  The specifics all four cases are shown in table 6 in the [Technical Notes](../TechnicalDetails.pdf)
 
 ```@docs
 orth_type
@@ -136,7 +136,7 @@ is_orthogonal
 ```
 
 # Some utility functions
-One of the difficult aspects of working with operator-valued matrices is that they have four indices and if one just does a naive @show W to see what's in there, you see a volumous output that is hard to read because of the default slicing selected by the @show overload. The pprint(W) (pretty print) function attempts solve this problem by simply showing you where the zero, unit and other operators reside.
+One of the difficult aspects of working with operator-valued matrices is that they have four indices and if one just does a naive @show W to see what's in there, you see a voluminous output that is hard to read because of the default slicing selected by the @show overload. The pprint(W) (pretty print) function attempts to solve this problem by simply showing you where the zero, unit and other operators reside.
 ```@docs
 pprint
 ```
@@ -146,7 +146,7 @@ MPOs for various models.  Right now we have three Hamiltonians available
 1. Direct transverse Ising model with arbitrary neighbour interactions
 2. autoMPO transverse Ising model with arbitrary neighbour interactions
 3. autoMPO Heisenberg model with arbitrary neighbour interactions
-The autoMPO MPOs come pre-truncated to they are not useful testing truncation.
+The autoMPO MPOs come pre-truncated so they are not useful for testing truncation.
 
 ```@docs
 make_transIsing_MPO

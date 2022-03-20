@@ -41,11 +41,11 @@ end
 pprint(W[,eps])
 
 Show (pretty print) a schematic view of an operator-valued matrix.  In order to display any `ITensor`
-as a matrix one must decide which index to use as the row index, and simiarly for the column index. 
+as a matrix one must decide which index to use as the row index, and similarly for the column index. 
 `pprint` does this by inspecting the indices with "Site" tags to get the site number, and uses the 
-"Link" indices `l=\$n` as the column and `\$(n-1)` as the row. The output symbols I,0,S have the obvious 
+"Link" indices `l=\$n` as the column and `l=\$(n-1)` as the row. The output symbols I,0,S have the obvious 
 interpretations and S just means any (non zero) operator that is not I.  This function can obviously 
-be enchanced to recognize and display other symbols like X,Y,Z ... instead of just S.
+be enhanced to recognize and display other symbols like X,Y,Z ... instead of just S.
 
 # Arguments
 - `W::ITensor` : Operator-valued matrix for display.
@@ -73,8 +73,8 @@ function pprint(W::ITensor,r::Index,eps::Float64=default_eps)
 end
 
 function pprint(r::Index,W::ITensor,c::Index,eps::Float64=default_eps)
-    @assert hasind(W,r)
-    @assert hasind(W,c)
+    # @assert hasind(W,r) can't assume this becuse parse_links could return a Dw=1 dummy index.
+    # @assert hasind(W,c)
     isl=filterinds(W,tags="Link")
     ord=order(W)
     if length(isl)==2
@@ -114,7 +114,10 @@ Display the structure of an MPO, one line for each lattice site. For each site t
 - Orth. Form : L=left, R=right, M=not orthogonal, B=both left and right.
 - Tri. Form  : U=upper triangular, L=lower triangular, F=full (not triangular), D=diagonal, R=row, C=column
 
-# Arguments
+Be careful when reading the L symbols. L stands for Left in the Orth. column but is stands 
+for Lower in the other two columns.
+
+    # Arguments
 - `H::MPO` : MPO for display.
 - `eps::Float64 = 1e-14` : operators inside H with norm(W[i,j])<eps are assumed to be zero.
 

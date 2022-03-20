@@ -152,7 +152,7 @@ Test if all sites in an MPO statisfty the condition for `lr` orthogonal (canonic
 - `lr::orth_type` : choose `left` or `right` orthogonality condition to test for.
 - `eps::Float64 = 1e-14` : operators inside H with norm(W[i,j])<eps are assumed to be zero.
 
-Returns `true` of the MPO is in orthongal (canonical) form
+Returns `true` if the MPO is in `lr` orthogonal (canonical) form
 """
 is_orthogonal(H::MPO,lr::orth_type,eps::Float64=default_eps)::Bool = is_canonical(H,lr,eps)
 
@@ -339,7 +339,7 @@ end
 @doc """
     is_regular_form(W,ul[,eps])::Bool
 
-Determine is a operator-values matrix, `W`, is in `ul` regular form.
+Determine if an operator-valued matrix, `W`, is in `ul` regular form.
 
 # Arguments
 - `W::ITensor` : operator-valued matrix to be characterized. `W` is expected to have 2 site indices and 
@@ -359,7 +359,7 @@ end
 @doc """
     is_lower_regular_form(W[,eps])::Bool
 
-Determine is a operator-values matrix, `W`, is in lower regular form.
+Determine if an operator-valued matrix, `W`, is in lower regular form.
 
 # Arguments
 - `W::ITensor` : operator-valued matrix to be characterized. `W` is expected to have 2 site indices and 
@@ -377,7 +377,7 @@ end
 @doc """
     is_upper_regular_form(W[,eps])::Bool
 
-Determine is a operator-values matrix, `W`, is in upper regular form.
+Determine if an operator-valued matrix, `W`, is in upper regular form.
 
 # Arguments
 - `W::ITensor` : operator-valued matrix to be characterized. `W` is expected to have 2 site indices and 
@@ -395,7 +395,7 @@ end
 @doc """
     is_regular_form(H[,eps])::Bool
 
-Determine is a MPO, `H`, is in either lower xor upper regular form. All sites in H must 
+Determine if an MPO, `H`, is in either lower xor upper regular form. All sites in H must be
 in the same (lower or upper) regular form in order to return true.  In other words mixtures
 of lower and upper will fail.
 

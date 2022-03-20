@@ -5,25 +5,25 @@ using LinearAlgebra
 
 Perform a block respecting QX decomposition of the operator valued matrix `W`. 
 The appropriate decomposition, QR, RQ, QL, LQ is selected based on the `reg_form` `ul` 
-and the `dir` keyword argument.
+and the `orth` keyword argument.
 The new internal `Index` between Q and R/L is modified so that the tags are "Link,qx" instead
-"Link,qr" etc. returned by the qr/rq/ql/lq routines.  Q and R are also gauge fixed so that 
-the corner element of R is 1.0 and Q†Q=d𝕀 where d in the dimensionality of the local
+"Link,qr" etc. returned by the qr/rq/ql/lq routines.  Q and R/L are also gauge fixed so that 
+the corner element of R/L is 1.0 and Q⁺Q=d𝕀 where d is the dimensionality of the local
 Hilbert space.
 
 # Arguments
-- `W` Opertor valued matrix for decomposition.
+- `W` Operator valued matrix for decomposition.
 - `ul` upper/lower regular form of `W`. We can auto detect here, but is more efficient if this is done by the higher level calling routines.
 
 # Keywords
 - `orth::orth_type = right` : choose `left` or `right` orthogonal (canonical) form
 - `epsrr::Float64 = 1e-14` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
-   All rows with max(abs(R[:,j]))<epsrr are considered zero and removed.  epsrr==0.0 indicates no rank reduction.
+   All rows with max(abs(R[r,:]))<epsrr are considered zero and removed.  epsrr==0.0 indicates no rank reduction.
 
 # Returns a Tuple containing
-- `Q` with orthonormal columns or rows depending on orth=left/right, dimensions: (χ+1)x(χ\'+1)
-- `R` or `L` depending on `ul` with dimensions: (χ+2)x(χ\'+2)
-- `iq` the new internal link index between `Q` and `R`/`L` with tags="Link,qx"
+- `Q` with orthonormal columns or rows depending on orth=left/right, dimensions: (χ+1)x(χq+1)
+- `R` or `L` depending on `ul` with dimensions: (χq+2)x(χ\'+2)
+- `iq` the new internal link index between `Q` and `R`/`L` with dimensions χq+2 and tags="Link,qx"
 
 # Example
 ```julia
@@ -33,11 +33,12 @@ julia>N=5; #5 sites
 julia>NNN=2; #Include 2nd nearest neighbour interactions
 julia>sites = siteinds("S=1/2",N);
 #
-#  Make a Hamiltonian directly, i.e. no using autoMPO
+#  Make a Hamiltonian directly, i.e. not using autoMPO
 #
 julia>H=make_transIsing_MPO(sites,NNN);
 #
-#  Use pprint to see the sructure for site #2. I = unit operator and S = any other operator
+#  Use pprint to see the structure for site #2. I = unit operator and S = any 
+#  other operator
 #
 julia>pprint(H[2]) #H[1] is a row vector, so let's see what H[2] looks like
 I 0 0 0 0 
@@ -47,7 +48,7 @@ S 0 0 0 0
 0 S 0 S I 
 #
 #  Now do a block respecting QX decomposition. QL decomposition is chosen because
-#  H[2] is in lower regular form and the default ortho direction if left.
+#  H[2] is in lower regular form and the default ortho direction is left.
 #
 julia>Q,L,iq=block_qx(H[2]); #Block respecting QL
 #
@@ -61,7 +62,7 @@ S 0 0 0
 0 I 0 0 
 0 0 S I 
 #
-#  Similarly L is missing one row due to rank revealing QX algorithm
+#  Similarly L is missing one row due to the rank revealing QX algorithm
 #
 julia>pprint(L,iq) #we need to tell pprint which index is the row index.
 I 0 0 0 0 

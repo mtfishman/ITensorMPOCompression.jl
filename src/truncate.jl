@@ -151,8 +151,8 @@ Compress an MPO using block respecting SVD techniques as described in
 - `H` MPO for decomposition. If H is not already in the correct canonical form for compression, it will automatically be put into the correct form prior to compression.
 
 # Keywords
-- `orth::orth_type = right` : choose `left` or `right` canonical form for the final output. 
-- `cutoff::Foat64 = 1e-14` : Using a `cutoff` allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy. 
+- `orth::orth_type = left` : choose `left` or `right` canonical form for the final output. 
+- `cutoff::Float64 = 1e-14` : Using a `cutoff` allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy. 
 - `maxdim::Int64` : If the number of singular values exceeds `maxdim`, only the largest `maxdim` will be retained.
 - `mindim::Int64` : At least `mindim` singular values will be retained, even if some fall below the cutoff
 
@@ -176,8 +176,8 @@ true
 
 #
 #  Now we can truncate with defaults of left orthogonal cutoff=1e-14.
-#  truncate! returns the spectrum of singular values at each bond.  The largest singular
-#  values are remaining well under control.  i.e. no sign of divergences.
+#  truncate! returns the spectrum of singular values at each bond.  The largest
+#  singular values are remaining well under control.  i.e. no sign of divergences.
 #
 julia> truncate!(H)
 9-element Vector{bond_spectrum}:
@@ -200,16 +200,7 @@ S S S 0
 #  We can see that bond dimensions have been drastically reduced.
 #
 julia> get_Dw(H)
-9-element Vector{Int64}:
- 3
- 4
- 5
- 6
- 7
- 6
- 5
- 4
- 3
+9-element Vector{Int64}: 3 4 5 6 7 6 5 4 3
 
 julia> is_lower_regular_form(H)==true
 true

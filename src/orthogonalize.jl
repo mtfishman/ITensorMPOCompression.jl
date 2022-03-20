@@ -43,9 +43,10 @@ Bring an MPO into left or right canonical form using block respecting QR decompo
 
 # Keywords
 - `orth::orth_type = left` : choose `left` or `right` canonical form
-- `sweeps::Int64` : number of sweeps to perform. If sweeps is zero or not set then sweeps continue until there is no change in the internal dimensions from rank revelaing QR. 
+- `sweeps::Int64` : number of sweeps to perform. If sweeps is zero or not set then sweeps 
+   continue until there is no change in the internal dimensions from rank revealing QR. 
 - `epsrr::Float64 = 1e-14` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
-   All rows with max(abs(R[:,j]))<epsrr are considered zero and removed. 
+   All rows with max(abs(R[r,:]))<epsrr are considered zero and removed. 
 
 # Examples
 ```julia
@@ -90,20 +91,11 @@ I 0 0 0 0
 S S S 0 0 
 0 0 0 S I 
 #
-#  What do all the boond dimansions of H look like?  We will need compression (truncation)
-#  in order to further bang down the size of H
+#  What do all the bond dimensions of H look like?  We will need compression 
+#  (truncation) in order to further bang down the size of H
 #
 julia> get_Dw(H)
-9-element Vector{Int64}:
-  3
-  5
-  9
- 13
- 12
-  9
-  6
-  4
-  3
+9-element Vector{Int64}: 3 5 9 13 12 9 6 4 3
 #
 #  wrap up with two more checks on the structure of H
 #
