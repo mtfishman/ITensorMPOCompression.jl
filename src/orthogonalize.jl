@@ -4,6 +4,7 @@
 function orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form,kwargs...)
     W1,Lplus=block_qx(W1,ul;kwargs...) 
     W2=Lplus*W2
+    @assert order(W2)<=4 #make sure there was something to contract. 
  
     iq=filterinds(inds(Lplus),tags="qx")[1]
     il=noncommonind(Lplus,iq)
