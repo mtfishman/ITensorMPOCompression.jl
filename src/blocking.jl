@@ -8,8 +8,9 @@ function getV1(W::ITensor,off::V_offsets)::ITensor
     iss=filterinds(inds(W),tags="Site")
     @assert length(ils)==1
     w1=ils[1]
-    v1=redim(w1,dim(w1)-1) 
-    V=ITensor(0.0,v1,iss...)
+    v1=redim(w1,dim(w1)-1)
+    T=eltype(W)
+    V=ITensor(T(0.0),v1,iss...)
     for ilv in eachindval(v1)
         wlv=IndexVal(w1,ilv.second+off.o1)
         s=slice(W,wlv)
@@ -49,11 +50,12 @@ function setV1(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     iss=filterinds(inds(W),tags="Site")
     @assert iss==filterinds(inds(V),tags="Site")
     off=V_offsets(ms)
+    T=eltype(V)
     @assert(off.o1==off.o2)
     if dim(wil)>dim(vil)+1
         #we need to shrink W
         wil1=Index(dim(vil)+1,tags(wil))
-        W1=ITensor(0.0,wil1,iss)
+        W1=ITensor(T(0.0),wil1,iss)
         if off.o1==1
             #save first element
             for isv in eachindval(iss)
@@ -125,10 +127,11 @@ function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     end
 
     off=V_offsets(ms)
+    T=eltype(V)
     resize=dim(iwqx)>dim(ivqx)+1
     if resize
         iw1=Index(dim(ivqx)+1,tags(iwqx))
-        W1=ITensor(0.0,iw1,iwl,iss)
+        W1=ITensor(T(0.0),iw1,iwl,iss)
         others=noncommoninds(W,iwqx)
         @assert off.o1==off.o2
         if  off.o1==1 #save row or col 1
@@ -164,14 +167,14 @@ end
 #
 function growRL(RL::ITensor,iWlink::Index,off::V_offsets)::Tuple{ITensor,Index}
     @assert order(RL)==2
-    #is=inds(RL)
     iLlink=filterinds(inds(RL),tags=tags(iWlink))[1] #find the link index of RL
     iLqx=noncommonind(inds(RL),iLlink) #find the qx link of RL
     Dwl=dim(iLlink)
     Dwq=dim(iLqx)
     @assert dim(iWlink)==Dwl+1
     iq=Index(Dwq+1,tags(iLqx))
-    RLplus=ITensor(0.0,iq,iWlink)
+    T=eltype(RL)
+    RLplus=ITensor(T(0.0),iq,iWlink)
     @assert norm(RLplus)==0.0
     for jq in eachindval(iLqx)
         for jl in eachindval(iLlink)

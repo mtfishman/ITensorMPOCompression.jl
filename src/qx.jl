@@ -552,8 +552,9 @@ function trim(R::ITensor,Q::ITensor,eps::Float64)
   iRo=noncommoninds(R,iq)
   iQo=noncommoninds(Q,iq)
   iqn=Index(nq,tags(iq))
-  Rn=ITensor(0.0,iqn,iRo)
-  Qn=ITensor(0.0,iQo,iqn)
+  T=eltype(R)
+  Rn=ITensor(T(0.0),iqn,iRo)
+  Qn=ITensor(T(0.0),iQo,iqn)
   ivqn=1
   for ivq in eachindval(iq)
     if zeros[ivq.second]==false
