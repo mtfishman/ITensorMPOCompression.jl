@@ -3631,7 +3631,345 @@ Infinite lattice MPO compression
 \end_layout
 
 \begin_layout Standard
-Stay tuned .....
+A large portion of the literature on infinite MPS and MPO methods tends
+ to focus on models with a one site unit cell.
+ Attention to models or ground states with ,multiple sites per unit tends
+ to be an afterthought.
+ This makes sense as one can explain the essence of a new algorithm with
+ less notational baggage if one repeating site is assumed.
+ However for a software library we must keep everything general and not
+ assume a one site, or uniform MPS or MPO.
+ And even if the MPO is perfectly uniform that does not by any means suggest
+ that the ground state MPS is uniform.
+ Antiferromagnetic models are an obvious example.
+ In order establish the notation for this we write the iMPO Hamiltonian
+ as 
+\begin_inset Formula 
+\[
+\hat{H}=\cdots\hat{W}^{(N)}\left[\hat{W}^{(1)}\hat{W}^{(2)}\cdots\hat{W}^{(N)}\right]\hat{W}^{(1)}\cdots
+\]
+
+\end_inset
+
+where we have show the repeating unit cell, with 
+\begin_inset Formula $N$
+\end_inset
+
+ sites, inside the square brackets.
+ We will use superscripts on 
+\begin_inset Formula $\hat{W}$
+\end_inset
+
+'s to indicate site number inside the unit cell, and subscripts to indicate
+ iteration number.
+\end_layout
+
+\begin_layout Subsection
+QR Orthogonalization
+\end_layout
+
+\begin_layout Standard
+There are three algorithms for this, going from simplest and least reliable
+ to the most complex and most reliable.
+ In this section we describe the iterated QX orthogonalization scheme.
+ This idea was first introduced for MPS networks
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Vanderstraeten2019"
+literal "false"
+
+\end_inset
+
+ and then described for 1-site MPOs in 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Parker2019"
+literal "false"
+
+\end_inset
+
+.
+ The extension to two site MPOs is described in 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Soejima2020"
+literal "false"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+We begin by creating a collection of gauge transforms and set them equal
+ to the identity:
+\begin_inset Formula 
+\[
+G_{L}^{1}=G_{L}^{2}\cdots=G_{L}^{N}=\mathbb{I}
+\]
+
+\end_inset
+
+Next we do a block respecting, rank revealing QX decomposition on each site
+\begin_inset Formula 
+\[
+\hat{QR}\left(\hat{W}_{0}^{n}\right)\rightarrow\hat{V}_{0}^{n}=\hat{Q}_{0}^{n}R_{0}^{n}
+\]
+
+\end_inset
+
+and now 
+\begin_inset Formula $\hat{H}$
+\end_inset
+
+ looks like
+\begin_inset Formula 
+\[
+\hat{H}=\cdots R_{0}^{N}\left[\hat{Q}_{0}^{1}R_{0}^{1}\hat{Q}_{0}^{2}R_{0}^{2}\cdots\hat{Q}_{0}^{N}R_{0}^{N}\right]\hat{Q}_{0}^{1}\cdots
+\]
+
+\end_inset
+
+But we can demarcate the unit cell any place we want so
+\begin_inset Formula 
+\[
+=\cdots\left[R_{0}^{N}\hat{Q}_{0}^{1}R_{0}^{1}\hat{Q}_{0}^{2}R_{0}^{2}\cdots R_{0}^{(N-1)}\hat{Q}_{0}^{N}\right]\cdots
+\]
+
+\end_inset
+
+which defines a new set 
+\begin_inset Formula $\hat{W}$
+\end_inset
+
+'s with iteration index 
+\begin_inset Formula $1$
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\hat{H}=\cdots\cdots\left[\hat{W}_{1}^{1}\hat{W}_{1}^{2}\cdots\hat{W}_{1}^{N}\right]\cdots
+\]
+
+\end_inset
+
+where 
+\begin_inset Formula 
+\[
+\hat{W}_{1}^{n}=R_{0}^{(n-1)}\hat{Q}_{0}^{n}.
+\]
+
+\end_inset
+
+In addition we must update the accumulated gauge transforms
+\begin_inset Formula 
+\[
+G_{L}^{n}\rightarrow R_{0}^{n}G_{L}^{n}
+\]
+
+\end_inset
+
+At this point we can go back the block QX step.
+\end_layout
+
+\begin_layout Standard
+As the iterations proceed the 
+\begin_inset Formula $R$
+\end_inset
+
+ (or 
+\begin_inset Formula $L)$
+\end_inset
+
+ matrices will usually converge towards the identity matrix.
+ In addition the rank revealing algorithm will be constantly reducing the
+ dimansions of the 
+\begin_inset Formula $W$
+\end_inset
+
+ and 
+\begin_inset Formula $R$
+\end_inset
+
+ (or 
+\begin_inset Formula $L)$
+\end_inset
+
+ matrices.
+ Convergence is achieved when 
+\begin_inset Formula $\left\Vert \tilde{R}_{i}-𝕀\right\Vert <\varepsilon$
+\end_inset
+
+ and there are no more dimension changes.
+ Finally 
+\begin_inset Formula $\hat{W}_{\infty}=\hat{Q}_{\infty}$
+\end_inset
+
+ which we can label as 
+\begin_inset Formula $\hat{W}_{L}$
+\end_inset
+
+ if we are doing a left orthogonalization sweep.
+ The full gauge transformation is accumulated in the set of 
+\begin_inset Formula $G_{L}^{n}$
+\end_inset
+
+ matrices.
+ 
+\end_layout
+
+\begin_layout Subsection
+SVD Compression
+\end_layout
+
+\begin_layout Standard
+To prepare an iMPO for compression we first left orthogonalize and the right
+ orthogonalize.
+ The gauge transform returned by the last step relates the left and right
+ forms through a daisy chain of relations
+\begin_inset Formula 
+\[
+G^{\left(n-1\right)}\hat{W}_{R}^{n}=\hat{W}_{L}^{n}G^{n}\;n=1\cdots N
+\]
+
+\end_inset
+
+with modular, 
+\begin_inset Formula $mod\left(N\right)$
+\end_inset
+
+, arithmetic assumed for 
+\begin_inset Formula $n$
+\end_inset
+
+ indices.
+ This full gauge transform 
+\begin_inset Formula $G$
+\end_inset
+
+ is the input for SVD compression.
+ We can now imagine a mixed canonical form Hamiltonian created by introducing
+ 
+\begin_inset Formula $G^{N}$
+\end_inset
+
+ at left infinity onto a right orthogonal Hamiltonian, and sweeping towards
+ to right:
+\begin_inset Formula 
+\[
+\hat{H}=G^{N}\left[\hat{W}_{R}^{1}\hat{W}_{R}^{2}\cdots\hat{W}_{R}^{N}\right]\cdots
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+=\left[\hat{W}_{L}^{1}G^{1}\hat{W}_{R}^{2}\cdots\hat{W}_{R}^{N}\right]\cdots
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+=\left[\hat{W}_{L}^{1}\hat{W}_{L}^{2}G^{2}\cdots\hat{W}_{R}^{N}\right]\cdots
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\vdots
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+=\cdots\left.\hat{W}_{L}^{N}\right]\left[\hat{W}_{L}^{1}G^{1}\hat{W}_{R}^{2}\cdots\hat{W}_{R}^{N}\right]\left[\hat{W}_{R}^{1}\right.\cdots
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The gauge transform should have the form below which can be decomposed in
+ a block respecting manner (in order avoid those nasty diverging singular
+ values), and then compressed
+\begin_inset Formula 
+\[
+G^{n}=\begin{bmatrix}1 & 0 & 0\\
+0 & \mathsf{G^{n}} & 0\\
+0 & 0 & 1
+\end{bmatrix}=\begin{bmatrix}1 & 0 & 0\\
+0 & \mathsf{U^{n}}\mathsf{s^{n}}\mathsf{V^{n}} & 0\\
+0 & 0 & 1
+\end{bmatrix}\approx\begin{bmatrix}1 & 0 & 0\\
+0 & \mathsf{\tilde{U}^{n}}\mathsf{\tilde{s}^{n}}\mathsf{\tilde{V}^{n}} & 0\\
+0 & 0 & 1
+\end{bmatrix}=\tilde{U}^{n}\tilde{s}^{n}\tilde{V}^{n}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\hat{H}_{trunc}=\cdots\left.\hat{W}_{L}^{N}\right]\left[\hat{W}_{L}^{1}\tilde{U}^{1}\tilde{s}^{1}\tilde{V}^{1}\hat{W}_{R}^{2}\cdots\hat{W}_{R}^{N}\right]\left[\hat{W}_{R}^{1}\right.\cdots
+\]
+
+\end_inset
+
+We could also have just as easily chosen the orthogonality center to be
+ between sites 2 and 3.
+\begin_inset Formula 
+\[
+\hat{H}_{trunc}=\cdots\left[\cdots\hat{W}_{L}^{N}\right]\left[\hat{W}_{L}^{1}\hat{W}_{L}^{2}\tilde{U}^{2}\tilde{s}^{2}\tilde{V}^{2}\hat{W}_{R}^{3}\cdots\hat{W}_{R}^{N}\right]\left[\hat{W}_{R}^{1}\cdots\right]\cdots
+\]
+
+\end_inset
+
+and so on for each bond in the unit cell.
+ Now we can define
+\begin_inset Formula 
+\[
+\hat{Q}^{n}=\tilde{U}^{\left(n-1\right)\dagger}\hat{W}_{L}^{n}\tilde{U}^{n}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\hat{P}^{n}=\tilde{V}^{\left(n-1\right)\dagger}\hat{W}_{R}^{n}\tilde{V}^{n}
+\]
+
+\end_inset
+
+And in terms of these new tensors we have
+\begin_inset Formula 
+\[
+\hat{H}=\cdots\left[\hat{Q}^{1}\tilde{s}^{1}\hat{P}^{2}\cdots\hat{P}^{N}\right]\cdots=\cdots\left[\hat{Q}^{1}\hat{Q}^{2}\tilde{s}^{2}\cdots\hat{P}^{N}\right]\cdots
+\]
+
+\end_inset
+
+where we can chose to put the orthogonality center on any bond in the unit
+ cell by using the gauge relation
+\begin_inset Formula 
+\[
+\tilde{s}^{\left(n-1\right)}\hat{P}^{n}=\hat{Q}^{n}\tilde{s}^{n}
+\]
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Section
