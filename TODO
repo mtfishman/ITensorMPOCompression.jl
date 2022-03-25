@@ -12,7 +12,6 @@ Done:    rename compress! to trunctate! (supprts the svd args)
         mindim –- integer m. At least m singular values will be retained, even if some fall below the cutoff
     rename canonical! to orthogonalize! and orthogonalize (support left/right rankreveal)
 
--Get min and max Dw from H
 Done: -Figure out how to turn off asserts for performance.
 -consistent variable names for link indexs: ir,ic,iq,iu,iv ?
 Fixed: #grow(i1,W,i2) relies on index ordering inside W ... is that bad?? (hint:yes!)
@@ -30,7 +29,6 @@ Done -We need rank reaving QR/QL/RQ/LQ throughout, otherwise we get zero col/row
 -is_regular is looking along the wrong diagonal for upper rectangular.  Not sure any more
 Fixed: -for lower,right SetV seems to require the last column(above I)  should be preserved ... 
   but why?       It should be zeros.  Index ordering?
--mirror(::matrix_state) should also flip ul ... no?  THen we need reflect to just flip lr.
 Done: -Make rank reaviling an option for block_qx
 Done: -For obc MPO try compressing 2..N-1, what do we end up with for W[N].  Then try N..2, what does W[1] look like??  Can we get around PBC issue this way?
 Done: -Test canonical with epsrr=0.0 and compare.  need an max_Dw(H::MPO) function.  
@@ -59,6 +57,56 @@ Plan:
   Done: Incoroprate make_Ham functions into module
   Done: Organize exports
   90% Add examples to docs (needs make_Ham functions)
+  
 
+Matts emails:
+Nice meeting you and thanks again for offering to help us out with the development of ITensor!
 
+Here are the Julia development tools that were brought up, and some other ones I thought of:
+
+Julia debuggers (the primary ones appear to be the one built into the Julia VSCode extension and Debugger.jl):
+https://opensourc.es/blog/basics-debugging/
+https://www.julia-vscode.org/docs/stable/userguide/debugging/
+https://github.com/JuliaDebug/Debugger.jl
+
+Julia vim plugin:
+https://github.com/JuliaEditorSupport/julia-vim
+
+OhMyREPL for nice syntax highlighting in the Julia REPL:
+https://github.com/KristofferC/OhMyREPL.jl
+
+Revise is absolutely critical for developing Julia packages, since it allows you to edit code when you are developing Julia packages and have the changes immediately reflected outside the package, without restarting the Julia session:
+https://github.com/timholy/Revise.jl
+
+I would also recommend using the JuliaMono font to help with viewing unicode (many fonts have limited unicode support):
+https://juliamono.netlify.app/
+
+Here is the profile visualization tool I use:
+https://github.com/timholy/ProfileView.jl
+
+For a graph visualization of the profile you can use:
+https://github.com/JuliaPerf/PProf.jl
+https://opensourc.es/blog/constraint-solver-profiling/
+
+And here is the code I wrote for making an operator valued matrix from an MPO:
+https://github.com/ITensor/ITensorInfiniteMPS.jl/blob/main/src/vumps_mpo.jl#L36-L64
+
+We actually have an immediate application of the MPO compression in Julia (there is an intern working on a project where he is renormalizing a local Hamiltonian by a unitary circuit, so it would be great to automatically compress the MPO instead of computing the new Hamiltonian more manually). I also have some quantum chemistry applications where that would be useful. I think that would be a top priority, though of course feel free to work on whatever peaks your interest most.
+
+I don't think you need any particular Hamiltonian. A useful test would be to start with any local Hamiltonian (say the Heisenberg model) and time evolve it by any local local circuit, it could even be totally random gates. I'm attaching an example you could start from.
+
+Unfortunately there is a slightly circular logic in this example, since the lines:
+
+UHU = apply(U, H; apply_dag=true, cutoff=1e-15)
+
+that performs the circuit evolution also does an MPO truncation, however it uses the naive form of truncation that treats the MPO as a state. It would also take the MPO out of the upper/lower triangular form. So I guess we would have to think about how the basis rotation should actually be applied in this case. Ultimately the goal would be for the apply have an option where you can specify the MPO should be treated as a local Hamiltonian and truncated using the Parker et al. algorithm.
+
+Let me know if you think that example makes sense and if there is a way you could make use of it. Perhaps it is best to think about it in terms of just applying one of the gates of the circuit at a time, and truncating just the bond where it is applied. In that way, we could engineer the gate so it is applied at first without truncation and then truncated using the Parker et al. algorithm.
+
+Also, maybe it is helpful to know that you can turn the circuit into an MPO like this:
+
+Id = MPO(OpSum() + ("Id", 1), s)
+Umpo = apply(U, Id; cutoff=1e-15)
+
+That form could make it easier to apply the circuit (or just a gate) to the Hamiltonian MPO to keep it in a form where it can be used with the Parker et al. algorithm.
 

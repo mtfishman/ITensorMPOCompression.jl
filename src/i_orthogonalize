@@ -1,0 +1,154 @@
+using ITensors
+using ITensorMPOCompression
+using Printf
+
+function unit(r::Index,c::Index)::ITensor
+    @assert dim(r)==dim(c) #Only handle square for now.
+    Id=ITensor(0.0,r,c)
+    for i in 1:dim(r)
+        Id[r=>i,c=>i]=1.0
+    end
+    return Id
+end
+
+function get_site_number(W::ITensor)::Tuple{Int64,Int64}
+    is=filterinds(inds(W),tags="Site")[1]
+    d=dim(is)
+    ts2=String(tags(is)[3])
+    @assert ts2[1:2]=="n="
+    nsite::Int64=tryparse(Int64,ts2[3:end])
+    return d,nsite
+end
+function iparse_links(W::ITensor)::Tuple{Int64,Int64,Index,Index}
+    r=filterinds(W,tags="left")[1]
+    c=filterinds(W,tags="right")[1]
+    return get_site_number(W)...,r,c
+end
+
+function set_tags!(H::MPO)
+    N=length(H)
+    d,nsite=get_site_number(H[1])
+    dn=nsite-1
+    for n in 1:N
+        nl = dn + (n==1 ? N+n-1 : n-1)
+        nr = dn + n
+        addtags!(Hinf[n],"left" ,tags="l=$nl")
+        addtags!(Hinf[n],"right",tags="l=$nr")
+    end
+end
+#
+#  Functions for bringing an iMPO into left or right canonical form
+#
+function qx_step!(W::ITensor,G::ITensor,ul::reg_form,eps::Float64;kwargs...)
+    d,n,r,c=iparse_links(W) #tag(r)= "l=$(n-1)", tag(c)="l=$n"
+    Q,RL,iq=block_qx(W,n,r,c,ul;kwargs...) # r-Q-qx qx-RL-c
+   
+    if dim(c)==dim(iq)
+        eta=norm(RL-unit(iq,c))
+    else
+        eta=99.0
+    end
+    tln=String(tags(c)[2])
+    ilnp=prime(replacetags(iq,"qx",tln)) #"qx" -> "l=$n" prime
+
+    # @show iq ilnp
+    replaceind!(RL,iq,ilnp)
+    replaceind!(Q ,iq,ilnp)
+   
+#    @show inds(RL) inds(G)
+    G=RL*G
+    @assert order(G)==2
+    noprime!(G)
+    addtags!(G,"right" ,tags=tln)
+#    @show inds(G)
+    return Q,RL,G,eta
+end
+
+
+#
+#  Loop throught the sites in correct direction
+#
+function qx_iterate!(H::MPO,ul::reg_form;kwargs...)
+    lr::orth_type=get(kwargs, :orth, left)
+    N=length(H)
+    if lr==left
+        rng=1:1:N #sweep left to right
+    else #right
+        rng=N:-1:1 #sweep right to left
+    end
+    set_tags!(H) #add left/right markers
+    #
+    #  Init gauge transform with unit matrices.
+    #
+    Gs=Vector{ITensor}(undef,N)
+    for n in 1:N
+        d,n_site,r,c=iparse_links(H[n])
+        Gs[n]=unit(c,r) #r/c swapped so gauge relation G*W_L=W_0*G works.
+    end
+    RLs=Vector{ITensor}(undef,N)
+    
+    
+    eps=1e-13
+    niter=0
+    max_iter=20
+    @printf "niter eta\n" 
+    loop=true
+    while loop
+        eta=0.0
+        for n in rng
+            H[n],RLs[n],Gs[n],etan=qx_step!(H[n],Gs[n],ul,eps)
+            eta=Base.max(eta,etan)
+        end
+        #
+        #  H now contains all the Qs
+        #
+        for n in 1:N
+            nn= n>1 ? n-1 : N #mod N left neightbour
+            replacetags!(RLs[nn],"right","left")
+            #@show nn n inds(RLs[nn]) inds(H[n])
+            H[n]=RLs[nn]*H[n] #W(n)=RL(n-1)*Q(n)
+            @assert order(H[n])==4
+            noprime!(H[n],tags="Link")
+            #@show "after R*Q" inds(H[n]) 
+        end
+        niter+=1
+        loop=eta>1e-13 && niter<max_iter
+        if loop set_tags!(H) end #add back left/right markers
+        @printf "%4i %1.1e\n" niter eta
+    end
+end
+
+#
+#  Next level down we select a algorithm
+#
+function i_orthogonalize!(H::MPO,ul::reg_form;kwargs...)
+    qx_iterate!(H,ul;kwargs...)
+end
+
+#
+#  Out routine simply established upper or lower regular forms
+#
+function i_orthogonalize!(H::MPO;kwargs...)
+    @assert has_pbc(H)
+    (bl,bu)=detect_regular_form(H,1e-14)
+    if !(bl || bu)
+        throw(ErrorException("orthogonalize!(H::MPO), H must be in either lower or upper regular form"))
+    end
+    @assert !(bl && bu)
+    ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
+    orthogonalize!(H,ul;kwargs...)
+end
+
+s4 = siteinds("SpinHalf", 4)
+H=make_transIsing_MPO(s4,4;pbc=true)
+
+Hinf=MPO([s4[2],s4[3]])
+Hinf[1]=H[2]
+Hinf[2]=H[3]
+d,n,r1,c1=parse_links(Hinf[1])
+d,n,r2,c2=parse_links(Hinf[2])
+replaceind!(Hinf[1],r1,c2) #set pbc in the indexes
+pprint(Hinf)
+i_orthogonalize!(Hinf,lower,orth=left)
+pprint(Hinf)
+Nothing

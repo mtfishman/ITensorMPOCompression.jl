@@ -188,14 +188,19 @@ interactions.  The interactions are hard coded to decay like J/(i-j) between sit
 - `J::Float64=1.0` : Nearest neighbour interaction strength.
 
 """
-function make_transIsing_MPO(sites,NNN::Int64=1,hx::Float64=0.0,ul::reg_form=lower,J::Float64=1.0)::MPO
+function make_transIsing_MPO(sites,NNN::Int64=1,hx::Float64=0.0,ul::reg_form=lower,J::Float64=1.0;kwargs...)::MPO
+    pbc::Bool=get(kwargs,:pbc,false)
     mpo=MPO(sites) #make and MPO only to get the indices
     prev_link=Nothing
     for n in 1:length(sites)
         mpo[n]=make_transIsing_op(mpo[n],prev_link,NNN,J,hx,ul)
         prev_link=filterinds(mpo[n],tags="Link,l=$n")[1]
     end
-    return ITensorMPOCompression.to_openbc(mpo) #contract with l* and *r at the edges.
+    if pbc
+        return mpo #leave end Ws as full matrices, i.e. periodic boundary conditions.
+    else
+        return ITensorMPOCompression.to_openbc(mpo) #contract with l* and *r at the edges.
+    end
 end
 
 #  It turns out that the trans-Ising model

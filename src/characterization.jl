@@ -506,7 +506,7 @@ function get_Dw(H::MPO)::Vector{Int64}
     N=length(H)
     Dws=Vector{Int64}(undef,N-1)
     for n in 1:N-1
-        d,n,r,c=parse_links(H[n])
+        d,nsite,r,c=parse_links(H[n])
         Dws[n]=dim(c)
     end
     return Dws

@@ -3646,7 +3646,7 @@ A large portion of the literature on infinite MPS and MPO methods tends
  as 
 \begin_inset Formula 
 \[
-\hat{H}=\cdots\hat{W}^{(N)}\left[\hat{W}^{(1)}\hat{W}^{(2)}\cdots\hat{W}^{(N)}\right]\hat{W}^{(1)}\cdots
+\hat{H}=\cdots\hat{W}^{N}\left[\hat{W}^{1}\hat{W}^{2}\cdots\hat{W}^{N}\right]\hat{W}^{1}\cdots
 \]
 
 \end_inset
@@ -3713,7 +3713,7 @@ G_{L}^{1}=G_{L}^{2}\cdots=G_{L}^{N}=\mathbb{I}
 Next we do a block respecting, rank revealing QX decomposition on each site
 \begin_inset Formula 
 \[
-\hat{QR}\left(\hat{W}_{0}^{n}\right)\rightarrow\hat{V}_{0}^{n}=\hat{Q}_{0}^{n}R_{0}^{n}
+\hat{QX}\left(\hat{W}_{0}^{n}\right)\rightarrow\hat{V}_{0}^{n}=\hat{Q}_{0}^{n}R_{0}^{n}
 \]
 
 \end_inset
@@ -3816,7 +3816,101 @@ As the iterations proceed the
 \end_inset
 
  matrices.
- 
+ The guage transforme relate 
+\begin_inset Formula $\hat{W}_{L}$
+\end_inset
+
+ and 
+\begin_inset Formula $\hat{W}_{0}$
+\end_inset
+
+ as follows
+\begin_inset Formula 
+\[
+\hat{W}_{L}G_{L}=G_{L}\hat{W}_{0}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+ITensor indexing
+\end_layout
+
+\begin_layout Standard
+In order to get all of the matrix products in the previous section to execture
+ correctly, we need to be very careful about how we organize all the 
+\begin_inset Quotes eld
+\end_inset
+
+Link
+\begin_inset Quotes erd
+\end_inset
+
+ indices of the tensors.
+ To begin with the link indices need to obey periodic boundary condtions
+\begin_inset Formula 
+\[
+\hat{H}=\cdots\hat{W}^{N}\left[\frac{1=N}{}\hat{W}^{1}\frac{l=1}{}\hat{W}^{2}\frac{l=2}{}\cdots\frac{l=N-1}{}\hat{W}^{N}\right]\frac{1=N}{}\hat{W}^{1}\cdots
+\]
+
+\end_inset
+
+QX decomposition for left orthogonal form looks like
+\begin_inset Formula 
+\[
+\hat{QX}\left(\frac{l=n-1}{}\hat{W}_{0}^{n}\frac{l=n}{}\right)=\frac{l=n-1}{}\hat{Q}_{0}^{n}\frac{qx}{}R_{0}^{n}\frac{l=n}{}
+\]
+
+\end_inset
+
+and we need to do some tag replacements before the next step:
+\begin_inset Formula 
+\[
+\frac{l=n-1}{}\hat{Q}_{0}^{n}\frac{qx}{}\longrightarrow\frac{l=n}{}\hat{Q}_{0}^{n}\frac{\left(l=n\right)^{\prime}}{}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\frac{qx}{}R_{0}^{n}\frac{l=n}{}\longrightarrow\frac{\left(l=n\right)^{\prime}}{}R_{0}^{n}\frac{l=n}{}
+\]
+
+\end_inset
+
+Now the 
+\begin_inset Formula $\hat{W}_{1}^{n}$
+\end_inset
+
+ update will look like
+\begin_inset Formula 
+\[
+\hat{W}_{1}^{n}=\frac{\left(l=n-1\right)^{\prime}}{}R_{0}^{n-1}\frac{l=n}{}\hat{Q}_{0}^{n}\frac{\left(l=n\right)^{\prime}}{}.
+\]
+
+\end_inset
+
+As for the gauge transforms they need to begin as
+\begin_inset Formula 
+\[
+\frac{l=n}{}G_{0}^{n}\frac{l=n-1}{}
+\]
+
+\end_inset
+
+and then
+\begin_inset Formula 
+\[
+G_{1}^{n}=\frac{\left(l=n\right)^{\prime}}{}R_{0}^{n}\frac{l=n}{}G_{0}^{n}\frac{l=n-1}{}
+\]
+
+\end_inset
+
+After these steps the primes can be removed to get ready for the next iteration.
 \end_layout
 
 \begin_layout Subsection

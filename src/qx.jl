@@ -71,7 +71,12 @@ I 0 0 0 0
 0 0 0 0 I 
 ```
 """
-function block_qx(W_::ITensor,ul::reg_form=lower;kwargs...)::Tuple{ITensor,ITensor,Index}
+function block_qx(W::ITensor,ul::reg_form=lower;kwargs...)::Tuple{ITensor,ITensor,Index}
+  d,n,r,c=parse_links(W)
+  return block_qx(W,n,r,c,ul;kwargs...)
+end
+
+function block_qx(W_::ITensor,n::Int64,r::Index,c::Index,ul::reg_form=lower;kwargs...)::Tuple{ITensor,ITensor,Index}
   #
   # Copy so that we don't mess up the original MPO
   #
@@ -81,7 +86,6 @@ function block_qx(W_::ITensor,ul::reg_form=lower;kwargs...)::Tuple{ITensor,ITens
   #
   lr::orth_type=get(kwargs, :orth, left)
   ms=matrix_state(ul,lr)
-  d,n,r,c=parse_links(W)
   #
   #  decide some strings and variables based on lr.
   #
