@@ -129,7 +129,7 @@ function make_Heisenberg_AutoMPO(sites,NNN::Int64=1,hz::Float64=0.0,J::Float64=1
         end
     end
     mpo=MPO(ampo,sites)
-    fix_autoMPO!(mpo) #swap row[2]<->row[Dw] and col[2]<->col[Dw]
+    #fix_autoMPO!(mpo) #swap row[2]<->row[Dw] and col[2]<->col[Dw]
     return mpo
 end
 
@@ -169,7 +169,7 @@ function make_transIsing_AutoMPO(sites,NNN::Int64=1,hx::Float64=0.0,J::Float64=1
         end
     end
     mpo=MPO(ampo,sites)
-    fix_autoMPO!(mpo) #swap row[2]<->row[Dw] and col[2]<->col[Dw]
+    #fix_autoMPO!(mpo) #swap row[2]<->row[Dw] and col[2]<->col[Dw]
     return mpo
 end
 
