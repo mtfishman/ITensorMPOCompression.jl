@@ -8,6 +8,7 @@ function getV1(W::ITensor,off::V_offsets)::ITensor
     iss=filterinds(inds(W),tags="Site")
     @assert length(ils)==1
     w1=ils[1]
+    @show inds(W) w1
     v1=redim(w1,dim(w1)-1)
     T=eltype(W)
     V=ITensor(T(0.0),v1,iss...)
@@ -54,8 +55,10 @@ function setV1(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     @assert(off.o1==off.o2)
     if dim(wil)>dim(vil)+1
         #we need to shrink W
-        wil1=Index(dim(vil)+1,tags(wil))
+        wil1=redim(wil,dim(vil)+1) #Index(dim(vil)+1,tags(wil))
+        @show wil1 vil
         W1=ITensor(T(0.0),wil1,iss)
+        @show inds(W1)
         if off.o1==1
             #save first element
             for isv in eachindval(iss)

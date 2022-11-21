@@ -191,6 +191,7 @@ interactions.  The interactions are hard coded to decay like J/(i-j) between sit
 function make_transIsing_MPO(sites,NNN::Int64=1,hx::Float64=0.0,ul::reg_form=lower,J::Float64=1.0;kwargs...)::MPO
     pbc::Bool=get(kwargs,:pbc,false)
     mpo=MPO(sites) #make and MPO only to get the indices
+    @show inds(mpo[2])
     prev_link=Nothing
     for n in 1:length(sites)
         mpo[n]=make_transIsing_op(mpo[n],prev_link,NNN,J,hx,ul)
@@ -230,9 +231,9 @@ function make_transIsing_op(Wref::ITensor,prev_link,NNN::Int64,J::Float64,hx::Fl
     use_qn=hasqns(is)
     d,n,r,c=parse_links(Wref)
     if tags(r)==TagSet("")
-        r=make_Ising_index(Dw,"Link,l=$(n-1)",use_qn,ITensors.In)
+        r=make_Ising_index(Dw,"Link,l=$(n-1)",use_qn,ITensors.Out)
     else
-        r=prev_link
+        r=dag(prev_link)
     end
     if tags(c)==TagSet("")
         c=make_Ising_index(Dw,"Link,l=$n",use_qn,ITensors.Out)

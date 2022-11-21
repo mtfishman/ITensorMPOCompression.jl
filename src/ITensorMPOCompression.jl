@@ -187,10 +187,13 @@ end
     Create an index with the same tags ans plev, but different dimension(s) and and id 
 """
 function redim(i::Index,Dw::Int64...)::Index
+    @show i Dw nblocks(i) space(i)
     @assert length(Dw)==nblocks(i)
     if hasqns(i)
         j=0
+        #@show i space(i)
         new_qns=[(j+=1;q.first=>Dw[j]) for q in space(i)]
+        #@show new_qns
         return Index(new_qns...;dir=dir(i),tags=tags(i),plev=plev(i))
     else
         return Index(Dw[1];tags=tags(i),plev=plev(i))
