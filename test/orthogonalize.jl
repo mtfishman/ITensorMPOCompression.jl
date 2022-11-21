@@ -1,3 +1,4 @@
+using ITensors
 using ITensorMPOCompression
 using Revise
 using Test

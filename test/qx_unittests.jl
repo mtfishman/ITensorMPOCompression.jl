@@ -2,6 +2,7 @@ using ITensors
 using ITensorMPOCompression
 using Test
 using Printf
+import ITensors: rq
 
 #
 # Single index tests
@@ -97,7 +98,7 @@ end
 #
 #  Test multiple indicies using MPO matrices
 #
-@testset "QR,QL,LQ,RQ decomposition fo MPO matrices" begin
+@testset "QR,QL,LQ,RQ decomposition for MPO matrices" begin
     N=5
     NNN=4
     hx=0.5
@@ -154,7 +155,7 @@ end
     #  use lower tri MPO to get some zero pivots for QL and RQ.
     #
     H=make_transIsing_MPO(sites,NNN,hx,lower)
-    W=H[2]
+    W=H[5]
     d,n,r,c=parse_links(W)
 
     Lind=noncommoninds(inds(W),c)
@@ -163,7 +164,7 @@ end
     #
     #  RQ decomp
     #
-    R,Q=rq(W,Rind;positive=true,rank=true)
+    R,Q=rq(W,Rind;positive=false,epsrr=1e-12)
     iq=commonindex(Q,R)
     @printf "RQ decomposition %4i rows were removed from R\n" dim(c)-dim(iq)
     Id=Q*prime(Q,iq)
@@ -216,40 +217,4 @@ end
     
 
 end
- #= 
-@testset "QR,QL,LQ,RQ decomposition for block sparse matrices" begin
-    N=5
-    NNN=2
-    Dw=3
-    hx=0.0 #can't make and sx op with QNs in play
-    ul=lower
-    lr=left
-    ms=matrix_state(ul,lr)
-
-    rowq=Index(QN("Sz",0)=>Dw;dir=ITensors.In,tags="Link,l=1") #link index with qn's
-    colq=Index(QN("Sz",0)=>Dw;dir=ITensors.Out,tags="Link,l=2")
-    sites = siteinds("S=1/2",N;conserve_qns=true) #sites with qn's
-    H=make_transIsing_MPO(sites,NNN,hx,ul)
-    W=H[2]
-    pprint(W,1e-14)
-    # Q,R,lq=block_qx(W,ul;orth=lr)
-    
-    off=V_offsets(ms)
-    Vblock=getV(W,off)
-    Rind=filterinds(Vblock,tags="l=2")
-    Linds=noncommoninds(Vblock,Rind)
-    Vd=dense(Vblock)
-    Qd,Ld,iq=ql(Vd,Linds;positive=true,epsrr=0.0)
-    set_scale!(Ld,Qd,off) #rescale so the L(n,n)==1.0
-    pprint(Qd,1e-14)
-    # @show Qd Ld
-
-    # Vt=NDTensors.tensor(Vblock)
-    # for b in eachnzblock(Vt)
-    #     bl=NDTensors.blockview(Vt, b)
-    #     @show Vt
-    # end
-    Q,L,iq=ql(Vblock,Linds;positive=true,epsrr=0.0)
-    # U,s,V,iu,iv=svd(Vblock,Linds)
-    #@show U V
-end =#
+ 

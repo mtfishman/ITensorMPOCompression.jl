@@ -47,3 +47,4 @@ end
     test_auto_vs_direct(sites,4,hx,-1.4481111362390489,eps) #1->4 neighbour interactions
     if db  ITensors.ITensors.enable_debug_checks() end
 end
+nothing
