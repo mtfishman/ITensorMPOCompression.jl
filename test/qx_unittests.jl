@@ -20,7 +20,7 @@ import ITensors: rq
     #  use lower tri MPO to get some zero pivots for QL and RQ.
     #
     H=make_transIsing_MPO(sites,NNN,hx,lower)
-    W=H[5]
+    W=H[2]
     d,n,r,c=parse_links(W)
 
     Lind=noncommoninds(inds(W),c)
@@ -29,7 +29,7 @@ import ITensors: rq
     #
     #  RQ decomp
     #
-    R,Q=rq(W,Rind;positive=false,epsrr=1e-12)
+    R,Q=rq(W,r;positive=true,epsrr=1e-10)
     iq=commonindex(Q,R)
     @printf "RQ decomposition %4i rows were removed from R\n" dim(c)-dim(iq)
     Id=Q*prime(Q,iq)
@@ -39,7 +39,7 @@ import ITensors: rq
     #
     #  QL decomp
     #
-    Q,L=ql(W,Rind;positive=true,rank=true)
+    Q,L=ql(W,Rind;positive=true,epsrr=1e-10)
     iq=commonindex(Q,L)
     @printf "QL decomposition %4i rows were removed from L\n" dim(c)-dim(iq)
     Id=Q*prime(Q,iq)
@@ -61,7 +61,7 @@ import ITensors: rq
     #
     #  QR decomp
     #
-    Q,R=ITensorMPOCompression.qr(W,Rind;positive=true,rank=true)
+    Q,R=qr(W,Rind;positive=true,epsrr=1e-10)
     iq=commonindex(Q,R)
     @printf "QR decomposition %4i rows were removed from R\n" dim(c)-dim(iq)
     Id=Q*prime(Q,iq)
@@ -71,7 +71,7 @@ import ITensors: rq
     #
     #  LQ decomp
     #
-    L,Q=lq(W,Rind;positive=true,rank=true)
+    L,Q=lq(W,r;positive=true,epsrr=1e-10)
     iq=commonindex(Q,L)
     @printf "LQ decomposition %4i rows were removed from L\n" dim(c)-dim(iq)
     Id=Q*prime(Q,iq)
