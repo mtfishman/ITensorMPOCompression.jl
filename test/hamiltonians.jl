@@ -9,20 +9,20 @@ function test_auto_vs_direct(sites,NNN::Int64,hx::Float64,Eexpected::Float64,eps
     #
     Hauto=make_transIsing_AutoMPO(sites,NNN,hx,lower) #make and MPO only to get the indices
     Eauto,psi=fast_GS(Hauto,sites)
-    @test abs(Eauto-Eexpected)<eps
+    @test Eauto ≈ Eexpected atol = eps
     Eauto1=inner(psi',Hauto,psi)
-    @test abs(Eauto1-Eexpected)<eps
+    @test Eauto1 ≈ Eexpected atol = eps
     
     #
     #  Make H directly ... should be lower triangular
     #
     Hdirect=make_transIsing_MPO(sites,NNN,hx,lower) #defaults to lower reg form
     @test order(Hdirect[1])==3    
-    @test abs(inner(psi',Hdirect,psi)-Eexpected)<eps
+    @test inner(psi',Hdirect,psi) ≈ Eexpected atol = eps
     Edirect,psidirect=fast_GS(Hdirect,sites)
-    @test abs(Edirect-Eexpected)<eps
+    @test Edirect ≈ Eexpected atol = eps
     overlap=abs(inner(psi',psidirect))
-    @test abs(overlap-1.0)<eps
+    @test overlap ≈ 1.0 atol = eps
 end
 
 #using Printf

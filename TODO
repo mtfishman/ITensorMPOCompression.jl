@@ -1,3 +1,18 @@
+Done: 1) Not seeing any rank reduction
+Done: 2) Upgrade tests to use ~ and atol.
+3) Upgrade tests to use for loops.
+4) ITensorMPOCompression/test/hamiltonians.jl
+Deal with: Calling `inner(x::MPS, A::MPO, y::MPS)` where the site indices of the `MPS`
+│ `x` and the `MPS` resulting from contracting `MPO` `A` with `MPS` `y` don't
+│ match is deprecated as of ITensors v0.3 and will result in an error in ITensors
+│ v0.4. The most common cause of this is something like the following:
+5) Use new is_upper functions using combiners to get rank-2 tensors.
+6) orthogonalize! -> ITensors.orthogonalize! for proper overloading
+7) truncate! -> ITensors.truncate! for proper overloading
+8) Use q returned from qr()
+9) Do we still need disable_debug_checks before calling dmrg() ?
+
+
 Done: -make block_qx return link name qx instead of ql,lq,qr,rq
 Done: -calculate getV,setV offsets from matrix_state
 Done: -We need pure upper/lower enums without diagonal and full options

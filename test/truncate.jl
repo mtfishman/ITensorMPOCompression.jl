@@ -38,7 +38,7 @@ function test_truncate(makeH,N::Int64,NNN::Int64,ms::matrix_state,epsSVD::Float6
     E1l=inner(psi',H,psi)
     RE=abs((E0l-E1l)/E0l)
     #@printf "E0=%1.5f E1=%1.5f rel. error=%.5e  \n" E0l E1l RE 
-    @test RE<2*eps
+    @test RE ≈ 0 atol = 2*eps
     @test is_regular_form(H,ms.ul,eps)
     @test is_canonical(H,ms,eps)
 
@@ -54,7 +54,7 @@ function test_truncate(makeH,N::Int64,NNN::Int64,ms::matrix_state,epsSVD::Float6
     RE=abs((E0l-E2l)/E0l)
     @printf "E0=%8.5f Etrunc=%8.5f rel. error=%7.1e RE/espSVD=%6.2f \n" E0l E2l RE RE/epsSVD
     if epsSVD<=1e-12
-        @test (RE/epsSVD)<1.0 #typically this will remove any meaning SVs
+        @test (RE/epsSVD)<1.0 #typically this will remove any meaningless SVs
     else
         @test (RE/epsSVD)<1000.0 #now we may remove real SVs and expect much bigger energy errors
     end
@@ -119,8 +119,8 @@ end
     overlap=abs(inner(psi0',psi1))
     RE=abs((E0-E1)/E0)
     @printf "Trans. Ising E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
-    @test abs(E0-E1)<eps
-    @test abs(overlap-1.0)<eps
+    @test E0 ≈ E1 atol = eps
+    @test overlap ≈ 1.0 atol = eps
 
     hx=0.0
     H=make_Heisenberg_AutoMPO(sites,NNN,hx,lower)
@@ -138,8 +138,8 @@ end
     overlap=abs(inner(psi0',psi1))
     RE=abs((E0-E1)/E0)
     @printf "Heisenberg   E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
-    @test abs(E0-E1)<eps
-    @test abs(overlap-1.0)<eps
+    @test E0 ≈ E1 atol = eps
+    @test overlap ≈ 1.0 atol = eps
 end 
 
 @testset "Look at bond singular values for large lattices" begin

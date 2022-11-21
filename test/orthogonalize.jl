@@ -61,7 +61,7 @@ function test_canonical(makeH,N::Int64,NNN::Int64,ms::matrix_state)
     E0=inner(psi',H,psi)
     orthogonalize!(H;orth=ms.lr,epsrr=1e-12)
     E1=inner(psi',H,psi)
-    @test abs(E0-E1)<1e-14
+    @test E0 ≈ E1 atol = 1e-14
     @test is_regular_form(H,ms.ul,eps)
     @test  is_canonical(H,ms,eps)
     @test !is_canonical(H,mirror(ms),eps)    

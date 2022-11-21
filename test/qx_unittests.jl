@@ -29,23 +29,17 @@ import ITensors: rq
     #
     #  RQ decomp
     #
-    R,Q=rq(W,r;positive=true,epsrr=1e-10)
-    iq=commonindex(Q,R)
-    @printf "RQ decomposition %4i rows were removed from R\n" dim(c)-dim(iq)
-    Id=Q*prime(Q,iq)
-    Idq=delta(iq,iq')
-    @test norm(Id-Idq)<eps
-    @test norm(W-R*Q)<eps
+    R,Q,iq=rq(W,r;positive=true,epsrr=1e-10)
+    @test dim(c)-dim(iq) == 5 #make sure rank reduction worked.
+    @test Q * prime(Q,iq) ≈ δ(Float64, iq, iq') atol = eps
+    @test W ≈ R*Q atol = eps
     #
     #  QL decomp
     #
-    Q,L=ql(W,Rind;positive=true,epsrr=1e-10)
-    iq=commonindex(Q,L)
-    @printf "QL decomposition %4i rows were removed from L\n" dim(c)-dim(iq)
-    Id=Q*prime(Q,iq)
-    Idq=delta(iq,iq')
-    @test norm(Id-Idq)<eps
-    @test norm(W-L*Q)<eps    
+    Q,L,iq=ql(W,Rind;positive=true,epsrr=1e-10)
+    @test dim(c)-dim(iq) == 5 #make sure rank reduction worked.
+    @test Q * prime(Q,iq) ≈ δ(Float64, iq, iq') atol = eps
+    @test W ≈ L*Q atol = eps
     
     #
     #  use upper tri MPO to get some zero pivots for LQ and QR.
@@ -61,25 +55,17 @@ import ITensors: rq
     #
     #  QR decomp
     #
-    Q,R=qr(W,Rind;positive=true,epsrr=1e-10)
-    iq=commonindex(Q,R)
-    @printf "QR decomposition %4i rows were removed from R\n" dim(c)-dim(iq)
-    Id=Q*prime(Q,iq)
-    Idq=delta(iq,iq')
-    @test norm(Id-Idq)<eps
-    @test norm(W-R*Q)<eps
+    Q,R,iq=qr(W,Rind;positive=true,epsrr=1e-10)
+    @test dim(c)-dim(iq) == 5 #make sure rank reduction worked.
+    @test Q * prime(Q,iq) ≈ δ(Float64, iq, iq') atol = eps
+    @test W ≈ R*Q atol = eps   
     #
     #  LQ decomp
     #
-    L,Q=lq(W,r;positive=true,epsrr=1e-10)
-    iq=commonindex(Q,L)
-    @printf "LQ decomposition %4i rows were removed from L\n" dim(c)-dim(iq)
-    Id=Q*prime(Q,iq)
-    Idq=delta(iq,iq')
-    @test norm(Id-Idq)<eps
-    @test norm(W-L*Q)<eps
-
+    L,Q,iq=lq(W,r;positive=true,epsrr=1e-10)
+    @test dim(c)-dim(iq) == 5 #make sure rank reduction worked.
+    @test Q * prime(Q,iq) ≈ δ(Float64, iq, iq') atol = eps
+    @test W ≈ L*Q atol = eps
     
-
 end
  
