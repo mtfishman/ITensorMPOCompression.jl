@@ -3,9 +3,6 @@ using ITensorMPOCompression
 using Test
 using Revise
 
-#ITensors.ITensors.disable_debug_checks()
-ITensors.ITensors.enable_debug_checks()
-#function run_tests()
 @testset "ITensorMPOCompression.jl" begin
     include("qx_unittests.jl")
     include("blocking.jl")
@@ -13,6 +10,4 @@ ITensors.ITensors.enable_debug_checks()
     include("orthogonalize.jl")
     include("truncate.jl")
 end
-Nothing #suppress messy dump from Test
-
-#@time run_tests()
+nothing #suppress messy dump from Test

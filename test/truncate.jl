@@ -163,21 +163,3 @@ end
         @test max_mid<1.0
     end
 end
-#= 
-@testset "Test with conserved QNs" begin
-    N = 10
-    NNN = 1
-    hx=0.0 #can't make and sx op with QNs in play
-    sites = siteinds("S=1/2",N;conserve_qns=true)
-    # to build our own MPO we need to put QNs on all the link indices.
-    # from autoMPO we see QN("Sz",0) => 3 as the qn for a link index.
-    H=make_transIsing_MPO(sites,NNN,hx,upper)
-    #H=make_transIsing_AutoMPO(sites,NNN,hx,lower)
-    pprint(H[2],1e-14)
-    orthogonalize!(H)
-    #pprint(H[2],1e-14)
-    #@show H[2]
-    #i=Index(QN("Sz",0)=>3;dir=ITensors.In,tags="Link,l=1")
-    #@show i
-end
- =#

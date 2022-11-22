@@ -2,7 +2,7 @@ using ITensors
 using ITensorMPOCompression
 using Test
 using Printf
-import ITensors: rq
+#import ITensors: rq
 
 
 
@@ -68,4 +68,4 @@ import ITensors: rq
     @test W ≈ L*Q atol = eps
     
 end
- 
+

@@ -51,9 +51,20 @@ import ITensorMPOCompression.orthogonalize!
 
 end
 
-function test_canonical(makeH,N::Int64,NNN::Int64,ms::matrix_state)
+test_combos=[
+    (make_transIsing_MPO,lower),
+    (make_transIsing_MPO,upper),
+    (make_transIsing_AutoMPO,lower),
+    (make_Heisenberg_AutoMPO,lower)
+]
+
+@testset "Bring MPO into canonical form" for test_combo in test_combos, lr in [left,right]
+    N=10
+    NNN=4
     eps=1e-14
     hx=0.5
+    ms=matrix_state(test_combo[2],lr )
+    makeH=test_combo[1]
     sites = siteinds("SpinHalf", N)
     psi=randomMPS(sites)
     H=makeH(sites,NNN,hx,ms.ul) 
@@ -66,20 +77,4 @@ function test_canonical(makeH,N::Int64,NNN::Int64,ms::matrix_state)
     @test  is_canonical(H,ms,eps)
     @test !is_canonical(H,mirror(ms),eps)    
 end
-
-#
-@testset "Bring MPO into canonical form" begin
-  
-    N=10
-    NNN=4
-   
-    test_canonical(make_transIsing_MPO    ,N,NNN,matrix_state(lower,left ))
-    test_canonical(make_transIsing_MPO    ,N,NNN,matrix_state(lower,right))
-    test_canonical(make_transIsing_MPO    ,N,NNN,matrix_state(upper,left ))
-    test_canonical(make_transIsing_MPO    ,N,NNN,matrix_state(upper,right))
-    test_canonical(make_transIsing_AutoMPO,N,NNN,matrix_state(lower,left ))
-    test_canonical(make_transIsing_AutoMPO,N,NNN,matrix_state(lower,right))
-    test_canonical(make_Heisenberg_AutoMPO,N,NNN,matrix_state(lower,left ))
-    test_canonical(make_Heisenberg_AutoMPO,N,NNN,matrix_state(lower,right))
-    
-end 
+nothing

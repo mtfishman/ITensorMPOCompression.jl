@@ -1,6 +1,6 @@
 Done: 1) Not seeing any rank reduction
 Done: 2) Upgrade tests to use ~ and atol.
-3) Upgrade tests to use for loops.
+Done: 3) Upgrade tests to use for loops.
 4) ITensorMPOCompression/test/hamiltonians.jl
 Deal with: Calling `inner(x::MPS, A::MPO, y::MPS)` where the site indices of the `MPS`
 │ `x` and the `MPS` resulting from contracting `MPO` `A` with `MPS` `y` don't
