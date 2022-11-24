@@ -99,24 +99,21 @@ function block_qx(W_::ITensor,n::Int64,r::Index,c::Index,ul::reg_form=lower;kwar
 
   if ul==lower
     if lr==left
-      Q,RL=ql(V,inds_on_Q;positive=true,kwargs...) #block respecting QL decomposition
+      Q,RL,iq=ql(V,inds_on_Q;positive=true,tags="Link,qx",kwargs...) #block respecting QL decomposition
     else #right
-      RL,Q=lq(V,ind_on_V;positive=true,kwargs...) #block respecting LQ decomposition
+      RL,Q,iq=lq(V,ind_on_V;positive=true,tags="Link,qx",kwargs...) #block respecting LQ decomposition
     end
   else #upper
     if lr==left
-      Q,RL=qr(V,inds_on_Q;positive=true,kwargs...) #block respecting QR decomposition
+      Q,RL,iq=qr(V,inds_on_Q;positive=true,tags="Link,qx",kwargs...) #block respecting QR decomposition
     else #right
-      RL,Q=rq(V,ind_on_V;positive=true,kwargs...) #block respecting RQ decomposition
+      RL,Q,iq=rq(V,ind_on_V;positive=true,tags="Link,qx",kwargs...) #block respecting RQ decomposition
     end
   end
   set_scale!(RL,Q,offset) #rescale so the L(n,n)==1.0
   ITensors.@debug_check begin
     @assert norm(V-RL*Q)<1e-12 #make sure decomp worked
   end
-  qx=String(tags(commonind(RL,Q))[2]) #should be "ql","lq","qr" os "rq"
-  replacetags!(Q ,qx,"qx") #releive client code from the burden dealing ql,lq,qr,rq tags
-  replacetags!(RL,qx,"qx")
   W=setV(W,Q,ms) #Q is the new V, stuff Q into W. THis can resize W
   RLplus,iqx=growRL(RL,ilw,offset) #Now make a full size version of RL
   ilw=filterinds(W,tags=tln)[1]
