@@ -1,4 +1,5 @@
 
+using ITensors
 using ITensorMPOCompression
 using Revise
 using Test
@@ -31,7 +32,7 @@ NNEs=[(1,-1.5066685458330529),(2,-1.4524087749432490),(3,-1.4516941302867301),(4
     @test inner(psi',Hdirect,psi) ≈ Eexpected atol = eps
     Edirect,psidirect=fast_GS(Hdirect,sites)
     @test Edirect ≈ Eexpected atol = eps
-    overlap=abs(inner(psi',psidirect))
+    overlap=abs(inner(psi,psidirect))
     @test overlap ≈ 1.0 atol = eps 
 end 
 
