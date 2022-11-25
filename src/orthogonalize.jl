@@ -1,7 +1,7 @@
 #
 #  Functions for bringing and MPO into left or right canonical form
 #
-function orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form,kwargs...)
+function ITensors.orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form,kwargs...)
     W1,Lplus=block_qx(W1,ul;kwargs...) 
     W2=Lplus*W2
     @assert order(W2)<=4 #make sure there was something to contract. 
@@ -19,7 +19,7 @@ function orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form,kwargs...)
     return W1,W2 #We should not need to return these if W1 and W2 were truely passed by reference.
 end
 
-function orthogonalize!(H::MPO,ul::reg_form;kwargs...)
+function ITensors.orthogonalize!(H::MPO,ul::reg_form;kwargs...)
     lr::orth_type=get(kwargs, :orth, left)
     N=length(H)
     if lr==left
@@ -109,7 +109,7 @@ true
 ```
 
 """
-function orthogonalize!(H::MPO;kwargs...)
+function ITensors.orthogonalize!(H::MPO;kwargs...)
     (bl,bu)=detect_regular_form(H,1e-14)
     if !(bl || bu)
         throw(ErrorException("orthogonalize!(H::MPO), H must be in either lower or upper regular form"))
