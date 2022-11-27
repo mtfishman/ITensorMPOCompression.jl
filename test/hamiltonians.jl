@@ -1,49 +1,39 @@
 
+using ITensors
 using ITensorMPOCompression
 using Revise
 using Test
 
-function test_auto_vs_direct(sites,NNN::Int64,hx::Float64,Eexpected::Float64,eps::Float64)
+NNEs=[(1,-1.5066685458330529),(2,-1.4524087749432490),(3,-1.4516941302867301),(4,-1.4481111362390489)]
+@testset "MPOs hand coded versus autoMPO" for nne in NNEs
+
+    N=5
+    hx=0.5
+    eps=4e-14 #this is right at the lower limit for passing the tests.
+    NNN=nne[1]
+    Eexpected=nne[2]
+    
+    sites = siteinds("SpinHalf", N;conserve_qns=false)
+    ITensors.ITensors.disable_debug_checks() #dmrg crashes when this in.
     #
     #  Use autoMPO to make H
     #
-    Hauto=make_transIsing_AutoMPO(sites,NNN,hx,lower) #make and MPO only to get the indices
+    Hauto=make_transIsing_AutoMPO(sites,NNN,hx,lower) 
     Eauto,psi=fast_GS(Hauto,sites)
-    @test abs(Eauto-Eexpected)<eps
+    @test Eauto ≈ Eexpected atol = eps
     Eauto1=inner(psi',Hauto,psi)
-    @test abs(Eauto1-Eexpected)<eps
+    @test Eauto1 ≈ Eexpected atol = eps
     
     #
     #  Make H directly ... should be lower triangular
     #
     Hdirect=make_transIsing_MPO(sites,NNN,hx,lower) #defaults to lower reg form
     @test order(Hdirect[1])==3    
-    @test abs(inner(psi',Hdirect,psi)-Eexpected)<eps
+    @test inner(psi',Hdirect,psi) ≈ Eexpected atol = eps
     Edirect,psidirect=fast_GS(Hdirect,sites)
-    @test abs(Edirect-Eexpected)<eps
-    overlap=abs(inner(psi',psidirect))
-    @test abs(overlap-1.0)<eps
-end
+    @test Edirect ≈ Eexpected atol = eps
+    overlap=abs(inner(psi,psidirect))
+    @test overlap ≈ 1.0 atol = eps 
+end 
 
-#using Printf
-#Base.show(io::IO, f::Float64) = @printf(io, "%1.16f", f)
-#println("-----------Start--------------")
-
-@testset "MPOs with periodic boundary conditions" begin
-
-    N=5
-    hx=0.5
-    eps=4e-14 #this is right at the lower limit for passing the tests.
-    sites = siteinds("SpinHalf", N;conserve_qns=false)
- 
-    # It seems we need to jump through hoops to avoid the 
-    # "type Dense has no field blockoffsets" from inside DMRG errors
-    # I tried to move these disables inside fast_GS with no success?!?!?
-    db=ITensors.using_debug_checks()
-    if db  ITensors.ITensors.disable_debug_checks() end
-    test_auto_vs_direct(sites,1,hx,-1.5066685458330529,eps) #1st neighbour interactions
-    test_auto_vs_direct(sites,2,hx,-1.4524087749432490,eps) #1&2 neighbour interactions
-    test_auto_vs_direct(sites,3,hx,-1.4516941302867301,eps) #1->3 neighbour interactions
-    test_auto_vs_direct(sites,4,hx,-1.4481111362390489,eps) #1->4 neighbour interactions
-    if db  ITensors.ITensors.enable_debug_checks() end
-end
+nothing

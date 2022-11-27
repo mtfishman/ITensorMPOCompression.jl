@@ -210,7 +210,7 @@ true
 
 ```
 """
-function truncate!(H::MPO;kwargs...)::bond_spectrums
+function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
     #@printf "---- start compress ----\n"
     #
     # decide left/right and upper/lower
