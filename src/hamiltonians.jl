@@ -191,7 +191,6 @@ interactions.  The interactions are hard coded to decay like J/(i-j) between sit
 function make_transIsing_MPO(sites,NNN::Int64=1,hx::Float64=0.0,ul::reg_form=lower,J::Float64=1.0;kwargs...)::MPO
     pbc::Bool=get(kwargs,:pbc,false)
     mpo=MPO(sites) #make and MPO only to get the indices
-    @show inds(mpo[2])
     prev_link=Nothing
     for n in 1:length(sites)
         mpo[n]=make_transIsing_op(mpo[n],prev_link,NNN,J,hx,ul)

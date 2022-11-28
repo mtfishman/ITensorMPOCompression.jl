@@ -186,17 +186,57 @@ end
     
     Create an index with the same tags ans plev, but different dimension(s) and and id 
 """
-function redim(i::Index,Dw::Int64...)::Index
-    @show i Dw nblocks(i) space(i)
-    @assert length(Dw)==nblocks(i)
+function redim(i::Index,Dw::Int64,offset::Int64=0)::Index
     if hasqns(i)
-        j=0
-        #@show i space(i)
-        new_qns=[(j+=1;q.first=>Dw[j]) for q in space(i)]
-        #@show new_qns
-        return Index(new_qns...;dir=dir(i),tags=tags(i),plev=plev(i))
+        qns=space(i)
+        if Dw>dim(i)
+            #
+            # We need grow the space.  If there are multiple QNs, where to add the space?
+            # Lets add to the end for now.
+            #
+            @assert offset==0 #not ready to handle this case yet.
+            delta=Dw-dim(i)
+            dq=qns[end].second #dim of space for last QN
+            qns[end]=qns[end].first=>dq+delta
+            return Index(qns;dir=dir(i),tags=tags(i),plev=plev(i))
+        else
+            start_offset=offset
+            end_offset=dim(i)-Dw-offset
+            #
+            #  Set spaces from 1<=d<=1+offset and Dw<d<D to zero 
+            #
+            for n in eachindex(qns)
+                dq=qns[n].second #dim of space
+                d_remain=Base.max(0,dq-start_offset) #How much space to leave
+                qns[n]=qns[n].first=>d_remain #update dim of QN
+                start_offset-=(dq-d_remain) #decrement start_offset 
+                if start_offset==0 break end #are we done?
+                @assert start_offset>0 #sanity check
+            end
+
+            for n in reverse(eachindex(qns))
+                dq=qns[n].second
+                d_remain=Base.max(0,dq-end_offset) #How much space to leave
+                qns[n]=qns[n].first=>d_remain #update dim of QN
+                end_offset-=(dq-d_remain) #decrement end_offset 
+                if end_offset==0 break end #are we done?
+                @assert end_offset>0 #sanity check
+            end
+        
+            #
+            #  now trim out all the QNs with dim(q)==0
+            #
+            qns_trim=Pair{QN, Int64}[]
+            for q in qns
+                if q.second>0
+                    append!(qns_trim,[q])
+                end
+            end
+            @assert Dw==sum(map((q)->q.second,qns_trim))
+            return Index(qns_trim;dir=dir(i),tags=tags(i),plev=plev(i))
+        end #if Dw>dim(i)
     else
-        return Index(Dw[1];tags=tags(i),plev=plev(i))
+        return Index(Dw;tags=tags(i),plev=plev(i))
     end
 end
 

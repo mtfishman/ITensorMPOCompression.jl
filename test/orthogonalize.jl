@@ -68,7 +68,7 @@ test_combos=[
     sites = siteinds("SpinHalf", N)
     psi=randomMPS(sites)
     H=makeH(sites,NNN,hx,ms.ul) 
-    @show inds(H[1])
+    #@show inds(H[1])
     @test is_regular_form(H   ,ms.ul,eps)
     E0=inner(psi',H,psi)
     orthogonalize!(H;orth=ms.lr,epsrr=1e-12)
