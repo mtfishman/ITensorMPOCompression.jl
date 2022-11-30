@@ -72,6 +72,13 @@ function pprint(W::ITensor,r::Index,eps::Float64=default_eps)
     pprint(r,W,c[1],eps)
 end
 
+macro pprint(W)
+    quote
+    println($(string(W))," = ")
+    pprint($(esc(W)))
+    end
+end
+
 function pprint(r::Index,W::ITensor,c::Index,eps::Float64=default_eps)
     # @assert hasind(W,r) can't assume this becuse parse_links could return a Dw=1 dummy index.
     # @assert hasind(W,c)
