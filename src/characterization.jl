@@ -116,10 +116,9 @@ function is_canonical(W::ITensor,ms::matrix_state,eps::Float64=default_eps)::Boo
     else #right
         rc=r
     end
-    Id=V*prime(V,rc)/d
+    Id=V*prime(dag(V),rc)/d
     if order(Id)==2
-        Id1=delta(rc,rc')
-        is_can = norm(Id-Id1)<eps
+        is_can = norm(dense(Id)-delta(rc,dag(rc')))<eps
     elseif order(Id)==0
         is_can = abs(scalar(Id)-d)<eps
     end

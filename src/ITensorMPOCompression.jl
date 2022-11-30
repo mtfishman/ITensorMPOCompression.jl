@@ -189,7 +189,7 @@ end
 """
 function redim(i::Index,Dw::Int64,offset::Int64=0)::Index
     if hasqns(i)
-        qns=space(i)
+        qns=copy(space(i))
         if Dw>dim(i)
             #
             # We need grow the space.  If there are multiple QNs, where to add the space?

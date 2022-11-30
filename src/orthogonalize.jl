@@ -1,7 +1,7 @@
 #
 #  Functions for bringing and MPO into left or right canonical form
 #
-function ITensors.orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form,kwargs...)
+function ITensors.orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form;kwargs...)
     W1,Lplus=block_qx(W1,ul;kwargs...) 
     W2=Lplus*W2
     @assert order(W2)<=4 #make sure there was something to contract. 
@@ -9,7 +9,7 @@ function ITensors.orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form,kwargs...)
     iq=filterinds(inds(Lplus),tags="qx")[1]
     il=noncommonind(Lplus,iq)
     #pprint(iq,Lplus,il,1e-14)
-    il=Index(dim(iq),tags(il))
+    il=redim(il,dim(iq)) #Index(dim(iq),tags(il))
     replaceind!(W1,iq,il)
     replaceind!(W2,iq,il)
     ITensors.@debug_check begin
@@ -30,7 +30,7 @@ function ITensors.orthogonalize!(H::MPO,ul::reg_form;kwargs...)
     for n in rng 
         nn=n+rng.step #index to neighbour
         #@show n,nn,nl
-        H[n],H[nn]=orthogonalize!(H[n],H[nn],ul,kwargs...)
+        H[n],H[nn]=orthogonalize!(H[n],H[nn],ul;kwargs...)
     end
 end
 

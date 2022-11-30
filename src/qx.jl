@@ -90,13 +90,14 @@ function block_qx(W_::ITensor,n::Int64,r::Index,c::Index,ul::reg_form=lower;kwar
   #  decide some strings and variables based on lr.
   #
   (tln,cr)= lr==left ? ("l=$n",c) : ("l=$(n-1)",r)
-
-  ilw=filterinds(inds(W),tags=tln)[1] #get the link to the next site
+  # for block sparse we get a reference that tracks the size of W behind the scenes!
+  # So we must make copy to get a static result.
+  ilw=copy(filterinds(inds(W),tags=tln)[1]) #get the link to the next site. 
   offset=V_offsets(ms)
   V=getV(W,offset) #extract the V block
   ind_on_V=filterinds(inds(V),tags=tln)[1] #link to next site 
   inds_on_Q=noncommoninds(inds(V),ind_on_V) #group all other indices for QX factorization
-
+  
   if ul==lower
     if lr==left
       Q,RL,iq=ql(V,inds_on_Q;positive=true,tags="Link,qx",kwargs...) #block respecting QL decomposition
@@ -117,7 +118,8 @@ function block_qx(W_::ITensor,n::Int64,r::Index,c::Index,ul::reg_form=lower;kwar
   W=setV(W,Q,ms) #Q is the new V, stuff Q into W. THis can resize W
   RLplus,iqx=growRL(RL,ilw,offset) #Now make a full size version of RL
   ilw=filterinds(W,tags=tln)[1]
-  replaceind!(W,ilw,iqx)  
+  replaceind!(W,ilw,iqx) #this function purposely ignores dir(iqx) and preserves dir(ilw)
+  @assert dir(W,iqx)==dir(iqx) #so they better match or everything crashes!!
   @assert hastags(W,"qx")
   return W,RLplus,iqx
 end

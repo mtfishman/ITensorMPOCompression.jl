@@ -62,10 +62,10 @@ test_combos=[
     N=10
     NNN=4
     eps=1e-14
-    hx=0.5
+    hx=0.0
     ms=matrix_state(test_combo[2],lr )
     makeH=test_combo[1]
-    sites = siteinds("SpinHalf", N)
+    sites = siteinds("SpinHalf", N;conserve_qns=false)
     psi=randomMPS(sites)
     H=makeH(sites,NNN,hx,ms.ul) 
     #@show inds(H[1])
@@ -77,5 +77,34 @@ test_combos=[
     @test is_regular_form(H,ms.ul,eps)
     @test  is_canonical(H,ms,eps)
     @test !is_canonical(H,mirror(ms),eps)    
+end 
+
+test_combos=[
+    (make_transIsing_MPO,lower),
+    (make_transIsing_MPO,upper),
+    # (make_transIsing_AutoMPO,lower),
+    # (make_Heisenberg_AutoMPO,lower)
+]
+
+@testset "Bring MPO into canonical form" for test_combo in test_combos, lr in [left,right]
+    N=10
+    NNN=4
+    eps=1e-14
+    hx=0.0
+    ms=matrix_state(test_combo[2],lr )
+    makeH=test_combo[1]
+    sites = siteinds("SpinHalf", N;conserve_qns=true)
+    state=[isodd(n) ? "Up" : "Dn" for n=1:N]
+    psi=randomMPS(sites,state)
+    H=makeH(sites,NNN,hx,ms.ul) 
+    @test is_regular_form(H   ,ms.ul,eps)
+    E0=inner(psi',H,psi)
+    orthogonalize!(H,ms.ul;orth=ms.lr,epsrr=1e-12)
+    E1=inner(psi',H,psi)
+    @test E0 ≈ E1 atol = 1e-14
+    @test is_regular_form(H,ms.ul,eps)
+    @test  is_canonical(H,ms,eps)
+    @test !is_canonical(H,mirror(ms),eps)    
 end
+
 nothing
