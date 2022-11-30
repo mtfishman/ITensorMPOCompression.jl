@@ -14,7 +14,7 @@ end
 
 
 NNEs=[(1,-1.5066685458330529),(2,-1.4524087749432490),(3,-1.4516941302867301),(4,-1.4481111362390489)]
-@testset "MPOs hand coded versus autoMPO" for nne in NNEs
+@testset "MPOs hand coded versus autoMPO give same GS energies" for nne in NNEs
 
     N=5
     hx=0.5
@@ -87,5 +87,22 @@ makeHs=[make_transIsing_AutoMPO,make_transIsing_MPO,make_Heisenberg_AutoMPO]
         end #for start_offset 
     end #for i
 end #@testset
+
+@testset "hand coded versus autoMPO with conserve_qns=true have the same index directions" begin
+    N=5
+    hx=0.0 #Hx!=0 breaks symmetry.
+    eps=4e-14 #this is right at the lower limit for passing the tests.
+    NNN=2
+    
+    sites = siteinds("SpinHalf", N;conserve_qns=true)
+    Hauto=make_transIsing_AutoMPO(sites,NNN,hx,lower) 
+    Hhand=make_transIsing_MPO(sites,NNN,hx,lower) 
+    for (Wauto,Whand) in zip(Hauto,Hhand)
+        for ia in inds(Wauto)
+            ih=filterinds(Whand,tags=tags(ia),plev=plev(ia))[1]
+            @test dir(ia)==dir(ih)
+        end
+    end
+end
 
 nothing
