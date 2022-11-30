@@ -56,19 +56,15 @@ function setV1(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     if dim(wil)>dim(vil)+1
         #we need to shrink W
         wil1=redim(wil,dim(vil)+1) #Index(dim(vil)+1,tags(wil))
-        #@show wil1 vil
         W1=ITensor(T(0.0),wil1,iss)
-        #@show inds(W1)
         if off.o1==1
             #save first element
-            for isv in eachindval(iss)
-                W1[wil1=>1,isv...]=W[wil=>1,isv...]
-            end
+            op=slice(W,wil=>1)
+            assign!(W1,op,wil1=>1)
         else
             #save last element
-            for isv in eachindval(iss)
-                W1[wil1=>dim(wil1),isv...]=W[wil=>dim(wil),isv...]
-            end
+            op=slice(W,wil=>dim(wil))
+            assign!(W1,op,wil1=>dim(wil1))
         end
     else
         W1=W
@@ -78,9 +74,8 @@ function setV1(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
 
     for ilv in eachindval(vil)
         wlv=IndexVal(wil1,ilv.second+off.o1)
-        for isv in eachindval(iss)
-            W1[wlv,isv...]=V[ilv,isv...]
-        end
+        op=slice(V,ilv)
+        assign!(W1,op,wlv)
     end
     return W1
 end
@@ -98,7 +93,6 @@ function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
         return setV1(W,V,ms) #Handle row/col vectors
     end
     vils=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
-    #@show wils vils
     @assert length(wils)==2
     @assert length(vils)==2
     iss=filterinds(inds(W),tags="Site")
@@ -133,18 +127,19 @@ function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     T=eltype(V)
     resize=dim(iwqx)>dim(ivqx)+1
     if resize
-        iw1=Index(dim(ivqx)+1,tags(iwqx))
+        iw1=redim(iwqx,dim(ivqx)+1) #Index(dim(ivqx)+1,tags(iwqx))
         W1=ITensor(T(0.0),iw1,iwl,iss)
-        others=noncommoninds(W,iwqx)
         @assert off.o1==off.o2
         if  off.o1==1 #save row or col 1
-            for io in eachindval(others...)
-                W1[iw1=>1,io...]=W[iwqx=>1,io...]
+            for io in eachindval(iwl)
+                op=slice(W,iwqx=>1,io)
+                assign!(W1,op,iw1=>1,io)
             end
         else #off.o1==0 save row or col Dw
             @assert off.o1==0
-            for io in eachindval(others...)
-                W1[iw1=>dim(iw1),io...]=W[iwqx=>dim(iwqx),io...]
+            for io in eachindval(iwl)
+                op=slice(W,iwqx=>dim(iwqx),io)
+                assign!(W1,op,iw1=>dim(iw1),io)
             end
         end
 
@@ -155,9 +150,8 @@ function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
 
     for ilv in eachindval(ivqx,ivl)
         wlv=(IndexVal(iwqx,ilv[1].second+off.o1),IndexVal(iwl,ilv[2].second+off.o2))
-        for isv in eachindval(iss)
-            W[wlv...,isv...]=V[ilv...,isv...]
-        end
+        op=slice(V,ilv...)
+        assign!(W,op,wlv...)
     end
     
     return W
@@ -171,11 +165,11 @@ end
 function growRL(RL::ITensor,iWlink::Index,off::V_offsets)::Tuple{ITensor,Index}
     @assert order(RL)==2
     iLlink=filterinds(inds(RL),tags=tags(iWlink))[1] #find the link index of RL
-    iLqx=noncommonind(inds(RL),iLlink) #find the qx link of RL
+    iLqx=copy(noncommonind(inds(RL),iLlink)) #find the qx link of RL
     Dwl=dim(iLlink)
     Dwq=dim(iLqx)
     @assert dim(iWlink)==Dwl+1
-    iq=Index(Dwq+1,tags(iLqx))
+    iq=redim(iLqx,Dwq+1) 
     T=eltype(RL)
     RLplus=ITensor(T(0.0),iq,iWlink)
     @assert norm(RLplus)==0.0
@@ -192,7 +186,7 @@ function growRL(RL::ITensor,iWlink::Index,off::V_offsets)::Tuple{ITensor,Index}
     if !(off.o1==0 && off.o2==0)
         RLplus[iq=>1,iWlink=>1]=1.0
     end
-    return RLplus,iq
+    return RLplus,dag(iq)
 end
 
 #
