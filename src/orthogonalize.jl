@@ -116,37 +116,37 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
     end
     @assert !(bl && bu)
     ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
-    nsweep=get(kwargs,:sweeps,0)
+    
     if length(kwargs)>0
         kwargs=Dict(kwargs) #this allows us to set the dir elements
     else
         kwargs=Dict{Symbol, Any}(:orth => left)
     end
     lr=get(kwargs,:orth,left)
-    lrm=mirror(lr)
-    if nsweep>0
-        for isweep in 1:nsweep
-            kwargs[:orth]=lrm
-            orthogonalize!(H,ul;kwargs...)
-            kwargs[:orth]=lr
+   
+    #
+    # First sweep direction is critical for proper rank reduction upper:right, lower:left
+    #
+    if ul==lower
+        kwargs[:orth]=left
+        orthogonalize!(H,ul;kwargs...)
+        kwargs[:orth]=right
+        orthogonalize!(H,ul;kwargs...)
+        if lr==left
+            kwargs[:orth]=left
             orthogonalize!(H,ul;kwargs...)
         end
     else
-        Dws=get_Dw(H)
-        if !haskey(kwargs,:orth)
-            @show kwargs
-            get!(kwargs,:orth,lr)
-        end
-        while true
-            kwargs[:orth]=lrm
+        kwargs[:orth]=right
+        orthogonalize!(H,ul;kwargs...)
+        kwargs[:orth]=left
+        orthogonalize!(H,ul;kwargs...)
+        if lr==right
+            kwargs[:orth]=right
             orthogonalize!(H,ul;kwargs...)
-            kwargs[:orth]=lr
-            orthogonalize!(H,ul;kwargs...)
-            new_Dws=get_Dw(H)
-            if new_Dws==Dws break end
-            Dws=new_Dws
         end
-    end
+    end   
+  
 end
 
 
