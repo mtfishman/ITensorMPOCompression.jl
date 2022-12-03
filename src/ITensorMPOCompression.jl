@@ -3,11 +3,9 @@ module ITensorMPOCompression
 using ITensors
 using ITensors.NDTensors
 
+import ITensors: QNIndex, addqns
 import ITensors.BlockSparseTensor,ITensors.DenseTensor,ITensors.tensor
-# For some reason we import these in order for the mere existence of
-# the ITensorMPOCompression versions to be acknowledged!?!?
-import ITensors.orthogonalize!,ITensors.truncate!
-                                                                    
+
 export block_qx,ql,lq,rq,set_scale! #qx related
 export slice,assign!,redim #operator handling
 export getV,setV,growRL,V_offsets #blocking related

@@ -1,4 +1,5 @@
 using Printf
+
 #
 # functions for getting and setting V blocks required for block respecting QX and SVD
 #
@@ -201,6 +202,15 @@ end
 #  zeros as possible in M in order for the SVD decomp and compression to have maximum effect.
 #
 function getM(RL::ITensor,ms::matrix_state,eps::Float64)::Tuple{ITensor,ITensor,Index,Bool}
+    # if hasqns(RL)
+    #     @assert nnzblocks(RL)==1 #all qns should be on QL
+    #     # RLt=tensor(RL)
+    #     # RLt1=blockview(RLt,nzblocks(RLt)[1])
+    #     # RL=itensor(RLt1)
+    #     @show dense(RL)
+    #     @assert false
+    # end
+    # @show RL
     ils=filterinds(inds(RL),tags="Link") 
     iqx=findinds(ils,"qx")[1] #think of this as the row index
     iln=noncommonind(ils,iqx) #think of this as the column index
@@ -287,3 +297,47 @@ function grow(A::ITensor,ig1::Index,ig2::Index)
     return G
 end
 
+function grow(A::ITensor,ig1::QNIndex,ig2::Index)
+    @assert !hasqns(A)
+    @assert !hasqns(ig2)
+    G=grow(A,removeqns(ig1),ig2) #grow A into G as dense tensors
+    ig2q=addqns(ig2,[QN()=>dim(ig2)];dir=dir(dag(ig1))) #make a QN version of index ig2
+    @assert id(ig2)==id(ig2q) #If the ID changes then subsequent contractions will fail.
+    return convert_blocksparse(G,ig1,ig2q) #fabricate a 1-block blocksparse version.
+end
+
+#
+#  Convert a order 2 dense tensor into a single block, block-sparse tensor
+#  using provided QNIndexes.  
+#  TODO: There is probably a better way to do this without any risk of doing A
+#  deep copy.
+#
+function convert_blocksparse(A::ITensor,inds::QNIndex...)
+    @assert order(A)==2 #required for Block(1,1) to be correct.
+    bst=BlockSparseTensor(eltype(A),[Block(1,1)],inds )
+    b=nzblocks(bst)[1]
+    blockview(bst, b) .= A #is this deep copy???
+    return itensor(bst)
+end
+
+#
+#  One of the sample_inds needs to match one of inds(A).  This provides enough
+#  info to establish QN() space and direction for the inds of A.
+#
+function make_qninds(A::ITensor,sample_inds::Index...)
+    @assert order(A)==2
+    @assert !hasqns(A)
+    @assert hasqns(sample_inds)
+    ic=commonind(inds(A),sample_inds)
+    ins =noncommonind(ic,sample_inds)
+    inA =noncommonind(ic,inds(A))
+    ics =noncommonind(ins,sample_inds)
+    @assert hasqns(ics)
+    #can't use space(ins) to get QNs because dim could be different.
+    in=addqns(inA,[QN()=>dim(inA)];dir=dir(ins)) #make a QN version of index inA
+    iset=IndexSet(in, ics)
+    if inds(A) != iset
+        iset = permute(iset, inds(A))
+    end
+    return iset
+end
