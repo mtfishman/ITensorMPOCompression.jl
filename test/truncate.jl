@@ -223,3 +223,30 @@ end
         @test max_mid<1.0
     end
 end
+
+
+@testset "Compare $ul truncation with AutoMPO, QNs=$qns" for ul in [lower,upper],qns in [false,true]
+    for N in 3:15
+        NNN=N-1
+        sites = siteinds("SpinHalf", N;conserve_qns=qns)
+        Hauto=make_transIsing_AutoMPO(sites,NNN,0.0,ul) 
+        Dw_auto=get_Dw(Hauto)
+        Hr=make_transIsing_MPO(sites,NNN,0.0,ul) 
+        truncate!(Hr;orth=right,epsrr=1e-12) #sweep left to right
+        @test is_canonical(Hr,matrix_state(ul,right),1e-12)
+        delta_Dw=sum(get_Dw(Hr)-Dw_auto)
+        @test delta_Dw<=0
+        if delta_Dw<0
+            println("Compression beat AutoMPO by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
+        end
+        Hl=make_transIsing_MPO(sites,NNN,0.0,ul) 
+        truncate!(Hl;orth=left,epsrr=1e-12) #sweep right to left
+        @test is_canonical(Hl,matrix_state(ul,left),1e-12)
+        delta_Dw=sum(get_Dw(Hr)-Dw_auto)
+        @test delta_Dw<=0
+        if delta_Dw<0
+            println("Compression beat AutoMPO by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=left ,ul=$ul,QNs=$qns")
+        end
+        end  
+end 
+
