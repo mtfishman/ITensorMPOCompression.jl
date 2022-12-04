@@ -113,7 +113,10 @@ function block_qx(W_::ITensor,n::Int64,r::Index,c::Index,ul::reg_form=lower;kwar
   end
   set_scale!(RL,Q,offset) #rescale so the L(n,n)==1.0
   ITensors.@debug_check begin
-    @assert norm(V-RL*Q)<1e-12 #make sure decomp worked
+    err=norm(V-RL*Q)
+    if  err>1e-12
+      @warn "Loss of precision in block_qx, norm(V-RL*Q)=$err"
+    end
   end
   W=setV(W,Q,ms) #Q is the new V, stuff Q into W. THis can resize W
   RLplus,iqx=growRL(RL,ilw,offset) #Now make a full size version of RL
