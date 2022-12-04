@@ -1,100 +1,4 @@
 
-#handle case with 1 link index at edges.
-function fix_autoMPO1(W::ITensor)::ITensor
-    ils=filterinds(W,"Link")
-    iss=filterinds(W,"Site")
-    @assert length(ils)==1
-    @assert length(iss)==2
-    il=ils[1] #link index
-    Dw=dim(il)
-    p=collect(1:Dw)
-    p[2],p[Dw]=p[Dw],p[2]
-    W1=ITensor(il,iss...)
-    for js in eachindval(iss)
-        for jl in eachindval(il)
-            Sl=slice(W,jl)
-            assign!(W1,Sl,il=>p[jl.second])
-        end
-    end
-    return W1
-end
-
-function fix_autoMPO2(W::ITensor)::ITensor
-    ils=filterinds(W,"Link")
-    if length(ils)==1
-        return fix_autoMPO1(W)
-    end
-    iss=filterinds(W,"Site")
-    @assert length(ils)==2
-    @assert length(iss)==2
-    d,n,r,c=parse_links(W)
-    Dw1,Dw2=dim(r),dim(c)
-    #
-    #  set up perm arrays to swap row and col 2 with N
-    #
-    pr=collect(1:Dw1)
-    pc=collect(1:Dw2)
-    pr[2],pr[Dw1]=pr[Dw1],pr[2]
-    pc[2],pc[Dw2]=pc[Dw2],pc[2]
-    W1=ITensor(r,c,iss...)
-    for jr in eachindval(r)
-        for jc in eachindval(c)
-            sl=slice(W,jr,jc)
-            assign!(W1,sl,r=>pr[jr.second],c=>pc[jc.second])
-        end
-    end
-    return W1
-end
-
-@doc """
-    fix_autoMPO!(H::MPO)
-
-Convert AutoMPO output into lower regular form.  If `Dw` x `Dw'` are the dimensions of 
-the Link indices for any site then this routine simply does 2 swaps:
-1. Swap row 2 with row `Dw`
-2. Swap column 2 with column `Dw'`
-    
-# Arguments
-- `H::MPO` : MPO to be characterized.
-    
-MPO is modified in place into lower regular form
-
-# Examples
-
-```julia
-julia> using ITensors
-julia> using ITensorMPOCompression
-julia> N=5
-julia> sites = siteinds("S=1/2",5);
-julia> ampo = OpSum();
-julia> for j=1:N-1
-julia>     add!(ampo,1.0, "Sz", j, "Sz", j+1);
-julia>     add!(ampo,0.5, "S+", j, "S-", j+1);
-julia>     add!(ampo,0.5, "S-", j, "S+", j+1);
-julia> end
-julia> H=MPO(ampo,sites);
-julia> pprint(H[2])
-I 0 0 0 0 
-0 I S S S 
-S 0 0 0 0 
-S 0 0 0 0 
-S 0 0 0 0 
-
-julia> fix_autoMPO!(H)
-julia> pprint(H[2])
-I 0 0 0 0 
-S 0 0 0 0 
-S 0 0 0 0 
-S 0 0 0 0 
-0 S S S I 
-```
-"""
-function fix_autoMPO!(H::MPO)
-    N=length(H)
-    for n in 1:N
-        H[n]=fix_autoMPO2(H[n])
-    end
-end
 
 make_Heisenberg_AutoMPO(sites,NNN::Int64,hz::Float64,ul::reg_form,J::Float64=1.0)::MPO = 
     make_Heisenberg_AutoMPO(sites,NNN,hz,J)
@@ -128,9 +32,7 @@ function make_Heisenberg_AutoMPO(sites,NNN::Int64=1,hz::Float64=0.0,J::Float64=1
             add!(ampo, f*0.5,"S-", j, "S+", j+dj)
         end
     end
-    mpo=MPO(ampo,sites)
-    #fix_autoMPO!(mpo) #swap row[2]<->row[Dw] and col[2]<->col[Dw]
-    return mpo
+    return MPO(ampo,sites)
 end
 
 
@@ -168,9 +70,7 @@ function make_transIsing_AutoMPO(sites,NNN::Int64=1,hx::Float64=0.0,J::Float64=1
             add!(ampo, f    ,"Sz", j, "Sz", j+dj)
         end
     end
-    mpo=MPO(ampo,sites)
-    #fix_autoMPO!(mpo) #swap row[2]<->row[Dw] and col[2]<->col[Dw]
-    return mpo
+    return MPO(ampo,sites)
 end
 
 

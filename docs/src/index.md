@@ -107,7 +107,7 @@ points to keep in mind:
 3. Lower (upper) regular form does not mean that the MPO is lower (upper) triangular.  As explained in the [Technical Notes](../TechnicalDetails.pdf) the `A`-block does not need to be triangular.
 4. Having said all that, most common hand constructed MPOs are either lower or upper triangular. Lower happens to be the more common convention.
 5. The orthogonalize! operation just happens to preserve lower (upper) trianglur form.  However truncation (SVD) does not preserve triangular form.
-6. At the moment autoMPO outputs (after a simple 2<-->Dw row & col swap [`fix_autoMPO!`](@ref)) lower *regular* form, but not lower *triangular* form (the `A` block is not triangular).
+
 
 ## Regular forms
 
@@ -152,5 +152,4 @@ The autoMPO MPOs come pre-truncated so they are not useful for testing truncatio
 make_transIsing_MPO
 make_transIsing_AutoMPO
 make_Heisenberg_AutoMPO
-fix_autoMPO!(::MPO)
 ```

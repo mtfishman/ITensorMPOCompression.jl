@@ -17,9 +17,7 @@ function make_2D_Heisenberg_AutoMPO(sites,Nx::Int64,Ny::Int64,hz::Float64=0.0,J:
         ampo .+= 0.5*J, "S-", b.s1, "S+", b.s2
         ampo .+=     J, "Sz", b.s1, "Sz", b.s2
     end
-    H = MPO(ampo,sites)
-    fix_autoMPO!(H) #swap row[2]<->row[Dw] and col[2]<->col[Dw]
-    return H
+    return MPO(ampo,sites)
 end
 using Printf
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
