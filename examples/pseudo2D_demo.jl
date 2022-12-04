@@ -27,7 +27,7 @@ N=Nx*Ny; #10 sites
 sites = siteinds("S=1/2",N);
 H=make_2D_Heisenberg_AutoMPO(sites,Nx,Ny)
 Dw_auto=get_Dw(H)
-ss=truncate!(H)
+ss=truncate!(H) #if you look at the SV spectrum we min(sv)=0.25 so there is nothing small to truncate.
 Dw_trunc=get_Dw(H)
 if Dw_auto==Dw_trunc
     println("You can't beat autoMPO!!!!")
