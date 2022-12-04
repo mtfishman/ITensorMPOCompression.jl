@@ -98,7 +98,7 @@ Background
 \end_layout
 
 \begin_layout Standard
-These are technical implementation notes to develop the 
+These are technical implementation notes used to develop the 
 \family typewriter
 ITensorMPOCompression
 \family default
@@ -128,8 +128,8 @@ literal "false"
  the SVD factorization of an MPO matrix tend to grow rapidly with lattice
  size.
  Indeed they diverge in the thermodynamic limit.
- The root of the problem can be traced to the combination of intensive and
- extensive degrees of freedom within Hamiltonian operators.
+ The root cause of the problem can be traced to the combination of intensive
+ and extensive degrees of freedom within Hamiltonian operators.
  The recent paper Local Matrix Product Operators:Canonical Form, Compression,
  and Control Theory
 \begin_inset CommandInset citation
@@ -188,7 +188,7 @@ The indexing methodology used in the
 ITensor
 \family default
  libraries (C++ and Julia) relieves the user from worrying about index order
- and as a result even matrix multiplication order.
+ and as a result even factor ordering for matrix multiplication.
  For example accessing a tensor element
 \family roman
 \series medium
@@ -226,7 +226,7 @@ W[j=>4,i=>3]
 \family typewriter
 ITensor
 \family default
- is meaningless.
+ is a no-op.
  It then follows that defining an order 2 
 \family typewriter
 ITensor
@@ -286,7 +286,7 @@ A primed version of the site index.
 l=1
 \emph default
  index is for columns.
- With this definition we can declare 
+ With this definition we can define 
 \begin_inset Formula $\hat{W}$
 \end_inset
 
@@ -682,7 +682,18 @@ where
  must be triangular.
  Hand generated Hamiltonian MPOs are always either upper or lower triangular,
  but as we shall see SVD compression will not guarantee preservation of
- the triangular form.
+ the triangular form, but it will preserve regular form.
+\end_layout
+
+\begin_layout Standard
+All algorithms in module require and check for regular form.
+ This is not just an algorithmic requirement.
+ Regular form means that the Hamiltonian operator is local and extensive
+ (energy scales with systems size 
+\begin_inset Formula $N$
+\end_inset
+
+), which is required for any physical system.
 \end_layout
 
 \begin_layout Subsection
@@ -692,22 +703,12 @@ MPOs for open and periodic boundary conditions
 \begin_layout Standard
 Just like the MPS structure for open boundary conditions, MPOs are capped
  at each end with row and column vectors.
- For rarely used periodic boundary conditions, full operator matrices are
- used throughout since there really are no ends to the tensor chain.
- MPO compression also requires full tensors (or operator valued matrices)
- at the ends, but this has nothing to do with periodic boundary conditions.
+ For periodic boundary conditions, full operator matrices are used throughout
+ since there really are no ends to the tensor chain.
  In the paper they write the Hamiltonian as follows:
 \begin_inset Formula 
 \begin{equation}
 \hat{H}=\boldsymbol{𝑙}\hat{W}^{1}\hat{W}^{2}\hat{W}^{3}\cdots\hat{W}^{N-1}\hat{W}^{N}\boldsymbol{𝑟}\label{eq:PBC MPO form}
-\end{equation}
-
-\end_inset
-
-
-\begin_inset Formula 
-\begin{equation}
-\hat{H}=\hat{W}^{1}\hat{W}^{2}\hat{W}^{3}\cdots\hat{W}^{N-1}\hat{W}^{N}\label{eq:PBC MPO form-1}
 \end{equation}
 
 \end_inset
@@ -749,20 +750,7 @@ After compression is finished, the normal open boundary condition structure
 \end_inset
 
 .
- We need a name for the form shown in eq.
  
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "eq:PBC MPO form"
-plural "false"
-caps "false"
-noprefix "false"
-
-\end_inset
-
- so instead of dreaming up a new name we simply call this the Periodic Boundary
- Condition (PBC) MPO form\SpecialChar ldots
-
 \end_layout
 
 \begin_layout Subsection
@@ -830,7 +818,17 @@ This section applies to upper regular form of
 \end_inset
 
  targeting the left canonical form.
- The first step is to isolate the so called left V-block:
+ The first step is to isolate the so called left V-block of 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:WRegular"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+:
 \begin_inset Formula 
 \[
 \hat{V}_{L}=\begin{bmatrix}\hat{\mathbb{I}} & \hat{\boldsymbol{c}}\\
@@ -1027,7 +1025,7 @@ In addition we also want the gauge with
 \family typewriter
 lapack
 \family default
- routines seem to return 
+ routines return 
 \begin_inset Formula $R$
 \end_inset
 
@@ -1096,7 +1094,7 @@ Float64
 \family typewriter
 lapack 
 \family default
-so must add this feature to that 
+so we must add this feature to that 
 \begin_inset Formula $QX$
 \end_inset
 
@@ -1115,7 +1113,7 @@ That is a summary block respecting
  It can be written compactly as 
 \begin_inset Formula 
 \[
-\hat{QR}\left(\hat{W}\right)=\hat{Q}_{+}R_{+}
+\hat{QR}\left(\hat{W}\right)=\hat{Q}_{+}R_{+}=\hat{W}^{\prime}R_{+}
 \]
 
 \end_inset
@@ -1138,7 +1136,7 @@ noprefix "false"
  and
 \begin_inset Formula 
 \begin{equation}
-\hat{Q}_{+}=\begin{bmatrix}\hat{\mathbb{I}} & \hat{\boldsymbol{c}}^{\prime} & \hat{d}\\
+\hat{Q}_{+}=\hat{W}^{\prime}=\begin{bmatrix}\hat{\mathbb{I}} & \hat{\boldsymbol{c}}^{\prime} & \hat{d}\\
 0 & \hat{\boldsymbol{A}}^{\prime} & \hat{\boldsymbol{b}}\\
 0 & 0 & \hat{\mathbb{I}}
 \end{bmatrix}\label{eq:Qplus}
@@ -2142,7 +2140,7 @@ To bring the whole MPO into left canonical form we simply start at site
 
 \begin_inset Formula 
 \[
-=\boldsymbol{𝑙}\hat{QR}\left(\hat{W}^{1}\right)\hat{W}^{2}\hat{W}^{3}\cdots\hat{W}^{N-1}\hat{W}^{N}\boldsymbol{𝑟}
+=\hat{QR}\left(\boldsymbol{𝑙}\hat{W}^{1}\right)\hat{W}^{2}\hat{W}^{3}\cdots\hat{W}^{N-1}\hat{W}^{N}\boldsymbol{𝑟}
 \]
 
 \end_inset
@@ -2150,7 +2148,7 @@ To bring the whole MPO into left canonical form we simply start at site
 
 \begin_inset Formula 
 \[
-=\boldsymbol{𝑙}\hat{Q}_{+}^{1}R_{+}^{1}\hat{W}^{2}\hat{W}^{3}\cdots\hat{W}^{N-1}\hat{W}^{N}\boldsymbol{𝑟}
+=\hat{Q}_{+}^{1}R_{+}^{1}\hat{W}^{2}\hat{W}^{3}\cdots\hat{W}^{N-1}\hat{W}^{N}\boldsymbol{𝑟}
 \]
 
 \end_inset
@@ -2158,7 +2156,7 @@ To bring the whole MPO into left canonical form we simply start at site
 
 \begin_inset Formula 
 \[
-=\boldsymbol{𝑙}\hat{W}_{L}^{1}R_{+}^{1}\hat{W}^{2}\hat{W}^{3}\cdots\hat{W}^{L-1}\hat{W}^{L}\boldsymbol{𝑟}
+=\hat{W}_{L}^{1}R_{+}^{1}\hat{W}^{2}\hat{W}^{3}\cdots\hat{W}^{L-1}\hat{W}^{L}\boldsymbol{𝑟}
 \]
 
 \end_inset
@@ -2166,7 +2164,7 @@ To bring the whole MPO into left canonical form we simply start at site
 
 \begin_inset Formula 
 \[
-=\boldsymbol{𝑙}\hat{W}_{L}^{1}\left(R_{+}^{1}\hat{W}^{2}\right)\hat{W}^{3}\cdots\hat{W}^{N-1}\hat{W}^{N}\boldsymbol{𝑟}
+=\hat{W}_{L}^{1}\left(R_{+}^{1}\hat{W}^{2}\right)\hat{W}^{3}\cdots\hat{W}^{N-1}\hat{W}^{N}\boldsymbol{𝑟}
 \]
 
 \end_inset
@@ -2174,7 +2172,7 @@ To bring the whole MPO into left canonical form we simply start at site
 
 \begin_inset Formula 
 \[
-=\boldsymbol{𝑙}\hat{W}_{L}^{1}\hat{W}^{2\prime}\hat{W}^{3}\cdots\hat{W}^{N-1}\hat{W}^{N}\boldsymbol{𝑟}
+=\hat{W}_{L}^{1}\hat{W}^{2\prime}\hat{W}^{3}\cdots\hat{W}^{N-1}\hat{W}^{N}\boldsymbol{𝑟}
 \]
 
 \end_inset
@@ -2182,7 +2180,7 @@ To bring the whole MPO into left canonical form we simply start at site
 
 \begin_inset Formula 
 \[
-=\boldsymbol{𝑙}\hat{W}_{L}^{1}\hat{QR}\left(\hat{W}^{2\prime}\right)\hat{W}^{3}\cdots\hat{W}^{N-1}\hat{W}^{N}\boldsymbol{𝑟}
+=\hat{W}_{L}^{1}\hat{QR}\left(\hat{W}^{2\prime}\right)\hat{W}^{3}\cdots\hat{W}^{N-1}\hat{W}^{N}\boldsymbol{𝑟}
 \]
 
 \end_inset
@@ -2204,7 +2202,7 @@ To bring the whole MPO into left canonical form we simply start at site
 \begin_layout Standard
 \begin_inset Formula 
 \[
-=\boldsymbol{𝑙}\hat{W}_{L}^{1}\hat{W}_{L}^{2}\hat{W}_{L}^{3}\cdots\hat{W}_{L}^{N-1}\hat{W}_{L}^{N}\boldsymbol{𝑟}
+=\hat{W}_{L}^{1}\hat{W}_{L}^{2}\hat{W}_{L}^{3}\cdots\hat{W}_{L}^{N-1}\hat{W}_{L}^{N}
 \]
 
 \end_inset
@@ -2518,7 +2516,7 @@ or equivalently
 And we update the neighbouring site
 \begin_inset Formula 
 \[
-\hat{W}^{n+1}\rightarrow VR^{\prime}\hat{W}^{n+1}
+\hat{W}^{n+1}\rightarrow TR^{\prime}\hat{W}^{n+1}
 \]
 
 \end_inset
@@ -2589,170 +2587,14 @@ triangularity
 \end_layout
 
 \begin_layout Paragraph
-Case 2:
+Case 2: 
 \end_layout
 
 \begin_layout Standard
-Disclaimer: This issue is not discussed in ref.
- 
-\begin_inset CommandInset citation
-LatexCommand cite
-key "Parker2019"
-literal "false"
-
-\end_inset
-
- so I am flying by the seat of my pants here.
- This case requires some extra work in order to construct the 
-\begin_inset Formula $R^{\prime}$
-\end_inset
-
- matrix.
- We re-write eq.
- 
+This is discussed in 
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "eq:MR rect factoring"
-plural "false"
-caps "false"
-noprefix "false"
-
-\end_inset
-
- as follows
-\begin_inset Formula 
-\begin{equation}
-R=\begin{bmatrix}1 & t_{2} & t_{1} & 0\\
-0 & \mathsf{\mathsf{R}_{2}} & \mathsf{M} & 0\\
-0 & 0 & 0 & 1
-\end{bmatrix}=MR^{\prime}=\begin{bmatrix}1 & 0 & 0\\
-0 & \mathsf{M} & 0\\
-0 & 0 & 1
-\end{bmatrix}\begin{bmatrix}1 & t_{2} & t_{1} & 0\\
-0 & \mathsf{R^{\prime}}_{2} & \mathsf{𝕀} & 0\\
-0 & 0 & 0 & 1
-\end{bmatrix}\label{eq:MR rect factoring}
-\end{equation}
-
-\end_inset
-
-where 
-\begin_inset Formula $\mathsf{M}$
-\end_inset
-
- (and 
-\begin_inset Formula $M)$
-\end_inset
-
- must be square.
- We now must solve the linear system
-\begin_inset Formula 
-\begin{equation}
-\mathsf{R}_{2}=\mathsf{M\mathsf{R^{\prime}}_{2}}\label{eq:R2}
-\end{equation}
-
-\end_inset
-
-for 
-\begin_inset Formula $\mathsf{R^{\prime}}_{2}$
-\end_inset
-
-.
- This requires care because in general 
-\family roman
-\series medium
-\shape up
-\size normal
-\emph off
-\bar no
-\strikeout off
-\xout off
-\uuline off
-\uwave off
-\noun off
-\color none
-
-\begin_inset Formula $\mathsf{M}$
-\end_inset
-
- will be close to or even fully singular.
- Indeed that is the whole point of compressing.
- So standard linear solvers and/or matrix inversions are going to fail spectacul
-arly! Again SVD comes to the rescue:
-\begin_inset Formula 
-\begin{equation}
-\mathsf{\mathsf{R^{\prime}}_{2}}\approx\tilde{\mathsf{M}}^{-1}\mathsf{R}_{2}=\tilde{V}\mathsf{\frac{1}{\tilde{s}}\tilde{U^{\dagger}}}\label{eq:R2 solution}
-\end{equation}
-
-\end_inset
-
-This is often referred to as the pseudo inverse.
- Warning: don't just do 
-\begin_inset Formula $R^{\prime}\approx\tilde{M}^{-1}R$
-\end_inset
-
- because then you will get a very lousy approximation of the unit matrix
- in the right side of 
-\begin_inset Formula $R^{\prime}$
-\end_inset
-
-.
- 
-\end_layout
-
-\begin_layout Standard
-
-\family roman
-\series medium
-\shape up
-\size normal
-\emph off
-\bar no
-\strikeout off
-\xout off
-\uuline off
-\uwave off
-\noun off
-\color none
-Notice in eq.
- 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "eq:MR rect factoring"
-plural "false"
-caps "false"
-noprefix "false"
-
-\end_inset
-
- that we chose to push 
-\begin_inset Formula $\mathsf{M}$
-\end_inset
-
- over to the right side instead of positioning it on the left.
- This is so that we capture as much weight (non zero elements) as possible
- in 
-\begin_inset Formula $\mathsf{M}$
-\end_inset
-
- and as little as possible in 
-\begin_inset Formula $\mathsf{R}_{2}$
-\end_inset
-
- (and therefore 
-\begin_inset Formula $\mathsf{R}_{2}^{\prime})$
-\end_inset
-
-.
- This gives us more to compress in 
-\begin_inset Formula $\mathsf{M}$
-\end_inset
-
- and should improve the numerical stability when solving eq.
- 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "eq:R2 solution"
+reference "sec:Appendix:A"
 plural "false"
 caps "false"
 noprefix "false"
@@ -2760,38 +2602,7 @@ noprefix "false"
 \end_inset
 
 .
- I should also note that at the moment this is the weakest part of the whole
- MPO compression code.
- When 
-\begin_inset Formula $\epsilon_{SVD}$
-\end_inset
-
- becomes large, then eq.
- 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "eq:R2"
-plural "false"
-caps "false"
-noprefix "false"
-
-\end_inset
-
- is poorly satisfied, introducing large gauge errors and ultimately degrading
- energy expectation values.
- Perhaps some iterative techniques will be required to improve the accuracy
- of eq.
- 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "eq:R2"
-plural "false"
-caps "false"
-noprefix "false"
-
-\end_inset
-
-.
+ Right now the code just bails out and does not try to compress.
 \end_layout
 
 \begin_layout Subsection
@@ -3626,27 +3437,44 @@ Explicit structure of all four
 
 \end_layout
 
+\begin_layout Subsection
+Emperically determined strategy
+\end_layout
+
+\begin_layout Standard
+Based on testing with spin system hamiltonians the following strategy appears
+ to be the most effective.
+ The surprise here is that orthogonalization with rank reduction is much
+ more effective and efficient than SVD compression.
+ In most cases 3 sweeps of orthogonalization with rank reduction will yield
+ about 98% of the possible reduction of a spin Hamiltonian.
+ If you really want to grab the last ~2% then do 1 or 2 truncation/compression
+ sweeps.
+ Of course we need to build experience with other types of Hamiltonians
+ to see if these insights hold more generally.
+\end_layout
+
 \begin_layout Section
 Infinite lattice MPO compression
 \end_layout
 
 \begin_layout Standard
 A large portion of the literature on infinite MPS and MPO methods tends
- to focus one models with a one site unit cell.
- Attention to models or ground states with ,utliple sites per unit tends
+ to focus on models with a one site unit cell.
+ Attention to models or ground states with ,multiple sites per unit tends
  to be an afterthought.
- This makes sense as one can exposite the essence of a new algoritm with
- less notationla baggage when one repeating site is assumed.
+ This makes sense as one can explain the essence of a new algorithm with
+ less notational baggage if one repeating site is assumed.
  However for a software library we must keep everything general and not
  assume a one site, or uniform MPS or MPO.
- Adn even if the MPO is perfectly uniform that does not by any means suggest
- that ground state MPS is uniform.
- Antiferromagnetic models are an abvious example.
- In order establis the notation for this we write the iMPO Hamiltonian as
- 
+ And even if the MPO is perfectly uniform that does not by any means suggest
+ that the ground state MPS is uniform.
+ Antiferromagnetic models are an obvious example.
+ In order establish the notation for this we write the iMPO Hamiltonian
+ as 
 \begin_inset Formula 
 \[
-\hat{H}=\cdots\hat{W}^{(N)}\left[\hat{W}^{(1)}\hat{W}^{(2)}\cdots\hat{W}^{(N)}\right]\hat{W}^{(1)}\cdots
+\hat{H}=\cdots\hat{W}^{N}\left[\hat{W}^{1}\hat{W}^{2}\cdots\hat{W}^{N}\right]\hat{W}^{1}\cdots
 \]
 
 \end_inset
@@ -3669,10 +3497,10 @@ QR Orthogonalization
 \end_layout
 
 \begin_layout Standard
-There are three algorithms for this going from simplest and least reliable
+There are three algorithms for this, going from simplest and least reliable
  to the most complex and most reliable.
  In this section we describe the iterated QX orthogonalization scheme.
- THis idea was first introduced for MPS networks
+ This idea was first introduced for MPS networks
 \begin_inset CommandInset citation
 LatexCommand cite
 key "Vanderstraeten2019"
@@ -3680,7 +3508,7 @@ literal "false"
 
 \end_inset
 
- and the described for 1-site MPOs in 
+ and then described for 1-site MPOs in 
 \begin_inset CommandInset citation
 LatexCommand cite
 key "Parker2019"
@@ -3689,7 +3517,7 @@ literal "false"
 \end_inset
 
 .
- The extension to multi site MPOs is described in 
+ The extension to two site MPOs is described in 
 \begin_inset CommandInset citation
 LatexCommand cite
 key "Soejima2020"
@@ -3701,11 +3529,11 @@ literal "false"
 \end_layout
 
 \begin_layout Standard
-We begine by creating a collection of gauge transforms and set them to the
- identity:
+We begin by creating a collection of gauge transforms and set them equal
+ to the identity:
 \begin_inset Formula 
 \[
-G_{L}^{(1)}=G_{L}^{(2)}\cdots=G_{L}^{(N)}=\mathbb{I}
+G_{L}^{1}=G_{L}^{2}\cdots=G_{L}^{N}=\mathbb{I}
 \]
 
 \end_inset
@@ -3713,7 +3541,7 @@ G_{L}^{(1)}=G_{L}^{(2)}\cdots=G_{L}^{(N)}=\mathbb{I}
 Next we do a block respecting, rank revealing QX decomposition on each site
 \begin_inset Formula 
 \[
-\hat{QR}\left(\hat{W}_{0}^{(n)}\right)\rightarrow\hat{V}_{0}^{(n)}=\hat{Q}_{0}^{(n)}R_{0}^{(n)}
+\hat{QX}\left(\hat{W}_{0}^{n}\right)\rightarrow\hat{V}_{0}^{n}=\hat{Q}_{0}^{n}R_{0}^{n}
 \]
 
 \end_inset
@@ -3725,15 +3553,16 @@ and now
  looks like
 \begin_inset Formula 
 \[
-\hat{H}=\cdots R_{0}^{(N)}\left[\hat{Q}_{0}^{(1)}R_{0}^{(1)}\hat{Q}_{0}^{(2)}R_{0}^{(2)}\cdots\hat{Q}_{0}^{(N)}R_{0}^{(N)}\right]\hat{Q}_{0}^{(1)}\cdots
+\hat{H}=\cdots R_{0}^{N}\left[\hat{Q}_{0}^{1}R_{0}^{1}\hat{Q}_{0}^{2}R_{0}^{2}\cdots\hat{Q}_{0}^{N}R_{0}^{N}\right]\hat{Q}_{0}^{1}\cdots
 \]
 
 \end_inset
 
-But we can demarcate the unit cell any place we want so
+But we can demarcate the unit cell any place we want, moving the sqaure
+ brakets on tensor to the left we have
 \begin_inset Formula 
 \[
-=\cdots\left[R_{0}^{(N)}\hat{Q}_{0}^{(1)}R_{0}^{(1)}\hat{Q}_{0}^{(2)}R_{0}^{(2)}\cdots R_{0}^{(N-1)}\hat{Q}_{0}^{(N)}\right]\cdots
+=\cdots\left[R_{0}^{N}\hat{Q}_{0}^{1}R_{0}^{1}\hat{Q}_{0}^{2}R_{0}^{2}\cdots R_{0}^{(N-1)}\hat{Q}_{0}^{N}\right]\cdots
 \]
 
 \end_inset
@@ -3742,18 +3571,22 @@ which defines a new set
 \begin_inset Formula $\hat{W}$
 \end_inset
 
-'s
+'s with iteration index 
+\begin_inset Formula $1$
+\end_inset
+
+
 \begin_inset Formula 
 \[
-\hat{H}=\cdots\cdots\left[\hat{W}_{1}^{(1)}\hat{W}_{1}^{(2)}\cdots\hat{W}_{1}^{(N)}\right]\cdots
+\hat{H}=\cdots\cdots\left[\hat{W}_{1}^{1}\hat{W}_{1}^{2}\cdots\hat{W}_{1}^{N}\right]\cdots
 \]
 
 \end_inset
 
-where for example
+where 
 \begin_inset Formula 
 \[
-\hat{W}_{1}^{(1)}=R_{0}^{(N)}\hat{Q}_{0}^{(1)}.
+\hat{W}_{1}^{n}=R_{0}^{(n-1)}\hat{Q}_{0}^{n}.
 \]
 
 \end_inset
@@ -3761,7 +3594,7 @@ where for example
 In addition we must update the accumulated gauge transforms
 \begin_inset Formula 
 \[
-G_{L}^{(n)}\rightarrow R_{0}^{(n)}G_{L}^{(n)}
+G_{L}^{n}\rightarrow R_{0}^{n}G_{L}^{n}
 \]
 
 \end_inset
@@ -3770,7 +3603,7 @@ At this point we can go back the block QX step.
 \end_layout
 
 \begin_layout Standard
-As the iterations proceede the 
+As the iterations proceed the 
 \begin_inset Formula $R$
 \end_inset
 
@@ -3778,9 +3611,9 @@ As the iterations proceede the
 \begin_inset Formula $L)$
 \end_inset
 
- matrices will converge towards the identity matrix.
+ matrices will usually converge towards the identity matrix.
  In addition the rank revealing algorithm will be constantly reducing the
- size of the 
+ dimansions of the 
 \begin_inset Formula $W$
 \end_inset
 
@@ -3806,13 +3639,107 @@ As the iterations proceede the
 \begin_inset Formula $\hat{W}_{L}$
 \end_inset
 
- is we are doing a left orthogonalization sweep.
+ if we are doing a left orthogonalization sweep.
  The full gauge transformation is accumulated in the set of 
-\begin_inset Formula $G_{L}^{\left(n\right)}$
+\begin_inset Formula $G_{L}^{n}$
 \end_inset
 
  matrices.
- 
+ The guage transforms relate 
+\begin_inset Formula $\hat{W}_{L}$
+\end_inset
+
+ and 
+\begin_inset Formula $\hat{W}_{0}$
+\end_inset
+
+ as follows
+\begin_inset Formula 
+\[
+\hat{W}_{L}G_{L}=G_{L}\hat{W}_{0}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+ITensor indexing
+\end_layout
+
+\begin_layout Standard
+In order to get all of the matrix products in the previous section to execture
+ correctly, we need to be very careful about how we organize all the 
+\begin_inset Quotes eld
+\end_inset
+
+Link
+\begin_inset Quotes erd
+\end_inset
+
+ indices of the tensors.
+ To begin with the link indices need to obey periodic boundary condtions
+\begin_inset Formula 
+\[
+\hat{H}=\cdots\hat{W}^{N}\left[\frac{1=N}{}\hat{W}^{1}\frac{l=1}{}\hat{W}^{2}\frac{l=2}{}\cdots\frac{l=N-1}{}\hat{W}^{N}\right]\frac{1=N}{}\hat{W}^{1}\cdots
+\]
+
+\end_inset
+
+QX decomposition for left orthogonal form looks like
+\begin_inset Formula 
+\[
+\hat{QX}\left(\frac{l=n-1}{}\hat{W}_{0}^{n}\frac{l=n}{}\right)=\frac{l=n-1}{}\hat{Q}_{0}^{n}\frac{qx}{}R_{0}^{n}\frac{l=n}{}
+\]
+
+\end_inset
+
+and we need to do some tag replacements before the next step:
+\begin_inset Formula 
+\[
+\frac{l=n-1}{}\hat{Q}_{0}^{n}\frac{qx}{}\longrightarrow\frac{l=n}{}\hat{Q}_{0}^{n}\frac{\left(l=n\right)^{\prime}}{}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\frac{qx}{}R_{0}^{n}\frac{l=n}{}\longrightarrow\frac{\left(l=n\right)^{\prime}}{}R_{0}^{n}\frac{l=n}{}
+\]
+
+\end_inset
+
+Now the 
+\begin_inset Formula $\hat{W}_{1}^{n}$
+\end_inset
+
+ update will look like
+\begin_inset Formula 
+\[
+\hat{W}_{1}^{n}=\frac{\left(l=n-1\right)^{\prime}}{}R_{0}^{n-1}\frac{l=n}{}\hat{Q}_{0}^{n}\frac{\left(l=n\right)^{\prime}}{}.
+\]
+
+\end_inset
+
+As for the gauge transforms they need to begin as
+\begin_inset Formula 
+\[
+\frac{l=n}{}G_{0}^{n}\frac{l=n-1}{}
+\]
+
+\end_inset
+
+and then
+\begin_inset Formula 
+\[
+G_{1}^{n}=\frac{\left(l=n\right)^{\prime}}{}R_{0}^{n}\frac{l=n}{}G_{0}^{n}\frac{l=n-1}{}
+\]
+
+\end_inset
+
+After these steps the primes can be removed to get ready for the next iteration.
 \end_layout
 
 \begin_layout Subsection
@@ -3822,11 +3749,11 @@ SVD Compression
 \begin_layout Standard
 To prepare an iMPO for compression we first left orthogonalize and the right
  orthogonalize.
- The guage transform returned by the last step relates the left and right
+ The gauge transform returned by the last step relates the left and right
  forms through a daisy chain of relations
 \begin_inset Formula 
 \[
-G^{\left(n-1\right)}\hat{W}_{R}^{\left(n\right)}=\hat{W}_{L}^{\left(n\right)}G^{\left(n\right)}\;n=1\cdots N
+G^{\left(n-1\right)}\hat{W}_{R}^{n}=\hat{W}_{L}^{n}G^{n}\;n=1\cdots N
 \]
 
 \end_inset
@@ -3835,7 +3762,7 @@ with modular,
 \begin_inset Formula $mod\left(N\right)$
 \end_inset
 
-, arithmetic used for 
+, arithmetic assumed for 
 \begin_inset Formula $n$
 \end_inset
 
@@ -3845,12 +3772,12 @@ with modular,
 \end_inset
 
  is the input for SVD compression.
- We can now imagine a mixed canonical form Hamiltonian created by introducting
+ We can now imagine a mixed canonical form Hamiltonian created by introducing
  
 \begin_inset Formula $G^{N}$
 \end_inset
 
- at left infinity onto a right orthogonal Hmailtonian, and sweeping towards
+ at left infinity onto a right orthogonal Hamiltonian, and sweeping towards
  to right:
 \begin_inset Formula 
 \[
@@ -3896,8 +3823,8 @@ with modular,
 
 \begin_layout Standard
 The gauge transform should have the form below which can be decomposed in
- a block respecting manner (in order avoid those nastey diverging singular
- values), and compessed
+ a block respecting manner (in order avoid those nasty diverging singular
+ values), and then compressed
 \begin_inset Formula 
 \[
 G^{n}=\begin{bmatrix}1 & 0 & 0\\
@@ -3917,7 +3844,25 @@ G^{n}=\begin{bmatrix}1 & 0 & 0\\
 
 \begin_inset Formula 
 \[
-\hat{H}=\cdots\left.\hat{W}_{L}^{N}\right]\left[\hat{W}_{L}^{1}\tilde{U}^{1}\tilde{s}^{1}\tilde{V}^{1}\hat{W}_{R}^{2}\cdots\hat{W}_{R}^{N}\right]\left[\hat{W}_{R}^{1}\right.\cdots
+\hat{H}_{trunc}=\cdots\left.\hat{W}_{L}^{N}\right]\left[\hat{W}_{L}^{1}\tilde{U}^{1}\tilde{s}^{1}\tilde{V}^{1}\hat{W}_{R}^{2}\cdots\hat{W}_{R}^{N}\right]\left[\hat{W}_{R}^{1}\right.\cdots
+\]
+
+\end_inset
+
+We could also have just as easily chosen the orthogonality center to be
+ between sites 2 and 3.
+\begin_inset Formula 
+\[
+\hat{H}_{trunc}=\cdots\left[\cdots\hat{W}_{L}^{N}\right]\left[\hat{W}_{L}^{1}\hat{W}_{L}^{2}\tilde{U}^{2}\tilde{s}^{2}\tilde{V}^{2}\hat{W}_{R}^{3}\cdots\hat{W}_{R}^{N}\right]\left[\hat{W}_{R}^{1}\cdots\right]\cdots
+\]
+
+\end_inset
+
+and so on for each bond in the unit cell.
+ Now we can define
+\begin_inset Formula 
+\[
+\hat{Q}^{n}=\tilde{U}^{\left(n-1\right)\dagger}\hat{W}_{L}^{n}\tilde{U}^{n}
 \]
 
 \end_inset
@@ -3925,31 +3870,24 @@ G^{n}=\begin{bmatrix}1 & 0 & 0\\
 
 \begin_inset Formula 
 \[
-\hat{H}=\cdots\left[\hat{W}_{L}^{1}\hat{W}_{L}^{2}\cdots\hat{W}_{L}^{N}\right]\left[\hat{W}_{L}^{1}\tilde{U}^{1}\tilde{s}^{1}\tilde{V}^{1}\hat{W}_{R}^{2}\cdots\hat{W}_{R}^{N}\right]\left[\hat{W}_{R}^{1}\hat{W}_{R}^{2}\cdots\hat{W}_{R}^{N}\right]\cdots
+\hat{P}^{n}=\tilde{V}^{\left(n-1\right)\dagger}\hat{W}_{R}^{n}\tilde{V}^{n}
 \]
 
 \end_inset
 
-
+And in terms of these new tensors we have
 \begin_inset Formula 
 \[
-\hat{H}=\cdots\left[\hat{W}_{L}^{1}\tilde{U}^{1}\tilde{U}^{1\dagger}\hat{W}_{L}^{2}\cdots\hat{W}_{L}^{N}\right]\left[\hat{W}_{L}^{1}\tilde{U}^{1}\tilde{s}^{1}\tilde{V}^{1}\hat{W}_{R}^{2}\cdots\hat{W}_{R}^{N}\right]\left[\hat{W}_{R}^{1}\tilde{V}^{1\dagger}\tilde{V}^{1}\hat{W}_{R}^{2}\cdots\hat{W}_{R}^{N}\right]\cdots
+\hat{H}=\cdots\left[\hat{Q}^{1}\tilde{s}^{1}\hat{P}^{2}\cdots\hat{P}^{N}\right]\cdots=\cdots\left[\hat{Q}^{1}\hat{Q}^{2}\tilde{s}^{2}\cdots\hat{P}^{N}\right]\cdots
 \]
 
 \end_inset
 
-now we define
+where we can chose to put the orthogonality center on any bond in the unit
+ cell by using the gauge relation
 \begin_inset Formula 
 \[
-\hat{Q}^{1}=\hat{W}_{L}^{1}\tilde{U}^{1},\:\hat{P}^{2}=\tilde{V}^{1}\hat{W}_{R}^{2}
-\]
-
-\end_inset
-
-
-\begin_inset Formula 
-\[
-\hat{H}=\cdots\left[\hat{Q}^{1}\tilde{U}^{1\dagger}\hat{W}_{L}^{2}\cdots\hat{W}_{L}^{N}\right]\left[\hat{Q}^{1}\tilde{s}^{1}\hat{P}^{2}\cdots\hat{W}_{R}^{N}\right]\left[\hat{W}_{R}^{1}\tilde{V}^{1\dagger}\hat{P}^{2}\cdots\hat{W}_{R}^{N}\right]\cdots
+\tilde{s}^{\left(n-1\right)}\hat{P}^{n}=\hat{Q}^{n}\tilde{s}^{n}
 \]
 
 \end_inset
@@ -3971,6 +3909,220 @@ options "plain"
 \end_inset
 
 
+\end_layout
+
+\begin_layout Section
+\start_of_appendix
+Appendix: 
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Appendix:A"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Disclaimer: This issue is not discussed in ref.
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Parker2019"
+literal "false"
+
+\end_inset
+
+ so I am flying by the seat of my pants here.
+ This case requires some extra work in order to construct the 
+\begin_inset Formula $R^{\prime}$
+\end_inset
+
+ matrix.
+ We re-write eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:MR rect factoring"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ as follows
+\begin_inset Formula 
+\begin{equation}
+R=\begin{bmatrix}1 & t_{2} & t_{1} & 0\\
+0 & \mathsf{\mathsf{R}_{2}} & \mathsf{M} & 0\\
+0 & 0 & 0 & 1
+\end{bmatrix}=MR^{\prime}=\begin{bmatrix}1 & 0 & 0\\
+0 & \mathsf{M} & 0\\
+0 & 0 & 1
+\end{bmatrix}\begin{bmatrix}1 & t_{2} & t_{1} & 0\\
+0 & \mathsf{R^{\prime}}_{2} & \mathsf{𝕀} & 0\\
+0 & 0 & 0 & 1
+\end{bmatrix}\label{eq:MR rect factoring}
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\mathsf{M}$
+\end_inset
+
+ (and 
+\begin_inset Formula $M)$
+\end_inset
+
+ must be square.
+ We now must solve the linear system
+\begin_inset Formula 
+\begin{equation}
+\mathsf{R}_{2}=\mathsf{M\mathsf{R^{\prime}}_{2}}\label{eq:R2}
+\end{equation}
+
+\end_inset
+
+for 
+\begin_inset Formula $\mathsf{R^{\prime}}_{2}$
+\end_inset
+
+.
+ This requires care because in general 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\xout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $\mathsf{M}$
+\end_inset
+
+ will be close to or even fully singular.
+ Indeed that is the whole point of compressing.
+ So standard linear solvers and/or matrix inversions are going to fail spectacul
+arly! Again SVD comes to the rescue:
+\begin_inset Formula 
+\begin{equation}
+\mathsf{\mathsf{R^{\prime}}_{2}}\approx\tilde{\mathsf{M}}^{-1}\mathsf{R}_{2}=\tilde{V}\mathsf{\frac{1}{\tilde{s}}\tilde{U^{\dagger}}}\label{eq:R2 solution}
+\end{equation}
+
+\end_inset
+
+This is often referred to as the pseudo inverse.
+ Warning: don't just do 
+\begin_inset Formula $R^{\prime}\approx\tilde{M}^{-1}R$
+\end_inset
+
+ because then you will get a very lousy approximation of the unit matrix
+ in the right side of 
+\begin_inset Formula $R^{\prime}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\xout off
+\uuline off
+\uwave off
+\noun off
+\color none
+Notice in eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:MR rect factoring"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ that we chose to push 
+\begin_inset Formula $\mathsf{M}$
+\end_inset
+
+ over to the right side instead of positioning it on the left.
+ This is so that we capture as much weight (non zero elements) as possible
+ in 
+\begin_inset Formula $\mathsf{M}$
+\end_inset
+
+ and as little as possible in 
+\begin_inset Formula $\mathsf{R}_{2}$
+\end_inset
+
+ (and therefore 
+\begin_inset Formula $\mathsf{R}_{2}^{\prime})$
+\end_inset
+
+.
+ This gives us more to compress in 
+\begin_inset Formula $\mathsf{M}$
+\end_inset
+
+ and should improve the numerical stability when solving eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:R2 solution"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+.
+ I should also note that at the moment this is the weakest part of the whole
+ MPO compression code.
+ When 
+\begin_inset Formula $\epsilon_{SVD}$
+\end_inset
+
+ becomes large, then eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:R2"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ is poorly satisfied, introducing large gauge errors and ultimately degrading
+ energy expectation values.
+ Perhaps some iterative techniques will be required to improve the accuracy
+ of eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:R2"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+.
 \end_layout
 
 \end_body
