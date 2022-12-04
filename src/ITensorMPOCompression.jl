@@ -121,6 +121,10 @@ struct bond_spectrum
         @assert order(s)==2
         new(diag(array(s)),link)
     end
+    bond_spectrum(link::Int64) = begin
+        @assert link>0
+        new([],link)
+    end
 end
 
 bond_spectrums = Vector{bond_spectrum} 
