@@ -131,21 +131,23 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
     if smart_sweep
         if ul==lower
             kwargs[:orth]=left
-            orthogonalize!(H,ul;kwargs...)
+            orthogonalize!(H,ul;epsrr=epsrr,kwargs...)
+            #@show get_Dw(H)
             kwargs[:orth]=right
-            orthogonalize!(H,ul;kwargs...)
+            orthogonalize!(H,ul;epsrr=epsrr,kwargs...)
+            #@show get_Dw(H)
             if lr==left
                 kwargs[:orth]=left
-                orthogonalize!(H,ul;kwargs...)
+                orthogonalize!(H,ul;epsrr=epsrr,kwargs...)
             end
         else
             kwargs[:orth]=right
-            orthogonalize!(H,ul;kwargs...)
+            orthogonalize!(H,ul;epsrr=epsrr,kwargs...)
             kwargs[:orth]=left
-            orthogonalize!(H,ul;kwargs...)
+            orthogonalize!(H,ul;epsrr=epsrr,kwargs...)
             if lr==right
                 kwargs[:orth]=right
-                orthogonalize!(H,ul;kwargs...)
+                orthogonalize!(H,ul;epsrr=epsrr,kwargs...)
             end
         end   
     else
