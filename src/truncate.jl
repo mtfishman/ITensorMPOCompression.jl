@@ -80,12 +80,18 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,bond
 # horizontal rectangular RL matricies which are hard to handle accurately.
 #
    
-    Q,RL,lq=block_qx(W,ul;epsrr=0.0,kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
+    Q,RL,lq=block_qx(W,ul;epsrr=-1.0,kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
     ITensors.@debug_check begin
         if order(Q)==4
             @assert is_canonical(Q,ms,eps)
             @assert is_regular_form(Q,ul,eps)
         end
+    end
+    c=noncommonind(RL,lq) #if size changed the old c is not lnger valid
+    if dim(c)>dim(lq)
+        replacetags!(RL,"qx",tln) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+        replacetags!(Q ,"qx",tln) #W[l=n-1,l=n]
+        return Q,RL,bond_spectrum(n)
     end
     RLinds=inds(RL) # we will need the QN space info later to reconstruct a block sparse RL.
     
@@ -98,7 +104,7 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,bond
     if (hasqns(RL))
         @assert nnzblocks(RL)==1
     end
-    c=noncommonind(RL,lq) #if size changed the old c is not lnger valid
+   
     M,RL_prime,im,RLnz=getM(dense(RL),ms,eps) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
 #  
 #  At last we can svd and compress M using epsSVD as the cutoff.  M should be dense.
@@ -122,6 +128,11 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,bond
     #  during the orthogonalization step, prior to truncation.
     #
     if ns>0 && RLnz
+        @show "bailing out",ns>0,RLnz,dim(c)>dim(lq)
+        W=Q
+        replacetags!(RL,"qx",tln) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+        replacetags!(W ,"qx",tln) #W[l=n-1,l=n]
+        return W,RL,spectrum
         @show "fixing RL_prime" 
         RL_prime=SolveRLprime(RL,RL_prime,U,s,V,lq,im,ms)
     end
@@ -130,9 +141,16 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,bond
     #@show norm(D)
     # Check accuracy of RL_prime.
     if norm(D)>get(kwargs, :cutoff, 1e-14)
+        @show "bailing out norm(D)",norm(D),dim(c)>dim(lq)
+        W=Q
+        replacetags!(RL,"qx",tln) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+        replacetags!(W ,"qx",tln) #W[l=n-1,l=n]
+        return W,RL,spectrum
         @printf "High normD(D)=%.1e min(s)=%.1e \n" norm(D) Base.min(diag(array(s))...)
     end
-
+    if dim(c)>dim(lq)
+        @show "avoided bailout ",dim(c),dim(q)
+    end
     luv=Index(ns+2,"Link,$tuv") #link for expanded U,Us,V,sV matricies.
     if lr==left
         ITensors.@debug_check begin
