@@ -1,7 +1,7 @@
 #
 #  Functions for bringing and MPO into left or right canonical form
 #
-function ITensors.orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form,kwargs...)
+function ITensors.orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form;kwargs...)
     W1,Lplus=block_qx(W1,ul;kwargs...) 
     W2=Lplus*W2
     @assert order(W2)<=4 #make sure there was something to contract. 
@@ -9,7 +9,7 @@ function ITensors.orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form,kwargs...)
     iq=filterinds(inds(Lplus),tags="qx")[1]
     il=noncommonind(Lplus,iq)
     #pprint(iq,Lplus,il,1e-14)
-    il=Index(dim(iq),tags(il))
+    il=redim(il,dim(iq)) #Index(dim(iq),tags(il))
     replaceind!(W1,iq,il)
     replaceind!(W2,iq,il)
     ITensors.@debug_check begin
@@ -30,7 +30,7 @@ function ITensors.orthogonalize!(H::MPO,ul::reg_form;kwargs...)
     for n in rng 
         nn=n+rng.step #index to neighbour
         #@show n,nn,nl
-        H[n],H[nn]=orthogonalize!(H[n],H[nn],ul,kwargs...)
+        H[n],H[nn]=orthogonalize!(H[n],H[nn],ul;kwargs...)
     end
 end
 
@@ -116,37 +116,43 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
     end
     @assert !(bl && bu)
     ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
-    nsweep=get(kwargs,:sweeps,0)
+    
     if length(kwargs)>0
         kwargs=Dict(kwargs) #this allows us to set the dir elements
     else
         kwargs=Dict{Symbol, Any}(:orth => left)
     end
     lr=get(kwargs,:orth,left)
-    lrm=mirror(lr)
-    if nsweep>0
-        for isweep in 1:nsweep
-            kwargs[:orth]=lrm
+    epsrr=get(kwargs,:epsrr,1e-12)
+    smart_sweep=epsrr>=0.0 #if rank reduction is allowed then do smart sweeps prior to final sweep
+    #
+    # First sweep direction is critical for proper rank reduction upper:right, lower:left
+    #
+    if smart_sweep
+        if ul==lower
+            kwargs[:orth]=left
             orthogonalize!(H,ul;kwargs...)
-            kwargs[:orth]=lr
+            kwargs[:orth]=right
             orthogonalize!(H,ul;kwargs...)
-        end
+            if lr==left
+                kwargs[:orth]=left
+                orthogonalize!(H,ul;kwargs...)
+            end
+        else
+            kwargs[:orth]=right
+            orthogonalize!(H,ul;kwargs...)
+            kwargs[:orth]=left
+            orthogonalize!(H,ul;kwargs...)
+            if lr==right
+                kwargs[:orth]=right
+                orthogonalize!(H,ul;kwargs...)
+            end
+        end   
     else
-        Dws=get_Dw(H)
-        if !haskey(kwargs,:orth)
-            @show kwargs
-            get!(kwargs,:orth,lr)
-        end
-        while true
-            kwargs[:orth]=lrm
-            orthogonalize!(H,ul;kwargs...)
-            kwargs[:orth]=lr
-            orthogonalize!(H,ul;kwargs...)
-            new_Dws=get_Dw(H)
-            if new_Dws==Dws break end
-            Dws=new_Dws
-        end
+        println("Doing dumb sweep lr=$lr")
+        orthogonalize!(H,ul;kwargs...)
     end
+  
 end
 
 

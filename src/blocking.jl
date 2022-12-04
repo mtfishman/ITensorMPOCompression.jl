@@ -1,4 +1,5 @@
 using Printf
+
 #
 # functions for getting and setting V blocks required for block respecting QX and SVD
 #
@@ -8,6 +9,7 @@ function getV1(W::ITensor,off::V_offsets)::ITensor
     iss=filterinds(inds(W),tags="Site")
     @assert length(ils)==1
     w1=ils[1]
+    #@show inds(W) w1
     v1=redim(w1,dim(w1)-1)
     T=eltype(W)
     V=ITensor(T(0.0),v1,iss...)
@@ -54,18 +56,16 @@ function setV1(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     @assert(off.o1==off.o2)
     if dim(wil)>dim(vil)+1
         #we need to shrink W
-        wil1=Index(dim(vil)+1,tags(wil))
+        wil1=redim(wil,dim(vil)+1) #Index(dim(vil)+1,tags(wil))
         W1=ITensor(T(0.0),wil1,iss)
         if off.o1==1
             #save first element
-            for isv in eachindval(iss)
-                W1[wil1=>1,isv...]=W[wil=>1,isv...]
-            end
+            op=slice(W,wil=>1)
+            assign!(W1,op,wil1=>1)
         else
             #save last element
-            for isv in eachindval(iss)
-                W1[wil1=>dim(wil1),isv...]=W[wil=>dim(wil),isv...]
-            end
+            op=slice(W,wil=>dim(wil))
+            assign!(W1,op,wil1=>dim(wil1))
         end
     else
         W1=W
@@ -75,9 +75,8 @@ function setV1(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
 
     for ilv in eachindval(vil)
         wlv=IndexVal(wil1,ilv.second+off.o1)
-        for isv in eachindval(iss)
-            W1[wlv,isv...]=V[ilv,isv...]
-        end
+        op=slice(V,ilv)
+        assign!(W1,op,wlv)
     end
     return W1
 end
@@ -95,7 +94,6 @@ function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
         return setV1(W,V,ms) #Handle row/col vectors
     end
     vils=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
-    #@show wils vils
     @assert length(wils)==2
     @assert length(vils)==2
     iss=filterinds(inds(W),tags="Site")
@@ -130,18 +128,19 @@ function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     T=eltype(V)
     resize=dim(iwqx)>dim(ivqx)+1
     if resize
-        iw1=Index(dim(ivqx)+1,tags(iwqx))
+        iw1=redim(iwqx,dim(ivqx)+1) #Index(dim(ivqx)+1,tags(iwqx))
         W1=ITensor(T(0.0),iw1,iwl,iss)
-        others=noncommoninds(W,iwqx)
         @assert off.o1==off.o2
         if  off.o1==1 #save row or col 1
-            for io in eachindval(others...)
-                W1[iw1=>1,io...]=W[iwqx=>1,io...]
+            for io in eachindval(iwl)
+                op=slice(W,iwqx=>1,io)
+                assign!(W1,op,iw1=>1,io)
             end
         else #off.o1==0 save row or col Dw
             @assert off.o1==0
-            for io in eachindval(others...)
-                W1[iw1=>dim(iw1),io...]=W[iwqx=>dim(iwqx),io...]
+            for io in eachindval(iwl)
+                op=slice(W,iwqx=>dim(iwqx),io)
+                assign!(W1,op,iw1=>dim(iw1),io)
             end
         end
 
@@ -152,9 +151,8 @@ function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
 
     for ilv in eachindval(ivqx,ivl)
         wlv=(IndexVal(iwqx,ilv[1].second+off.o1),IndexVal(iwl,ilv[2].second+off.o2))
-        for isv in eachindval(iss)
-            W[wlv...,isv...]=V[ilv...,isv...]
-        end
+        op=slice(V,ilv...)
+        assign!(W,op,wlv...)
     end
     
     return W
@@ -168,11 +166,11 @@ end
 function growRL(RL::ITensor,iWlink::Index,off::V_offsets)::Tuple{ITensor,Index}
     @assert order(RL)==2
     iLlink=filterinds(inds(RL),tags=tags(iWlink))[1] #find the link index of RL
-    iLqx=noncommonind(inds(RL),iLlink) #find the qx link of RL
+    iLqx=copy(noncommonind(inds(RL),iLlink)) #find the qx link of RL
     Dwl=dim(iLlink)
     Dwq=dim(iLqx)
     @assert dim(iWlink)==Dwl+1
-    iq=Index(Dwq+1,tags(iLqx))
+    iq=redim(iLqx,Dwq+1) 
     T=eltype(RL)
     RLplus=ITensor(T(0.0),iq,iWlink)
     @assert norm(RLplus)==0.0
@@ -189,7 +187,7 @@ function growRL(RL::ITensor,iWlink::Index,off::V_offsets)::Tuple{ITensor,Index}
     if !(off.o1==0 && off.o2==0)
         RLplus[iq=>1,iWlink=>1]=1.0
     end
-    return RLplus,iq
+    return RLplus,dag(iq)
 end
 
 #
@@ -204,6 +202,15 @@ end
 #  zeros as possible in M in order for the SVD decomp and compression to have maximum effect.
 #
 function getM(RL::ITensor,ms::matrix_state,eps::Float64)::Tuple{ITensor,ITensor,Index,Bool}
+    # if hasqns(RL)
+    #     @assert nnzblocks(RL)==1 #all qns should be on QL
+    #     # RLt=tensor(RL)
+    #     # RLt1=blockview(RLt,nzblocks(RLt)[1])
+    #     # RL=itensor(RLt1)
+    #     @show dense(RL)
+    #     @assert false
+    # end
+    # @show RL
     ils=filterinds(inds(RL),tags="Link") 
     iqx=findinds(ils,"qx")[1] #think of this as the row index
     iln=noncommonind(ils,iqx) #think of this as the column index
@@ -290,3 +297,47 @@ function grow(A::ITensor,ig1::Index,ig2::Index)
     return G
 end
 
+function grow(A::ITensor,ig1::QNIndex,ig2::Index)
+    @assert !hasqns(A)
+    @assert !hasqns(ig2)
+    G=grow(A,removeqns(ig1),ig2) #grow A into G as dense tensors
+    ig2q=addqns(ig2,[QN()=>dim(ig2)];dir=dir(dag(ig1))) #make a QN version of index ig2
+    @assert id(ig2)==id(ig2q) #If the ID changes then subsequent contractions will fail.
+    return convert_blocksparse(G,ig1,ig2q) #fabricate a 1-block blocksparse version.
+end
+
+#
+#  Convert a order 2 dense tensor into a single block, block-sparse tensor
+#  using provided QNIndexes.  
+#  TODO: There is probably a better way to do this without any risk of doing A
+#  deep copy.
+#
+function convert_blocksparse(A::ITensor,inds::QNIndex...)
+    @assert order(A)==2 #required for Block(1,1) to be correct.
+    bst=BlockSparseTensor(eltype(A),[Block(1,1)],inds )
+    b=nzblocks(bst)[1]
+    blockview(bst, b) .= A #is this deep copy???
+    return itensor(bst)
+end
+
+#
+#  One of the sample_inds needs to match one of inds(A).  This provides enough
+#  info to establish QN() space and direction for the inds of A.
+#
+function make_qninds(A::ITensor,sample_inds::Index...)
+    @assert order(A)==2
+    @assert !hasqns(A)
+    @assert hasqns(sample_inds)
+    ic=commonind(inds(A),sample_inds)
+    ins =noncommonind(ic,sample_inds)
+    inA =noncommonind(ic,inds(A))
+    ics =noncommonind(ins,sample_inds)
+    @assert hasqns(ics)
+    #can't use space(ins) to get QNs because dim could be different.
+    in=addqns(inA,[QN()=>dim(inA)];dir=dir(ins)) #make a QN version of index inA
+    iset=IndexSet(in, ics)
+    if inds(A) != iset
+        iset = permute(iset, inds(A))
+    end
+    return iset
+end

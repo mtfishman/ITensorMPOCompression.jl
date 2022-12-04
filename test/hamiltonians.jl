@@ -4,8 +4,17 @@ using ITensorMPOCompression
 using Revise
 using Test
 
+function make_random_qindex(d::Int64,nq::Int64)::Index
+    qns=Pair{QN, Int64}[]
+    for n in 1:nq
+        append!(qns,[QN()=>rand(1:d)])
+    end
+    return Index(qns,"Link,l=1")
+end
+
+
 NNEs=[(1,-1.5066685458330529),(2,-1.4524087749432490),(3,-1.4516941302867301),(4,-1.4481111362390489)]
-@testset "MPOs hand coded versus autoMPO" for nne in NNEs
+@testset "MPOs hand coded versus autoMPO give same GS energies" for nne in NNEs
 
     N=5
     hx=0.5
@@ -35,5 +44,65 @@ NNEs=[(1,-1.5066685458330529),(2,-1.4524087749432490),(3,-1.4516941302867301),(4
     overlap=abs(inner(psi,psidirect))
     @test overlap ≈ 1.0 atol = eps 
 end 
+
+@testset "Redim function with non-trivial QN spaces" begin
+   
+    for offset in 0:2
+        for d in 1:5
+            for nq in 1:5
+                il=make_random_qindex(d,nq)
+                Dw=dim(il)
+                if Dw>1+offset
+                    #@show il
+                    ilr=redim(il,Dw-offset-1,offset)
+                    #@show ilr
+                    @test dim(ilr)==Dw-offset-1
+                end
+            
+            end #for nq
+        end #for d
+    end #for offset
+end #@testset
+
+makeHs=[make_transIsing_AutoMPO,make_transIsing_MPO,make_Heisenberg_AutoMPO]
+@testset "Auto MPO Ising Ham with Sz blocking" for makeH in makeHs
+    N=5
+    hx=0.0 #Hx!=0 breaks symmetry.
+    eps=4e-14 #this is right at the lower limit for passing the tests.
+    NNN=2
+    
+    sites = siteinds("SpinHalf", N;conserve_qns=true)
+    H=makeH(sites,NNN,hx,lower) 
+    il=filterinds(inds(H[2]),tags="Link")
+    for i in 1:2
+        for start_offset in 0:2
+            for end_offset in 0:2
+                Dw=dim(il[i])
+                Dw_new=Dw-start_offset-start_offset
+                if Dw_new>0 
+                    ilr=redim(il[i],Dw_new,start_offset)
+                    @test dim(ilr)==Dw_new
+                end #if
+            end #for end_offset
+        end #for start_offset 
+    end #for i
+end #@testset
+
+@testset "hand coded versus autoMPO with conserve_qns=true have the same index directions" begin
+    N=5
+    hx=0.0 #Hx!=0 breaks symmetry.
+    eps=4e-14 #this is right at the lower limit for passing the tests.
+    NNN=2
+    
+    sites = siteinds("SpinHalf", N;conserve_qns=true)
+    Hauto=make_transIsing_AutoMPO(sites,NNN,hx,lower) 
+    Hhand=make_transIsing_MPO(sites,NNN,hx,lower) 
+    for (Wauto,Whand) in zip(Hauto,Hhand)
+        for ia in inds(Wauto)
+            ih=filterinds(Whand,tags=tags(ia),plev=plev(ia))[1]
+            @test dir(ia)==dir(ih)
+        end
+    end
+end
 
 nothing

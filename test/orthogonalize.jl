@@ -58,16 +58,17 @@ test_combos=[
     (make_Heisenberg_AutoMPO,lower)
 ]
 
-@testset "Bring MPO into canonical form" for test_combo in test_combos, lr in [left,right]
+@testset "Bring dense $(test_combo[2]) MPO into $lr canonical form" for test_combo in test_combos, lr in [left,right]
     N=10
     NNN=4
     eps=1e-14
-    hx=0.5
+    hx=0.0
     ms=matrix_state(test_combo[2],lr )
     makeH=test_combo[1]
-    sites = siteinds("SpinHalf", N)
+    sites = siteinds("SpinHalf", N;conserve_qns=false)
     psi=randomMPS(sites)
     H=makeH(sites,NNN,hx,ms.ul) 
+    #@show inds(H[1])
     @test is_regular_form(H   ,ms.ul,eps)
     E0=inner(psi',H,psi)
     orthogonalize!(H;orth=ms.lr,epsrr=1e-12)
@@ -76,5 +77,56 @@ test_combos=[
     @test is_regular_form(H,ms.ul,eps)
     @test  is_canonical(H,ms,eps)
     @test !is_canonical(H,mirror(ms),eps)    
+end 
+
+test_combos=[
+    (make_transIsing_MPO,lower),
+    (make_transIsing_MPO,upper),
+    # (make_transIsing_AutoMPO,lower),
+    # (make_Heisenberg_AutoMPO,lower)
+]
+
+@testset "Bring block sparse $(test_combo[2]) MPO into $lr canonical form" for test_combo in test_combos, lr in [left,right]
+    N=10
+    NNN=4
+    eps=1e-14
+    hx=0.0
+    ms=matrix_state(test_combo[2],lr )
+    makeH=test_combo[1]
+    sites = siteinds("SpinHalf", N;conserve_qns=true)
+    state=[isodd(n) ? "Up" : "Dn" for n=1:N]
+    psi=randomMPS(sites,state)
+    H=makeH(sites,NNN,hx,ms.ul) 
+    @test is_regular_form(H   ,ms.ul,eps)
+    E0=inner(psi',H,psi)
+    orthogonalize!(H,ms.ul;orth=ms.lr,epsrr=1e-12)
+    E1=inner(psi',H,psi)
+    @test E0 ≈ E1 atol = 1e-14
+    @test is_regular_form(H,ms.ul,eps)
+    @test  is_canonical(H,ms,eps)
+    @test !is_canonical(H,mirror(ms),eps)    
 end
+
+
+
+ 
+ @testset "Compare $ul tri rank reduction with AutoMPO, QNs=$qns" for ul in [lower,upper],qns in [false,true]
+    N=13
+    sites = siteinds("SpinHalf", N;conserve_qns=qns)
+    for NNN in 3:N-1
+        Hauto=make_transIsing_AutoMPO(sites,NNN,0.0,ul) 
+        Dw_auto=get_Dw(Hauto)
+        Hr=make_transIsing_MPO(sites,NNN,0.0,ul) 
+        orthogonalize!(Hr;orth=right,epsrr=1e-12) #sweep left to right
+        @test is_canonical(Hr,matrix_state(ul,right),1e-12)
+        @test get_Dw(Hr)==Dw_auto
+        Hl=make_transIsing_MPO(sites,NNN,0.0,ul) 
+        orthogonalize!(Hl;orth=left,epsrr=1e-12) #sweep right to left
+        @test is_canonical(Hl,matrix_state(ul,left),1e-12)
+        @test get_Dw(Hl)==Dw_auto
+    end  
+end 
+
+
+
 nothing

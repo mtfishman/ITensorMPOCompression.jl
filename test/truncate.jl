@@ -9,7 +9,7 @@ import ITensorMPOCompression.truncate
 import ITensorMPOCompression.orthogonalize!
 
 #brute force method to control the default float display format.
-# Base.show(io::IO, f::Float64) = @printf(io, "%1.5f", f)
+Base.show(io::IO, f::Float64) = @printf(io, "%1.1e", f)
 
 #
 #  We need consistent output from randomMPS in order to avoid flakey unit testset
@@ -19,23 +19,22 @@ import ITensorMPOCompression.orthogonalize!
 using Random
 Random.Random.seed!(12345);
 
-function test_truncate(makeH,N::Int64,NNN::Int64,ms::matrix_state,epsSVD::Float64,epsrr::Float64,eps::Float64)
+function test_truncate(makeH,N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,epsSVD::Float64,
+    epsrr::Float64,eps::Float64,qns::Bool)
     mlr=mirror(ms.lr)
-    hx=0.5
 
-    sites = siteinds("SpinHalf", N)
-    psi=randomMPS(sites)
+    sites = siteinds("SpinHalf", N;conserve_qns=qns)
+    state=[isodd(n) ? "Up" : "Dn" for n=1:N]
+    psi=randomMPS(sites,state)
     #
     # Make right canonical, then compress to left canonical
     #
     H=makeH(sites,NNN,hx,ms.ul)
-    E0l=inner(psi',H,psi)
+    E0l=inner(psi',H,psi)/(N-1)
     @test is_regular_form(H,ms.ul,eps)
-    #@show get_Dw(H)
     orthogonalize!(H;orth=ms.lr,epsrr=epsrr)
-    #@show get_Dw(H)
-
-    E1l=inner(psi',H,psi)
+    
+    E1l=inner(psi',H,psi)/(N-1)
     RE=abs((E0l-E1l)/E0l)
     #@printf "E0=%1.5f E1=%1.5f rel. error=%.5e  \n" E0l E1l RE 
     @test RE ≈ 0 atol = 2*eps
@@ -43,26 +42,45 @@ function test_truncate(makeH,N::Int64,NNN::Int64,ms::matrix_state,epsSVD::Float6
     @test is_canonical(H,ms,eps)
 
     truncate!(H;orth=mlr,cutoff=epsSVD)
-    #@show get_Dw(H)
-    ss=truncate!(H;orth=ms.lr,cutoff=epsSVD)
-    #@show get_Dw(H)
+    truncate!(H;orth=ms.lr,cutoff=epsSVD)
+    if epsrr<0.0 #no rank reduction so do two more sweeps to make sure
+        truncate!(H;orth=mlr,cutoff=epsSVD)
+        truncate!(H;orth=ms.lr,cutoff=epsSVD)
+    end
     @test is_regular_form(H,ms.ul,eps)
     @test is_canonical(H,ms,eps)
-    #@show ITensorMPOCompression.min(ss) ITensorMPOCompression.max(ss)
     # make sure the energy in unchanged
-    E2l=inner(psi',H,psi)
+    E2l=inner(psi',H,psi)/(N-1)
     RE=abs((E0l-E2l)/E0l)
-    @printf "E0=%8.5f Etrunc=%8.5f rel. error=%7.1e RE/espSVD=%6.2f \n" E0l E2l RE RE/epsSVD
-    if epsSVD<=1e-12
-        @test (RE/epsSVD)<1.0 #typically this will remove any meaningless SVs
-    else
-        @test (RE/epsSVD)<1000.0 #now we may remove real SVs and expect much bigger energy errors
-    end
+    REs= RE/sqrt(epsSVD)
+    @printf "E0=%8.5f Etrunc=%8.5f rel. error=%7.1e RE/sqrt(espSVD)=%6.2f \n" E0l E2l RE REs
+    @test REs<1.0 
+    
 end
 
+#these test are slow.  Uncomment and test if you mess with the truncate algo details.
+# @testset "Compress insideous cases with no rank reduction, no QNs" begin
+#     eps=2e-13
+#     epsSVD=1e-12
+#     epsrr=-1.0
+#     ll=matrix_state(lower,left)
+#     ul=matrix_state(upper,left)
+#     lr=matrix_state(lower,right)
+#     ur=matrix_state(upper,right)
+#     hx=0.5
+
+#     #                                 V=N sites
+#     #                                   V=Num Nearest Neighbours in H
+#     for N in 4:15
+#         test_truncate(make_transIsing_MPO,N,N,hx,ll,epsSVD,epsrr,eps,false)
+#         test_truncate(make_transIsing_MPO,N,N,hx,ul,epsSVD,epsrr,eps,false)
+#         test_truncate(make_transIsing_MPO,N,N,hx,lr,epsSVD,epsrr,eps,false)
+#         test_truncate(make_transIsing_MPO,N,N,hx,ur,epsSVD,epsrr,eps,false)
+#     end
+# end 
 
 
-@testset "Compress full MPO" begin
+@testset "Compress full MPO no QNs" begin
     eps=2e-13
     epsSVD=1e-12
     epsrr=1e-12
@@ -70,31 +88,73 @@ end
     ul=matrix_state(upper,left)
     lr=matrix_state(lower,right)
     ur=matrix_state(upper,right)
+    hx=0.5
 
     #                                 V=N sites
     #                                   V=Num Nearest Neighbours in H
-    test_truncate(make_transIsing_MPO,5,1,ll,epsSVD,epsrr,eps)
-    test_truncate(make_transIsing_MPO,5,3,ll,epsSVD,epsrr,eps)
-    test_truncate(make_transIsing_MPO,5,3,ul,epsSVD,epsrr,eps)
-    test_truncate(make_transIsing_MPO,5,3,lr,epsSVD,epsrr,eps)
-    test_truncate(make_transIsing_MPO,5,3,ur,epsSVD,epsrr,eps)
-    #test_truncate(make_transIsing_MPO,15,10,ll,epsSVD,epsrr,eps) #know fail, triggers fixing RL_prime
-    test_truncate(make_transIsing_MPO,15,10,lr,epsSVD,epsrr,eps) 
+    test_truncate(make_transIsing_MPO,5,1,hx,ll,epsSVD,epsrr,eps,false)
+    test_truncate(make_transIsing_MPO,5,3,hx,ll,epsSVD,epsrr,eps,false)
+    test_truncate(make_transIsing_MPO,5,3,hx,ul,epsSVD,epsrr,eps,false)
+    test_truncate(make_transIsing_MPO,5,3,hx,lr,epsSVD,epsrr,eps,false)
+    test_truncate(make_transIsing_MPO,5,3,hx,ur,epsSVD,epsrr,eps,false)
+    test_truncate(make_transIsing_MPO,15,10,hx,ll,epsSVD,epsrr,eps,false) 
+    test_truncate(make_transIsing_MPO,15,10,hx,lr,epsSVD,epsrr,eps,false) 
+    # Rank revealing QR/RQ  won't fully reduce these two cases
+    test_truncate(make_transIsing_MPO,14,13,hx,ll,epsSVD,epsrr,eps,false) 
+    test_truncate(make_transIsing_MPO,14,13,hx,lr,epsSVD,epsrr,eps,false) 
 
-    epsSVD=.00001
-    test_truncate(make_transIsing_MPO,10,7,ll,epsSVD,epsrr,eps) 
-    test_truncate(make_transIsing_MPO,10,7,lr,epsSVD,epsrr,eps) 
-    test_truncate(make_transIsing_MPO,10,7,ur,epsSVD,epsrr,eps)
-    test_truncate(make_transIsing_MPO,10,7,ul,epsSVD,epsrr,eps)
+    # epsSVD=.00001
+    test_truncate(make_transIsing_MPO,10,7,hx,ll,epsSVD,epsrr,eps,false) 
+    test_truncate(make_transIsing_MPO,10,7,hx,lr,epsSVD,epsrr,eps,false) 
+    test_truncate(make_transIsing_MPO,10,7,hx,ur,epsSVD,epsrr,eps,false)
+    test_truncate(make_transIsing_MPO,10,7,hx,ul,epsSVD,epsrr,eps,false)
 
     #
     # Heisenberg from AutoMPO
     #
-    epsSVD=.00001
-    test_truncate(make_Heisenberg_AutoMPO,10,7,lr,epsSVD,epsrr,eps)
+    # epsSVD=.00001
+    test_truncate(make_Heisenberg_AutoMPO,10,7,hx,lr,epsSVD,epsrr,eps,false)
 
 end 
- 
+
+@testset "Compress full MPO with QNs" begin
+    ITensors.ITensors.enable_debug_checks()
+    eps=2e-13
+    epsSVD=1e-12
+    epsrr=1e-12
+    hx=0.0
+    ll=matrix_state(lower,left)
+    ul=matrix_state(upper,left)
+    lr=matrix_state(lower,right)
+    ur=matrix_state(upper,right)
+
+    #                                 V=N sites
+    #                                   V=Num Nearest Neighbours in H
+    test_truncate(make_transIsing_MPO,5,1,hx,ll,epsSVD,epsrr,eps,true)
+    test_truncate(make_transIsing_MPO,5,3,hx,ll,epsSVD,epsrr,eps,true)
+    test_truncate(make_transIsing_MPO,5,3,hx,ul,epsSVD,epsrr,eps,true)
+    test_truncate(make_transIsing_MPO,5,3,hx,lr,epsSVD,epsrr,eps,true)
+    test_truncate(make_transIsing_MPO,5,3,hx,ur,epsSVD,epsrr,eps,true)
+    test_truncate(make_transIsing_MPO,15,10,hx,ll,epsSVD,epsrr,eps,true) 
+    test_truncate(make_transIsing_MPO,15,10,hx,lr,epsSVD,epsrr,eps,true) 
+    # Rank revealing QR/RQ  won't fully reduce these two cases
+    test_truncate(make_transIsing_MPO,14,13,hx,ll,epsSVD,epsrr,eps,true) 
+    test_truncate(make_transIsing_MPO,14,13,hx,lr,epsSVD,epsrr,eps,true) 
+
+    epsSVD=.00001
+    test_truncate(make_transIsing_MPO,10,7,hx,ll,epsSVD,epsrr,eps,true)  
+    test_truncate(make_transIsing_MPO,10,7,hx,lr,epsSVD,epsrr,eps,true) 
+    test_truncate(make_transIsing_MPO,10,7,hx,ur,epsSVD,epsrr,eps,true)
+    test_truncate(make_transIsing_MPO,10,7,hx,ul,epsSVD,epsrr,eps,true)  
+
+    # #
+    # # Heisenberg from AutoMPO
+    # #
+    # epsSVD=.00001
+    # test_truncate(make_Heisenberg_AutoMPO,10,7,lr,epsSVD,epsrr,eps,false)
+
+end 
+
 @testset "Test ground states" begin
     eps=3e-13
     epsSVD=1e-12
@@ -163,3 +223,31 @@ end
         @test max_mid<1.0
     end
 end
+
+
+@testset "Compare $ul truncation with AutoMPO, QNs=$qns" for ul in [lower,upper],qns in [false,true]
+    for N in 3:15
+        NNN=N-1
+        sites = siteinds("SpinHalf", N;conserve_qns=qns)
+        Hauto=make_transIsing_AutoMPO(sites,NNN,0.0,ul) 
+        Dw_auto=get_Dw(Hauto)
+        Hr=make_transIsing_MPO(sites,NNN,0.0,ul) 
+        truncate!(Hr;orth=right,epsrr=1e-12) #sweep left to right
+        @test is_canonical(Hr,matrix_state(ul,right),1e-12)
+        delta_Dw=sum(get_Dw(Hr)-Dw_auto)
+        @test delta_Dw<=0
+        if delta_Dw<0
+            println("Compression beat AutoMPO by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
+        end
+        Hl=make_transIsing_MPO(sites,NNN,0.0,ul) 
+        truncate!(Hl;orth=left,epsrr=1e-12) #sweep right to left
+        @test is_canonical(Hl,matrix_state(ul,left),1e-12)
+        delta_Dw=sum(get_Dw(Hr)-Dw_auto)
+        @test delta_Dw<=0
+        if delta_Dw<0
+            println("Compression beat AutoMPO by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=left ,ul=$ul,QNs=$qns")
+        end
+        end  
+end 
+
+nothing

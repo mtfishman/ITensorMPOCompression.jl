@@ -230,14 +230,14 @@ function make_transIsing_op(Wref::ITensor,prev_link,NNN::Int64,J::Float64,hx::Fl
     use_qn=hasqns(is)
     d,n,r,c=parse_links(Wref)
     if tags(r)==TagSet("")
-        r=make_Ising_index(Dw,"Link,l=$(n-1)",use_qn,ITensors.In)
+        r=make_Ising_index(Dw,"Link,l=$(n-1)",use_qn,ITensors.Out)
     else
-        r=prev_link
+        r=dag(prev_link)
     end
     if tags(c)==TagSet("")
-        c=make_Ising_index(Dw,"Link,l=$n",use_qn,ITensors.Out)
+        c=make_Ising_index(Dw,"Link,l=$n",use_qn,ITensors.In)
     else
-        c=redim(c,Dw)
+        c=ul==lower ? dag(redim(c,Dw)) : redim(c,Dw)
     end
     iblock=1;
    

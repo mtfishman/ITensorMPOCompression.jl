@@ -1,0 +1,20 @@
+using ITensors
+function make_Heisenberg_AutoMPO(sites,NNN::Int64=1,hz::Float64=0.0,J::Float64=1.0)::MPO
+    N=length(sites)
+    @assert(N>=NNN)
+    ampo = OpSum()
+    for j=1:N
+        add!(ampo, hz   ,"Sz", j)
+    end
+    for dj=1:NNN
+        f=J/dj
+        for j=1:N-dj
+            add!(ampo, f    ,"Sz", j, "Sz", j+dj)
+            add!(ampo, f*0.5,"S+", j, "S-", j+dj)
+            add!(ampo, f*0.5,"S-", j, "S+", j+dj)
+        end
+    end
+    mpo=MPO(ampo,sites)
+    #fix_autoMPO!(mpo) #swap row[2]<->row[Dw] and col[2]<->col[Dw]
+    return mpo
+end
