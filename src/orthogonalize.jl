@@ -123,29 +123,35 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
         kwargs=Dict{Symbol, Any}(:orth => left)
     end
     lr=get(kwargs,:orth,left)
-   
+    epsrr=get(kwargs,:epsrr,1e-12)
+    smart_sweep=epsrr>=0.0 #if rank reduction is allowed then do smart sweeps prior to final sweep
     #
     # First sweep direction is critical for proper rank reduction upper:right, lower:left
     #
-    if ul==lower
-        kwargs[:orth]=left
-        orthogonalize!(H,ul;kwargs...)
-        kwargs[:orth]=right
-        orthogonalize!(H,ul;kwargs...)
-        if lr==left
+    if smart_sweep
+        if ul==lower
             kwargs[:orth]=left
             orthogonalize!(H,ul;kwargs...)
-        end
-    else
-        kwargs[:orth]=right
-        orthogonalize!(H,ul;kwargs...)
-        kwargs[:orth]=left
-        orthogonalize!(H,ul;kwargs...)
-        if lr==right
             kwargs[:orth]=right
             orthogonalize!(H,ul;kwargs...)
-        end
-    end   
+            if lr==left
+                kwargs[:orth]=left
+                orthogonalize!(H,ul;kwargs...)
+            end
+        else
+            kwargs[:orth]=right
+            orthogonalize!(H,ul;kwargs...)
+            kwargs[:orth]=left
+            orthogonalize!(H,ul;kwargs...)
+            if lr==right
+                kwargs[:orth]=right
+                orthogonalize!(H,ul;kwargs...)
+            end
+        end   
+    else
+        println("Doing dumb sweep lr=$lr")
+        orthogonalize!(H,ul;kwargs...)
+    end
   
 end
 
