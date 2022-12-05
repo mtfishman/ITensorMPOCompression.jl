@@ -90,17 +90,19 @@ interactions.  The interactions are hard coded to decay like J/(i-j) between sit
 """
 function make_transIsing_MPO(sites,NNN::Int64=1,hx::Float64=0.0,ul::reg_form=lower,J::Float64=1.0;kwargs...)::MPO
     pbc::Bool=get(kwargs,:pbc,false)
-    mpo=MPO(sites) #make and MPO only to get the indices
-    prev_link=Nothing
+    Dw::Int64=transIsing_Dw(NNN)
+    use_qn::Bool=hasqns(sites)
+    mpo=MPO(length(sites))
+    io = ul==lower ? ITensors.Out : ITensors.In
+    prev_link=make_Ising_index(Dw,"Link,l=0",use_qn,io)
     for n in 1:length(sites)
-        mpo[n]=make_transIsing_op(mpo[n],prev_link,NNN,J,hx,ul)
+        mpo[n]=make_transIsing_op(sites[n],prev_link,NNN,J,hx,ul)
         prev_link=filterinds(mpo[n],tags="Link,l=$n")[1]
     end
-    if pbc
-        return mpo #leave end Ws as full matrices, i.e. periodic boundary conditions.
-    else
-        return ITensorMPOCompression.to_openbc(mpo) #contract with l* and *r at the edges.
+    if !pbc
+        mpo=ITensorMPOCompression.to_openbc(mpo) #contract with l* and *r at the edges.
     end
+    return mpo
 end
 
 #  It turns out that the trans-Ising model
@@ -112,36 +114,67 @@ end
 
 function make_Ising_index(Dw::Int64,tags::String,use_qn::Bool,dir)
     if (use_qn)
-        ind=Index(QN("Sz",0)=>Dw;dir=dir,tags=tags)
+        if tags[1:4]=="Link"
+            ind=Index(QN("Sz",0)=>Dw;dir=dir,tags=tags)
+        else
+            @assert tags[1:4]=="Site"
+            ind=Index(QN("Sz",1)=>Dw;dir=dir,tags=tags)
+        end
     else
         ind=Index(Dw,tags)
     end
     return ind
 end
 
+function parse_site(is::Index)
+    @assert hastags(is,"Site")
+    nsite=-1
+    for t in tags(is)
+        ts=String(t)
+        if ts[1:2]=="n="
+            nsite::Int64=tryparse(Int64,ts[3:end])
+        end
+        if length(ts)>=4 && ts[1:4]=="Spin"
+            space=ts
+        end
+        if ts[1:2]=="S="
+            space=ts[3:end]
+        end
+    end
+    @assert nsite>=0
+    return nsite,space
+end
+
+function parse_link(il::Index)::Int64
+    @assert hastags(il,"Link")
+    nsite=-1
+    for t in tags(il)
+        ts=String(t)
+        if ts[1:2]=="l="
+            nsite::Int64=tryparse(Int64,ts[3:end])
+            break
+        end
+    end
+    @assert nsite>=0
+    return nsite
+end
+
 # NNN = Number of Nearest Neighbours, for example
 #    NNN=1 corresponds to nearest neighbour
 #    NNN=2 corresponds to nearest and next nearest neighbour
-function make_transIsing_op(Wref::ITensor,prev_link,NNN::Int64,J::Float64,hx::Float64=0.0,ul::reg_form=lower)::ITensor
+function make_transIsing_op(site::Index,prev_link::Index,NNN::Int64,J::Float64,hx::Float64=0.0,ul::reg_form=lower)::ITensor
     @assert NNN>=1
     do_field = hx!=0.0
     Dw::Int64=transIsing_Dw(NNN)
-    is=filterinds(Wref,tags="Site")[1] #get any site index for generating operators
-    use_qn=hasqns(is)
-    d,n,r,c=parse_links(Wref)
-    if tags(r)==TagSet("")
-        r=make_Ising_index(Dw,"Link,l=$(n-1)",use_qn,ITensors.Out)
-    else
-        r=dag(prev_link)
-    end
-    if tags(c)==TagSet("")
-        c=make_Ising_index(Dw,"Link,l=$n",use_qn,ITensors.In)
-    else
-        c=ul==lower ? dag(redim(c,Dw)) : redim(c,Dw)
-    end
-    iblock=1;
-   
-    W=ITensor(r,dag(c),is,dag(is'))
+    nl=parse_link(prev_link)
+    n,space=parse_site(site)
+    @assert n==nl+1
+    use_qn=hasqns(site)
+    
+    r=dag(prev_link)
+    c=make_Ising_index(Dw,"Link,l=$n",use_qn,dir(prev_link))
+    is=dag(site) #site seem to have the wrong direction!
+    W=ITensor(r,c,is,dag(is'))
     Id=op(is,"Id")
     Sz=op(is,"Sz")
     if do_field
@@ -149,7 +182,8 @@ function make_transIsing_op(Wref::ITensor,prev_link,NNN::Int64,J::Float64,hx::Fl
     end
     assign!(W,Id,r=>1 ,c=>1 )
     assign!(W,Id,r=>Dw,c=>Dw)
-    
+
+    iblock=1
     if ul==lower
         if do_field
             assign!(W ,hx*Sx,r=>Dw,c=>1); #add field term
@@ -181,6 +215,8 @@ function make_transIsing_op(Wref::ITensor,prev_link,NNN::Int64,J::Float64,hx::Fl
     end
     return W
 end
+
+
 
 function to_openbc(mpo::MPO)::MPO
     N=length(mpo)
