@@ -1,7 +1,9 @@
 
-
-make_Heisenberg_AutoMPO(sites,NNN::Int64,hz::Float64,ul::reg_form,J::Float64=1.0)::MPO = 
-    make_Heisenberg_AutoMPO(sites,NNN,hz,J)
+#make_Heisenberg_AutoMPO
+make_Heisenberg_AutoMPO(sites,NNN::Int64,hz::Float64,::reg_form,J::Float64=1.0)::MPO = make_Heisenberg_AutoMPO(sites,NNN,hz,J)
+    
+# make_Heisenberg_AutoMPO(sites,NNN::Int64,hz::Float64,ul::reg_form)::MPO = 
+#     make_Heisenberg_AutoMPO(sites,NNN,hz,1.0)
 
 @doc """
     make_Heisenberg_AutoMPO(sites,[NNN=1[,hz=0.0[,J=1.0]]])
@@ -34,6 +36,55 @@ function make_Heisenberg_AutoMPO(sites,NNN::Int64=1,hz::Float64=0.0,J::Float64=1
     end
     return MPO(ampo,sites)
 end
+
+#
+#  Reproduce the 3-body Hamiltonian from the Parker paper, eq. 34
+#
+function make_Parker(sites,hx::Float64=0.0;kwargs...)
+    N=length(sites)
+    os = OpSum()
+    if hx!=0
+        os=make_1body(os,N,hx)
+    end
+    os=make_2body(os,N)
+    os=make_3body(os,N)
+    MPO(os,sites;kwargs...)
+end
+
+function make_1body(os::OpSum,N::Int64,hx::Float64=0.0)::OpSum
+    for n=1:N
+        add!(os, hx   ,"Sx", n)
+    end
+    return os
+end
+
+function make_2body(os::OpSum,N::Int64,heis::Bool=false)::OpSum
+    for n=1:N
+        for m=n+1:N
+            Jnm=1.0/abs(n-m)^4
+            add!(os, Jnm    ,"Sz", n, "Sz", m)
+            if heis
+                add!(os, Jnm*0.5,"S+", n, "S-", m)
+                add!(os, Jnm*0.5,"S-", n, "S+", m)
+            end
+        end
+    end
+    return os
+end
+
+function make_3body(os::OpSum,N::Int64)::OpSum
+    for n=1:N
+        for m=n+1:N
+            Jnm=1.0/abs(n-m)^2
+            for k=m+1:N
+                Jkn=1.0/abs(k-n)^2
+                add!(os, Jnm*Jkn    ,"Sz", n, "Sz", m,"Sz",k)
+            end
+        end
+    end
+    return os
+end
+
 
 
 
@@ -124,39 +175,6 @@ function make_Ising_index(Dw::Int64,tags::String,use_qn::Bool,dir)
         ind=Index(Dw,tags)
     end
     return ind
-end
-
-function parse_site(is::Index)
-    @assert hastags(is,"Site")
-    nsite=-1
-    for t in tags(is)
-        ts=String(t)
-        if ts[1:2]=="n="
-            nsite::Int64=tryparse(Int64,ts[3:end])
-        end
-        if length(ts)>=4 && ts[1:4]=="Spin"
-            space=ts
-        end
-        if ts[1:2]=="S="
-            space=ts[3:end]
-        end
-    end
-    @assert nsite>=0
-    return nsite,space
-end
-
-function parse_link(il::Index)::Int64
-    @assert hastags(il,"Link")
-    nsite=-1
-    for t in tags(il)
-        ts=String(t)
-        if ts[1:2]=="l="
-            nsite::Int64=tryparse(Int64,ts[3:end])
-            break
-        end
-    end
-    @assert nsite>=0
-    return nsite
 end
 
 # NNN = Number of Nearest Neighbours, for example
