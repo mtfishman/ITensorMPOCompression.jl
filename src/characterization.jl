@@ -19,10 +19,8 @@ function parse_links(A::ITensor)::Tuple{Int64,Int64,Index,Index}
     #  assume third tag is always the "n=$nsite" site number tag
     #
     is=filterinds(inds(A),tags="Site")[1]
+    nsite,space=parse_site(is)
     d=dim(is)
-    ts2=String(tags(is)[3])
-    @assert ts2[1:2]=="n="
-    nsite::Int64=tryparse(Int64,ts2[3:end])
     #
     #  Now process the link tags
     #
@@ -80,6 +78,39 @@ function parse_links(A::ITensor)::Tuple{Int64,Int64,Index,Index}
     else
         @assert false
     end
+end
+
+function parse_site(is::Index)
+    @assert hastags(is,"Site")
+    nsite=-1
+    for t in tags(is)
+        ts=String(t)
+        if ts[1:2]=="n="
+            nsite::Int64=tryparse(Int64,ts[3:end])
+        end
+        if length(ts)>=4 && ts[1:4]=="Spin"
+            space=ts
+        end
+        if ts[1:2]=="S="
+            space=ts[3:end]
+        end
+    end
+    @assert nsite>=0
+    return nsite,space
+end
+
+function parse_link(il::Index)::Int64
+    @assert hastags(il,"Link")
+    nsite=-1
+    for t in tags(il)
+        ts=String(t)
+        if ts[1:2]=="l="
+            nsite::Int64=tryparse(Int64,ts[3:end])
+            break
+        end
+    end
+    @assert nsite>=0
+    return nsite
 end
 
 #----------------------------------------------------------------------------
