@@ -52,10 +52,6 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,bond
 #  
 #  At last we can svd and compress M using epsSVD as the cutoff.  M should be dense.
 #    
-    min_cutoff=1e-12
-    cutoff=get(kwargs,:cutoff,min_cutoff)
-    cutoff=cutoff<min_cutoff ? min_cutoff : cutoff
-    kwargs=add_or_replace(kwargs,:cutoff,cutoff) #make sure cutoff is not zero.
     isvd=findinds(M,tsvd)[1] #decide the left index
     U,s,V=svd(M,isvd;kwargs...) # ns sing. values survive compression
     ns=dim(inds(s)[1])
