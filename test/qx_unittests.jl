@@ -2,7 +2,6 @@ using ITensors
 using ITensorMPOCompression
 using Test
 using Printf
-#import ITensors: rq
 
 
 

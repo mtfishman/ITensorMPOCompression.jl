@@ -1,5 +1,4 @@
 using LinearAlgebra
-import ITensors: qr,rq,ql,lq
 @doc """
   `block_qx(W::ITensor,ul::reg_form)::Tuple{ITensor,ITensor,Index}`
 
