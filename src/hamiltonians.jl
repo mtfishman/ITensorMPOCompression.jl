@@ -140,15 +140,27 @@ interactions.  The interactions are hard coded to decay like J/(i-j) between sit
 
 """
 function make_transIsing_MPO(sites,NNN::Int64=1,hx::Float64=0.0,ul::reg_form=lower,J::Float64=1.0;kwargs...)::MPO
+    N=length(sites)
     pbc::Bool=get(kwargs,:pbc,false)
     Dw::Int64=transIsing_Dw(NNN)
-    use_qn::Bool=hasqns(sites)
-    mpo=MPO(length(sites))
+    use_qn::Bool=hasqns(sites[1])
+    mpo=MPO(N)
     io = ul==lower ? ITensors.Out : ITensors.In
-    prev_link=make_Ising_index(Dw,"Link,l=0",use_qn,io)
-    for n in 1:length(sites)
-        mpo[n]=make_transIsing_op(sites[n],prev_link,NNN,J,hx,ul)
+   
+    if pbc
+        prev_link=make_Ising_index(Dw,"Link,c=0,l=$(N)",use_qn,io)
+    else
+        prev_link=make_Ising_index(Dw,"Link,l=1",use_qn,io)
+    end
+    for n in 1:N
+        mpo[n]=make_transIsing_op(sites[n],prev_link,NNN,J,hx,ul,pbc)
         prev_link=filterinds(mpo[n],tags="Link,l=$n")[1]
+    end
+    if pbc
+        i0=filterinds(mpo[1],tags="Link,c=0,l=$(N)")[1]
+        i0=replacetags(i0,"c=0","c=1")
+        in=filterinds(mpo[N],tags="Link,c=1,l=$(N)")[1]
+        mpo[N]=replaceind(mpo[N],in,i0)
     end
     if !pbc
         mpo=ITensorMPOCompression.to_openbc(mpo) #contract with l* and *r at the edges.
@@ -180,17 +192,19 @@ end
 # NNN = Number of Nearest Neighbours, for example
 #    NNN=1 corresponds to nearest neighbour
 #    NNN=2 corresponds to nearest and next nearest neighbour
-function make_transIsing_op(site::Index,prev_link::Index,NNN::Int64,J::Float64,hx::Float64=0.0,ul::reg_form=lower)::ITensor
+function make_transIsing_op(site::Index,prev_link::Index,NNN::Int64,J::Float64,hx::Float64=0.0,ul::reg_form=lower,pbc::Bool=false)::ITensor
     @assert NNN>=1
     do_field = hx!=0.0
     Dw::Int64=transIsing_Dw(NNN)
     nl=parse_link(prev_link)
     n,space=parse_site(site)
-    @assert n==nl+1
     use_qn=hasqns(site)
     
     r=dag(prev_link)
     c=make_Ising_index(Dw,"Link,l=$n",use_qn,dir(prev_link))
+    if pbc
+        c=addtags(c,"c=1")
+    end
     is=dag(site) #site seem to have the wrong direction!
     W=ITensor(r,c,is,dag(is'))
     Id=op(is,"Id")

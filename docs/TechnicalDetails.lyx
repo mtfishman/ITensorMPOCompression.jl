@@ -3533,7 +3533,7 @@ We begin by creating a collection of gauge transforms and set them equal
  to the identity:
 \begin_inset Formula 
 \[
-G_{L}^{1}=G_{L}^{2}\cdots=G_{L}^{N}=\mathbb{I}
+G_{L0}^{1}=G_{L0}^{2}\cdots=G_{L0}^{N}=\mathbb{I}
 \]
 
 \end_inset
@@ -3559,7 +3559,7 @@ and now
 \end_inset
 
 But we can demarcate the unit cell any place we want, moving the square
- brackets on tensor to the left we have
+ brackets one tensor to the left we have
 \begin_inset Formula 
 \[
 =\cdots\left[R_{0}^{N}\hat{Q}_{0}^{1}R_{0}^{1}\hat{Q}_{0}^{2}R_{0}^{2}\cdots R_{0}^{(N-1)}\hat{Q}_{0}^{N}\right]\cdots
@@ -3594,7 +3594,7 @@ where
 In addition we must update the accumulated gauge transforms
 \begin_inset Formula 
 \[
-G_{L}^{n}\rightarrow R_{0}^{n}G_{L}^{n}
+G_{L1}^{n}=R_{0}^{n}G_{L0}^{n}
 \]
 
 \end_inset
@@ -3641,27 +3641,79 @@ As the iterations proceed the
 
  if we are doing a left orthogonalization sweep.
  The full gauge transformation is accumulated in the set of 
-\begin_inset Formula $G_{L}^{n}$
+\begin_inset Formula $G_{L\infty}^{n}$
 \end_inset
 
  matrices.
  The gauge transforms relate 
-\begin_inset Formula $\hat{W}_{L}$
+\begin_inset Formula $\hat{W}_{L\infty}$
 \end_inset
 
  and 
 \begin_inset Formula $\hat{W}_{0}$
 \end_inset
 
- as follows
+ are as follows
 \begin_inset Formula 
 \[
-\hat{W}_{L}G_{L}=G_{L}\hat{W}_{0}
+\hat{W}_{L}^{n}G_{L}^{n}=G_{L}^{n-1}\hat{W}_{0}^{n}
 \]
 
 \end_inset
 
 
+\end_layout
+
+\begin_layout Standard
+When we sweep the oher direction 
+\begin_inset Formula 
+\[
+\hat{QX}\left(\hat{W}_{0}^{n}\right)\rightarrow\hat{V}_{0}^{n}=R_{0}^{n}\hat{Q}_{0}^{n}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\hat{H}=\cdots\hat{Q}_{0}^{N}\left[R_{0}^{1}\hat{Q}_{0}^{1}R_{0}^{2}\hat{Q}_{0}^{2}\cdots R_{0}^{N}\hat{Q}_{0}^{N}\right]R_{0}^{1}\cdots=\cdots R_{0}^{1}\left[\hat{Q}_{0}^{1}R_{0}^{2}\hat{Q}_{0}^{2}\cdots R_{0}^{N}\hat{Q}_{0}^{N}R_{0}^{1}\right]\hat{Q}_{0}^{1}\cdots
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+=\cdots R_{0}^{1}\left[\hat{W}_{1}^{1}\hat{W}_{1}^{2}\cdots\hat{W}_{1}^{N}\right]\hat{Q}_{0}^{1}\cdots
+\]
+
+\end_inset
+
+where
+\begin_inset Formula 
+\[
+\hat{W}_{1}^{n}=\hat{Q}_{0}^{n}R_{0}^{n+1}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+G_{L1}^{n}=G_{L0}^{n}R_{0}^{n}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+G_{R}^{n}\hat{W}_{R}^{n}=\hat{W}_{0}^{n}G_{R}^{n-1}
+\]
+
+\end_inset
+
+ 
 \end_layout
 
 \begin_layout Subsubsection

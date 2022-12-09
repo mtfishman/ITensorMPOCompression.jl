@@ -91,10 +91,12 @@ function block_qx(W_::ITensor,n::Int64,r::Index,c::Index,ul::reg_form=lower;kwar
   (tln,cr)= lr==left ? ("l=$n",c) : ("l=$(n-1)",r)
   # for block sparse we get a reference that tracks the size of W behind the scenes!
   # So we must make copy to get a static result.
-  ilw=copy(filterinds(inds(W),tags=tln)[1]) #get the link to the next site. 
+  #@show tln cr 
+  #ilw=copy(filterinds(inds(W),tags=tln)[1]) #get the link to the next site. 
+  ilw=copy(cr) #get the link to the next site. 
   offset=V_offsets(ms)
   V=getV(W,offset) #extract the V block
-  ind_on_V=filterinds(inds(V),tags=tln)[1] #link to next site 
+  ind_on_V=filterinds(inds(V),tags=tags(ilw))[1] #link to next site 
   inds_on_Q=noncommoninds(inds(V),ind_on_V) #group all other indices for QX factorization
   
   if ul==lower
@@ -113,13 +115,13 @@ function block_qx(W_::ITensor,n::Int64,r::Index,c::Index,ul::reg_form=lower;kwar
   set_scale!(RL,Q,offset) #rescale so the L(n,n)==1.0
   ITensors.@debug_check begin
     err=norm(V-RL*Q)
-    if  err>1e-12
+    if  err>1e-11
       @warn "Loss of precision in block_qx, norm(V-RL*Q)=$err"
     end
   end
   W=setV(W,Q,ms) #Q is the new V, stuff Q into W. THis can resize W
   RLplus,iqx=growRL(RL,ilw,offset) #Now make a full size version of RL
-  ilw=filterinds(W,tags=tln)[1]
+  ilw=filterinds(W,tags=tags(cr))[1]
   replaceind!(W,ilw,iqx) #this function purposely ignores dir(iqx) and preserves dir(ilw)
   @assert dir(W,iqx)==dir(iqx) #so they better match or everything crashes!!
   @assert hastags(W,"qx")
