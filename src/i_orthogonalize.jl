@@ -87,14 +87,13 @@ end
 #
 #  Out routine simply established upper or lower regular forms
 #
-function i_orthogonalize!(H::MPO;kwargs...)
-    @assert has_pbc(H)
+function i_orthogonalize!(H::InfiniteMPO;kwargs...)
     (bl,bu)=detect_regular_form(H,1e-14)
     if !(bl || bu)
         throw(ErrorException("orthogonalize!(H::MPO), H must be in either lower or upper regular form"))
     end
     @assert !(bl && bu)
     ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
-    return orthogonalize!(H,ul;kwargs...)
+    return i_orthogonalize!(H,ul;kwargs...)
 end
 

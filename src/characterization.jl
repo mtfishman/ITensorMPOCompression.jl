@@ -467,7 +467,7 @@ function is_regular_form(H::AbstractMPS,eps::Float64=default_eps)::Bool
         lrf=lrf && l
         urf=urf && u
     end
-    return lrf || url
+    return lrf || urf
 end
 
 @doc """
