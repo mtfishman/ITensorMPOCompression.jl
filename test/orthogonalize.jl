@@ -22,25 +22,25 @@ import ITensorMPOCompression.orthogonalize!
     @test is_upper_lower(H   ,lower,eps)
     @test is_lower_regular_form(H,eps)
     W=H[2]
-    d,n,r,c=parse_links(W)
+    r,c=parse_links(W)
     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
     Sz=op(is,"Sz")
     assign!(W,Sz,r=>1,c=>2) #stuff any op on the top row
     @test !is_lower_regular_form(W,eps)
     W=H[3]
-    d,n,r,c=parse_links(W)
+    r,c=parse_links(W)
     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
     Sz=op(is,"Sz")
     assign!(W,Sz,r=>2,c=>dim(c)) #stuff any op on the right column
     @test !is_lower_regular_form(W,eps)
     W=H[4]
-    d,n,r,c=parse_links(W)
+    r,c=parse_links(W)
     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
     Sz=op(is,"Sz")
     assign!(W,Sz,r=>2,c=>2) #stuff any op on the diag
     @test is_lower_regular_form(W,eps) #this one should still be regular
     W=H[5]
-    d,n,r,c=parse_links(W)
+    r,c=parse_links(W)
     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
     Id=op(is,"Id")
     assign!(W,Id,r=>2,c=>2) #stuff unit op on the diag
@@ -106,27 +106,22 @@ test_combos=[
     @test  is_canonical(H,ms,eps)
     @test !is_canonical(H,mirror(ms),eps)    
 end
-
-
-
  
- @testset "Compare $ul tri rank reduction with AutoMPO, QNs=$qns" for ul in [lower,upper],qns in [false,true]
-    N=13
-    sites = siteinds("SpinHalf", N;conserve_qns=qns)
-    for NNN in 3:N-1
-        Hauto=make_transIsing_AutoMPO(sites,NNN,0.0,ul) 
-        Dw_auto=get_Dw(Hauto)
-        Hr=make_transIsing_MPO(sites,NNN,0.0,ul) 
-        orthogonalize!(Hr;orth=right,epsrr=1e-12) #sweep left to right
-        @test is_canonical(Hr,matrix_state(ul,right),1e-12)
-        @test get_Dw(Hr)==Dw_auto
-        Hl=make_transIsing_MPO(sites,NNN,0.0,ul) 
-        orthogonalize!(Hl;orth=left,epsrr=1e-12) #sweep right to left
-        @test is_canonical(Hl,matrix_state(ul,left),1e-12)
-        @test get_Dw(Hl)==Dw_auto
-    end  
+@testset "Compare $ul tri rank reduction with AutoMPO, QNs=$qns" for ul in [lower,upper],qns in [false,true]
+N=13
+sites = siteinds("SpinHalf", N;conserve_qns=qns)
+for NNN in 3:N-1
+    Hauto=make_transIsing_AutoMPO(sites,NNN,0.0,ul) 
+    Dw_auto=get_Dw(Hauto)
+    Hr=make_transIsing_MPO(sites,NNN,0.0,ul) 
+    orthogonalize!(Hr;orth=right,epsrr=1e-12) #sweep left to right
+    @test is_canonical(Hr,matrix_state(ul,right),1e-12)
+    @test get_Dw(Hr)==Dw_auto
+    Hl=make_transIsing_MPO(sites,NNN,0.0,ul) 
+    orthogonalize!(Hl;orth=left,epsrr=1e-12) #sweep right to left
+    @test is_canonical(Hl,matrix_state(ul,left),1e-12)
+    @test get_Dw(Hl)==Dw_auto
+end  
 end 
-
-
 
 nothing

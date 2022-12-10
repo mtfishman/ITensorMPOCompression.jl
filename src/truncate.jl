@@ -5,13 +5,13 @@ using Printf
 #  Compress one site
 #
 function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,bond_spectrum}
-    d,n,r,c=parse_links(W) # W[l=$(n-1)l=$n]=W[r,c]
     lr::orth_type=get(kwargs, :orth, right)
     ms=matrix_state(ul,lr)
     eps=1e-14 #relax used for testing upper/lower/regular-form etc.
+    forward,reverse=parse_links(W,lr) # W[l=$(n-1)l=$n]=W[r,c]
+    d,n,space=parse_site(W)
     # establish some tag strings then depend on lr.
-    (tsvd,tuv,tln) = lr==left ? ("qx","u","l=$n") : ("m","v","l=$(n-1)")
-
+    (tsvd,tuv) = lr==left ? ("qx","Link,u") : ("m","Link,v")
 #
 # Block repecting QR/QL/LQ/RQ factorization.  RL=L or R for upper and lower.
 # here we purposely turn off rank reavealing feature (epsrr=0.0) to (mostly) avoid
@@ -31,15 +31,15 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,bond
     #  For now we just bail out.
     #
     if dim(c)>dim(lq)
-        replacetags!(RL,"qx",tln) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-        replacetags!(Q ,"qx",tln) #W[l=n-1,l=n]
+        replacetags!(RL,"Link,qx",tags(forward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+        replacetags!(Q ,"Link,qx",tags(forward)) #W[l=n-1,l=n]
         return Q,RL,bond_spectrum(n)
     end
     RLinds=inds(RL) # we will need the QN space info later to reconstruct a block sparse RL.
     
 #
 #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
-#  For blcoksparse W, at this point we switch to dense for all RL manipulations and RL should
+#  For blocksparse W, at this point we switch to dense for all RL manipulations and RL should
 #  only have one block anyway.
 #  TODO: use multiple dispatch on getM to get all QN specific code out of this funtion.
 #
@@ -64,16 +64,13 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,bond
     # Check accuracy of RL_prime.
     if norm(D)>get(kwargs, :cutoff, 1e-14)
         @printf "High normD(D)=%.1e min(s)=%.1e \n" norm(D) Base.min(diag(array(s))...)
-        replacetags!(RL,"qx",tln) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-        replacetags!(Q ,"qx",tln) #W[l=n-1,l=n]
+        replacetags!(RL,"Link,qx",tags(forward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+        replacetags!(Q ,"Link,qx",tags(forward)) #W[l=n-1,l=n]
         return Q,RL,spectrum
     end
    
     luv=Index(ns+2,"Link,$tuv") #link for expanded U,Us,V,sV matricies.
     if lr==left
-        ITensors.@debug_check begin
-            @assert is_upper_lower(lq,RL      ,c,ul,eps)
-        end
         RL=grow(s*V,luv,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
         Uplus=grow(U,dag(lq),luv)
         if hasqns(lq)
@@ -81,9 +78,6 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,bond
         end
         W=Q*Uplus #W[l=n-1,u]
     else # right
-        ITensors.@debug_check begin
-            @assert is_upper_lower(r,RL      ,lq,ms.ul,eps)
-        end
         RL=RL_prime*grow(U*s,im,luv) #RL[l=n-1,v] dim Dw1 x ns+2
         
         Vplus=grow(V,dag(lq),luv) #lq has the dir of Q so want the opposite on Vplus
@@ -92,14 +86,13 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,bond
         end
         W=Vplus*Q #W[l=n-1,v]
     end
-    replacetags!(RL,tuv,tln) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-    replacetags!(W ,tuv,tln) #W[l=n-1,l=n]
+    replacetags!(RL,tuv,tags(forward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+    replacetags!(W ,tuv,tags(forward)) #W[l=n-1,l=n]
     # At this point RL is dense, we need to make block-sparse version with one block.
     if hasqns(RLinds)
         iRL=make_qninds(RL,RLinds...)
         RL=convert_blocksparse(RL,iRL...)
     end
-    #@show removeqns(filterinds(W,tags="Link")) removeqns(filterinds(RL,tags="Link")) 
     ITensors.@debug_check begin
         @assert is_regular_form(W,ul,eps)
         @assert is_canonical(W,ms,eps)

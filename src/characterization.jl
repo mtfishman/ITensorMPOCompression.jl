@@ -12,43 +12,60 @@
 #
 #  Obviously a lot of things could go wrong with all these assumptions.
 #
-function parse_links(A::ITensor,Ncell::Int64=100)::Tuple{Int64,Int64,Index,Index}
+#  returns forward,reverse relatvie to sweep direction indexes
+#  if lr=left, then the sweep direction is o the right, and i_right is the forward index.
+function parse_links(A::ITensor,lr::orth_type)::Tuple{Index,Index}
+    i_left,i_right = parse_links(A)
+    return lr==left ? (i_right,i_left) : (i_left,i_right)
+end
+
+function parse_links(A::ITensor)::Tuple{Index,Index}
     #
     #  find any site index and try and extract the site number
     #
-    is=filterinds(inds(A),tags="Site")[1]
-    nsite,space=parse_site(is)
-    d=dim(is)
+    d,nsite,space=parse_site(A)
     #
     #  Now process the link tags
     #
     ils=filterinds(inds(A),tags="Link")
     if length(ils)==2
-        n1= parse_link(ils[1],Ncell)
-        n2= parse_link(ils[2],Ncell) #find the "l=$n" tags. -1 if not such tag
+        n1,c1= parse_link(ils[1])
+        n2,c2= parse_link(ils[2]) #find the "l=$n" tags. -1 if not such tag
         n1,n2=infer_site_numbers(n1,n2,nsite) #handle qx links with no l=$n tags.
-        if n1>n2
-            return d,n1,ils[2],ils[1]
-        else 
-            return d,n2,ils[1],ils[2]
+        if c1>c2
+            return ils[2],ils[1]
+        elseif c2>c1
+            return ils[1],ils[2]
+        elseif n1>n2
+            return ils[2],ils[1]
+        elseif n2>n1
+            return ils[1],ils[2]
+        else
+            @assert false #no way to dermine order of links
         end
     elseif length(ils)==1
-        n=parse_link(ils[1],Ncell)
+        n,c=parse_link(ils[1])
         if n==Nothing
-            return d,nsite,Index(1),ils[1] #probably a qx link, don't know if row or col
+            return Index(1),ils[1] #probably a qx link, don't know if row or col
         elseif nsite==1
-            return d,nsite,Index(1),ils[1] #row vector
+            return Index(1),ils[1] #row vector
         else
-            return d,nsite,ils[1],Index(1) #col vector
+            return ils[1],Index(1) #col vector
         end
     else
         @assert false
     end
 end
+undef_int=-99999
+
+function parse_site(W::ITensor)
+    is=inds(W,tags="Site")[1]
+    return parse_site(is)
+end
 
 function parse_site(is::Index)
     @assert hastags(is,"Site")
-    nsite=-1
+    nsite=undef_int #sentenal value
     for t in tags(is)
         ts=String(t)
         if ts[1:2]=="n="
@@ -62,25 +79,24 @@ function parse_site(is::Index)
         end
     end
     @assert nsite>=0
-    return nsite,space
+    return dim(is),nsite,space
 end
 
 #
 #  fix up nsite based on unit cell number
 #
-function parse_link(il::Index,Ncell::Int64)::Int64
-    n,c=parse_link(il)
-    if Ncell>0 && c!=undef_int
-        n=c*Ncell+n
-    end
-    if Ncell<=0 && c!=undef_int
-        #caller didn't provide Ncell
-        @assert false
-    end
-    return n
-end
+# function parse_link(il::Index,Ncell::Int64)::Int64
+#     n,c=parse_link(il)
+#     if Ncell>0 && c!=undef_int
+#         n=c*Ncell+n
+#     end
+#     if Ncell<=0 && c!=undef_int
+#         #caller didn't provide Ncell
+#         @assert false
+#     end
+#     return n
+# end
 
-undef_int=-99999
 
 function parse_link(il::Index)::Tuple{Int64,Int64}
     @assert hastags(il,"Link")
@@ -97,18 +113,6 @@ function parse_link(il::Index)::Tuple{Int64,Int64}
     return nsite,ncell
 end
 
-# function parse_link(il::Index)::Int64
-#     @assert hastags(il,"Link")
-#     nsite=-1 #sentinal value
-#     for t in tags(il)
-#         ts=String(t)
-#         if ts[1:2]=="l="
-#             nsite::Int64=tryparse(Int64,ts[3:end])
-#             break
-#         end
-#     end
-#     return nsite
-# end
 
 #
 # if one ot links is "Link,qx" then we don't get any site info from it.
@@ -144,39 +148,14 @@ end
 #
 #  Detection of canonical (orthogonal) forms
 #
-# function is_canonical(r::Index,W::ITensor,c::Index,d::Int64,ms::matrix_state,eps::Float64=default_eps)::Bool
-#     V=getV(W,V_offsets(ms))
-#     rv=findinds(V,tags(r))[1]
-#     cv=findinds(V,tags(c))[1]
-#     if ms.lr==left
-#         rc=cv
-#     else
-#         rc=rv
-#     end
-#     #@show inds(V) rv,cv,rc
-#     Id=V*prime(V,rc)/d
-#     @show Id
-#     Id1=delta(rc,rc')
-#     @show Id1
-#     @show Id-Id1
-#     if !(norm(Id-Id1)<eps)
-#         @show norm(Id-Id1) eps
-#     end
-#     return norm(Id-Id1)<eps
-# end
-
-
 function is_canonical(W::ITensor,ms::matrix_state,eps::Float64=default_eps)::Bool
     V=getV(W,V_offsets(ms))
-    d,n,r,c=parse_links(V)
-    if ms.lr==left
-        rc=c
-    else #right
-        rc=r
-    end
-    Id=V*prime(dag(V),rc)/d
+    forward,reverse=parse_links(V,ms.lr)
+    d,n,space=parse_site(W)
+    
+    Id=V*prime(dag(V),forward)/d
     if order(Id)==2
-        is_can = norm(dense(Id)-delta(rc,dag(rc')))<eps
+        is_can = norm(dense(Id)-delta(forward,dag(forward')))<eps
     elseif order(Id)==0
         is_can = abs(scalar(Id)-d)<eps
     end
@@ -281,7 +260,7 @@ is_lower(r::Index,W::ITensor,c::Index,eps::Float64=default_eps) = is_upper_lower
 is_upper(r::Index,W::ITensor,c::Index,eps::Float64=default_eps) = is_upper_lower(r,W,c,upper,eps)
 
 function detect_upper_lower(W::ITensor,eps::Float64=default_eps)::Tuple{Bool,Bool,Char}
-    d,n,r,c=parse_links(W)
+    r,c=parse_links(W)
     return detect_upper_lower(r,W,c,eps)
 end
 
@@ -349,7 +328,7 @@ The function returns two Bools in order to handle cases where W is not in regula
     
 """
 function detect_regular_form(W::ITensor,eps::Float64=default_eps)::Tuple{Bool,Bool}
-    d,n,r,c=parse_links(W)
+    r,c=parse_links(W)
     Dw1,Dw2=dim(r),dim(c)
     #handle edge row and col vectors
     if Dw1==1 #left edge row vector
@@ -579,14 +558,14 @@ function get_Dw(H::MPO)::Vector{Int64}
     N=length(H)
     Dws=Vector{Int64}(undef,N-1)
     for n in 1:N-1
-        d,nsite,r,c=parse_links(H[n])
+        r,c=parse_links(H[n])
         Dws[n]=dim(c)
     end
     return Dws
 end
     
 function get_traits(W::ITensor,eps::Float64)
-    d,n,r,c=parse_links(W)
+    r,c=parse_links(W)
     Dw1,Dw2=dim(r),dim(c)
     bl,bu = detect_regular_form(W,eps)
     l= bl ? 'L' : ' '

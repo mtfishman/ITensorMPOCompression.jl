@@ -9,10 +9,9 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f)
 
 
 
-@testset "Orthogonalize InfiniteMPO 2-body Hamiltonians" begin
+@testset "Orthogonalize InfiniteMPO 2-body Hamiltonians" for ul in [lower]
     initstate(n) = "↑"
-    ul=lower
-    for N in 1:4, NNN in [2]
+    for N in 1:4, NNN in [2,4]
         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=false)
         H=make_transIsing_MPO(si,NNN,0.0,ul,1.0;pbc=true)
         @test is_regular_form(H,ul)

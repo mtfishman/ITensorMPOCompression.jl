@@ -62,7 +62,7 @@ S 0 0 0 0
 ```
 """
 function pprint(W::ITensor,eps::Float64=default_eps)
-    d,n,r,c=parse_links(W)
+    r,c=parse_links(W)
     pprint(r,W,c,eps)
 end
 

@@ -196,8 +196,7 @@ function make_transIsing_op(site::Index,prev_link::Index,NNN::Int64,J::Float64,h
     @assert NNN>=1
     do_field = hx!=0.0
     Dw::Int64=transIsing_Dw(NNN)
-    nl=parse_link(prev_link)
-    n,space=parse_site(site)
+    d,n,space=parse_site(site)
     use_qn=hasqns(site)
     
     r=dag(prev_link)
