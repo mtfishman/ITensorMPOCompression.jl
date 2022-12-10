@@ -151,7 +151,7 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
             end
         end   
     else
-        println("Doing dumb sweep lr=$lr")
+        #println("Doing dumb sweep lr=$lr")
         orthogonalize!(H,ul;kwargs...)
     end
   
