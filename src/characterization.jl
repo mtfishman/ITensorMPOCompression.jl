@@ -183,16 +183,32 @@ function is_canonical(W::ITensor,ms::matrix_state,eps::Float64=default_eps)::Boo
     return is_can    
 end
 
-function is_canonical(H::MPO,ms::matrix_state,eps::Float64=default_eps)::Bool
+#
+#  Handles direction and leaving out the last element in the sweep.
+#
+function sweep(H::AbstractMPS,lr::orth_type)::StepRange{Int64, Int64}
+    N=length(H)
+    return lr==left ? (1:1:N-1) : (N:-1:2)
+end
+
+#
+#  Handles direction only.  For iMPOs we include the last site in the unit cell.
+#
+function sweep(H::AbstractInfiniteMPS,lr::orth_type)::StepRange{Int64, Int64}
+    N=length(H)
+    return lr==left ? (1:1:N) : (N:-1:1)
+end
+
+function is_canonical(H::AbstractMPS,ms::matrix_state,eps::Float64=default_eps)::Bool
     N=length(H)
     ic=true
-    for n in 2:N-1 #skip the edge row/col opertors
+    for n in sweep(H,ms.lr) #skip the edge row/col opertors
         ic=ic &&  is_canonical(H[n],ms,eps)
     end
     return ic
 end
 
-function is_canonical(H::MPO,lr::orth_type,eps::Float64=default_eps)::Bool
+function is_canonical(H::AbstractMPS,lr::orth_type,eps::Float64=default_eps)::Bool
     l,u=detect_regular_form(H)
     @assert u || l
     ul = u ? upper : lower
@@ -211,7 +227,7 @@ Test if all sites in an MPO statisfty the condition for `lr` orthogonal (canonic
 
 Returns `true` if the MPO is in `lr` orthogonal (canonical) form
 """
-is_orthogonal(H::MPO,lr::orth_type,eps::Float64=default_eps)::Bool = is_canonical(H,lr,eps)
+is_orthogonal(H::AbstractMPS,lr::orth_type,eps::Float64=default_eps)::Bool = is_canonical(H,lr,eps)
 
 #-
 
@@ -464,7 +480,7 @@ of lower and upper will fail.
 - `true` if *all* sites in `H` are in either lower xor upper regular form.
 
 """
-function is_regular_form(H::MPO,eps::Float64=default_eps)::Bool
+function is_regular_form(H::AbstractMPS,eps::Float64=default_eps)::Bool
     N=length(H)
     lrf,urf=true,true
     for n in 1:N
@@ -490,7 +506,7 @@ in the same `ul` regular form in order to return true.
 - `true` if *all* sites in `H` are in `ul` regular form.
 
 """
-function is_regular_form(H::MPO,ul::reg_form,eps::Float64=default_eps)::Bool
+function is_regular_form(H::AbstractMPS,ul::reg_form,eps::Float64=default_eps)::Bool
     N=length(H)
     irf=true
     for n in 1:N
@@ -514,7 +530,7 @@ Inspect the structure of an MPO `H` to see if it satisfies the regular form cond
 The function returns two Bools in order to handle cases where `H` is not regular form, returning (`false`,`false`) and `H` is in a special pseudo-diagonal regular form, returning (`true`,`true`).
     
 """
-function detect_regular_form(H::MPO,eps::Float64=default_eps)::Tuple{Bool,Bool}
+function detect_regular_form(H::AbstractMPS,eps::Float64=default_eps)::Tuple{Bool,Bool}
     N=length(H)
     l,u=true,true
     for n in 1:N
@@ -538,7 +554,7 @@ Determine if all sites in an MPO, `H`, are in lower regular form.
 - `true` if *all* sites in `H` are in lower regular form.
 
 """
-function is_lower_regular_form(H::MPO,eps::Float64=default_eps)::Bool
+function is_lower_regular_form(H::AbstractMPS,eps::Float64=default_eps)::Bool
     return is_regular_form(H,lower,eps)
 end
 
@@ -555,7 +571,7 @@ Determine if all sites in an MPO, `H`, are in upper regular form.
 - `true` if *all* sites in `H` are in upper regular form.
 
 """
-function is_upper_regular_form(H::MPO,eps::Float64=default_eps)::Bool
+function is_upper_regular_form(H::AbstractMPS,eps::Float64=default_eps)::Bool
     return is_regular_form(H,upper,eps)
 end
 
