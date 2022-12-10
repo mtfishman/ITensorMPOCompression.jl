@@ -12,7 +12,7 @@ function qx_step!(W::ITensor,n::Int64,ul::reg_form,eps::Float64;kwargs...)
     #  How far are we from RL==Id ?
     #
     if dim(forward)==dim(iq)
-        eta=norm(RL-δ(Float64, iq,forward))
+        eta=norm(dense(RL)-δ(Float64, inds(RL))) #block sparse - diag no supported yet
     else
         eta=99.0 #Rank reduction occured to keep going.
     end
@@ -40,7 +40,7 @@ function qx_iterate!(H::InfiniteMPO,ul::reg_form;kwargs...)
     Gs=CelledVector{ITensor}(undef,N)
     for n in 1:N
         forward,reverse=parse_links(H[n],lr) #get left and right indices
-        Gs[n]=δ(Float64,forward,forward') 
+        Gs[n]=δ(Float64,dag(forward),forward') 
     end
     RLs=CelledVector{ITensor}(undef,N)
     
