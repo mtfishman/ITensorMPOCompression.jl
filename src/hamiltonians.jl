@@ -150,7 +150,7 @@ function make_transIsing_MPO(sites,NNN::Int64=1,hx::Float64=0.0,ul::reg_form=low
     if pbc
         prev_link=make_Ising_index(Dw,"Link,c=0,l=$(N)",use_qn,io)
     else
-        prev_link=make_Ising_index(Dw,"Link,l=1",use_qn,io)
+        prev_link=make_Ising_index(Dw,"Link,l=0",use_qn,io)
     end
     for n in 1:N
         mpo[n]=make_transIsing_op(sites[n],prev_link,NNN,J,hx,ul,pbc)

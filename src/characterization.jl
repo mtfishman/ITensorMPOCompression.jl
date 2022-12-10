@@ -5,18 +5,16 @@
 #
 #  Figure out the site number, and left and indicies of an MPS or MPO ITensor
 #  assumes:
-#       1) all tensors have two link indices (edge sites no handled yet)
-#       2) link indices all have a "Link" tag
-#       3) the "Link" tag is the first tag for each link index
-#       4) the second tag has the for "l=nnnnn"  where nnnnn are the integer digits of the link number
-#       5) the site number is the larges of the link numbers
+#       1) link indices all have a "Link" tag
+#       2) the "Link" tag is the first tag for each link index
+#       3) one other tag has the form "l=$n"  where n is the link number
+#       4) the site number is the largest of the link numbers, i.e. left link is l=n-1
 #
 #  Obviously a lot of things could go wrong with all these assumptions.
 #
-function parse_links(A::ITensor)::Tuple{Int64,Int64,Index,Index}
+function parse_links(A::ITensor,Ncell::Int64=100)::Tuple{Int64,Int64,Index,Index}
     #
     #  find any site index and try and extract the site number
-    #  assume third tag is always the "n=$nsite" site number tag
     #
     is=filterinds(inds(A),tags="Site")[1]
     nsite,space=parse_site(is)
@@ -26,51 +24,19 @@ function parse_links(A::ITensor)::Tuple{Int64,Int64,Index,Index}
     #
     ils=filterinds(inds(A),tags="Link")
     if length(ils)==2
-        tl1=String(tags(ils[1])[2])
-        tl2=String(tags(ils[2])[2])
-        if tl1[1:2]=="l="
-            n1::Int64=tryparse(Int64,tl1[3:end]) # assume second tag is the "l=n" tag
-        else
-            n1=-1
-        end
-        if tl2[1:2]=="l="
-            n2::Int64=tryparse(Int64,tl2[3:end]) # assume second tag is the "l=n" tag
-        else
-            n2=-1
-        end
-        if n1==-1 && n2==-1
-            @show ils
-            @assert false
-        end
-        if n1==-1
-            if n2==nsite
-                n1=nsite-1 
-            elseif n2==nsite-1
-                n1=nsite 
-            else
-                @assert false
-            end
-        end
-        if n2==-1
-            if n1==nsite
-                n2=nsite-1 
-            elseif n1==nsite-1
-                n2=nsite 
-            else
-                @assert false
-            end
-        end     
+        n1= parse_link(ils[1],Ncell)
+        n2= parse_link(ils[2],Ncell) #find the "l=$n" tags. -1 if not such tag
+        n1,n2=infer_site_numbers(n1,n2,nsite) #handle qx links with no l=$n tags.
         if n1>n2
             return d,n1,ils[2],ils[1]
         else 
             return d,n2,ils[1],ils[2]
         end
     elseif length(ils)==1
-        t=tags(ils[1])
-        n=tryparse(Int64,String(t[2])[3:end]) # assume second tag is the "l=n" tag
+        n=parse_link(ils[1],Ncell)
         if n==Nothing
-            return d,nsite,Index(1),ils[1] #probably a qx link, don;t if row or col
-        elseif n==1
+            return d,nsite,Index(1),ils[1] #probably a qx link, don't know if row or col
+        elseif nsite==1
             return d,nsite,Index(1),ils[1] #row vector
         else
             return d,nsite,ils[1],Index(1) #col vector
@@ -99,44 +65,105 @@ function parse_site(is::Index)
     return nsite,space
 end
 
-function parse_link(il::Index)::Int64
+#
+#  fix up nsite based on unit cell number
+#
+function parse_link(il::Index,Ncell::Int64)::Int64
+    n,c=parse_link(il)
+    if Ncell>0 && c!=undef_int
+        n=c*Ncell+n
+    end
+    if Ncell<=0 && c!=undef_int
+        #caller didn't provide Ncell
+        @assert false
+    end
+    return n
+end
+
+undef_int=-99999
+
+function parse_link(il::Index)::Tuple{Int64,Int64}
     @assert hastags(il,"Link")
-    nsite=-1
+    nsite=ncell=undef_int #sentinel values
     for t in tags(il)
         ts=String(t)
         if ts[1:2]=="l="
             nsite::Int64=tryparse(Int64,ts[3:end])
-            break
+        end
+        if ts[1:2]=="c="
+            ncell::Int64=tryparse(Int64,ts[3:end])
         end
     end
-    @assert nsite>=0
-    return nsite
+    return nsite,ncell
+end
+
+# function parse_link(il::Index)::Int64
+#     @assert hastags(il,"Link")
+#     nsite=-1 #sentinal value
+#     for t in tags(il)
+#         ts=String(t)
+#         if ts[1:2]=="l="
+#             nsite::Int64=tryparse(Int64,ts[3:end])
+#             break
+#         end
+#     end
+#     return nsite
+# end
+
+#
+# if one ot links is "Link,qx" then we don't get any site info from it.
+# All this messy logic below tries to infer the site # of qx link from site index
+# and link number of other index.
+#
+function infer_site_numbers(n1::Int64,n2::Int64,nsite::Int64)::Tuple{Int64,Int64}
+    if n1==undef_int && n2==undef_int
+        @assert false
+    end
+    if n1==undef_int
+        if n2==nsite
+            n1=nsite-1 
+        elseif n2==nsite-1
+            n1=nsite 
+        else
+            @assert false
+        end
+    end
+    if n2==undef_int
+        if n1==nsite
+            n2=nsite-1 
+        elseif n1==nsite-1
+            n2=nsite 
+        else
+            @assert false
+        end
+    end    
+    return n1,n2
 end
 
 #----------------------------------------------------------------------------
 #
 #  Detection of canonical (orthogonal) forms
 #
-function is_canonical(r::Index,W::ITensor,c::Index,d::Int64,ms::matrix_state,eps::Float64=default_eps)::Bool
-    V=getV(W,V_offsets(ms))
-    rv=findinds(V,tags(r))[1]
-    cv=findinds(V,tags(c))[1]
-    if ms.lr==left
-        rc=cv
-    else
-        rc=rv
-    end
-    #@show inds(V) rv,cv,rc
-    Id=V*prime(V,rc)/d
-    @show Id
-    Id1=delta(rc,rc')
-    @show Id1
-    @show Id-Id1
-    if !(norm(Id-Id1)<eps)
-        @show norm(Id-Id1) eps
-    end
-    return norm(Id-Id1)<eps
-end
+# function is_canonical(r::Index,W::ITensor,c::Index,d::Int64,ms::matrix_state,eps::Float64=default_eps)::Bool
+#     V=getV(W,V_offsets(ms))
+#     rv=findinds(V,tags(r))[1]
+#     cv=findinds(V,tags(c))[1]
+#     if ms.lr==left
+#         rc=cv
+#     else
+#         rc=rv
+#     end
+#     #@show inds(V) rv,cv,rc
+#     Id=V*prime(V,rc)/d
+#     @show Id
+#     Id1=delta(rc,rc')
+#     @show Id1
+#     @show Id-Id1
+#     if !(norm(Id-Id1)<eps)
+#         @show norm(Id-Id1) eps
+#     end
+#     return norm(Id-Id1)<eps
+# end
 
 
 function is_canonical(W::ITensor,ms::matrix_state,eps::Float64=default_eps)::Bool
