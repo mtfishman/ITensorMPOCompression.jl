@@ -1,5 +1,5 @@
 #
-#  Functions for bringing and MPO into left or right canonical form
+#  Functions for bringing an MPO into left or right canonical form
 #
 function ITensors.orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form;kwargs...)
     W1,Lplus=block_qx(W1,ul;kwargs...) 

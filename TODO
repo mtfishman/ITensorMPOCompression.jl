@@ -6,6 +6,12 @@
   -orthog inside truncate
   -convergence in truncate?
   -epsrr=0.0 not allowed in truncate?
+-Put some content in Readme.md
+-Does block_qx really need to know n?
+  Instead of r,c index we should really think in terms of f,r = forward, reverse
+  R gets transferred in f/forward direction
+-implement @show for bond_spectrum 
+Done -Clean up the whole parse links mess to handle iMPOs
 
 
 Done: 1) Not seeing any rank reduction

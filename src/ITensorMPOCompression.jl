@@ -25,6 +25,7 @@ export bond_spectrum,bond_spectrums
 export add_or_replace # Handle inpenetrable kwargs
 
 export orthogonalize!,truncate,truncate! #the punchline
+export i_orthogonalize!
 export @pprint
 
 default_eps=1e-14 #for characterization routines, floats abs()<default_eps are considered to be zero.
@@ -269,6 +270,7 @@ include("qx.jl")
 include("characterization.jl") 
 include("blocking.jl")
 include("orthogonalize.jl")
+include("i_orthogonalize.jl")
 include("truncate.jl")
 
 
