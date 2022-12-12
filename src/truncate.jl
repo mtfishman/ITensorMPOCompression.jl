@@ -212,11 +212,12 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
     return ss
 end
 
-function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums}
+function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
     #@printf "---- start compress ----\n"
     #
     # decide left/right and upper/lower
     #
+    h_mirror::Bool=get(kwargs, :h_mirror, false) #Calculate and return mirror of H
     lr::orth_type=get(kwargs, :orth, left) #this specifies the final output orth direction.
     kwargs=add_or_replace(kwargs,:orth,lr) #if lr is not yet in kwargs, we need to stuff in there
     (bl,bu)=detect_regular_form(H)
@@ -232,6 +233,7 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
     if !is_canonical(H,ms)
         #@show inds(H[1],tags="Link")
         orthogonalize!(H;orth=mirror(lr)) 
+        Hm=h_mirror ? copy(H) : nothing
         @assert is_orthogonal(H,mirror(lr))
         #@show inds(H[1],tags="Link")
         Gs=orthogonalize!(H;orth=lr) #TODO why fail if spec ul here??
@@ -243,17 +245,16 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
         # wasteful sweeps
         @assert false #for now.
     end
+    
+    
+    return truncate!(H,Hm,Gs,lr;kwargs...)
+end
+
+function ITensors.truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::CelledVector{ITensor},lr::orth_type;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
     N=length(H)
     ss=bond_spectrums(undef,N)
     Ss=CelledVector{ITensor}(undef,N)
     #TODO use sweep here
-    if lr==left
-        rng=1:1:N #sweep left to right
-        link_offest=0
-    else #right
-        rng=1,1,N #sweep right to left
-        link_offest=0
-    end
     for n in 1:N 
         if lr==left
             il,ir=parse_links(H[n]) #right link of H is the left link of G
@@ -265,6 +266,15 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
             @assert order(H[n])==4
             H[n+1]=dag(U)*H[n+1]
             @assert order(H[n+1])==4
+            if Hm!=nothing
+                #@show inds(Hm[n],tags="Link") inds(V)
+                Hm[n]=Hm[n]*dag(V)
+                @assert order(Hm[n])==4
+                #@show inds(H[n-1],tags="Link") inds(V)
+                Hm[n+1]=V*Hm[n+1]
+                @assert order(Hm[n+1])==4
+            end
+            Ss[n]=Sp
         else
             il,ir=parse_links(H[n]) #left link of H[n] is the right link of G[n-1]
             igl=noncommonind(Gs[n-1],il)
@@ -276,12 +286,22 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
             #@show inds(H[n-1],tags="Link") inds(V)
             H[n-1]=V*H[n-1]
             @assert order(H[n-1])==4
+            if Hm!=nothing
+                #@show inds(Hm[n],tags="Link") inds(V)
+                Hm[n]=Hm[n]*U
+                @assert order(Hm[n])==4
+                #@show inds(H[n-1],tags="Link") inds(V)
+                Hm[n-1]=dag(U)*Hm[n-1]
+                @assert order(Hm[n-1])==4
+            end
+            Ss[n-1]=Sp
         end
-        Ss[n]=Sp
-        ss[n+link_offest]=bond_spectrum(s,n)
+        ss[n]=bond_spectrum(s,n)
     end
-    return Ss,ss
+    return Ss,ss,Hm
+
 end
+
 
 function truncate(G::ITensor,igl::Index;kwargs...)
     igr=noncommonind(G,igl)
@@ -290,9 +310,8 @@ function truncate(G::ITensor,igl::Index;kwargs...)
     iu=commonind(U,s)
     iv=commonind(V,s)
    
-    iup=redim(iu,dim(iu)+2) #Index(dim(iu)+2,tags(iu))
-    ivp=redim(iv,dim(iv)+2) #Index(dim(iv)+2,tags(iv))
-    #lr::orth_type=get(kwargs, :orth, left) 
+    iup=redim(iu,dim(iu)+2) 
+    ivp=redim(iv,dim(iv)+2) 
     Up=grow(U,igl,iup)
     Sp=grow(s,iup,ivp)
     Vp=grow(V,ivp,igr)
