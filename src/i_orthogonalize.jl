@@ -40,7 +40,11 @@ function qx_iterate!(H::InfiniteMPO,ul::reg_form;kwargs...)
     Gs=CelledVector{ITensor}(undef,N)
     for n in 1:N
         forward,reverse=parse_links(H[n],lr) #get left and right indices
-        Gs[n]=δ(Float64,dag(forward),forward') 
+        if lr==left
+            Gs[n]=δ(Float64,dag(forward),forward') 
+        else
+            Gs[n-1]=δ(Float64,dag(forward),forward') 
+        end
     end
     RLs=CelledVector{ITensor}(undef,N)
     
@@ -57,7 +61,11 @@ function qx_iterate!(H::InfiniteMPO,ul::reg_form;kwargs...)
         eta=0.0
         for n in rng
             H[n],RLs[n],etan=qx_step!(H[n],n,ul,eps;kwargs...)
-            Gs[n]=noprime(RLs[n]*Gs[n])  #  Update the accumulated gauge transform
+            if lr==left
+                Gs[n]=noprime(RLs[n]*Gs[n])  #  Update the accumulated gauge transform
+            else
+                Gs[n-1]=noprime(RLs[n]*Gs[n-1])  #  Update the accumulated gauge transform
+            end
             @assert order(Gs[n])==2 #This will fail if the indices somehow got messed up.
             eta=Base.max(eta,etan)
         end

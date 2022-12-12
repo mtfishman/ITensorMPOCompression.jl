@@ -261,6 +261,22 @@ function getM(RL::ITensor,ms::matrix_state,eps::Float64)::Tuple{ITensor,ITensor,
     return M,RL_prime,irm,non_zero
 end
 
+function getM(G::ITensor,igl::Index,igr::Index)::Tuple{ITensor,Index}
+    @assert order(G)==2
+    #igr=noncommoninds(G,igl)[1]
+    Dwl,Dwr=dim(igl),dim(igr)
+    iml,imr=Index(Dwl-2,tags(igl)),Index(Dwr-2,tags(igr))
+    #@show inds(G) igl igr iml imr
+    M=ITensor(iml,imr)
+    for jl in 2:Dwl-1
+        for jr in 2:Dwr-1
+            M[iml=>jl-1,imr=>jr-1]=G[igl=>jl,igr=>jr]
+        end
+    end
+    return M,iml
+end
+
+
 #                      |1 0 0|
 #  given A, spit out G=|0 A 0|
 #                      |0 0 1|

@@ -193,6 +193,7 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
     end
     N=length(H)
     ss=bond_spectrums(undef,N-1)
+     #TODO use sweep here
     if lr==left
         rng=1:1:N-1 #sweep left to right
         link_offest=0
@@ -210,3 +211,97 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
     end
     return ss
 end
+
+function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums}
+    #@printf "---- start compress ----\n"
+    #
+    # decide left/right and upper/lower
+    #
+    lr::orth_type=get(kwargs, :orth, left) #this specifies the final output orth direction.
+    kwargs=add_or_replace(kwargs,:orth,lr) #if lr is not yet in kwargs, we need to stuff in there
+    (bl,bu)=detect_regular_form(H)
+    if !(bl || bu)
+        throw(ErrorException("truncate!(H::MPO), H must be in either lower or upper regular form"))
+    end
+    @assert !(bl && bu)
+    ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
+    #
+    # Now check if H required orthogonalization
+    #
+    ms=matrix_state(ul,lr)
+    if !is_canonical(H,ms)
+        #@show inds(H[1],tags="Link")
+        orthogonalize!(H;orth=mirror(lr)) 
+        @assert is_orthogonal(H,mirror(lr))
+        #@show inds(H[1],tags="Link")
+        Gs=orthogonalize!(H;orth=lr) #TODO why fail if spec ul here??
+        @assert is_orthogonal(H,lr)
+        #@show inds(H[1],tags="Link")
+        #@show lr Gs
+    else
+        # user supplied canonical H but not the Gs so we cannot proceed unless we do one more
+        # wasteful sweeps
+        @assert false #for now.
+    end
+    N=length(H)
+    ss=bond_spectrums(undef,N)
+    Ss=CelledVector{ITensor}(undef,N)
+    #TODO use sweep here
+    if lr==left
+        rng=1:1:N #sweep left to right
+        link_offest=0
+    else #right
+        rng=1,1,N #sweep right to left
+        link_offest=0
+    end
+    for n in 1:N 
+        if lr==left
+            il,ir=parse_links(H[n]) #right link of H is the left link of G
+            #@show il ir inds(Gs[n])
+            U,s,V,Sp=truncate(Gs[n],ir;kwargs...)
+            #@show diag(array(s))
+            #@show inds(H[n],tags="Link") inds(H[n+1],tags="Link") inds(U)
+            H[n]=H[n]*U
+            @assert order(H[n])==4
+            H[n+1]=dag(U)*H[n+1]
+            @assert order(H[n+1])==4
+        else
+            il,ir=parse_links(H[n]) #left link of H[n] is the right link of G[n-1]
+            igl=noncommonind(Gs[n-1],il)
+            U,s,V,Sp=truncate(Gs[n-1],igl;kwargs...)
+            #@show diag(array(s))
+            #@show inds(H[n],tags="Link") inds(V)
+            H[n]=H[n]*dag(V)
+            @assert order(H[n])==4
+            #@show inds(H[n-1],tags="Link") inds(V)
+            H[n-1]=V*H[n-1]
+            @assert order(H[n-1])==4
+        end
+        Ss[n]=Sp
+        ss[n+link_offest]=bond_spectrum(s,n)
+    end
+    return Ss,ss
+end
+
+function truncate(G::ITensor,igl::Index;kwargs...)
+    igr=noncommonind(G,igl)
+    M,iml=getM(G,igl,igr)
+    U,s,V=svd(M,iml;kwargs...)
+    iu=commonind(U,s)
+    iv=commonind(V,s)
+   
+    iup=redim(iu,dim(iu)+2) #Index(dim(iu)+2,tags(iu))
+    ivp=redim(iv,dim(iv)+2) #Index(dim(iv)+2,tags(iv))
+    #lr::orth_type=get(kwargs, :orth, left) 
+    Up=grow(U,igl,iup)
+    Sp=grow(s,iup,ivp)
+    Vp=grow(V,ivp,igr)
+    replacetags!(Up,tags(iu),tags(igl))
+    replacetags!(Sp,tags(iu),tags(igl))
+    replacetags!(Sp,tags(iv),tags(igr))
+    replacetags!(Vp,tags(iv),tags(igr))
+    @assert norm(G-Up*Sp*Vp)<1e-12    
+    return Up,s,Vp,Sp
+end
+
+
