@@ -259,7 +259,7 @@ function ITensors.truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::Ce
         if lr==left
             il,ir=parse_links(H[n]) #right link of H is the left link of G
             #@show il ir inds(Gs[n])
-            U,s,V,Sp=truncate(Gs[n],ir;kwargs...)
+            U,s,V,Sp=truncate(Gs[n],dag(ir);kwargs...)
             #@show diag(array(s))
             #@show inds(H[n],tags="Link") inds(H[n+1],tags="Link") inds(U)
             H[n]=H[n]*U
@@ -274,26 +274,40 @@ function ITensors.truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::Ce
                 Hm[n+1]=V*Hm[n+1]
                 @assert order(Hm[n+1])==4
             end
+            if hasqns(Gs[n])
+                iSs=make_qninds(Sp,inds(dag(U))...)
+                #@show iSs inds(Sp)
+                Sp=convert_blocksparse(Sp,iSs...)
+                #@show inds(Sp)
+            end
             Ss[n]=Sp
         else
             il,ir=parse_links(H[n]) #left link of H[n] is the right link of G[n-1]
             igl=noncommonind(Gs[n-1],il)
-            U,s,V,Sp=truncate(Gs[n-1],igl;kwargs...)
+            #@show inds(Gs[n-1])
+            U,s,V,Sp=truncate(Gs[n-1],igl;kwargs...) #returns U[n-1], s[n-1] V[n-1]
             #@show diag(array(s))
-            #@show inds(H[n],tags="Link") inds(V)
-            H[n]=H[n]*dag(V)
-            @assert order(H[n])==4
-            #@show inds(H[n-1],tags="Link") inds(V)
-            H[n-1]=V*H[n-1]
+            #@show inds(H[n-1],tags="Link") inds(dag(V))
+            H[n-1]=H[n-1]*dag(V)
             @assert order(H[n-1])==4
+            #@show inds(H[n-1],tags="Link") inds(V)
+            H[n]=V*H[n]
+            @assert order(H[n])==4
             if Hm!=nothing
                 #@show inds(Hm[n],tags="Link") inds(V)
-                Hm[n]=Hm[n]*U
-                @assert order(Hm[n])==4
-                #@show inds(H[n-1],tags="Link") inds(V)
-                Hm[n-1]=dag(U)*Hm[n-1]
+                Hm[n-1]=Hm[n-1]*U
                 @assert order(Hm[n-1])==4
+                #@show inds(H[n-1],tags="Link") inds(V)
+                Hm[n]=dag(U)*Hm[n]
+                @assert order(Hm[n])==4
             end
+            if hasqns(Gs[n-1])
+                iSs=make_qninds(Sp,inds(dag(U))...)
+                #@show iSs inds(Sp)
+                Sp=convert_blocksparse(Sp,iSs...)
+                #@show inds(Sp)
+            end
+        
             Ss[n-1]=Sp
         end
         ss[n]=bond_spectrum(s,n)
@@ -312,6 +326,7 @@ function truncate(G::ITensor,igl::Index;kwargs...)
    
     iup=redim(iu,dim(iu)+2) 
     ivp=redim(iv,dim(iv)+2) 
+    #@show igl igr iup ivp
     Up=grow(U,igl,iup)
     Sp=grow(s,iup,ivp)
     Vp=grow(V,ivp,igr)
@@ -319,7 +334,8 @@ function truncate(G::ITensor,igl::Index;kwargs...)
     replacetags!(Sp,tags(iu),tags(igl))
     replacetags!(Sp,tags(iv),tags(igr))
     replacetags!(Vp,tags(iv),tags(igr))
-    @assert norm(G-Up*Sp*Vp)<1e-12    
+    #@show hasqns(Up) hasqns(Sp) hasqns(Vp)
+    @assert norm(dense(G)-dense(Up)*Sp*dense(Vp))<1e-12    
     return Up,s,Vp,Sp
 end
 
