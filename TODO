@@ -22,7 +22,7 @@ Done: -For the make hamiltonian functions put ul,hx,J into kwargs
 -vumps GS example with timing for uncomp./comp.
 -Try using cutoff instead of truncate=false for autoMPO
 Done: -Clean up iMPO truncate code.
--Move i_orthog code into orthogonalize.jl files
+Done: -Move i_orthog code into orthogonalize.jl files
 -Review generated docs, upgrade for iMPO support.
 -Pare down unit test for shorter run time.
 -QN support for InfiniteSum code.

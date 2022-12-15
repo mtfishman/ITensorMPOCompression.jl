@@ -16,16 +16,11 @@ using Printf
     eps=1e-15
     sites = siteinds("SpinHalf", N)
     ms=matrix_state(ul,lr)
-    if lr==left
-        rng=1:1:N-1 #sweep left to right
-    else #right
-        rng=N:-1:2 #sweep right to left
-    end
     #
     #  test lower triangular MPO 
     #
     H=make_transIsing_MPO(sites,NNN;model_kwargs...)
-    for n in rng
+    for n in sweep(H,lr)
         W=H[n]
         @test is_regular_form(W,ms.ul)
         Q,RL,lq=block_qx(W,ms.ul;orth=ms.lr)

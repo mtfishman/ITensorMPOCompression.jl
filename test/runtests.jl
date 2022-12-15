@@ -8,7 +8,6 @@ using Revise
     include("qx_unittests.jl")
     include("hamiltonians.jl")
     include("orthogonalize.jl")
-    include("i_orthogonalize.jl")
     include("truncate.jl")
 end
 nothing #suppress messy dump from Test

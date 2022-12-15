@@ -271,7 +271,6 @@ include("qx.jl")
 include("characterization.jl") 
 include("blocking.jl")
 include("orthogonalize.jl")
-include("i_orthogonalize.jl")
 include("truncate.jl")
 
 

@@ -116,7 +116,8 @@ end
     psi=randomMPS(sites)
     Enot=inner(psi',Hnot,psi)
     E=inner(psi',H,psi)
-    @test E ≈ Enot atol = 1e-9
+    #@show E-Enot
+    @test E ≈ Enot atol = 3e-9
    
 end
 nothing

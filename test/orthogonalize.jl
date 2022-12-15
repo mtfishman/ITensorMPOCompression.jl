@@ -1,8 +1,11 @@
 using ITensors
 using ITensorMPOCompression
+using ITensorInfiniteMPS
 using Revise
 using Test
 import ITensorMPOCompression.orthogonalize!
+
+quiet=true
 
 # using Printf
 # Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
@@ -107,20 +110,70 @@ test_combos=[
 end
  
 @testset "Compare $ul tri rank reduction with AutoMPO, QNs=$qns" for ul in [lower,upper],qns in [false,true]
-N=13
-sites = siteinds("SpinHalf", N;conserve_qns=qns)
-for NNN in 3:N-1
-    Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul) 
-    Dw_auto=get_Dw(Hauto)
-    Hr=make_transIsing_MPO(sites,NNN;ul=ul) 
-    orthogonalize!(Hr;orth=right,epsrr=1e-12) #sweep left to right
-    @test is_canonical(Hr,matrix_state(ul,right),1e-12)
-    @test get_Dw(Hr)==Dw_auto
-    Hl=make_transIsing_MPO(sites,NNN;ul=ul) 
-    orthogonalize!(Hl;orth=left,epsrr=1e-12) #sweep right to left
-    @test is_canonical(Hl,matrix_state(ul,left),1e-12)
-    @test get_Dw(Hl)==Dw_auto
-end  
+    N=13
+    sites = siteinds("SpinHalf", N;conserve_qns=qns)
+    for NNN in 3:N-1
+        Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul) 
+        Dw_auto=get_Dw(Hauto)
+        Hr=make_transIsing_MPO(sites,NNN;ul=ul) 
+        orthogonalize!(Hr;orth=right,epsrr=1e-12) #sweep left to right
+        @test is_canonical(Hr,matrix_state(ul,right),1e-12)
+        @test get_Dw(Hr)==Dw_auto
+        Hl=make_transIsing_MPO(sites,NNN;ul=ul) 
+        orthogonalize!(Hl;orth=left,epsrr=1e-12) #sweep right to left
+        @test is_canonical(Hl,matrix_state(ul,left),1e-12)
+        @test get_Dw(Hl)==Dw_auto
+    end  
 end 
+
+@testset "Orthogonalize iMPO Check gauge relations, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
+    initstate(n) = "↑"
+    if !quiet
+        @printf "               Dw     Dw    Dw    Dw\n"
+        @printf " Ncell  NNN  uncomp. left  right  LR\n"
+    end
+    for N in [1,2,4], NNN in [2,4] #3 site unit cell fails for qns=true.
+        si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
+
+        H0=make_transIsing_iMPO(si,NNN;ul=ul)
+        @test is_regular_form(H0)
+        Dw0=Base.max(get_Dw(H0)...)
+
+        HL=copy(H0)
+        @test is_regular_form(HL)
+        GL=ITensorMPOCompression.orthogonalize!(HL;orth=left)
+        DwL=Base.max(get_Dw(HL)...)
+        @test is_regular_form(HL)
+        @test is_orthogonal(HL,left)
+        for n in 1:N
+            @test norm(HL[n]*GL[n]-GL[n-1]*H0[n]) ≈ 0.0 atol = 1e-14 
+        end
+        HR=copy(H0)
+        GR=ITensorMPOCompression.orthogonalize!(HR;orth=right)
+        DwR=Base.max(get_Dw(HR)...)
+        @test is_regular_form(HR)
+        @test is_orthogonal(HR,right)
+        for n in 1:N
+            @test norm(GR[n-1]*HR[n]-H0[n]*GR[n]) ≈ 0.0 atol = 1e-14
+        end   
+        HR1=copy(HL) 
+        G=ITensorMPOCompression.orthogonalize!(HR1;orth=right)
+        DwLR=Base.max(get_Dw(HR1)...)
+        @test is_regular_form(HR1)
+        @test is_orthogonal(HR1,right)
+        for n in 1:N
+            D1=G[n-1]*HR1[n]
+            @assert order(D1)==4
+            D2=HL[n]*G[n]
+            @assert order(D2)==4
+            @test norm(G[n-1]*HR1[n]-HL[n]*G[n]) ≈ 0.0 atol = 1e-14
+        end
+        if !quiet
+            @printf " %4i %4i   %4i   %4i  %4i  %4i\n" N NNN Dw0 DwL DwR DwLR
+        end
+
+    end
+end
+
 
 nothing
