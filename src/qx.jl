@@ -76,59 +76,6 @@ function block_qx(W::ITensor,ul::reg_form=lower;kwargs...)::Tuple{ITensor,ITenso
   return block_qx(W,f,ul;kwargs...)
 end
 
-function block_qx(W_::ITensor,n::Int64,r::Index,c::Index,ul::reg_form=lower;kwargs...)::Tuple{ITensor,ITensor,Index}
-  #
-  # Copy so that we don't mess up the original MPO
-  #
-  W=copy(W_) 
-  #
-  # settle the left/right && upper/lower question
-  #
-  lr::orth_type=get(kwargs, :orth, left)
-  ms=matrix_state(ul,lr)
-  #
-  #  decide some strings and variables based on lr.
-  #
-  (tln,cr)= lr==left ? ("l=$n",c) : ("l=$(n-1)",r)
-  # for block sparse we get a reference that tracks the size of W behind the scenes!
-  # So we must make copy to get a static result.
-  #@show tln cr 
-  #ilw=copy(filterinds(inds(W),tags=tln)[1]) #get the link to the next site. 
-  ilw=copy(cr) #get the link to the next site. 
-  offset=V_offsets(ms)
-  V=getV(W,offset) #extract the V block
-  ind_on_V=filterinds(inds(V),tags=tags(ilw))[1] #link to next site 
-  inds_on_Q=noncommoninds(inds(V),ind_on_V) #group all other indices for QX factorization
-  
-  if ul==lower
-    if lr==left
-      Q,RL,iq=ql(V,inds_on_Q;positive=true,tags="Link,qx",kwargs...) #block respecting QL decomposition
-    else #right
-      RL,Q,iq=lq(V,ind_on_V;positive=true,tags="Link,qx",kwargs...) #block respecting LQ decomposition
-    end
-  else #upper
-    if lr==left
-      Q,RL,iq=qr(V,inds_on_Q;positive=true,tags="Link,qx",kwargs...) #block respecting QR decomposition
-    else #right
-      RL,Q,iq=rq(V,ind_on_V;positive=true,tags="Link,qx",kwargs...) #block respecting RQ decomposition
-    end
-  end
-  set_scale!(RL,Q,offset) #rescale so the L(n,n)==1.0
-  ITensors.@debug_check begin
-    err=norm(V-RL*Q)
-    if  err>1e-11
-      @warn "Loss of precision in block_qx, norm(V-RL*Q)=$err"
-    end
-  end
-  W=setV(W,Q,ms) #Q is the new V, stuff Q into W. THis can resize W
-  RLplus,iqx=growRL(RL,ilw,offset) #Now make a full size version of RL
-  ilw=filterinds(W,tags=tags(cr))[1]
-  replaceind!(W,ilw,iqx) #this function purposely ignores dir(iqx) and preserves dir(ilw)
-  @assert dir(W,iqx)==dir(iqx) #so they better match or everything crashes!!
-  @assert hastags(W,"qx")
-  return W,RLplus,iqx
-end
-
 function block_qx(W_::ITensor,forward::Index,ul::reg_form=lower;kwargs...)::Tuple{ITensor,ITensor,Index}
   #
   # Copy so that we don't mess up the original MPO
