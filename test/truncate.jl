@@ -1,12 +1,8 @@
 using ITensors
-using ITensorMPOCompression
+using ITensorMPOCompression: truncate!, orthogonalize!
 using Revise
 using Test
 using Printf
-
-import ITensorMPOCompression.truncate!
-import ITensorMPOCompression.truncate
-import ITensorMPOCompression.orthogonalize!
 
 #brute force method to control the default float display format.
 Base.show(io::IO, f::Float64) = @printf(io, "%1.1e", f)

@@ -98,25 +98,52 @@ end
     end
 end
 
-
-@testset "Time to try a <ψ|H|ψ> expectation value" begin
+@testset "Orthogonalize/truncate verify gauge invariace of <ψ|H|ψ>, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false]
     initstate(n) = "↑"
-    ul=lower
-    qns=false
-    N,NNN=1,1
-    s = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
-    Hi=make_transIsing_iMPO(s,NNN;ul=ul,pbc=true)
-    @show typeof(typeof(Hi))
-    His = InfiniteSum{MPO}(Hi,NNN)
-    @show His[1]
-    ψ = InfMPS(s, initstate)
-    e=expect(ψ, His) #calls ITensorInfiniteMPS/src/infinitecanonicalmps.jl line 184
-    @show e
-     ψ = InfMPS(s, initstate)
-    # for n in 1:N
-    #     ψ[n] = randomITensor(inds(ψ[n]))
-    # end
+    for N in [1], NNN in [2,4] #3 site unit cell fails for qns=true.
+        si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
+        ψ = InfMPS(si, initstate)
+        for n in 1:N
+            ψ[n] = randomITensor(inds(ψ[n]))
+        end
+        H0=make_transIsing_iMPO(si,NNN;ul=ul,pbc=true)
+        Hsum0=InfiniteSum{MPO}(H0,NNN)
+        E0=expect(ψ,Hsum0)
+
+        HL=copy(H0)
+        orthogonalize!(HL;orth=left)
+        HsumL=InfiniteSum{MPO}(HL,NNN)
+        EL=expect(ψ,HsumL)
+        @test EL ≈ E0 atol = 1e-14
+
+        HR=copy(HL)
+        orthogonalize!(HR;orth=right)
+        HsumR=InfiniteSum{MPO}(HR,NNN)
+        ER=expect(ψ,HsumR)
+        @test ER ≈ E0 atol = 1e-14
+
+        HL=copy(H0)
+        truncate!(HL;orth=left)
+        HsumL=InfiniteSum{MPO}(HL,NNN)
+        EL=expect(ψ,HsumL)
+        @test EL ≈ E0 atol = 1e-14
+
+        HR=copy(H0)
+        truncate!(HR;orth=right)
+        HsumR=InfiniteSum{MPO}(HR,NNN)
+        ER=expect(ψ,HsumR)
+        @test ER ≈ E0 atol = 1e-14
+        truncate!(HR;orth=left)
+        HsumR=InfiniteSum{MPO}(HR,NNN)
+        ER=expect(ψ,HsumR)
+        @test ER ≈ E0 atol = 1e-14
+
+        #@show E0 EL ER E0-EL
+        #@show get_Dw(H0) get_Dw(HL) get_Dw(HR)
+    end
 end
+
+
 
 
 nothing
