@@ -169,7 +169,7 @@ true
 
 ```
 """
-function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
+function truncate!(H::MPO;kwargs...)::bond_spectrums
     #@printf "---- start compress ----\n"
     #
     # decide left/right and upper/lower
@@ -193,14 +193,8 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
     end
     N=length(H)
     ss=bond_spectrums(undef,N-1)
-     #TODO use sweep here
-    if lr==left
-        rng=1:1:N-1 #sweep left to right
-        link_offest=0
-    else #right
-        rng=N:-1:2 #sweep right to left
-        link_offest=-1
-    end
+    link_offest = lr==left ? 0 : -1
+    rng=sweep(H,lr)
     for n in rng 
         nn=n+rng.step #index to neighbour
         W,RL,s=truncate(H[n],ul;kwargs...)
@@ -212,7 +206,7 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
     return ss
 end
 
-function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
+function truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
     #@printf "---- start compress ----\n"
     #
     # decide left/right and upper/lower
@@ -227,88 +221,68 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
     @assert !(bl && bu)
     ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
     #
-    # Now check if H required orthogonalization
+    # Now check if H requires orthogonalization
     #
     ms=matrix_state(ul,lr)
     if !is_canonical(H,ms)
-        #@show inds(H[1],tags="Link")
         orthogonalize!(H;orth=mirror(lr)) 
         Hm=h_mirror ? copy(H) : nothing
         @assert is_orthogonal(H,mirror(lr))
-        #@show inds(H[1],tags="Link")
         Gs=orthogonalize!(H;orth=lr) #TODO why fail if spec ul here??
         @assert is_orthogonal(H,lr)
-        #@show inds(H[1],tags="Link")
-        #@show lr Gs
     else
         # user supplied canonical H but not the Gs so we cannot proceed unless we do one more
         # wasteful sweeps
         @assert false #for now.
     end
     
-    
     return truncate!(H,Hm,Gs,lr;kwargs...)
 end
 
-function ITensors.truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::CelledVector{ITensor},lr::orth_type;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
+function truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::CelledVector{ITensor},lr::orth_type;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
     N=length(H)
     ss=bond_spectrums(undef,N)
     Ss=CelledVector{ITensor}(undef,N)
-    #TODO use sweep here
+    
     for n in 1:N 
         if lr==left
-            il,ir=parse_links(H[n]) #right link of H is the left link of G
-            #@show il ir inds(Gs[n])
-            U,s,V,Sp=truncate(Gs[n],dag(ir);kwargs...)
-            #@show diag(array(s))
-            #@show inds(H[n],tags="Link") inds(H[n+1],tags="Link") inds(U)
+            il,igl=parse_links(H[n]) #right link of H is the left link of G
+            U,s,V,Sp=truncate(Gs[n],dag(igl);kwargs...)
             H[n]=H[n]*U
-            @assert order(H[n])==4
             H[n+1]=dag(U)*H[n+1]
+            @assert order(H[n])==4
             @assert order(H[n+1])==4
             if Hm!=nothing
-                #@show inds(Hm[n],tags="Link") inds(V)
                 Hm[n]=Hm[n]*dag(V)
-                @assert order(Hm[n])==4
-                #@show inds(H[n-1],tags="Link") inds(V)
                 Hm[n+1]=V*Hm[n+1]
+                @assert order(Hm[n])==4
                 @assert order(Hm[n+1])==4
             end
             if hasqns(Gs[n])
                 iSs=make_qninds(Sp,inds(dag(U))...)
-                #@show iSs inds(Sp)
                 Sp=convert_blocksparse(Sp,iSs...)
-                #@show inds(Sp)
             end
             Ss[n]=Sp
         else
-            il,ir=parse_links(H[n]) #left link of H[n] is the right link of G[n-1]
-            igl=noncommonind(Gs[n-1],il)
-            #@show inds(Gs[n-1])
-            U,s,V,Sp=truncate(Gs[n-1],igl;kwargs...) #returns U[n-1], s[n-1] V[n-1]
-            #@show diag(array(s))
-            #@show inds(H[n-1],tags="Link") inds(dag(V))
-            H[n-1]=H[n-1]*dag(V)
-            @assert order(H[n-1])==4
-            #@show inds(H[n-1],tags="Link") inds(V)
-            H[n]=V*H[n]
+            il,ir=parse_links(H[n+1]) #left link of H[n+1] is the right link of G[n]
+            igl=noncommonind(Gs[n],il)
+            U,s,V,Sp=truncate(Gs[n],igl;kwargs...) 
+            H[n]=H[n]*dag(V)
+            H[n+1]=V*H[n+1]
             @assert order(H[n])==4
+            @assert order(H[n+1])==4
             if Hm!=nothing
-                #@show inds(Hm[n],tags="Link") inds(V)
-                Hm[n-1]=Hm[n-1]*U
-                @assert order(Hm[n-1])==4
-                #@show inds(H[n-1],tags="Link") inds(V)
-                Hm[n]=dag(U)*Hm[n]
+                Hm[n]=Hm[n]*U
+                Hm[n+1]=dag(U)*Hm[n+1]
                 @assert order(Hm[n])==4
+                @assert order(Hm[n+1])==4
             end
-            if hasqns(Gs[n-1])
+            if hasqns(Gs[n])
                 iSs=make_qninds(Sp,inds(dag(U))...)
-                #@show iSs inds(Sp)
                 Sp=convert_blocksparse(Sp,iSs...)
-                #@show inds(Sp)
             end
         
-            Ss[n-1]=Sp
+            Ss[n]=Sp
         end
         ss[n]=bond_spectrum(s,n)
     end
@@ -318,24 +292,28 @@ end
 
 
 function truncate(G::ITensor,igl::Index;kwargs...)
+    @assert order(G)==2
     igr=noncommonind(G,igl)
     M,iml=getM(G,igl,igr)
     U,s,V=svd(M,iml;kwargs...)
     iu=commonind(U,s)
     iv=commonind(V,s)
-   
-    iup=redim(iu,dim(iu)+2) 
+    #
+    # Build up U+, S+ and V+
+    #
+    iup=redim(iu,dim(iu)+2) #Use redim to preserve QNs
     ivp=redim(iv,dim(iv)+2) 
-    #@show igl igr iup ivp
     Up=grow(U,igl,iup)
     Sp=grow(s,iup,ivp)
     Vp=grow(V,ivp,igr)
+    #
+    #  But external link tags in so contractions with W[n] tensors will work.
+    #
     replacetags!(Up,tags(iu),tags(igl))
     replacetags!(Sp,tags(iu),tags(igl))
     replacetags!(Sp,tags(iv),tags(igr))
     replacetags!(Vp,tags(iv),tags(igr))
-    #@show hasqns(Up) hasqns(Sp) hasqns(Vp)
-    @assert norm(dense(G)-dense(Up)*Sp*dense(Vp))<1e-12    
+    #@assert norm(dense(G)-dense(Up)*Sp*dense(Vp))<1e-12    expensive!!!
     return Up,s,Vp,Sp
 end
 

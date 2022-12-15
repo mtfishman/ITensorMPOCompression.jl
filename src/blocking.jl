@@ -105,8 +105,7 @@ function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     #
     # this would be perfect but it only looks at the first tag "Link", 
     # we are interested in the second tag l=$n :(
-    #icom=ITensors.commontags(tags(wils...),tags(vils...))
-
+   
     if tags(wils[1])!=tags(vils[1]) && tags(wils[2])!=tags(vils[2])
         vils=vils[2],vils[1] #swap tags the same on index 1 or 2.
     end
@@ -261,12 +260,14 @@ function getM(RL::ITensor,ms::matrix_state,eps::Float64)::Tuple{ITensor,ITensor,
     return M,RL_prime,irm,non_zero
 end
 
+#          |1 0 0|
+#  given G=|0 M 0| spit out M and its left index iml
+#          |0 0 1|
+#
 function getM(G::ITensor,igl::Index,igr::Index)::Tuple{ITensor,Index}
     @assert order(G)==2
-    #igr=noncommoninds(G,igl)[1]
     Dwl,Dwr=dim(igl),dim(igr)
     iml,imr=Index(Dwl-2,tags(igl)),Index(Dwr-2,tags(igr))
-    #@show inds(G) igl igr iml imr
     M=ITensor(iml,imr)
     for jl in 2:Dwl-1
         for jr in 2:Dwr-1
@@ -278,12 +279,11 @@ end
 
 
 #                      |1 0 0|
-#  given A, spit out G=|0 A 0|
+#  given A, spit out G=|0 A 0| , indices of G are provided.
 #                      |0 0 1|
 #
 function grow(A::ITensor,ig1::Index,ig2::Index)
     ils=inds(A)
-    @assert length(ils)==order(A)
     #
     # we need to connect the indices of A with ig1,ig2 indices based on matching tags.
     #
