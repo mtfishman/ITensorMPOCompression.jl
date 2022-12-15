@@ -1,9 +1,4 @@
 
-#make_Heisenberg_AutoMPO
-make_Heisenberg_AutoMPO(sites,NNN::Int64,hz::Float64,::reg_form,J::Float64=1.0)::MPO = make_Heisenberg_AutoMPO(sites,NNN,hz,J)
-    
-# make_Heisenberg_AutoMPO(sites,NNN::Int64,hz::Float64,ul::reg_form)::MPO = 
-#     make_Heisenberg_AutoMPO(sites,NNN,hz,1.0)
 
 @doc """
     make_Heisenberg_AutoMPO(sites,[NNN=1[,hz=0.0[,J=1.0]]])
@@ -19,7 +14,9 @@ The MPO is returned in lower regular form.
 - `J::Float64=1.0` : Nearest neighbour interaction strength.
 
 """
-function make_Heisenberg_AutoMPO(sites,NNN::Int64=1,hz::Float64=0.0,J::Float64=1.0)::MPO
+function make_Heisenberg_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
+    hz::Float64=get(kwargs,:hz,0.0)
+    J::Float64=get(kwargs,:J,1.0)
     N=length(sites)
     @assert(N>=NNN)
     ampo = OpSum()
@@ -40,7 +37,9 @@ end
 #
 #  Reproduce the 3-body Hamiltonian from the Parker paper, eq. 34
 #
-function make_Parker(sites,hx::Float64=0.0;kwargs...)
+function make_Parker(sites;kwargs...)
+    hx::Float64=get(kwargs,:hx,0.0)
+
     N=length(sites)
     os = OpSum()
     if hx!=0
@@ -86,11 +85,6 @@ function make_3body(os::OpSum,N::Int64)::OpSum
 end
 
 
-
-
-make_transIsing_AutoMPO(sites,NNN::Int64,hx::Float64,ul::reg_form,J::Float64=1.0)::MPO = 
-     make_transIsing_AutoMPO(sites,NNN,hx,J)
-
 @doc """
     make\\_transIsing\\_AutoMPO(sites,NNN[,hx=0.0[,J=1.0]])
  
@@ -105,7 +99,10 @@ make_transIsing_AutoMPO(sites,NNN::Int64,hx::Float64,ul::reg_form,J::Float64=1.0
  - `J::Float64=1.0` : Nearest neighbour interaction strength.
  
  """
-function make_transIsing_AutoMPO(sites,NNN::Int64=1,hx::Float64=0.0,J::Float64=1.0)::MPO
+function make_transIsing_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
+    J::Float64=get(kwargs,:J,1.0)
+    hx::Float64=get(kwargs,:hx,0.0)
+    
     do_field = hx!=0.0
     N=length(sites)
     @assert(N>NNN)
@@ -159,8 +156,8 @@ function InfiniteSum{MPO}(impo::InfiniteMPO,NNN::Int64)
     return  InfiniteSum{MPO}([mpo])
   end
   
-function make_transIsing_iMPO(sites,NNN::Int64=1,hx::Float64=0.0,ul::reg_form=lower,J::Float64=1.0;kwargs...)
-    mpo=make_transIsing_MPO(sites,NNN,hx,ul,J;kwargs...)
+function make_transIsing_iMPO(sites,NNN::Int64;kwargs...)
+    mpo=make_transIsing_MPO(sites,NNN;kwargs...)
     return InfiniteMPO(mpo.data)
 end
   
@@ -178,14 +175,17 @@ interactions.  The interactions are hard coded to decay like J/(i-j) between sit
 - `J::Float64=1.0` : Nearest neighbour interaction strength.
 
 """
-function make_transIsing_MPO(sites,NNN::Int64=1,hx::Float64=0.0,ul::reg_form=lower,J::Float64=1.0;kwargs...)::MPO
+function make_transIsing_MPO(sites,NNN::Int64;kwargs...)::MPO
     N=length(sites)
+    ul::reg_form=get(kwargs,:ul,lower)
+    J::Float64=get(kwargs,:J,1.0)
+    hx::Float64=get(kwargs,:hx,0.0)
     pbc::Bool=get(kwargs,:pbc,false)
     Dw::Int64=transIsing_Dw(NNN)
     use_qn::Bool=hasqns(sites[1])
     mpo=MPO(N)
     io = ul==lower ? ITensors.Out : ITensors.In
-   
+    
     if pbc
         prev_link=make_Ising_index(Dw,"Link,c=0,l=$(N)",use_qn,io)
     else

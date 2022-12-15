@@ -21,7 +21,7 @@ NNEs=[(1,-1.5066685458330529),(2,-1.4524087749432490),(3,-1.4516941302867301),(4
 @testset "MPOs hand coded versus autoMPO give same GS energies" for nne in NNEs
 
     N=5
-    hx=0.5
+    model_kwargs = (hx=0.5, )
     eps=4e-14 #this is right at the lower limit for passing the tests.
     NNN=nne[1]
     Eexpected=nne[2]
@@ -31,7 +31,7 @@ NNEs=[(1,-1.5066685458330529),(2,-1.4524087749432490),(3,-1.4516941302867301),(4
     #
     #  Use autoMPO to make H
     #
-    Hauto=make_transIsing_AutoMPO(sites,NNN,hx,lower) 
+    Hauto=make_transIsing_AutoMPO(sites,NNN;model_kwargs...) 
     Eauto,psi=fast_GS(Hauto,sites)
     @test Eauto ≈ Eexpected atol = eps
     Eauto1=inner(psi',Hauto,psi)
@@ -40,7 +40,7 @@ NNEs=[(1,-1.5066685458330529),(2,-1.4524087749432490),(3,-1.4516941302867301),(4
     #
     #  Make H directly ... should be lower triangular
     #
-    Hdirect=make_transIsing_MPO(sites,NNN,hx,lower) #defaults to lower reg form
+    Hdirect=make_transIsing_MPO(sites,NNN;model_kwargs...) #defaults to lower reg form
     @test order(Hdirect[1])==3    
     @test inner(psi',Hdirect,psi) ≈ Eexpected atol = eps
     Edirect,psidirect=fast_GS(Hdirect,sites)
@@ -71,12 +71,11 @@ end #@testset
 makeHs=[make_transIsing_AutoMPO,make_transIsing_MPO,make_Heisenberg_AutoMPO]
 @testset "Auto MPO Ising Ham with Sz blocking" for makeH in makeHs
     N=5
-    hx=0.0 #Hx!=0 breaks symmetry.
     eps=4e-14 #this is right at the lower limit for passing the tests.
     NNN=2
     
     sites = siteinds("SpinHalf", N;conserve_qns=true)
-    H=makeH(sites,NNN,hx,lower) 
+    H=makeH(sites,NNN) 
     il=filterinds(inds(H[2]),tags="Link")
     for i in 1:2
         for start_offset in 0:2
@@ -99,8 +98,8 @@ end #@testset
     NNN=2
     
     sites = siteinds("SpinHalf", N;conserve_qns=true)
-    Hauto=make_transIsing_AutoMPO(sites,NNN,hx,lower) 
-    Hhand=make_transIsing_MPO(sites,NNN,hx,lower) 
+    Hauto=make_transIsing_AutoMPO(sites,NNN) 
+    Hhand=make_transIsing_MPO(sites,NNN) 
     for (Wauto,Whand) in zip(Hauto,Hhand)
         for ia in inds(Wauto)
             ih=filterinds(Whand,tags=tags(ia),plev=plev(ia))[1]

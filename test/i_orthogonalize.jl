@@ -14,7 +14,8 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.4f", f)
     @printf " Ncell  NNN  uncomp. left  right  LR\n"
     for N in [1,2,4], NNN in [2,4] #3 site unit cell fails for qns=true.
         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
-        H0=make_transIsing_iMPO(si,NNN,0.0,ul,1.0;pbc=true)
+
+        H0=make_transIsing_iMPO(si,NNN;ul=ul,pbc=true)
         @test is_regular_form(H0)
         Dw0=Base.max(get_Dw(H0)...)
 
@@ -22,7 +23,7 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.4f", f)
         @test is_regular_form(HL)
         GL=ITensorMPOCompression.orthogonalize!(HL;orth=left)
         DwL=Base.max(get_Dw(HL)...)
-        @test is_regular_form(H)
+        @test is_regular_form(HL)
         @test is_orthogonal(HL,left)
         for n in 1:N
             @test norm(HL[n]*GL[n]-GL[n-1]*H0[n]) ≈ 0.0 atol = 1e-14 
@@ -59,7 +60,7 @@ end
 
     for N in [1,2,4], NNN in [2,4] #3 site unit cell fails for qns=true.
         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
-        H0=make_transIsing_iMPO(si,NNN,0.0,ul,1.0;pbc=true)
+        H0=make_transIsing_iMPO(si,NNN;ul=ul,pbc=true)
         @test is_regular_form(H0)
         Dw0=Base.max(get_Dw(H0)...)
         #
@@ -104,7 +105,7 @@ end
     qns=false
     N,NNN=1,1
     s = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
-    Hi=make_transIsing_iMPO(s,NNN,0.0,ul,1.0;pbc=true)
+    Hi=make_transIsing_iMPO(s,NNN;ul=ul,pbc=true)
     @show typeof(typeof(Hi))
     His = InfiniteSum{MPO}(Hi,NNN)
     @show His[1]

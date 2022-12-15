@@ -12,13 +12,13 @@ import ITensorMPOCompression.orthogonalize!
 @testset "Upper, lower, regular detections" begin
     N=6
     NNN=4
-    hx=0.5
+    model_kwargs = (hx=0.5, ul=lower)
     eps=1e-15
     sites = siteinds("SpinHalf", N)
     #
     #  test lower triangular MPO 
     #
-    H=make_transIsing_MPO(sites,NNN,hx,lower) 
+    H=make_transIsing_MPO(sites,NNN;model_kwargs...) 
     @test is_upper_lower(H   ,lower,eps)
     @test is_lower_regular_form(H,eps)
     W=H[2]
@@ -62,12 +62,12 @@ test_combos=[
     N=10
     NNN=4
     eps=1e-14
-    hx=0.0
+    model_kwargs = (ul=test_combo[2], )
     ms=matrix_state(test_combo[2],lr )
     makeH=test_combo[1]
     sites = siteinds("SpinHalf", N;conserve_qns=false)
     psi=randomMPS(sites)
-    H=makeH(sites,NNN,hx,ms.ul) 
+    H=makeH(sites,NNN;model_kwargs...) 
     #@show inds(H[1])
     @test is_regular_form(H   ,ms.ul,eps)
     E0=inner(psi',H,psi)
@@ -90,13 +90,12 @@ test_combos=[
     N=10
     NNN=4
     eps=1e-14
-    hx=0.0
     ms=matrix_state(test_combo[2],lr )
     makeH=test_combo[1]
     sites = siteinds("SpinHalf", N;conserve_qns=true)
     state=[isodd(n) ? "Up" : "Dn" for n=1:N]
     psi=randomMPS(sites,state)
-    H=makeH(sites,NNN,hx,ms.ul) 
+    H=makeH(sites,NNN;ul=test_combo[2]) 
     @test is_regular_form(H   ,ms.ul,eps)
     E0=inner(psi',H,psi)
     orthogonalize!(H,ms.ul;orth=ms.lr,epsrr=1e-12)
@@ -111,13 +110,13 @@ end
 N=13
 sites = siteinds("SpinHalf", N;conserve_qns=qns)
 for NNN in 3:N-1
-    Hauto=make_transIsing_AutoMPO(sites,NNN,0.0,ul) 
+    Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul) 
     Dw_auto=get_Dw(Hauto)
-    Hr=make_transIsing_MPO(sites,NNN,0.0,ul) 
+    Hr=make_transIsing_MPO(sites,NNN;ul=ul) 
     orthogonalize!(Hr;orth=right,epsrr=1e-12) #sweep left to right
     @test is_canonical(Hr,matrix_state(ul,right),1e-12)
     @test get_Dw(Hr)==Dw_auto
-    Hl=make_transIsing_MPO(sites,NNN,0.0,ul) 
+    Hl=make_transIsing_MPO(sites,NNN;ul=ul) 
     orthogonalize!(Hl;orth=left,epsrr=1e-12) #sweep right to left
     @test is_canonical(Hl,matrix_state(ul,left),1e-12)
     @test get_Dw(Hl)==Dw_auto

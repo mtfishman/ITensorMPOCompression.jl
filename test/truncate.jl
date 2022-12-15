@@ -29,7 +29,7 @@ function test_truncate(makeH,N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,ep
     #
     # Make right canonical, then compress to left canonical
     #
-    H=makeH(sites,NNN,hx,ms.ul)
+    H=makeH(sites,NNN;hx=hx,ul=ms.ul)
     E0l=inner(psi',H,psi)/(N-1)
     @test is_regular_form(H,ms.ul,eps)
     orthogonalize!(H;orth=ms.lr,epsrr=epsrr)
@@ -165,7 +165,7 @@ end
     db=ITensors.using_debug_checks()
 
     sites = siteinds("SpinHalf", N)
-    H=make_transIsing_MPO(sites,NNN,hx,lower)
+    H=make_transIsing_MPO(sites,NNN;hx=hx)
 
     ITensors.ITensors.disable_debug_checks() 
     E0,psi0=fast_GS(H,sites)
@@ -183,7 +183,7 @@ end
     @test overlap ≈ 1.0 atol = eps
 
     hx=0.0
-    H=make_Heisenberg_AutoMPO(sites,NNN,hx,lower)
+    H=make_Heisenberg_AutoMPO(sites,NNN;hx=hx)
 
     ITensors.ITensors.disable_debug_checks() 
     E0,psi0=fast_GS(H,sites)
@@ -204,13 +204,12 @@ end
 
 @testset "Look at bond singular values for large lattices" begin
     NNN=5
-    hx=0.5
 
     @printf "                 max(sv)           min(sv)\n"
     @printf "  N    Dw  left     mid    right   mid\n"
     for N in [6,8,10,12,18,20,40,80]
         sites = siteinds("SpinHalf", N)
-        H=make_transIsing_MPO(sites,NNN,hx,lower)
+        H=make_transIsing_MPO(sites,NNN;hx=0.5)
         specs=truncate!(H,cutoff=1e-10)
         imid::Int64=N/2-1
         max_1  =specs[1   ].spectrum[1]
@@ -230,9 +229,9 @@ end
         svd_cutoff=1e-15 #same value auto MPO uses.
         rr_cutoff=1e-14
         sites = siteinds("SpinHalf", N;conserve_qns=qns)
-        Hauto=make_transIsing_AutoMPO(sites,NNN,0.0,ul) 
+        Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul) 
         Dw_auto=get_Dw(Hauto)
-        Hr=make_transIsing_MPO(sites,NNN,0.0,ul) 
+        Hr=make_transIsing_MPO(sites,NNN;ul=ul) 
         truncate!(Hr;orth=right,epsrr=rr_cutoff,cutoff=svd_cutoff) #sweep left to right
         @test is_canonical(Hr,matrix_state(ul,right),1e-12)
         delta_Dw=sum(get_Dw(Hr)-Dw_auto)
@@ -243,7 +242,7 @@ end
         if delta_Dw>0
             println("AutoMPO beat Compression by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
         end
-        Hl=make_transIsing_MPO(sites,NNN,0.0,ul) 
+        Hl=make_transIsing_MPO(sites,NNN;ul=ul) 
         truncate!(Hl;orth=left,epsrr=rr_cutoff,cutoff=svd_cutoff) #sweep right to left
         @test is_canonical(Hl,matrix_state(ul,left),1e-12)
         delta_Dw=sum(get_Dw(Hr)-Dw_auto)
@@ -261,16 +260,16 @@ end
     @printf "|              |autoMPO  |    1 truncation  | 2 truncations    |\n"
     @printf "|  N  epseSVD  | dE      |   dE     RE   Dw |   dE     RE   Dw |\n"
 
-    for N in [6,10,16,20,24]
-        sites = siteinds("SpinHalf", N;conserve_qns=false)
-        Hnot=make_Parker(sites;truncate=false) #No truncation inside autoMPO
-        H=make_Parker(sites;truncate=true) #Truncated by autoMPO
-        #@show get_Dw(Hnot)
-        Dw_auto = get_Dw(H)
-        psi=randomMPS(sites)
-        Enot=inner(psi',Hnot,psi)
-        E=inner(psi',H,psi)
-        for svd_cutoff in [1e-15,1e-12,1e-10]
+    for svd_cutoff in [1e-15,1e-12,1e-10]
+        for N in [6,10,16,20,24]
+            sites = siteinds("SpinHalf", N;conserve_qns=false)
+            Hnot=make_Parker(sites;truncate=false) #No truncation inside autoMPO
+            H=make_Parker(sites;truncate=true) #Truncated by autoMPO
+            #@show get_Dw(Hnot)
+            Dw_auto = get_Dw(H)
+            psi=randomMPS(sites)
+            Enot=inner(psi',Hnot,psi)
+            E=inner(psi',H,psi)
             @test E ≈ Enot atol = sqrt(svd_cutoff)
             truncate!(Hnot;dir=right,cutoff=svd_cutoff)
             Dw_1=get_Dw(Hnot)

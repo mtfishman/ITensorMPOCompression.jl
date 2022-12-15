@@ -12,7 +12,7 @@ using Printf
 @testset "Block respecting QX decomposition" for ul in [lower,upper], lr in [left,right]
     N=6
     NNN=4
-    hx=0.5
+    model_kwargs = (hx=0.5, ul=ul )
     eps=1e-15
     sites = siteinds("SpinHalf", N)
     ms=matrix_state(ul,lr)
@@ -24,7 +24,7 @@ using Printf
     #
     #  test lower triangular MPO 
     #
-    H=make_transIsing_MPO(sites,NNN,hx,ms.ul)
+    H=make_transIsing_MPO(sites,NNN;model_kwargs...)
     for n in rng
         W=H[n]
         @test is_regular_form(W,ms.ul)
@@ -36,13 +36,13 @@ end
 @testset "QR,QL,LQ,RQ decomposition with rank revealing" begin
     N=10
     NNN=6
-    hx=0.5
+    model_kwargs = (hx=0.5, ul=lower)
     eps=2e-15
     sites = siteinds("SpinHalf", N)
     #
     #  use lower tri MPO to get some zero pivots for QL and RQ.
     #
-    H=make_transIsing_MPO(sites,NNN,hx,lower)
+    H=make_transIsing_MPO(sites,NNN;model_kwargs...)
     W=H[2]
     r,c=parse_links(W)
 
@@ -67,7 +67,8 @@ end
     #
     #  use upper tri MPO to get some zero pivots for LQ and QR.
     #
-    H=make_transIsing_MPO(sites,NNN,hx,upper)
+    model_kwargs = (hx=0.5, ul=upper)
+    H=make_transIsing_MPO(sites,NNN;model_kwargs...)
     W=H[2]
     r,c=parse_links(W)
 

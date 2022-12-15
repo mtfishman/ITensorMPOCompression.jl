@@ -11,7 +11,10 @@
   Instead of r,c index we should really think in terms of f,r = forward, reverse
   R gets transferred in f/forward direction
 -implement @show for bond_spectrum 
-Done -Clean up the whole parse links mess to handle iMPOs
+Done: -Clean up the whole parse links mess to handle iMPOs
+Done: -Support make_transIsing_iMPO
+Done: -For the make hamiltonian functions put ul,hx,J into kwargs
+  This will tie in with using the Model("model_name") frameowrk Matt is using.
 
 
 Done: 1) Not seeing any rank reduction
