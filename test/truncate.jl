@@ -221,10 +221,10 @@ end
         H=make_transIsing_MPO(sites,NNN;hx=0.5)
         specs=truncate!(H,cutoff=1e-10)
         imid::Int64=N/2-1
-        max_1  =specs[1   ].spectrum[1]
-        max_mid=specs[imid].spectrum[1]
-        max_N  =specs[N-1 ].spectrum[1]
-        min_mid=specs[imid].spectrum[end]
+        max_1  =specs[1   ].eigs[1]
+        max_mid=specs[imid].eigs[1]
+        max_N  =specs[N-1 ].eigs[1]
+        min_mid=specs[imid].eigs[end]
         Dw=maximum(get_Dw(H))
         if !quiet
             @printf "%4i %4i %1.5f %1.5f %1.5f %1.5f\n" N Dw  max_1 max_mid max_N min_mid

@@ -22,7 +22,7 @@ export make_transIsing_iMPO
 export fast_GS,make_Parker
 # MPO and bond spectrum
 export get_Dw,min,max
-export bond_spectrum,bond_spectrums
+export bond_spectrums
 
 export add_or_replace # Handle inpenetrable kwargs
 
@@ -116,25 +116,10 @@ V_offsets(ms::matrix_state) = begin
     V_offsets(o1_,o2_)
 end
 
+bond_spectrums = Vector{Spectrum}
 
-struct bond_spectrum
-    spectrum::Vector{Float64}
-    link_number::Int64
-    bond_spectrum(s::ITensor,link::Int64) = begin
-        @assert link>0
-        @assert order(s)==2
-        new(diag(array(s)),link)
-    end
-    bond_spectrum(link::Int64) = begin
-        @assert link>0
-        new([],link)
-    end
-end
-
-bond_spectrums = Vector{bond_spectrum} 
-
-function max(s::bond_spectrum)::Float64 s.spectrum[1] end
-function min(s::bond_spectrum)::Float64 s.spectrum[end] end
+function max(s::Spectrum)::Float64 eigs(s)[1] end
+function min(s::Spectrum)::Float64 eigs(s)[end] end
 function max(ss::bond_spectrums)::Float64 
     ret=max(ss[1])
     for n in 2:length(ss)

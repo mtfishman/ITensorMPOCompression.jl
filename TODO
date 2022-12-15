@@ -28,10 +28,11 @@ Done: -Move i_orthog code into orthogonalize.jl files
 -QN support for InfiniteSum code.
 -Test alternating S=1/2 and S=1 sites.
 -Test Fermions.
--Use Itensor spectrum instead of bond_spectrum.
+Done: -Use Itensor spectrum instead of bond_spectrum.
 5) Use new is_upper functions using combiners to get rank-2 tensors.
 -Profile and code coverage.
 Done: -Use sweep(H,lr) instead of the if blocks.
+-Refactor the H[n]*U dag(U)*H[n+1] code for iMPO truncate.
 
 
 Done: 1) Not seeing any rank reduction

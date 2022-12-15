@@ -4,7 +4,7 @@ using Printf
 #
 #  Compress one site
 #
-function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,bond_spectrum}
+function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spectrum}
     lr::orth_type=get(kwargs, :orth, right)
     ms=matrix_state(ul,lr)
     eps=1e-14 #relax used for testing upper/lower/regular-form etc.
@@ -53,10 +53,9 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,bond
 #  At last we can svd and compress M using epsSVD as the cutoff.  M should be dense.
 #    
     isvd=findinds(M,tsvd)[1] #decide the left index
-    U,s,V=svd(M,isvd;kwargs...) # ns sing. values survive compression
+    U,s,V,spectrum=svd(M,isvd;kwargs...) # ns sing. values survive compression
     ns=dim(inds(s)[1])
 
-    spectrum=bond_spectrum(s,n)
     #@show diag(array(s))
     Mplus=grow(M,removeqns(lq),im)
     D=dense(RL)-Mplus*RL_prime
@@ -247,7 +246,7 @@ function truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::CelledVecto
     for n in 1:N 
         if lr==left
             il,igl=parse_links(H[n]) #right link of H is the left link of G
-            U,s,V,Sp=truncate(Gs[n],dag(igl);kwargs...)
+            U,Sp,V,spectrum=truncate(Gs[n],dag(igl);kwargs...)
             H[n]=H[n]*U
             H[n+1]=dag(U)*H[n+1]
             @assert order(H[n])==4
@@ -258,15 +257,11 @@ function truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::CelledVecto
                 @assert order(Hm[n])==4
                 @assert order(Hm[n+1])==4
             end
-            if hasqns(Gs[n])
-                iSs=make_qninds(Sp,inds(dag(U))...)
-                Sp=convert_blocksparse(Sp,iSs...)
-            end
-            Ss[n]=Sp
+           
         else
             il,ir=parse_links(H[n+1]) #left link of H[n+1] is the right link of G[n]
             igl=noncommonind(Gs[n],il)
-            U,s,V,Sp=truncate(Gs[n],igl;kwargs...) 
+            U,Sp,V,spectrum=truncate(Gs[n],igl;kwargs...) 
             H[n]=H[n]*dag(V)
             H[n+1]=V*H[n+1]
             @assert order(H[n])==4
@@ -277,14 +272,16 @@ function truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::CelledVecto
                 @assert order(Hm[n])==4
                 @assert order(Hm[n+1])==4
             end
-            if hasqns(Gs[n])
-                iSs=make_qninds(Sp,inds(dag(U))...)
-                Sp=convert_blocksparse(Sp,iSs...)
-            end
-        
-            Ss[n]=Sp
+           
         end
-        ss[n]=bond_spectrum(s,n)
+       
+        if hasqns(Gs[n])
+            iSs=make_qninds(Sp,inds(dag(U))...)
+            Sp=convert_blocksparse(Sp,iSs...)
+        end
+       
+        Ss[n]=Sp
+        ss[n]=spectrum
     end
     return Ss,ss,Hm
 
@@ -295,9 +292,9 @@ function truncate(G::ITensor,igl::Index;kwargs...)
     @assert order(G)==2
     igr=noncommonind(G,igl)
     M,iml=getM(G,igl,igr)
-    U,s,V=svd(M,iml;kwargs...)
-    iu=commonind(U,s)
-    iv=commonind(V,s)
+    U,s,V,spectrum,iu,iv=svd(M,iml;kwargs...)
+    # iu=commonind(U,s)
+    # iv=commonind(V,s)
     #
     # Build up U+, S+ and V+
     #
@@ -314,7 +311,7 @@ function truncate(G::ITensor,igl::Index;kwargs...)
     replacetags!(Sp,tags(iv),tags(igr))
     replacetags!(Vp,tags(iv),tags(igr))
     #@assert norm(dense(G)-dense(Up)*Sp*dense(Vp))<1e-12    expensive!!!
-    return Up,s,Vp,Sp
+    return Up,Sp,Vp,spectrum
 end
 
 
