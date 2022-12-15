@@ -20,7 +20,7 @@ Done: -For the make hamiltonian functions put ul,hx,J into kwargs
   Need to build H-3body from scratch.
   Need code for W_1 + W_2
 -vumps GS example with timing for uncomp./comp.
--Try using cutoff instead of truncate=false for autoMPO
+Done: -Try using cutoff instead of truncate=false for autoMPO
 Done: -Clean up iMPO truncate code.
 Done: -Move i_orthog code into orthogonalize.jl files
 -Review generated docs, upgrade for iMPO support.

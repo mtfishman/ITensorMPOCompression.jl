@@ -111,12 +111,12 @@ end
 @testset "Parker eq. 34 3-body Hamiltonian" begin
     N=15
     sites = siteinds("SpinHalf", N;conserve_qns=false)
-    Hnot=make_Parker(sites;truncate=false) #No truncation inside autoMPO
-    H=make_Parker(sites;truncate=true) #Truncated by autoMPO
+    Hnot=make_Parker(sites;cutoff=-1.0) #No truncation inside autoMPO
+    H=make_Parker(sites;cutoff=1e-15) #Truncated by autoMPO
     psi=randomMPS(sites)
     Enot=inner(psi',Hnot,psi)
     E=inner(psi',H,psi)
-    #@show E-Enot
+    #@show E-Enot get_Dw(Hnot) get_Dw(H)
     @test E ≈ Enot atol = 3e-9
    
 end
