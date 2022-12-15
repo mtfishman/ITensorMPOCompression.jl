@@ -157,7 +157,7 @@ function InfiniteSum{MPO}(impo::InfiniteMPO,NNN::Int64)
   end
   
 function make_transIsing_iMPO(sites,NNN::Int64;kwargs...)
-    mpo=make_transIsing_MPO(sites,NNN;kwargs...)
+    mpo=make_transIsing_MPO(sites,NNN;pbc=true,kwargs...)
     return InfiniteMPO(mpo.data)
 end
   

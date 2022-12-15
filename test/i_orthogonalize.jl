@@ -15,7 +15,7 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.4f", f)
     for N in [1,2,4], NNN in [2,4] #3 site unit cell fails for qns=true.
         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
 
-        H0=make_transIsing_iMPO(si,NNN;ul=ul,pbc=true)
+        H0=make_transIsing_iMPO(si,NNN;ul=ul)
         @test is_regular_form(H0)
         Dw0=Base.max(get_Dw(H0)...)
 
@@ -60,7 +60,7 @@ end
 
     for N in [1,2,4], NNN in [2,4] #3 site unit cell fails for qns=true.
         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
-        H0=make_transIsing_iMPO(si,NNN;ul=ul,pbc=true)
+        H0=make_transIsing_iMPO(si,NNN;ul=ul)
         @test is_regular_form(H0)
         Dw0=Base.max(get_Dw(H0)...)
         #
@@ -106,7 +106,7 @@ end
         for n in 1:N
             ψ[n] = randomITensor(inds(ψ[n]))
         end
-        H0=make_transIsing_iMPO(si,NNN;ul=ul,pbc=true)
+        H0=make_transIsing_iMPO(si,NNN;ul=ul)
         Hsum0=InfiniteSum{MPO}(H0,NNN)
         E0=expect(ψ,Hsum0)
 
