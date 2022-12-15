@@ -1,4 +1,4 @@
--Should we be using findinds
+-Should we be using findinds or just inds
 -For RL_prime problems, try factor R+ = R'*M (instread of M*R) then R' will be square.
   THis will only work if R' is orthogonal R_dagger'*R' = Id
 -Review high level algos
@@ -7,7 +7,7 @@
   -convergence in truncate?
   -epsrr=0.0 not allowed in truncate?
 -Put some content in Readme.md
--Does block_qx really need to know n?
+Done: -Does block_qx really need to know n?
   Instead of r,c index we should really think in terms of f,r = forward, reverse
   R gets transferred in f/forward direction
 -implement @show for bond_spectrum 
@@ -15,6 +15,23 @@ Done: -Clean up the whole parse links mess to handle iMPOs
 Done: -Support make_transIsing_iMPO
 Done: -For the make hamiltonian functions put ul,hx,J into kwargs
   This will tie in with using the Model("model_name") frameowrk Matt is using.
+-Review all examples.  Add truncate example.
+-Reproduce 30 site example from Parker paper.
+  Need to build H-3body from scratch.
+  Need code for W_1 + W_2
+-vumps GS example with timing for uncomp./comp.
+-Try using cutoff instead of truncate=false for autoMPO
+Done: -Clean up iMPO truncate code.
+-Move i_orthog code into orthogonalize.jl files
+-Review generated docs, upgrade for iMPO support.
+-Pare down unit test for shorter run time.
+-QN support for InfiniteSum code.
+-Test alternating S=1/2 and S=1 sites.
+-Test Fermions.
+-Use Itensor spectrum instead of bond_spectrum.
+5) Use new is_upper functions using combiners to get rank-2 tensors.
+-Profile and code coverage.
+Done: -Use sweep(H,lr) instead of the if blocks.
 
 
 Done: 1) Not seeing any rank reduction
@@ -25,7 +42,6 @@ Done: Deal with: Calling `inner(x::MPS, A::MPO, y::MPS)` where the site indices 
 │ `x` and the `MPS` resulting from contracting `MPO` `A` with `MPS` `y` don't
 │ match is deprecated as of ITensors v0.3 and will result in an error in ITensors
 │ v0.4. The most common cause of this is something like the following:
-5) Use new is_upper functions using combiners to get rank-2 tensors.
 Done: 6) orthogonalize! -> ITensors.orthogonalize! for proper overloading
 Done: 7) truncate! -> ITensors.truncate! for proper overloading
 Done: 8) Use iq returned from qr()

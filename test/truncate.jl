@@ -1,8 +1,11 @@
 using ITensors
-using ITensorMPOCompression: truncate!, orthogonalize!
+using ITensorMPOCompression
+using ITensorInfiniteMPS
 using Revise
 using Test
 using Printf
+
+using ITensorMPOCompression: orthogonalize!,truncate!
 
 #brute force method to control the default float display format.
 Base.show(io::IO, f::Float64) = @printf(io, "%1.1e", f)
@@ -14,6 +17,8 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.1e", f)
 #
 using Random
 Random.Random.seed!(12345);
+
+quiet=true
 
 function test_truncate(makeH,N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,epsSVD::Float64,
     epsrr::Float64,eps::Float64,qns::Bool)
@@ -49,7 +54,9 @@ function test_truncate(makeH,N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,ep
     E2l=inner(psi',H,psi)/(N-1)
     RE=abs((E0l-E2l)/E0l)
     REs= RE/sqrt(epsSVD)
-    @printf "E0=%8.5f Etrunc=%8.5f rel. error=%7.1e RE/sqrt(espSVD)=%6.2f \n" E0l E2l RE REs
+    if !quiet
+        @printf "E0=%8.5f Etrunc=%8.5f rel. error=%7.1e RE/sqrt(espSVD)=%6.2f \n" E0l E2l RE REs
+    end
     @test REs<1.0 
     
 end
@@ -174,7 +181,9 @@ end
 
     overlap=abs(inner(psi0,psi1))
     RE=abs((E0-E1)/E0)
-    @printf "Trans. Ising E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
+    if !quiet
+        @printf "Trans. Ising E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
+    end
     @test E0 ≈ E1 atol = eps
     @test overlap ≈ 1.0 atol = eps
 
@@ -193,7 +202,9 @@ end
 
     overlap=abs(inner(psi0,psi1))
     RE=abs((E0-E1)/E0)
-    @printf "Heisenberg   E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
+    if !quiet
+        @printf "Heisenberg   E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
+    end
     @test E0 ≈ E1 atol = eps
     @test overlap ≈ 1.0 atol = eps
 end 
@@ -201,8 +212,10 @@ end
 @testset "Look at bond singular values for large lattices" begin
     NNN=5
 
-    @printf "                 max(sv)           min(sv)\n"
-    @printf "  N    Dw  left     mid    right   mid\n"
+    if !quiet
+        @printf "                 max(sv)           min(sv)\n"
+        @printf "  N    Dw  left     mid    right   mid\n"
+    end
     for N in [6,8,10,12,18,20,40,80]
         sites = siteinds("SpinHalf", N)
         H=make_transIsing_MPO(sites,NNN;hx=0.5)
@@ -213,7 +226,9 @@ end
         max_N  =specs[N-1 ].spectrum[1]
         min_mid=specs[imid].spectrum[end]
         Dw=maximum(get_Dw(H))
-        @printf "%4i %4i %1.5f %1.5f %1.5f %1.5f\n" N Dw  max_1 max_mid max_N min_mid
+        if !quiet
+            @printf "%4i %4i %1.5f %1.5f %1.5f %1.5f\n" N Dw  max_1 max_mid max_N min_mid
+        end
         @test (max_1-max_N)<1e-10
         @test max_mid<1.0
     end
@@ -232,29 +247,31 @@ end
         @test is_canonical(Hr,matrix_state(ul,right),1e-12)
         delta_Dw=sum(get_Dw(Hr)-Dw_auto)
         #@test delta_Dw<=0
-        if delta_Dw<0
+        if !quiet && delta_Dw<0 
             println("Compression beat AutoMPO by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
         end
-        if delta_Dw>0
+        if !quiet && delta_Dw>0
             println("AutoMPO beat Compression by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
         end
         Hl=make_transIsing_MPO(sites,NNN;ul=ul) 
         truncate!(Hl;orth=left,epsrr=rr_cutoff,cutoff=svd_cutoff) #sweep right to left
         @test is_canonical(Hl,matrix_state(ul,left),1e-12)
         delta_Dw=sum(get_Dw(Hr)-Dw_auto)
-        if delta_Dw<0
+        if !quiet && delta_Dw<0
             println("Compression beat AutoMPO by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=left ,ul=$ul,QNs=$qns")
         end
-        if delta_Dw>0
+        if !quiet && delta_Dw>0
             println("AutoMPO beat Compression by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
         end
     end  
 end 
 
 @testset "Head to Head autoMPO with 3-body Hamiltonian" begin
-    @printf "+--------------+---------+------------------+------------------+\n"
-    @printf "|              |autoMPO  |    1 truncation  | 2 truncations    |\n"
-    @printf "|  N  epseSVD  | dE      |   dE     RE   Dw |   dE     RE   Dw |\n"
+    if !quiet
+        @printf "+--------------+---------+------------------+------------------+\n"
+        @printf "|              |autoMPO  |    1 truncation  | 2 truncations    |\n"
+        @printf "|  N  epseSVD  | dE      |   dE     RE   Dw |   dE     RE   Dw |\n"
+    end
 
     for svd_cutoff in [1e-15,1e-12,1e-10]
         for N in [6,10,16,20,24]
@@ -280,11 +297,102 @@ end
             Enott2=inner(psi',Hnot,psi)
             @test E ≈ Enott2 atol = sqrt(svd_cutoff)
             RE2=abs(E-Enott2)/sqrt(svd_cutoff)
-
-            @printf "| %3i %1.1e  | %1.1e | %1.1e %1.3f %2i | %1.1e %1.3f %2i | \n" N svd_cutoff abs(E-Enot) abs(E-Enott1) RE1 delta_Dw_1 abs(E-Enott2) RE2 delta_Dw_2 
+            if !quiet
+                @printf "| %3i %1.1e  | %1.1e | %1.1e %1.3f %2i | %1.1e %1.3f %2i | \n" N svd_cutoff abs(E-Enot) abs(E-Enott1) RE1 delta_Dw_1 abs(E-Enott2) RE2 delta_Dw_2 
+            end
         end
     end
 end
 
+
+@testset "Truncate/Compress iMPO Check gauge relations, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
+    initstate(n) = "↑"
+    if !quiet
+        @printf "               Dw     Dw    Dw   \n"
+        @printf " Ncell  NNN  uncomp. left  right \n"
+    end
+
+    for N in [1,2,4], NNN in [2,4] #3 site unit cell fails for qns=true.
+        si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
+        H0=make_transIsing_iMPO(si,NNN;ul=ul)
+        @test is_regular_form(H0)
+        Dw0=Base.max(get_Dw(H0)...)
+        #
+        #  Do truncate outputting left ortho Hamiltonian
+        #
+        HL=copy(H0)
+        Ss,ss,HR=truncate!(HL;orth=left,cutoff=1e-15,h_mirror=true)
+        DwL=Base.max(get_Dw(HL)...)
+        @test is_regular_form(HL)
+        @test is_orthogonal(HL,left)
+        #
+        #  Now test guage relations using the diagonal singular value matrices
+        #  as the gauge transforms.
+        #
+        for n in 1:N
+            @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
+        end    
+        #
+        #  Do truncate from H0 outputting right ortho Hamiltonian
+        #
+        HR=copy(H0)
+        Ss,ss,HL=truncate!(HR;orth=right,cutoff=1e-15,h_mirror=true)
+        DwR=Base.max(get_Dw(HR)...)
+        @test is_regular_form(HR)
+        @test is_orthogonal(HR,right)
+        for n in 1:N
+            @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
+        end   
+        if !quiet
+            @printf " %4i %4i   %4i   %4i  %4i \n" N NNN Dw0 DwL DwR
+        end
+
+    end
+end
+
+@testset "Orthogonalize/truncate verify gauge invariace of <ψ|H|ψ>, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false]
+    initstate(n) = "↑"
+    for N in [1], NNN in [2,4] #3 site unit cell fails for qns=true.
+        si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
+        ψ = InfMPS(si, initstate)
+        for n in 1:N
+            ψ[n] = randomITensor(inds(ψ[n]))
+        end
+        H0=make_transIsing_iMPO(si,NNN;ul=ul)
+        Hsum0=InfiniteSum{MPO}(H0,NNN)
+        E0=expect(ψ,Hsum0)
+
+        HL=copy(H0)
+        orthogonalize!(HL;orth=left)
+        HsumL=InfiniteSum{MPO}(HL,NNN)
+        EL=expect(ψ,HsumL)
+        @test EL ≈ E0 atol = 1e-14
+
+        HR=copy(HL)
+        orthogonalize!(HR;orth=right)
+        HsumR=InfiniteSum{MPO}(HR,NNN)
+        ER=expect(ψ,HsumR)
+        @test ER ≈ E0 atol = 1e-14
+
+        HL=copy(H0)
+        truncate!(HL;orth=left)
+        HsumL=InfiniteSum{MPO}(HL,NNN)
+        EL=expect(ψ,HsumL)
+        @test EL ≈ E0 atol = 1e-14
+
+        HR=copy(H0)
+        truncate!(HR;orth=right)
+        HsumR=InfiniteSum{MPO}(HR,NNN)
+        ER=expect(ψ,HsumR)
+        @test ER ≈ E0 atol = 1e-14
+        truncate!(HR;orth=left)
+        HsumR=InfiniteSum{MPO}(HR,NNN)
+        ER=expect(ψ,HsumR)
+        @test ER ≈ E0 atol = 1e-14
+
+        #@show E0 EL ER E0-EL
+        #@show get_Dw(H0) get_Dw(HL) get_Dw(HR)
+    end
+end
 
 nothing

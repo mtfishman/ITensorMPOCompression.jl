@@ -22,14 +22,9 @@ end
 function orthogonalize!(H::MPO,ul::reg_form;kwargs...)
     lr::orth_type=get(kwargs, :orth, left)
     N=length(H)
-    if lr==left
-        rng=1:1:N-1 #sweep left to right
-    else #right
-        rng=N:-1:2 #sweep right to left
-    end
+    rng=sweep(H,lr)
     for n in rng 
         nn=n+rng.step #index to neighbour
-        #@show n,nn,nl
         H[n],H[nn]=orthogonalize!(H[n],H[nn],ul;kwargs...)
     end
 end
