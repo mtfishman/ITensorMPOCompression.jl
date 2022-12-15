@@ -247,32 +247,14 @@ function truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::CelledVecto
         if lr==left
             il,igl=parse_links(H[n]) #right link of H is the left link of G
             U,Sp,V,spectrum=truncate(Gs[n],dag(igl);kwargs...)
-            H[n]=H[n]*U
-            H[n+1]=dag(U)*H[n+1]
-            @assert order(H[n])==4
-            @assert order(H[n+1])==4
-            if Hm!=nothing
-                Hm[n]=Hm[n]*dag(V)
-                Hm[n+1]=V*Hm[n+1]
-                @assert order(Hm[n])==4
-                @assert order(Hm[n+1])==4
-            end
-           
+            transform(H,U,n)
+            transform(Hm,dag(V),n)
         else
             il,ir=parse_links(H[n+1]) #left link of H[n+1] is the right link of G[n]
             igl=noncommonind(Gs[n],il)
             U,Sp,V,spectrum=truncate(Gs[n],igl;kwargs...) 
-            H[n]=H[n]*dag(V)
-            H[n+1]=V*H[n+1]
-            @assert order(H[n])==4
-            @assert order(H[n+1])==4
-            if Hm!=nothing
-                Hm[n]=Hm[n]*U
-                Hm[n+1]=dag(U)*Hm[n+1]
-                @assert order(Hm[n])==4
-                @assert order(Hm[n+1])==4
-            end
-           
+            transform(H,dag(V),n)
+            transform(Hm,U,n)
         end
        
         if hasqns(Gs[n])
@@ -286,6 +268,14 @@ function truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::CelledVecto
     return Ss,ss,Hm
 
 end
+
+function transform(H::InfiniteMPO,uv::ITensor,n::Int64)
+    H[n]=H[n]*uv
+    H[n+1]=dag(uv)*H[n+1]
+    @assert order(H[n])==4
+    @assert order(H[n+1])==4
+end
+function transform(H::Nothing,uv::ITensor,n::Int64) end
 
 
 function truncate(G::ITensor,igl::Index;kwargs...)

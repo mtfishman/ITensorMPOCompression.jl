@@ -32,7 +32,7 @@ Done: -Use Itensor spectrum instead of bond_spectrum.
 5) Use new is_upper functions using combiners to get rank-2 tensors.
 -Profile and code coverage.
 Done: -Use sweep(H,lr) instead of the if blocks.
--Refactor the H[n]*U dag(U)*H[n+1] code for iMPO truncate.
+Done: -Refactor the H[n]*U dag(U)*H[n+1] code for iMPO truncate.
 
 
 Done: 1) Not seeing any rank reduction
