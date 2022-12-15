@@ -12,11 +12,10 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.4f", f)
     initstate(n) = "↑"
     @printf "               Dw     Dw    Dw    Dw\n"
     @printf " Ncell  NNN  uncomp. left  right  LR\n"
-    for N in [1,2,4], NNN in [2,4,8] #3 site unit cell fails for qns=true.
+    for N in [1,2,4], NNN in [2,4] #3 site unit cell fails for qns=true.
         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
-        H=make_transIsing_MPO(si,NNN,0.0,ul,1.0;pbc=true)
-        @test is_regular_form(H)
-        H0=InfiniteMPO(H.data)
+        H0=make_transIsing_iMPO(si,NNN,0.0,ul,1.0;pbc=true)
+        @test is_regular_form(H0)
         Dw0=Base.max(get_Dw(H0)...)
 
         HL=copy(H0)
@@ -58,11 +57,10 @@ end
     @printf "               Dw     Dw    Dw   \n"
     @printf " Ncell  NNN  uncomp. left  right \n"
 
-    for N in [1,2,4], NNN in [2,4,8] #3 site unit cell fails for qns=true.
+    for N in [1,2,4], NNN in [2,4] #3 site unit cell fails for qns=true.
         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
-        H=make_transIsing_MPO(si,NNN,0.0,ul,1.0;pbc=true)
-        @test is_regular_form(H)
-        H0=InfiniteMPO(H.data)
+        H0=make_transIsing_iMPO(si,NNN,0.0,ul,1.0;pbc=true)
+        @test is_regular_form(H0)
         Dw0=Base.max(get_Dw(H0)...)
         #
         #  Do truncate outputting left ortho Hamiltonian
@@ -98,6 +96,27 @@ end
 
     end
 end
+
+
+@testset "Time to try a <ψ|H|ψ> expectation value" begin
+    initstate(n) = "↑"
+    ul=lower
+    qns=false
+    N,NNN=1,1
+    s = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
+    Hi=make_transIsing_iMPO(s,NNN,0.0,ul,1.0;pbc=true)
+    @show typeof(typeof(Hi))
+    His = InfiniteSum{MPO}(Hi,NNN)
+    @show His[1]
+    ψ = InfMPS(s, initstate)
+    e=expect(ψ, His) #calls ITensorInfiniteMPS/src/infinitecanonicalmps.jl line 184
+    @show e
+     ψ = InfMPS(s, initstate)
+    # for n in 1:N
+    #     ψ[n] = randomITensor(inds(ψ[n]))
+    # end
+end
+
 
 nothing
 
