@@ -118,8 +118,8 @@ end
 
 bond_spectrums = Vector{Spectrum}
 
-function max(s::Spectrum)::Float64 eigs(s)[1] end
-function min(s::Spectrum)::Float64 eigs(s)[end] end
+function max(s::Spectrum)::Float64 sqrt(eigs(s)[1]) end
+function min(s::Spectrum)::Float64 sqrt(eigs(s)[end]) end
 function max(ss::bond_spectrums)::Float64 
     ret=max(ss[1])
     for n in 2:length(ss)
