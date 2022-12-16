@@ -83,131 +83,131 @@ end
 # end 
 
 
-@testset "Compress full MPO no QNs" begin
-    eps=2e-13
-    epsSVD=1e-12
-    epsrr=1e-12
-    ll=matrix_state(lower,left)
-    ul=matrix_state(upper,left)
-    lr=matrix_state(lower,right)
-    ur=matrix_state(upper,right)
-    hx=0.5
+# @testset "Compress full MPO no QNs" begin
+#     eps=2e-13
+#     epsSVD=1e-12
+#     epsrr=1e-12
+#     ll=matrix_state(lower,left)
+#     ul=matrix_state(upper,left)
+#     lr=matrix_state(lower,right)
+#     ur=matrix_state(upper,right)
+#     hx=0.5
 
-    #                                 V=N sites
-    #                                   V=Num Nearest Neighbours in H
-    test_truncate(make_transIsing_MPO,5,1,hx,ll,epsSVD,epsrr,eps,false)
-    test_truncate(make_transIsing_MPO,5,3,hx,ll,epsSVD,epsrr,eps,false)
-    test_truncate(make_transIsing_MPO,5,3,hx,ul,epsSVD,epsrr,eps,false)
-    test_truncate(make_transIsing_MPO,5,3,hx,lr,epsSVD,epsrr,eps,false)
-    test_truncate(make_transIsing_MPO,5,3,hx,ur,epsSVD,epsrr,eps,false)
-    test_truncate(make_transIsing_MPO,15,10,hx,ll,epsSVD,epsrr,eps,false) 
-    test_truncate(make_transIsing_MPO,15,10,hx,lr,epsSVD,epsrr,eps,false) 
-    # Rank revealing QR/RQ  won't fully reduce these two cases
-    test_truncate(make_transIsing_MPO,14,13,hx,ll,epsSVD,epsrr,eps,false) 
-    test_truncate(make_transIsing_MPO,14,13,hx,lr,epsSVD,epsrr,eps,false) 
+#     #                                 V=N sites
+#     #                                   V=Num Nearest Neighbours in H
+#     test_truncate(make_transIsing_MPO,5,1,hx,ll,epsSVD,epsrr,eps,false)
+#     test_truncate(make_transIsing_MPO,5,3,hx,ll,epsSVD,epsrr,eps,false)
+#     test_truncate(make_transIsing_MPO,5,3,hx,ul,epsSVD,epsrr,eps,false)
+#     test_truncate(make_transIsing_MPO,5,3,hx,lr,epsSVD,epsrr,eps,false)
+#     test_truncate(make_transIsing_MPO,5,3,hx,ur,epsSVD,epsrr,eps,false)
+#     test_truncate(make_transIsing_MPO,15,10,hx,ll,epsSVD,epsrr,eps,false) 
+#     test_truncate(make_transIsing_MPO,15,10,hx,lr,epsSVD,epsrr,eps,false) 
+#     # Rank revealing QR/RQ  won't fully reduce these two cases
+#     test_truncate(make_transIsing_MPO,14,13,hx,ll,epsSVD,epsrr,eps,false) 
+#     test_truncate(make_transIsing_MPO,14,13,hx,lr,epsSVD,epsrr,eps,false) 
 
-    # epsSVD=.00001
-    test_truncate(make_transIsing_MPO,10,7,hx,ll,epsSVD,epsrr,eps,false) 
-    test_truncate(make_transIsing_MPO,10,7,hx,lr,epsSVD,epsrr,eps,false) 
-    test_truncate(make_transIsing_MPO,10,7,hx,ur,epsSVD,epsrr,eps,false)
-    test_truncate(make_transIsing_MPO,10,7,hx,ul,epsSVD,epsrr,eps,false)
+#     # epsSVD=.00001
+#     test_truncate(make_transIsing_MPO,10,7,hx,ll,epsSVD,epsrr,eps,false) 
+#     test_truncate(make_transIsing_MPO,10,7,hx,lr,epsSVD,epsrr,eps,false) 
+#     test_truncate(make_transIsing_MPO,10,7,hx,ur,epsSVD,epsrr,eps,false)
+#     test_truncate(make_transIsing_MPO,10,7,hx,ul,epsSVD,epsrr,eps,false)
 
-    #
-    # Heisenberg from AutoMPO
-    #
-    # epsSVD=.00001
-    test_truncate(make_Heisenberg_AutoMPO,10,7,hx,lr,epsSVD,epsrr,eps,false)
+#     #
+#     # Heisenberg from AutoMPO
+#     #
+#     # epsSVD=.00001
+#     test_truncate(make_Heisenberg_AutoMPO,10,7,hx,lr,epsSVD,epsrr,eps,false)
 
-end 
+# end 
 
-@testset "Compress full MPO with QNs" begin
-    ITensors.ITensors.enable_debug_checks()
-    eps=2e-13
-    epsSVD=1e-12
-    epsrr=1e-12
-    hx=0.0
-    ll=matrix_state(lower,left)
-    ul=matrix_state(upper,left)
-    lr=matrix_state(lower,right)
-    ur=matrix_state(upper,right)
+# @testset "Compress full MPO with QNs" begin
+#     ITensors.ITensors.enable_debug_checks()
+#     eps=2e-13
+#     epsSVD=1e-12
+#     epsrr=1e-12
+#     hx=0.0
+#     ll=matrix_state(lower,left)
+#     ul=matrix_state(upper,left)
+#     lr=matrix_state(lower,right)
+#     ur=matrix_state(upper,right)
 
-    #                                 V=N sites
-    #                                   V=Num Nearest Neighbours in H
-    test_truncate(make_transIsing_MPO,5,1,hx,ll,epsSVD,epsrr,eps,true)
-    test_truncate(make_transIsing_MPO,5,3,hx,ll,epsSVD,epsrr,eps,true)
-    test_truncate(make_transIsing_MPO,5,3,hx,ul,epsSVD,epsrr,eps,true)
-    test_truncate(make_transIsing_MPO,5,3,hx,lr,epsSVD,epsrr,eps,true)
-    test_truncate(make_transIsing_MPO,5,3,hx,ur,epsSVD,epsrr,eps,true)
-    test_truncate(make_transIsing_MPO,15,10,hx,ll,epsSVD,epsrr,eps,true) 
-    test_truncate(make_transIsing_MPO,15,10,hx,lr,epsSVD,epsrr,eps,true) 
-    # Rank revealing QR/RQ  won't fully reduce these two cases
-    test_truncate(make_transIsing_MPO,14,13,hx,ll,epsSVD,epsrr,eps,true) 
-    test_truncate(make_transIsing_MPO,14,13,hx,lr,epsSVD,epsrr,eps,true) 
+#     #                                 V=N sites
+#     #                                   V=Num Nearest Neighbours in H
+#     test_truncate(make_transIsing_MPO,5,1,hx,ll,epsSVD,epsrr,eps,true)
+#     test_truncate(make_transIsing_MPO,5,3,hx,ll,epsSVD,epsrr,eps,true)
+#     test_truncate(make_transIsing_MPO,5,3,hx,ul,epsSVD,epsrr,eps,true)
+#     test_truncate(make_transIsing_MPO,5,3,hx,lr,epsSVD,epsrr,eps,true)
+#     test_truncate(make_transIsing_MPO,5,3,hx,ur,epsSVD,epsrr,eps,true)
+#     test_truncate(make_transIsing_MPO,15,10,hx,ll,epsSVD,epsrr,eps,true) 
+#     test_truncate(make_transIsing_MPO,15,10,hx,lr,epsSVD,epsrr,eps,true) 
+#     # Rank revealing QR/RQ  won't fully reduce these two cases
+#     test_truncate(make_transIsing_MPO,14,13,hx,ll,epsSVD,epsrr,eps,true) 
+#     test_truncate(make_transIsing_MPO,14,13,hx,lr,epsSVD,epsrr,eps,true) 
 
-    epsSVD=.00001
-    test_truncate(make_transIsing_MPO,10,7,hx,ll,epsSVD,epsrr,eps,true)  
-    test_truncate(make_transIsing_MPO,10,7,hx,lr,epsSVD,epsrr,eps,true) 
-    test_truncate(make_transIsing_MPO,10,7,hx,ur,epsSVD,epsrr,eps,true)
-    test_truncate(make_transIsing_MPO,10,7,hx,ul,epsSVD,epsrr,eps,true)  
+#     epsSVD=.00001
+#     test_truncate(make_transIsing_MPO,10,7,hx,ll,epsSVD,epsrr,eps,true)  
+#     test_truncate(make_transIsing_MPO,10,7,hx,lr,epsSVD,epsrr,eps,true) 
+#     test_truncate(make_transIsing_MPO,10,7,hx,ur,epsSVD,epsrr,eps,true)
+#     test_truncate(make_transIsing_MPO,10,7,hx,ul,epsSVD,epsrr,eps,true)  
 
-    # #
-    # # Heisenberg from AutoMPO
-    # #
-    # epsSVD=.00001
-    # test_truncate(make_Heisenberg_AutoMPO,10,7,lr,epsSVD,epsrr,eps,false)
+#     # #
+#     # # Heisenberg from AutoMPO
+#     # #
+#     # epsSVD=.00001
+#     # test_truncate(make_Heisenberg_AutoMPO,10,7,lr,epsSVD,epsrr,eps,false)
 
-end 
+# end 
 
-@testset "Test ground states" begin
-    eps=3e-13
-    epsSVD=1e-12
-    epsrr=1e-12
-    N=10
-    NNN=5
-    hx=0.5
-    db=ITensors.using_debug_checks()
+# @testset "Test ground states" begin
+#     eps=3e-13
+#     epsSVD=1e-12
+#     epsrr=1e-12
+#     N=10
+#     NNN=5
+#     hx=0.5
+#     db=ITensors.using_debug_checks()
 
-    sites = siteinds("SpinHalf", N)
-    H=make_transIsing_MPO(sites,NNN;hx=hx)
+#     sites = siteinds("SpinHalf", N)
+#     H=make_transIsing_MPO(sites,NNN;hx=hx)
 
-    ITensors.ITensors.disable_debug_checks() 
-    E0,psi0=fast_GS(H,sites)
-    if db  ITensors.ITensors.enable_debug_checks() end
-    truncate!(H;orth=left,cutoff=epsSVD,epsrr=epsrr)
+#     ITensors.ITensors.disable_debug_checks() 
+#     E0,psi0=fast_GS(H,sites)
+#     if db  ITensors.ITensors.enable_debug_checks() end
+#     truncate!(H;orth=left,cutoff=epsSVD,epsrr=epsrr)
     
-    ITensors.ITensors.disable_debug_checks() 
-    E1,psi1=fast_GS(H,sites)
-    if db  ITensors.ITensors.enable_debug_checks() end
+#     ITensors.ITensors.disable_debug_checks() 
+#     E1,psi1=fast_GS(H,sites)
+#     if db  ITensors.ITensors.enable_debug_checks() end
 
-    overlap=abs(inner(psi0,psi1))
-    RE=abs((E0-E1)/E0)
-    if !quiet
-        @printf "Trans. Ising E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
-    end
-    @test E0 ≈ E1 atol = eps
-    @test overlap ≈ 1.0 atol = eps
+#     overlap=abs(inner(psi0,psi1))
+#     RE=abs((E0-E1)/E0)
+#     if !quiet
+#         @printf "Trans. Ising E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
+#     end
+#     @test E0 ≈ E1 atol = eps
+#     @test overlap ≈ 1.0 atol = eps
 
-    hx=0.0
-    H=make_Heisenberg_AutoMPO(sites,NNN;hx=hx)
+#     hx=0.0
+#     H=make_Heisenberg_AutoMPO(sites,NNN;hx=hx)
 
-    ITensors.ITensors.disable_debug_checks() 
-    E0,psi0=fast_GS(H,sites)
-    if db  ITensors.ITensors.enable_debug_checks() end
+#     ITensors.ITensors.disable_debug_checks() 
+#     E0,psi0=fast_GS(H,sites)
+#     if db  ITensors.ITensors.enable_debug_checks() end
 
-    truncate!(H;orth=right,cutoff=epsSVD,epsrr=epsrr)
+#     truncate!(H;orth=right,cutoff=epsSVD,epsrr=epsrr)
 
-    ITensors.ITensors.disable_debug_checks() 
-    E1,psi1=fast_GS(H,sites)
-    if db  ITensors.ITensors.enable_debug_checks() end
+#     ITensors.ITensors.disable_debug_checks() 
+#     E1,psi1=fast_GS(H,sites)
+#     if db  ITensors.ITensors.enable_debug_checks() end
 
-    overlap=abs(inner(psi0,psi1))
-    RE=abs((E0-E1)/E0)
-    if !quiet
-        @printf "Heisenberg   E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
-    end
-    @test E0 ≈ E1 atol = eps
-    @test overlap ≈ 1.0 atol = eps
-end 
+#     overlap=abs(inner(psi0,psi1))
+#     RE=abs((E0-E1)/E0)
+#     if !quiet
+#         @printf "Heisenberg   E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
+#     end
+#     @test E0 ≈ E1 atol = eps
+#     @test overlap ≈ 1.0 atol = eps
+# end 
 
 @testset "Look at bond singular values for large lattices" begin
     NNN=5
@@ -350,7 +350,7 @@ end
     end
 end
 
-@testset "Orthogonalize/truncate verify gauge invariace of <ψ|H|ψ>, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false]
+@testset "Orthogonalize/truncate verify gauge invariace of <ψ|H|ψ>, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
     initstate(n) = "↑"
     for N in [1], NNN in [2,4] #3 site unit cell fails for qns=true.
         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)

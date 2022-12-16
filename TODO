@@ -25,7 +25,7 @@ Done: -Clean up iMPO truncate code.
 Done: -Move i_orthog code into orthogonalize.jl files
 -Review generated docs, upgrade for iMPO support.
 -Pare down unit test for shorter run time.
--QN support for InfiniteSum code.
+Done: -QN support for InfiniteSum code.
 -Test alternating S=1/2 and S=1 sites.
 -Test Fermions.
 Done: -Use Itensor spectrum instead of bond_spectrum.

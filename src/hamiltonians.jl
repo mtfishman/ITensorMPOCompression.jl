@@ -143,8 +143,7 @@ function InfiniteSum{MPO}(impo::InfiniteMPO,NNN::Int64)
       end
       ir1=removetags(ir,"c=$n")
       ir1=replacetags(ir1,"l=1","l=$n")
-      ir2=Index(dim(ir1),tags(ir1)) #get a new id  TODO: handle QNs
-      #@show il il1 ir ir2
+      ir2=new_id(ir1)
       mpo[n]=replaceinds(impo[n],(il,ir),(il1,ir2))
     end
     #
@@ -159,6 +158,14 @@ function InfiniteSum{MPO}(impo::InfiniteMPO,NNN::Int64)
 function make_transIsing_iMPO(sites,NNN::Int64;kwargs...)
     mpo=make_transIsing_MPO(sites,NNN;pbc=true,kwargs...)
     return InfiniteMPO(mpo.data)
+end
+
+function new_id(i::Index)::Index
+    if hasqns(i)
+        return Index(space(i);dir=dir(i),tags=tags(i),plev=plev(i))
+    else
+        return Index(dim(i),tags(i),plev=plev(i))
+    end
 end
   
 @doc """
