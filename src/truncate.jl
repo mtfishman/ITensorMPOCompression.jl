@@ -224,10 +224,11 @@ function truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITensor},bond_s
     #
     ms=matrix_state(ul,lr)
     if !is_canonical(H,ms)
-        orthogonalize!(H;orth=mirror(lr)) 
+        epsrr=get(kwargs, :cutoff, 1e-15)
+        orthogonalize!(H;orth=mirror(lr),epsrr=epsrr) 
         Hm=h_mirror ? copy(H) : nothing
         @assert is_orthogonal(H,mirror(lr))
-        Gs=orthogonalize!(H;orth=lr) #TODO why fail if spec ul here??
+        Gs=orthogonalize!(H;orth=lr,epsrr=epsrr) #TODO why fail if spec ul here??
         @assert is_orthogonal(H,lr)
     else
         # user supplied canonical H but not the Gs so we cannot proceed unless we do one more
