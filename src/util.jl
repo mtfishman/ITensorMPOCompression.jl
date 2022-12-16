@@ -79,6 +79,16 @@ macro pprint(W)
     end
 end
 
+function Base.show(io::IO, ss::bond_spectrums)
+    N=length(ss)
+    print(io,"\nsite  Ns   max(s)  min(s)  Entropy\n")
+    for n in 1:N
+        s=ss[n]
+        @printf(io,"%4i %4i %1.5f %1.2e %1.5f \n",n,length(s.eigs),max(s),min(s),entropy(s))
+    end
+end
+
+
 function pprint(r::Index,W::ITensor,c::Index,eps::Float64=default_eps)
     # @assert hasind(W,r) can't assume this becuse parse_links could return a Dw=1 dummy index.
     # @assert hasind(W,c)

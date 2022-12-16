@@ -10,7 +10,7 @@
 Done: -Does block_qx really need to know n?
   Instead of r,c index we should really think in terms of f,r = forward, reverse
   R gets transferred in f/forward direction
--implement @show for bond_spectrum 
+Done: -Implement @show for bond_spectrum 
 Done: -Clean up the whole parse links mess to handle iMPOs
 Done: -Support make_transIsing_iMPO
 Done: -For the make hamiltonian functions put ul,hx,J into kwargs
