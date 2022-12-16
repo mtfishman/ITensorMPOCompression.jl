@@ -168,7 +168,7 @@ true
 
 ```
 """
-function truncate!(H::MPO;kwargs...)::bond_spectrums
+function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
     #@printf "---- start compress ----\n"
     #
     # decide left/right and upper/lower
@@ -205,7 +205,7 @@ function truncate!(H::MPO;kwargs...)::bond_spectrums
     return ss
 end
 
-function truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
+function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
     #@printf "---- start compress ----\n"
     #
     # decide left/right and upper/lower
@@ -239,7 +239,7 @@ function truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITensor},bond_s
     return truncate!(H,Hm,Gs,lr;kwargs...)
 end
 
-function truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::CelledVector{ITensor},lr::orth_type;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
+function ITensors.truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::CelledVector{ITensor},lr::orth_type;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
     N=length(H)
     ss=bond_spectrums(undef,N)
     Ss=CelledVector{ITensor}(undef,N)

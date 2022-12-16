@@ -1,5 +1,6 @@
 using ITensors
 using ITensorMPOCompression
+using ITensorInfiniteMPS
 using Printf
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
 initstate(n) = "↑"
