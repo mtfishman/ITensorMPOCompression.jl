@@ -81,10 +81,10 @@ end
 
 function Base.show(io::IO, ss::bond_spectrums)
     N=length(ss)
-    print(io,"\nsite  Ns   max(s)  min(s)  Entropy\n")
+    print(io,"\nsite  Ns   max(s)     min(s)    Entropy  Tr. Error\n")
     for n in 1:N
         s=ss[n]
-        @printf(io,"%4i %4i %1.5f %1.2e %1.5f \n",n,length(s.eigs),max(s),min(s),entropy(s))
+        @printf(io,"%4i %4i  %1.5f   %1.2e   %1.5f  %1.2e\n",n,length(s.eigs),max(s),min(s),entropy(s),sqrt(truncerror(s)))
     end
 end
 
