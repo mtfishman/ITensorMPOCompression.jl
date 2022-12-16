@@ -576,6 +576,7 @@ end
     
 function get_traits(W::ITensor,eps::Float64)
     r,c=parse_links(W)
+    d,n,space=parse_site(W)
     Dw1,Dw2=dim(r),dim(c)
     bl,bu = detect_regular_form(W,eps)
     l= bl ? 'L' : ' '

@@ -7,5 +7,7 @@ H=make_transIsing_MPO(sites,NNN);
 pprint(H)
 orthogonalize!(H;orth=right)
 pprint(H)
-truncate!(H;orth=left)
+bond_spectrum=truncate!(H;orth=left)
 pprint(H)
+@show bond_spectrum
+nothing
