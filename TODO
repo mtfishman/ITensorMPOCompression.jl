@@ -14,7 +14,7 @@ Done: -Implement @show for bond_spectrum
 Done: -Clean up the whole parse links mess to handle iMPOs
 Done: -Support make_transIsing_iMPO
 Done: -For the make hamiltonian functions put ul,hx,J into kwargs
-  This will tie in with using the Model("model_name") frameowrk Matt is using.
+  This will tie in with using the Model("model_name") framework Matt is using.
 Done: -Review all examples.  Add iMPO example.
 -Reproduce 30 site example from Parker paper.
   Need to build H-3body from scratch.
@@ -23,17 +23,17 @@ Done: -Review all examples.  Add iMPO example.
 Done: -Try using cutoff instead of truncate=false for autoMPO
 Done: -Clean up iMPO truncate code.
 Done: -Move i_orthog code into orthogonalize.jl files
--Review generated docs, upgrade for iMPO support.
+Done: -Review generated docs, upgrade for iMPO support.
 -Pare down unit test for shorter run time.
 Done: -QN support for InfiniteSum code.
 -Test alternating S=1/2 and S=1 sites.
--Test Fermions.
+-Test Fermions/Hubberd.
 Done: -Use Itensor spectrum instead of bond_spectrum.
 5) Use new is_upper functions using combiners to get rank-2 tensors.
 -Profile and code coverage.
 Done: -Use sweep(H,lr) instead of the if blocks.
 Done: -Refactor the H[n]*U dag(U)*H[n+1] code for iMPO truncate.
--Gs returned by truncate should Diag not Dense tensors.
+-Gs returned by truncate should be Diag not Dense tensors.
 
 Done: 1) Not seeing any rank reduction
 Done: 2) Upgrade tests to use ~ and atol.

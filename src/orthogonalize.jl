@@ -39,10 +39,8 @@ Bring an MPO into left or right canonical form using block respecting QR decompo
 
 # Keywords
 - `orth::orth_type = left` : choose `left` or `right` canonical form
-- `sweeps::Int64` : number of sweeps to perform. If sweeps is zero or not set then sweeps 
-   continue until there is no change in the internal dimensions from rank revealing QR. 
-- `epsrr::Float64 = 1e-14` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
-   All rows with max(abs(R[r,:]))<epsrr are considered zero and removed. 
+- `epsrr::Float64 = -1.0` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
+   All rows with max(abs(R[r,:]))<epsrr are considered zero and removed. epsrr=`1.0 indicates no rank reduction.
 
 # Examples
 ```julia
@@ -77,21 +75,21 @@ S 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 #  Now we can orthogonalize or bring it into canonical form.
 #  Defaults are left orthogonal with rank reduction.
 #
-julia> orthogonalize!(H)
+julia> orthogonalize!(H;epsrr=1e-14)
 #
 #  Wahoo .. rank reduction knocked the size of H way down, and we haven't
 #  tried compressing yet!
 #
 julia> pprint(H[2])
-I 0 0 0 0 
-S S S 0 0 
-0 0 0 S I 
+I 0 0 0 
+S I 0 0 
+0 0 S I 
 #
 #  What do all the bond dimensions of H look like?  We will need compression 
 #  (truncation) in order to further bang down the size of H
 #
 julia> get_Dw(H)
-9-element Vector{Int64}: 3 5 9 13 12 9 6 4 3
+9-element Vector{Int64}: 3 4 5 6 7 6 5 4 3
 #
 #  wrap up with two more checks on the structure of H
 #
@@ -118,31 +116,23 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
         kwargs=Dict{Symbol, Any}(:orth => left)
     end
     lr=get(kwargs,:orth,left)
-    epsrr=get(kwargs,:epsrr,1e-12)
+    epsrr=get(kwargs,:epsrr,-1.0)
     smart_sweep=epsrr>=0.0 #if rank reduction is allowed then do smart sweeps prior to final sweep
     #
     # First sweep direction is critical for proper rank reduction upper:right, lower:left
     #
     if smart_sweep
         if ul==lower
-            kwargs[:orth]=left
-            orthogonalize!(H,ul;epsrr=epsrr,kwargs...)
-            #@show get_Dw(H)
-            kwargs[:orth]=right
-            orthogonalize!(H,ul;epsrr=epsrr,kwargs...)
-            #@show get_Dw(H)
+            orthogonalize!(H,ul;kwargs...,orth=left) #putting orth last overrides orth in kwargs
+            orthogonalize!(H,ul;kwargs...,orth=right)
             if lr==left
-                kwargs[:orth]=left
-                orthogonalize!(H,ul;epsrr=epsrr,kwargs...)
+                orthogonalize!(H,ul;kwargs...,orth=left)
             end
         else
-            kwargs[:orth]=right
-            orthogonalize!(H,ul;epsrr=epsrr,kwargs...)
-            kwargs[:orth]=left
-            orthogonalize!(H,ul;epsrr=epsrr,kwargs...)
+            orthogonalize!(H,ul;kwargs...,orth=right)
+            orthogonalize!(H,ul;kwargs...,orth=left)
             if lr==right
-                kwargs[:orth]=right
-                orthogonalize!(H,ul;epsrr=epsrr,kwargs...)
+                orthogonalize!(H,ul;kwargs...,orth=right)
             end
         end   
     else
@@ -246,8 +236,56 @@ function ITensors.orthogonalize!(H::InfiniteMPO,ul::reg_form;kwargs...)
 end
 
 #
-#  Out routine simply established upper or lower regular forms
+#  Outer routine simply established upper or lower regular forms
 #
+@doc """
+    orthogonalize!(H::InfiniteMPO;kwargs...)
+
+Bring `CelledVector` representation of an infinite MPO into left or right canonical form using 
+block respecting QR iteration as described in section Vi B and Alogrithm 3 of:
+> Daniel E. Parker, Xiangyu Cao, and Michael P. Zaletel Phys. Rev. B 102, 035147
+If you intend to also call `truncate!` then do not bother calling `orthogonalize!` beforehand, as `truncate!` will do this automatically and ensure the correct handling of that gauge transforms.
+
+# Arguments
+- H::InfiniteMPO which is `CelledVector` of MPO matrices. `CelledVector` and `InfiniteMPO` are defined in the `ITensorInfiniteMPS` module.
+
+# Keywords
+- `orth::orth_type = left` : choose `left` or `right` canonical form
+- `epsrr::Float64 = -1.0` : cutoff for rank revealing QX which removes zero pivot rows and columns. All rows with max(abs(R[r,:]))<epsrr are considered zero and removed. epsrr=-11.0 indicate no rank reduction.
+
+# Returns
+- Vector{ITensor} with the gauge transforms between the input and output iMPOs
+
+# Examples
+```julia
+julia> using ITensors, ITensorMPOCompression, ITensorInfiniteMPS
+julia> initstate(n) = "↑";
+julia> sites = infsiteinds("S=1/2", 1;initstate, conserve_szparity=false)
+1-element CelledVector{Index{Int64}, typeof(translatecelltags)}:
+ (dim=2|id=326|"S=1/2,Site,c=1,n=1")
+#
+# This makes H directly, bypassing autoMPO.  (AutoMPO is too smart for this
+# demo, it makes maximally reduced MPOs right out of the box!)
+#
+julia> H=make_transIsing_MPO(sites,NNN);
+julia> get_Dw(H)
+1-element Vector{Int64}:
+ 17
+julia> orthogonalize!(H;orth=right,epsrr=1e-15);
+julia> get_Dw(H)
+1-element Vector{Int64}:
+ 14
+julia> orthogonalize!(H;orth=left,epsrr=1e-15);
+julia> get_Dw(H)
+ 1-element Vector{Int64}:
+  13
+julia> is_orthogonal(H,left)
+true
+
+
+```
+
+"""
 function ITensors.orthogonalize!(H::InfiniteMPO;kwargs...)
     (bl,bu)=detect_regular_form(H,1e-14)
     if !(bl || bu)

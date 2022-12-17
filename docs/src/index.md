@@ -1,8 +1,8 @@
 # ITensorMPOCompression
-ITensorMPOCompression is a Julia language module based in the [ITensors](https://itensor.org/) library.  In general, compression of Hamiltonian MPOs must be treated differently than standard MPS compression.  The root of the problem can be traced to the combination of both extensive and intensive degrees of freedom in Hamiltonian operators.  If conventional compression methods are applied of Hamiltonain MPOs, one finds that two of the singular values will diverge as the lattice size increases, resulting in severe numerical instabilities.
+ITensorMPOCompression is a Julia language module based in the [ITensors](https://itensor.org/) library.  In general, compression of Hamiltonian MPOs must be treated differently than standard MPS compression.  The root of the problem can be traced to the combination of both extensive and intensive degrees of freedom in Hamiltonian operators.  If conventional compression methods are applied to Hamiltonian MPOs, one finds that two of the singular values will diverge as the lattice size increases, resulting in severe numerical instabilities.
 The recent paper 
 > *Local Matrix Product Operators:Canonical Form, Compression, and Control Theory* Daniel E. Parker, Xiangyu Cao, and Michael P. Zaletel **Phys. Rev. B** 102, 035147
-contains a number of important insights for the handling of finite and infinite lattice MPOs. They show that the intensive degrees of freedom can be isolated from the extensive ones. If one only compresses the intensive portions of the Hamiltonian then the divergent singular values are removed from the problem.  This module attempts to implement the algorithms described in the *Parker et. al.* paper.  The initial release will support orthogonalization (canonical form) and truncation (SVD compression) of the finite lattice MPOs.  A future release will add support for handling iMPOs, or infinite lattice MPOs with a repeating unit cell.
+contains a number of important insights for the handling of finite and infinite lattice MPOs. They show that the intensive degrees of freedom can be isolated from the extensive ones. If one only compresses the intensive portions of the Hamiltonian then the divergent singular values are removed from the problem.  This module attempts to implement the algorithms described in the *Parker et. al.* paper.  
 The techincal details are presented in a document provided with this module: [TechnicalDetails.pdf](../TechnicalDetails.pdf). A brief summary of the key functions of this module follows.
 
 ## Block respecting QX decomposition
@@ -61,7 +61,7 @@ Q_{\left(mna\right)k}\rightarrow\hat{Q}_{ak}
 ```
 `4.` Stuff *Q* back into correct block of *W*.
 
-`5.` Transfer *L* to the next site: 
+`5.` Resize and transfer *L* to the next site: 
 ```math
 \hat{W}^{\left(i+1\right)}\rightarrow L\hat{W}^{\left(i+1\right)}
 ``` 
@@ -75,6 +75,7 @@ This is achieved by simply sweeping through the lattice and carrying out block r
 ITensorMPOCompression.orthogonalize!
 ```
 # Truncation (SVD compression)
+## Finite lattice
 Prior to truncation the MPO must first be rendered into canoncial form using the orthogonalize! function described above.  If for example the MPO is right-lower canonical form then a truncation sweep starts by doing a block repsecting *QL* decomposition on site 1:
 ```math
 \hat{W}^{1}\rightarrow\hat{Q}^{1}L^{1}
@@ -94,6 +95,36 @@ L=\begin{bmatrix}1 & 0 & 0\\
 ```
 where internal sans-M matrix is what gets decomposed with SVD.  Picking out this internal matrix is really the secret sauce for avoiding diverging singular values when the lattice size grows.  After decomposition `M=UsV` the `U` matrix is absorbed to the left such that `W=QU` which is left canoncial. *sV* gets combined with L' and transfered to next site to the right.  There are many details to consider and these are explained in the technical notes.
 
+## Infinite lattice
+Truncation for an infinite lattice operates on the gauge transforms `G` that relate the left and right orthogonal forms:
+```math
+G^{\left(n-1\right)}\hat{W}_{R}^{n}=\hat{W}_{L}^{n}G^{n}\;n=1\cdots N_{cell}
+```
+Where `Ncell` is the number of lattice sites in the repeating unit cell. The gauge transforms are the output from left orthogonalizatio of a right orthogonalized iMPO. As usual we don't decompose `G` directly, but instead do a block respecting `svd` in order to only attack the non-extensive degrees of freedom.  Small singular values can be truncated at this stage.
+```math
+G^{n}=\begin{bmatrix}1 & 0 & 0\\
+0 & \mathsf{G^{n}} & 0\\
+0 & 0 & 1
+\end{bmatrix}=\begin{bmatrix}1 & 0 & 0\\
+0 & \mathsf{U^{n}}\mathsf{s^{n}}\mathsf{V^{n}} & 0\\
+0 & 0 & 1
+\end{bmatrix}\approx\begin{bmatrix}1 & 0 & 0\\
+0 & \mathsf{\tilde{U}^{n}}\mathsf{\tilde{s}^{n}}\mathsf{\tilde{V}^{n}} & 0\\
+0 & 0 & 1
+\end{bmatrix}=\tilde{U}^{n}\tilde{s}^{n}\tilde{V}^{n}
+```
+
+We then use the unitary tensors to transform the MPO tensors:
+```math
+\hat{W}_{R^{\prime}}^{n}=\tilde{V}^{n-1}\hat{W}_{R}^{n}\tilde{V}^{\dagger n},\quad\hat{W}_{L^{\prime}}^{n}=\tilde{U}^{\dagger n-1}\hat{W}_{L}^{n}\tilde{U}^{n}
+```
+which should be reduced in size if there was any truncation. The new gauge transforms, `s`, are now diagonal:
+```math
+\tilde{s}^{n-1}\hat{W}_{R^{\prime}}^{n}=\hat{W}_{L^{\prime}}^{n}\tilde{s}^{n}\;n=1\cdots N_{cell}
+```
+This looks rather elegant compared to the finite lattice case.
+
+## Truncate functions
 ```@docs
 truncate!
 ```
@@ -128,7 +159,7 @@ The definition of orthogonal forms for MPOs or operator-valued matrices are more
 ```math
 \sum_{a}\left\langle \hat{W}_{ab}^{\dagger},\hat{W}_{ac}\right\rangle =\frac{\sum_{a}^{}Tr\left[\hat{W}_{ab}\hat{W}_{ac}\right]}{Tr\left[\hat{\mathbb{I}}\right]}=\delta_{bc}
 ```
-Where the summation limits depend on where the V-block is for `left`/`right` and `lower`/`upper`.  The specifics all four cases are shown in table 6 in the [Technical Notes](../TechnicalDetails.pdf)
+Where the summation limits depend on where the V-block is for `left`/`right` and `lower`/`upper`.  The specifics for all four cases are shown in table 6 in the [Technical Notes](../TechnicalDetails.pdf)
 
 ```@docs
 orth_type
@@ -142,14 +173,19 @@ pprint
 ```
 # Test Hamiltonians
 For development and demo purposes it is useful to have a quick way to make Hamiltonian
-MPOs for various models.  Right now we have three Hamiltonians available
-1. Direct transverse Ising model with arbitrary neighbour interactions
-2. autoMPO transverse Ising model with arbitrary neighbour interactions
-3. autoMPO Heisenberg model with arbitrary neighbour interactions
-The autoMPO MPOs come pre-truncated so they are not useful for testing truncation.
+MPOs for various models.  Right now we have four Hamiltonians available
+1. Direct transverse Ising model with arbitrary neighbour 2-body interactions
+2. autoMPO transverse Ising model with arbitrary neighbour 2-body interactions
+3. autoMPO Heisenberg model with arbitrary neighbour 2-body interactions
+4. The 3-body model in eq. 34 of the Parker paper, built with autoMPO.
+The autoMPO MPOs come pre-truncated so they are not as useful for testing truncation. The automated truncation in AutoMPO can **partially** disabled by providing the the keyword argument `cutoff=-1.0` which gets passed down in the svd/truncate call used when building the MPO
 
 ```@docs
 make_transIsing_MPO
 make_transIsing_AutoMPO
 make_Heisenberg_AutoMPO
+make_3body_MPO
+make_transIsing_iMPO
+
+
 ```

@@ -1,17 +1,19 @@
 
 
 @doc """
-    make_Heisenberg_AutoMPO(sites,[NNN=1[,hz=0.0[,J=1.0]]])
+    make_Heisenberg_AutoMPO(sites,NNN;kwargs...)
 
 Use `ITensor.autoMPO` to build up a Heisenberg model Hamiltonian with up to `NNN` neighbour
-interactions.  The interactions are hard coded to decay like J/(i-j) between sites `i` and `j`.
+2-body interactions.  The interactions are hard coded to decay like `J/(i-j)`. between sites `i` and `j`.
 The MPO is returned in lower regular form.
     
 # Arguments
 - `sites` : Site set defining the lattice of sites.
-- `NNN::Int64` : Number of nearest neighbour interactions to include in `H`
-- `hz::Float64=0.0` : External magnetic field in `z` direction.
-- `J::Float64=1.0` : Nearest neighbour interaction strength.
+- `NNN::Int64` : Number of neighbouring 2-body interactions to include in `H`
+
+# Keywords
+- `hz::Float64 = 0.0` : External magnetic field in `z` direction.
+- `J::Float64 = 1.0` : Nearest neighbour interaction strength. Further neighbours decay like `J/(i-j)`.
 
 """
 function make_Heisenberg_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
@@ -34,10 +36,18 @@ function make_Heisenberg_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
     return MPO(ampo,sites)
 end
 
-#
-#  Reproduce the 3-body Hamiltonian from the Parker paper, eq. 34
-#
-function make_Parker(sites;kwargs...)
+@doc """
+    make_3body_MPO(sites;kwargs...)
+
+Use `ITensor.autoMPO` to reproduce the 3 body Hamiltonian defined in eq. 34 of the Parker paper. 
+The MPO is returned in lower regular form.
+    
+# Arguments
+- `sites` : Site set defining the lattice of sites.
+# Keywords
+- `hx::Float64 = 0.0` : External magnetic field in `x` direction.
+"""
+function make_3body_MPO(sites;kwargs...)
     hx::Float64=get(kwargs,:hx,0.0)
 
     N=length(sites)
@@ -86,17 +96,19 @@ end
 
 
 @doc """
-    make\\_transIsing\\_AutoMPO(sites,NNN[,hx=0.0[,J=1.0]])
+    make_transIsing_AutoMPO(sites,NNN;kwargs...)
  
- Use `ITensor.autoMPO` to build up a transverse Ising model Hamiltonian with up to `NNN` neighbour
- interactions.  The interactions are hard coded to decay like J/(i-j) between sites `i` and `j`.
+ Use `ITensor.autoMPO` to build up a transverse Ising model Hamiltonian with up to `NNN` neighbour 2-body 
+ interactions.  The interactions are hard coded to decay like `J/(i-j)`. between sites `i` and `j`.
  The MPO is returned in lower regular form.
      
  # Arguments
  - `sites` : Site set defining the lattice of sites.
- - `NNN::Int64` : Number of nearest neighbour interactions to include in `H`
- - `hx::Float64=0.0` : External magnetic field in `x` direction.
- - `J::Float64=1.0` : Nearest neighbour interaction strength.
+ - `NNN::Int64` : Number of neighbouring 2-body interactions to include in `H`
+
+ # Keywords
+- `hx::Float64 = 0.0` : External magnetic field in `x` direction.
+ - `J::Float64 = 1.0` : Nearest neighbour interaction strength. Further neighbours decay like `J/(i-j)`..
  
  """
 function make_transIsing_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
@@ -122,7 +134,7 @@ function make_transIsing_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
 end
 
 #
-#  impo can be an Ncell==1 uniform iMPO.  But if the interaction extends out NNN nearest neightbours
+#  impo can be an Ncell==1 uniform iMPO.  But if the interaction extends out NNN neightbours
 #  then the infinite sum needs to hold h=l*W^1*W^2...W^(NNN)*W^(NNN+1)*r with the standard capping
 #  vectors l=(1,0...0) and r=(0,0...0,1) 
 #  Unfortunately we cannot easily deduce NNN from the contents of impo.  Especially if It
@@ -153,8 +165,25 @@ function InfiniteSum{MPO}(impo::InfiniteMPO,NNN::Int64)
     mpo[1]=l*mpo[1]
     mpo[N]=mpo[N]*r
     return  InfiniteSum{MPO}([mpo])
-  end
+end
   
+
+@doc """
+    make_transIsing_iMPO(sites,NNN;kwargs...)
+ 
+Infinite lattice of a transverse Ising model Hamiltonian with up to `NNN` neighbour 2-body 
+interactions.  The interactions are hard coded to decay like `J/(i-j)`. between sites `i` and `j`.
+One unit cell of the iMPO is stored, but `CelledVector` indexing allows code to access any unit cell.
+     
+# Arguments
+- `sites` : Site set defining the lattice of sites.
+- `NNN::Int64=1` : Number of neighbouring 2-body interactions to include in `H`
+# Keywords
+- `hx::Float64=0.0` : External magnetic field in `x` direction.
+- `ul::reg_form=lower` : build H with `lower` or `upper` regular form.
+- `J::Float64=1.0` : Nearest neighbour interaction strength.  Further neighbours decay like `J/(i-j)`..
+
+"""
 function make_transIsing_iMPO(sites,NNN::Int64;kwargs...)
     mpo=make_transIsing_MPO(sites,NNN;pbc=true,kwargs...)
     return InfiniteMPO(mpo.data)
@@ -169,17 +198,18 @@ function new_id(i::Index)::Index
 end
   
 @doc """
-    make_transIsing_MPO(sites[,NNN=1[,hx=0.0[,ul=lower[,J=1.0]]]])
+    make_transIsing_MPO(sites,NNN;kwargs...)
  
 Directly coded build up of a transverse Ising model Hamiltonian with up to `NNN` neighbour
-interactions.  The interactions are hard coded to decay like J/(i-j) between sites `i` and `j`.
+2-body interactions.  The interactions are hard coded to decay like `J/(i-j)`. between sites `i` and `j`.
      
 # Arguments
 - `sites` : Site set defining the lattice of sites.
-- `NNN::Int64=1` : Number of nearest neighbour interactions to include in `H`
+- `NNN::Int64=1` : Number of neighbouring 2-body interactions to include in `H`
+# Keywords
 - `hx::Float64=0.0` : External magnetic field in `x` direction.
 - `ul::reg_form=lower` : build H with `lower` or `upper` regular form.
-- `J::Float64=1.0` : Nearest neighbour interaction strength.
+- `J::Float64=1.0` : Nearest neighbour interaction strength.  Further neighbours decay like `J/(i-j)`..
 
 """
 function make_transIsing_MPO(sites,NNN::Int64;kwargs...)::MPO
@@ -235,7 +265,7 @@ function make_Ising_index(Dw::Int64,tags::String,use_qn::Bool,dir)
     return ind
 end
 
-# NNN = Number of Nearest Neighbours, for example
+# NNN = Number of Neighbours, for example
 #    NNN=1 corresponds to nearest neighbour
 #    NNN=2 corresponds to nearest and next nearest neighbour
 function make_transIsing_op(site::Index,prev_link::Index,NNN::Int64,J::Float64,hx::Float64=0.0,ul::reg_form=lower,pbc::Bool=false)::ITensor

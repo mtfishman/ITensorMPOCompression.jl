@@ -276,8 +276,8 @@ end
     for svd_cutoff in [1e-15,1e-12,1e-10]
         for N in [6,10,16,20,24]
             sites = siteinds("SpinHalf", N;conserve_qns=false)
-            Hnot=make_Parker(sites;truncate=false) #No truncation inside autoMPO
-            H=make_Parker(sites;truncate=true) #Truncated by autoMPO
+            Hnot=make_3body_MPO(sites;truncate=false) #No truncation inside autoMPO
+            H=make_3body_MPO(sites;truncate=true) #Truncated by autoMPO
             #@show get_Dw(Hnot)
             Dw_auto = get_Dw(H)
             psi=randomMPS(sites)

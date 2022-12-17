@@ -4107,7 +4107,7 @@ for
 arly! Again SVD comes to the rescue:
 \begin_inset Formula 
 \begin{equation}
-\mathsf{\mathsf{R^{\prime}}_{2}}\approx\tilde{\mathsf{M}}^{-1}\mathsf{R}_{2}=\tilde{V}\mathsf{\frac{1}{\tilde{s}}\tilde{U^{\dagger}}}\label{eq:R2 solution}
+\mathsf{\mathsf{R^{\prime}}_{2}}\approx\tilde{\mathsf{M}}^{-1}\mathsf{R}_{2}=\tilde{V}\mathsf{\frac{1}{\tilde{s}}\tilde{U^{\dagger}}\mathsf{R}_{2}}\label{eq:R2 solution}
 \end{equation}
 
 \end_inset

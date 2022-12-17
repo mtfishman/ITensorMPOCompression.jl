@@ -106,11 +106,11 @@ Compress an MPO using block respecting SVD techniques as described in
 > *Daniel E. Parker, Xiangyu Cao, and Michael P. Zaletel Phys. Rev. B 102, 035147*
 
 # Arguments
-- `H` MPO for decomposition. If H is not already in the correct canonical form for compression, it will automatically be put into the correct form prior to compression.
+- `H` MPO for decomposition. If `H` is not already in the correct canonical form for compression, it will automatically be put into the correct form prior to compression.
 
 # Keywords
 - `orth::orth_type = left` : choose `left` or `right` canonical form for the final output. 
-- `cutoff::Float64 = 1e-14` : Using a `cutoff` allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy. 
+- `cutoff::Float64 = 0.0` : Using a `cutoff` allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy. 
 - `maxdim::Int64` : If the number of singular values exceeds `maxdim`, only the largest `maxdim` will be retained.
 - `mindim::Int64` : At least `mindim` singular values will be retained, even if some fall below the cutoff
 
@@ -137,17 +137,17 @@ true
 #  truncate! returns the spectrum of singular values at each bond.  The largest
 #  singular values are remaining well under control.  i.e. no sign of divergences.
 #
-julia> truncate!(H)
-9-element Vector{bond_spectrum}:
- bond_spectrum([0.307], 1)
- bond_spectrum([0.354, 0.035], 2)
- bond_spectrum([0.375, 0.045, 0.021], 3)
- bond_spectrum([0.385, 0.044, 0.026, 0.018], 4)
- bond_spectrum([0.388, 0.043, 0.031, 0.019, 0.001], 5)
- bond_spectrum([0.385, 0.044, 0.026, 0.018], 6)
- bond_spectrum([0.375, 0.045, 0.021], 7)
- bond_spectrum([0.354, 0.035], 8)
- bond_spectrum([0.307], 9)
+julia> @show truncate!(H);
+site  Ns   max(s)     min(s)    Entropy  Tr. Error
+   1    1  0.30739   3.07e-01   0.22292  0.00e+00
+   2    2  0.35392   3.49e-02   0.26838  0.00e+00
+   3    3  0.37473   2.06e-02   0.29133  0.00e+00
+   4    4  0.38473   1.77e-02   0.30255  0.00e+00
+   5    5  0.38773   7.25e-04   0.30588  0.00e+00
+   6    4  0.38473   1.77e-02   0.30255  0.00e+00
+   7    3  0.37473   2.06e-02   0.29133  0.00e+00
+   8    2  0.35392   3.49e-02   0.26838  0.00e+00
+   9    1  0.30739   3.07e-01   0.22292  0.00e+00
 
 julia> pprint(H[2])
 I 0 0 0 
@@ -205,6 +205,58 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
     return ss
 end
 
+@doc """
+    truncate!(H::InfiniteMPO;kwargs...)
+
+Truncate a `CelledVector` representation of an infinite MPO as described in section VII and Alogrithm 5 of:
+> Daniel E. Parker, Xiangyu Cao, and Michael P. Zaletel Phys. Rev. B 102, 035147
+It is not nessecary (or recommended) to call the `orthogonalize!` function prior to calling `truncate!`. The `truncate!` function will do this automatically.  This is because the truncation process requires the gauge transform tensors resulting from left orthogonalizing an already right orthogonalized iMPO (or converse).  So it is better to do this internally in order to be sure the correct gauge transforms are used.
+
+# Arguments
+- H::InfiniteMPO which is a `CelledVector` of MPO matrices. `CelledVector` and `InfiniteMPO` are defined in the `ITensorInfiniteMPS` module.
+
+# Keywords
+- `orth::orth_type = left` : choose `left` or `right` canonical form for the output
+- `epsrr::Float64 = -1.0` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
+   All rows with max(abs(R[r,:]))<epsrr are considered zero and removed. epsrr=1.0 indicate no rank reduction.
+- `cutoff::Float64 = 0.0` : Using a `cutoff` allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy. 
+- `maxdim::Int64` : If the number of singular values exceeds `maxdim`, only the largest `maxdim` will be retained.
+- `mindim::Int64` : At least `mindim` singular values will be retained, even if some fall below the cutoff
+   
+# Returns
+- Vector{ITensor} with the diagonal gauge transforms between the input and output iMPOs
+- a `bond_spectrums` object which is a `Vector{Spectrum}`
+
+# Example
+```
+julia> using ITensors, ITensorMPOCompression, ITensorInfiniteMPS
+julia> initstate(n) = "↑";
+julia> sites = infsiteinds("S=1/2", 1;initstate, conserve_szparity=false)
+1-element CelledVector{Index{Int64}, typeof(translatecelltags)}:
+ (dim=2|id=224|"S=1/2,Site,c=1,n=1")
+julia> H=make_transIsing_iMPO(sites,7);
+julia> get_Dw(H)[1]
+30
+julia> Ss,spectrum=truncate!(H;epsrr=1e-15,cutoff=1e-15);
+julia> get_Dw(H)[1]
+9
+julia> pprint(H[1])
+I 0 0 0 0 0 0 0 0 
+S S S S S S S S 0 
+S S S S S S S S 0 
+S S S S S S S S 0 
+S S S S S S S S 0 
+S S S S S S S S 0 
+S S S S S S S S 0 
+S S S S S S S S 0 
+0 S S S S S S S I 
+julia> @show spectrum
+spectrum = 
+site  Ns   max(s)     min(s)    Entropy  Tr. Error
+   1    7  0.39565   1.26e-02   0.32644  1.23e-16
+
+```
+"""
 function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
     #@printf "---- start compress ----\n"
     #

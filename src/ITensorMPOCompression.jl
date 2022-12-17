@@ -19,7 +19,7 @@ export detect_upper_lower,is_upper_lower,sweep
 # Hamiltonian related
 export make_transIsing_MPO,make_Heisenberg_AutoMPO,make_transIsing_AutoMPO,to_openbc,get_lr
 export make_transIsing_iMPO
-export fast_GS,make_Parker
+export fast_GS,make_3body_MPO
 # MPO and bond spectrum
 export get_Dw,min,max
 export bond_spectrums

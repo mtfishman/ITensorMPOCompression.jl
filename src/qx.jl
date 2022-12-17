@@ -16,8 +16,8 @@ Hilbert space.
 
 # Keywords
 - `orth::orth_type = right` : choose `left` or `right` orthogonal (canonical) form
-- `epsrr::Float64 = 1e-14` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
-   All rows with max(abs(R[r,:]))<epsrr are considered zero and removed.  epsrr==0.0 indicates no rank reduction.
+- `epsrr::Float64 = -1.0` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
+   All rows with max(abs(R[r,:]))<epsrr are considered zero and removed.  epsrr==-1.0 indicates no rank reduction.
 
 # Returns a Tuple containing
 - `Q` with orthonormal columns or rows depending on orth=left/right, dimensions: (χ+1)x(χq+1)
@@ -49,10 +49,10 @@ S 0 0 0 0
 #  Now do a block respecting QX decomposition. QL decomposition is chosen because
 #  H[2] is in lower regular form and the default ortho direction is left.
 #
-julia>Q,L,iq=block_qx(H[2]); #Block respecting QL
+julia>Q,L,iq=block_qx(H[2];epsrr=1e-14); #Block respecting QL
 #
 #  The first column of Q is unchanged because it is outside the V-block.
-#  Also one column was removed because rank revealing QX is the default algorithm.
+#  Also one column was removed because set epsrr to enable rank revealing QX.
 #
 julia>pprint(Q)
 I 0 0 0 
@@ -63,7 +63,7 @@ S 0 0 0
 #
 #  Similarly L is missing one row due to the rank revealing QX algorithm
 #
-julia>pprint(L,iq) #we need to tell pprint which index is the row index.
+julia>pprint(L,iq) #we need to tell pprint the iq is the row index.
 I 0 0 0 0 
 0 0 I 0 0 
 0 S 0 S 0 
