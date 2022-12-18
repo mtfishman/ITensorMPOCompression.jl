@@ -19,7 +19,7 @@ export detect_upper_lower,is_upper_lower,sweep
 # Hamiltonian related
 export make_transIsing_MPO,make_Heisenberg_AutoMPO,make_transIsing_AutoMPO,to_openbc,get_lr
 export make_transIsing_iMPO
-export fast_GS,make_3body_MPO
+export fast_GS,make_3body_MPO,make_2body_op,make_3body_op,add_ops,make_3body_AutoMPO
 # MPO and bond spectrum
 export get_Dw,min,max
 export bond_spectrums
@@ -252,6 +252,8 @@ end
 
 include("util.jl")
 include("hamiltonians.jl")
+include("hamiltonians_AutoMPO.jl")
+include("hamiltonians_infinite.jl")
 include("qx.jl")
 include("characterization.jl") 
 include("blocking.jl")

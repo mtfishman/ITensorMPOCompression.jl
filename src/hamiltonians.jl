@@ -1,201 +1,4 @@
 
-
-@doc """
-    make_Heisenberg_AutoMPO(sites,NNN;kwargs...)
-
-Use `ITensor.autoMPO` to build up a Heisenberg model Hamiltonian with up to `NNN` neighbour
-2-body interactions.  The interactions are hard coded to decay like `J/(i-j)`. between sites `i` and `j`.
-The MPO is returned in lower regular form.
-    
-# Arguments
-- `sites` : Site set defining the lattice of sites.
-- `NNN::Int64` : Number of neighbouring 2-body interactions to include in `H`
-
-# Keywords
-- `hz::Float64 = 0.0` : External magnetic field in `z` direction.
-- `J::Float64 = 1.0` : Nearest neighbour interaction strength. Further neighbours decay like `J/(i-j)`.
-
-"""
-function make_Heisenberg_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
-    hz::Float64=get(kwargs,:hz,0.0)
-    J::Float64=get(kwargs,:J,1.0)
-    N=length(sites)
-    @assert(N>=NNN)
-    ampo = OpSum()
-    for j=1:N
-        add!(ampo, hz   ,"Sz", j)
-    end
-    for dj=1:NNN
-        f=J/dj
-        for j=1:N-dj
-            add!(ampo, f    ,"Sz", j, "Sz", j+dj)
-            add!(ampo, f*0.5,"S+", j, "S-", j+dj)
-            add!(ampo, f*0.5,"S-", j, "S+", j+dj)
-        end
-    end
-    return MPO(ampo,sites)
-end
-
-@doc """
-    make_3body_MPO(sites;kwargs...)
-
-Use `ITensor.autoMPO` to reproduce the 3 body Hamiltonian defined in eq. 34 of the Parker paper. 
-The MPO is returned in lower regular form.
-    
-# Arguments
-- `sites` : Site set defining the lattice of sites.
-# Keywords
-- `hx::Float64 = 0.0` : External magnetic field in `x` direction.
-"""
-function make_3body_MPO(sites;kwargs...)
-    hx::Float64=get(kwargs,:hx,0.0)
-
-    N=length(sites)
-    os = OpSum()
-    if hx!=0
-        os=make_1body(os,N,hx)
-    end
-    os=make_2body(os,N)
-    os=make_3body(os,N)
-    MPO(os,sites;kwargs...)
-end
-
-function make_1body(os::OpSum,N::Int64,hx::Float64=0.0)::OpSum
-    for n=1:N
-        add!(os, hx   ,"Sx", n)
-    end
-    return os
-end
-
-function make_2body(os::OpSum,N::Int64,heis::Bool=false)::OpSum
-    for n=1:N
-        for m=n+1:N
-            Jnm=1.0/abs(n-m)^4
-            add!(os, Jnm    ,"Sz", n, "Sz", m)
-            if heis
-                add!(os, Jnm*0.5,"S+", n, "S-", m)
-                add!(os, Jnm*0.5,"S-", n, "S+", m)
-            end
-        end
-    end
-    return os
-end
-
-function make_3body(os::OpSum,N::Int64)::OpSum
-    for n=1:N
-        for m=n+1:N
-            Jnm=1.0/abs(n-m)^2
-            for k=m+1:N
-                Jkn=1.0/abs(k-n)^2
-                add!(os, Jnm*Jkn    ,"Sz", n, "Sz", m,"Sz",k)
-            end
-        end
-    end
-    return os
-end
-
-
-@doc """
-    make_transIsing_AutoMPO(sites,NNN;kwargs...)
- 
- Use `ITensor.autoMPO` to build up a transverse Ising model Hamiltonian with up to `NNN` neighbour 2-body 
- interactions.  The interactions are hard coded to decay like `J/(i-j)`. between sites `i` and `j`.
- The MPO is returned in lower regular form.
-     
- # Arguments
- - `sites` : Site set defining the lattice of sites.
- - `NNN::Int64` : Number of neighbouring 2-body interactions to include in `H`
-
- # Keywords
-- `hx::Float64 = 0.0` : External magnetic field in `x` direction.
- - `J::Float64 = 1.0` : Nearest neighbour interaction strength. Further neighbours decay like `J/(i-j)`..
- 
- """
-function make_transIsing_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
-    J::Float64=get(kwargs,:J,1.0)
-    hx::Float64=get(kwargs,:hx,0.0)
-    
-    do_field = hx!=0.0
-    N=length(sites)
-    @assert(N>NNN)
-    ampo = OpSum()
-    if do_field
-        for j=1:N
-            add!(ampo, hx   ,"Sx", j)
-        end
-    end
-    for dj=1:NNN
-        f=J/dj
-        for j=1:N-dj
-            add!(ampo, f    ,"Sz", j, "Sz", j+dj)
-        end
-    end
-    return MPO(ampo,sites)
-end
-
-#
-#  impo can be an Ncell==1 uniform iMPO.  But if the interaction extends out NNN neightbours
-#  then the infinite sum needs to hold h=l*W^1*W^2...W^(NNN)*W^(NNN+1)*r with the standard capping
-#  vectors l=(1,0...0) and r=(0,0...0,1) 
-#  Unfortunately we cannot easily deduce NNN from the contents of impo.  Especially if It
-#  is orthogonalized and or compressed.
-#  
-#
-function InfiniteSum{MPO}(impo::InfiniteMPO,NNN::Int64)
-    @assert length(impo)==1  #for now.
-    N=NNN+1
-    mpo=MPO(N)
-    for n in 1:N
-      il,ir=parse_links(impo[n]) #get left and right links before we wipe out the cell numbers
-      if n==1
-        il1=removetags(il,"c=$(n-1)") #wipe out cell numbers
-        il1=replacetags(il1,"l=1","l=$(n-1)")
-      else
-        l,il1=parse_links(mpo[n-1])
-      end
-      ir1=removetags(ir,"c=$n")
-      ir1=replacetags(ir1,"l=1","l=$n")
-      ir2=new_id(ir1)
-      mpo[n]=replaceinds(impo[n],(il,ir),(il1,ir2))
-    end
-    #
-    #  Cap the ends so there are no dangling links.
-    #
-    l,r=get_lr(mpo)
-    mpo[1]=l*mpo[1]
-    mpo[N]=mpo[N]*r
-    return  InfiniteSum{MPO}([mpo])
-end
-  
-
-@doc """
-    make_transIsing_iMPO(sites,NNN;kwargs...)
- 
-Infinite lattice of a transverse Ising model Hamiltonian with up to `NNN` neighbour 2-body 
-interactions.  The interactions are hard coded to decay like `J/(i-j)`. between sites `i` and `j`.
-One unit cell of the iMPO is stored, but `CelledVector` indexing allows code to access any unit cell.
-     
-# Arguments
-- `sites` : Site set defining the lattice of sites.
-- `NNN::Int64=1` : Number of neighbouring 2-body interactions to include in `H`
-# Keywords
-- `hx::Float64=0.0` : External magnetic field in `x` direction.
-- `ul::reg_form=lower` : build H with `lower` or `upper` regular form.
-- `J::Float64=1.0` : Nearest neighbour interaction strength.  Further neighbours decay like `J/(i-j)`..
-
-"""
-function make_transIsing_iMPO(sites,NNN::Int64;kwargs...)
-    mpo=make_transIsing_MPO(sites,NNN;pbc=true,kwargs...)
-    return InfiniteMPO(mpo.data)
-end
-
-function new_id(i::Index)::Index
-    if hasqns(i)
-        return Index(space(i);dir=dir(i),tags=tags(i),plev=plev(i))
-    else
-        return Index(dim(i),tags(i),plev=plev(i))
-    end
-end
   
 @doc """
     make_transIsing_MPO(sites,NNN;kwargs...)
@@ -323,6 +126,217 @@ function make_transIsing_op(site::Index,prev_link::Index,NNN::Int64,J::Float64,h
     return W
 end
 
+#
+#  implement eq. E3 from the Parker paper.
+#
+#         | I c1 c2 d1+d2 |
+# W1+W2 = | 0 A1 0    b1  |
+#         | 0 0  A2   b2  |
+#         | 0 0  0    I   |
+# or
+#
+#         |  I    0  0  0 |
+# W1+W2 = |  b1   A1 0  0 |
+#         |  b2   0  A2 0 |
+#         | d1+d2 c1 c2 I |
+# χ
+#
+function add_ops(W1::ITensor,W2::ITensor)::ITensor
+    #@pprint(W1)
+    #@pprint(W2)
+    is1=inds(W1,tags="Site",plev=0)[1]
+    is2=inds(W2,tags="Site",plev=0)[1]
+    @assert is1==is2
+    l1,r1=parse_links(W1)
+    l2,r2=parse_links(W2)
+    @assert tags(l1)==tags(l2)
+    @assert tags(r1)==tags(r2)
+    χl1,χr1=dim(l1)-2,dim(r1)-2
+    χl2,χr2=dim(l2)-2,dim(r2)-2
+    χl,χr=χl1+χl2, χr1+χr2
+    l,r=redim(l1,χl+2),redim(r1,χr+2)
+    W=ITensor(0.0,l,r,is1,is1')
+    Id=slice(W1,l1=>1,r1=>1)
+    assign!(W,Id,l=>1,r=>1)
+    assign!(W,Id,l=>χl+2,r=>χr+2)
+    # b1 block
+    for i1 in 2:χl1+1
+        op=slice(W1,l1=>i1,r1=>1)
+        assign!(W,op,l=>i1,r=>1)
+    end
+    # b2 block
+    for i2 in 2:χl2+1
+        op=slice(W2,l2=>i2,r2=>1)
+        assign!(W,op,l=>χl1+i2,r=>1)
+    end
+    # d1+d2 block
+    d1=slice(W1,l1=>χl1+2,r1=>1)
+    d2=slice(W2,l2=>χl2+2,r2=>1)
+    assign!(W,d1+d2,l=>χl+2,r=>1)
+    # c1 block
+    for j1 in 2:χr1+1
+        op=slice(W1,l1=>χl1+2,r1=>j1)
+        assign!(W,op,l=>χl+2,r=>j1)
+    end
+    # c2 block
+    for j2 in 2:χr2+1
+        op=slice(W2,l2=>χl2+2,r2=>j2)
+        assign!(W,op,l=>χl+2,r=>χr1+j2)
+    end
+    # A1 block
+    for i1 in 2:χl1+1
+        for j1 in 2:χr1+1
+            op=slice(W1,l1=>i1,r1=>j1)
+            assign!(W,op,l=>i1,r=>j1)
+        end
+    end
+    # A2 block
+    for i2 in 2:χl2+1
+        for j2 in 2:χr2+1
+            op=slice(W2,l2=>i2,r2=>j2)
+            assign!(W,op,l=>χl1+i2,r=>χr1+j2)
+        end
+    end
+    return W
+end
+
+function make_3body_MPO(sites;kwargs...)
+    pbc::Bool=get(kwargs,:pbc,false)
+    N=length(sites)
+    H=MPO(N)
+    if false#pbc
+        l,r=Index(1,"Link,c=0,l=1"),Index(1,"Link,c=1,l=1")
+    else
+        l,r=Index(1,"Link,l=0"),Index(1,"Link,l=1")
+    end
+    ul=lower
+    H[1] = make_1body_op(sites[1],l,r,ul;kwargs...)
+    
+    for n in 2:N
+        H[n] = make_1body_op(sites[n],l,r,ul;kwargs...)
+    end
+    
+    W=H[1]
+    if get(kwargs,:Jprime,1.0)!=0.0
+        for m in 1:N-1
+            W = add_ops(W,make_2body_op(sites[1],l,r,m,ul;kwargs...))
+        end
+    end 
+    
+    if get(kwargs,:J,1.0)!=0.0
+        for n in 2:N
+            for m in n+1:N
+                W=add_ops(W,make_3body_op(sites[1],l,r,n,m,ul;kwargs...))
+            end
+        end
+    end
+
+    H[1]=add_ops(H[1],W)
+    
+    for n in 2:N
+        #@show inds(H[n])
+        iw1,iw2=inds(W,tags="Link")
+        ih1,ih2=inds(H[n],tags="Link")
+        replacetags!(W,tags(iw2),tags(ih2))
+        replacetags!(W,tags(iw1),tags(ih1))
+        is=sites[n]
+        replaceinds!(W,inds(W,tags="Site"),(is,dag(is)'))
+        H[n]=add_ops(H[n],W)
+    end
+    
+    for n in 2:N
+        ln=inds(H[n],tags="l=0")[1]
+        replacetags!(H[n],"l=1","l=$n")
+        l1,r1=parse_links(H[n-1])
+        replaceind!(H[n],ln,r1)
+    end
+
+    if !pbc
+        H=ITensorMPOCompression.to_openbc(H) #contract with l* and *r at the edges.
+    end
+    
+    return H
+end
+
+#
+#  d-block = Hx*Sx
+#
+function make_1body_op(site::Index,r1::Index,c1::Index,ul::reg_form;kwargs...)::ITensor
+    hx::Float64=get(kwargs,:hx,0.0)
+    Dw::Int64=2
+    #d,n,space=parse_site(site)
+    #use_qn=hasqns(site)
+    r,c=redim(r1,Dw),redim(c1,Dw)
+    is=dag(site) #site seem to have the wrong direction!
+    W=ITensor(0.0,r,c,is,dag(is'))
+    Id=op(is,"Id")
+    assign!(W,Id,r=>1 ,c=>1 )
+    assign!(W,Id,r=>Dw,c=>Dw)
+    if hx!=0.0
+        Sx=op(is,"Sx") #This will crash if Sz is a good QN
+        assign!(W,hx*Sx,r=>Dw,c=>1)
+    end
+    return W
+end
+#
+#  J_1n * Z_1*Z_n
+#
+function make_2body_op(site::Index,r1::Index,c1::Index,n::Int64,ul::reg_form;kwargs...)::ITensor
+    @assert n>=1
+    Jprime::Float64=get(kwargs,:Jprime,1.0)
+    Dw::Int64=2+n
+    #d,n,space=parse_site(site)
+    #use_qn=hasqns(site)
+    r,c=redim(r1,Dw),redim(c1,Dw)
+
+    is=dag(site) #site seem to have the wrong direction!
+    W=ITensor(0.0,r,c,is,dag(is'))
+    Id=op(is,"Id")
+    Sz=op(is,"Sz")
+    assign!(W,Id,r=>1 ,c=>1 )
+    assign!(W,Id,r=>Dw,c=>Dw)
+    Jn=Jprime/n^4 #interactions need to decay with distance in order for H to extensive 
+    if ul==lower
+        assign!(W,Sz,r=>2,c=>1)
+        for j in 1:n-1
+            assign!(W,Id,r=>2+j,c=>1+j)
+        end
+        assign!(W,Jn*Sz,r=>Dw,c=>Dw-1)
+    else
+        assign!(W,Sz,r=>1,c=>2)
+        for j in 1:n-1
+            assign!(W,Id,r=>1+j,c=>2+j)
+        end
+        assign!(W,Jn*Sz,r=>Dw-1,c=>Dw)
+    end
+    return W
+end
+
+#
+#  J1n*Jnm * Z_1*Z_n*Z_m
+#
+function make_3body_op(site::Index,r1::Index,c1::Index,n::Int64,m::Int64,ul::reg_form;kwargs...)::ITensor
+    @assert n>=1
+    @assert m>n
+    J::Float64=get(kwargs,:J,1.0)
+    W=make_2body_op(site,r1,c1,m-1,ul)
+    #@pprint(W)
+    r,c=inds(W,tags="Link")
+    Dw=dim(r)
+    Sz=op(dag(site),"Sz")
+    k=1
+    Jkn=J/(n-k)^2
+    Jnm=J/(m-n)^2 
+    #@show k,n,m,Jkn,Jnm
+    if ul==lower
+        assign!(W,Sz,r=>2+n-k,c=>1+n-k)
+        assign!(W,Jkn*Jnm*Sz,r=>Dw,c=>Dw-1)
+    else
+        assign!(W,Sz,r=>1+n-k,c=>2+n-k)
+        assign!(W,Jkn*Jnm*Sz,r=>Dw-1,c=>Dw)
+    end
+    return W
+end
 
 
 function to_openbc(mpo::MPO)::MPO

@@ -17,8 +17,10 @@ Done: -For the make hamiltonian functions put ul,hx,J into kwargs
   This will tie in with using the Model("model_name") framework Matt is using.
 Done: -Review all examples.  Add iMPO example.
 -Reproduce 30 site example from Parker paper.
-  Need to build H-3body from scratch.
-  Need code for W_1 + W_2
+  I estimate Dw>>1000 for N=30.  They must be building H_hand more efficiently.
+  Anyway for N=9 we get Dw=206 which truncates nicely to Dw=9, takes about a minute though!
+Done:  Need to build H-3body from scratch.
+Done:  Need code for W_1 + W_2
 -vumps GS example with timing for uncomp./comp.
 Done: -Try using cutoff instead of truncate=false for autoMPO
 Done: -Clean up iMPO truncate code.
@@ -34,6 +36,7 @@ Done: -Use Itensor spectrum instead of bond_spectrum.
 Done: -Use sweep(H,lr) instead of the if blocks.
 Done: -Refactor the H[n]*U dag(U)*H[n+1] code for iMPO truncate.
 -Gs returned by truncate should be Diag not Dense tensors.
+-Verbose mode show all Dws and steps orth-right etc.
 
 Done: 1) Not seeing any rank reduction
 Done: 2) Upgrade tests to use ~ and atol.
