@@ -30,10 +30,10 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
     #  If the RL is rectangular in wrong way, then factoring out M is very difficult.
     #  For now we just bail out.
     #
-    if dim(c)>dim(lq)
+    if dim(c)>dim(lq) || dim(c)<3
         replacetags!(RL,"Link,qx",tags(forward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
         replacetags!(Q ,"Link,qx",tags(forward)) #W[l=n-1,l=n]
-        return Q,RL,bond_spectrum(n)
+        return Q,RL,Spectrum([],0)
     end
     RLinds=inds(RL) # we will need the QN space info later to reconstruct a block sparse RL.
     
