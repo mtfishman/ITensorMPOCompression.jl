@@ -5,12 +5,12 @@ using Revise
 using Test
 import ITensorMPOCompression.orthogonalize!
 
-quiet=true
+verbose=true
 
 # using Printf
 # Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
 # println("-----------Start--------------")
-
+@testset verbose=false "Orthogonalize" begin
 
 @testset "Upper, lower, regular detections" begin
     N=6
@@ -128,7 +128,7 @@ end
 
 @testset "Orthogonalize iMPO Check gauge relations, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
     initstate(n) = "↑"
-    if !quiet
+    if verbose
         @printf "               Dw     Dw    Dw    Dw\n"
         @printf " Ncell  NNN  uncomp. left  right  LR\n"
     end
@@ -168,12 +168,12 @@ end
             @assert order(D2)==4
             @test norm(G[n-1]*HR1[n]-HL[n]*G[n]) ≈ 0.0 atol = 1e-14
         end
-        if !quiet
+        if verbose
             @printf " %4i %4i   %4i   %4i  %4i  %4i\n" N NNN Dw0 DwL DwR DwLR
         end
 
     end
 end
 
-
+end
 nothing

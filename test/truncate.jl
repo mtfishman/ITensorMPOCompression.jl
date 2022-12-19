@@ -18,7 +18,7 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.1e", f)
 using Random
 Random.Random.seed!(12345);
 
-quiet=true
+verbose=false
 
 function test_truncate(makeH,N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,epsSVD::Float64,
     epsrr::Float64,eps::Float64,qns::Bool)
@@ -54,13 +54,14 @@ function test_truncate(makeH,N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,ep
     E2l=inner(psi',H,psi)/(N-1)
     RE=abs((E0l-E2l)/E0l)
     REs= RE/sqrt(epsSVD)
-    if !quiet
+    if verbose
         @printf "E0=%8.5f Etrunc=%8.5f rel. error=%7.1e RE/sqrt(espSVD)=%6.2f \n" E0l E2l RE REs
     end
     @test REs<1.0 
     
 end
 
+@testset verbose=true "Truncate/Compress" begin
 # #these test are slow.  Uncomment and test if you mess with the truncate algo details.
 # @testset "Compress insideous cases with no rank reduction, no QNs" begin
 #     eps=2e-13
@@ -181,7 +182,7 @@ end
 
     overlap=abs(inner(psi0,psi1))
     RE=abs((E0-E1)/E0)
-    if !quiet
+    if verbose
         @printf "Trans. Ising E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
     end
     @test E0 ≈ E1 atol = eps
@@ -202,7 +203,7 @@ end
 
     overlap=abs(inner(psi0,psi1))
     RE=abs((E0-E1)/E0)
-    if !quiet
+    if verbose
         @printf "Heisenberg   E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
     end
     @test E0 ≈ E1 atol = eps
@@ -212,7 +213,7 @@ end
 @testset "Look at bond singular values for large lattices" begin
     NNN=5
 
-    if !quiet
+    if verbose
         @printf "                 max(sv)           min(sv)\n"
         @printf "  N    Dw  left     mid    right   mid\n"
     end
@@ -226,7 +227,7 @@ end
         max_N  =specs[N-1 ].eigs[1]
         min_mid=specs[imid].eigs[end]
         Dw=maximum(get_Dw(H))
-        if !quiet
+        if verbose
             @printf "%4i %4i %1.5f %1.5f %1.5f %1.5f\n" N Dw  max_1 max_mid max_N min_mid
         end
         @test (max_1-max_N)<1e-10
@@ -247,27 +248,27 @@ end
         @test is_canonical(Hr,matrix_state(ul,right),1e-12)
         delta_Dw=sum(get_Dw(Hr)-Dw_auto)
         #@test delta_Dw<=0
-        if !quiet && delta_Dw<0 
+        if verbose && delta_Dw<0 
             println("Compression beat AutoMPO by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
         end
-        if !quiet && delta_Dw>0
+        if verbose && delta_Dw>0
             println("AutoMPO beat Compression by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
         end
         Hl=make_transIsing_MPO(sites,NNN;ul=ul) 
         truncate!(Hl;orth=left,epsrr=rr_cutoff,cutoff=svd_cutoff) #sweep right to left
         @test is_canonical(Hl,matrix_state(ul,left),1e-12)
         delta_Dw=sum(get_Dw(Hr)-Dw_auto)
-        if !quiet && delta_Dw<0
+        if verbose && delta_Dw<0
             println("Compression beat AutoMPO by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=left ,ul=$ul,QNs=$qns")
         end
-        if !quiet && delta_Dw>0
+        if verbose && delta_Dw>0
             println("AutoMPO beat Compression by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
         end
     end  
 end 
 
 @testset "Head to Head autoMPO with 3-body Hamiltonian" begin
-    if !quiet
+    if verbose
         @printf "+--------------+---------+------------------+------------------+\n"
         @printf "|              |autoMPO  |    1 truncation  | 2 truncations    |\n"
         @printf "|  N  epseSVD  | dE      |   dE     RE   Dw |   dE     RE   Dw |\n"
@@ -297,7 +298,7 @@ end
             Enott2=inner(psi',Hnot,psi)
             @test E ≈ Enott2 atol = sqrt(svd_cutoff)
             RE2=abs(E-Enott2)/sqrt(svd_cutoff)
-            if !quiet
+            if verbose
                 @printf "| %3i %1.1e  | %1.1e | %1.1e %1.3f %2i | %1.1e %1.3f %2i | \n" N svd_cutoff abs(E-Enot) abs(E-Enott1) RE1 delta_Dw_1 abs(E-Enott2) RE2 delta_Dw_2 
             end
         end
@@ -308,7 +309,7 @@ end
 @testset "Truncate/Compress iMPO Check gauge relations, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
     initstate(n) = "↑"
     svd_cutoff=1e-15 #Same as autoMPO uses.
-    if !quiet
+    if verbose
         @printf "               Dw     Dw    Dw   \n"
         @printf " Ncell  NNN  uncomp. left  right \n"
     end
@@ -344,7 +345,7 @@ end
         for n in 1:N
             @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
         end   
-        if !quiet
+        if verbose
             @printf " %4i %4i   %4i   %4i  %4i \n" N NNN Dw0 DwL DwR
         end
 
@@ -396,4 +397,5 @@ end
     end
 end
 
+end #@testset "Truncate/Compress" 
 nothing

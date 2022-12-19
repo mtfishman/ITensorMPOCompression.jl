@@ -175,7 +175,7 @@ end
 #
 function qx_iterate!(H::InfiniteMPO,ul::reg_form;kwargs...)
     lr::orth_type=get(kwargs, :orth, left)
-    quiet::Bool=get(kwargs, :quiet, true)
+    verbose::Bool=get(kwargs, :verbose, false)
     N=length(H)
     #
     #  Init gauge transform with unit matrices.
@@ -195,7 +195,7 @@ function qx_iterate!(H::InfiniteMPO,ul::reg_form;kwargs...)
     eps=1e-13
     niter=0
     max_iter=40
-    if !quiet
+    if verbose
         @printf "niter eta\n" 
     end
     loop=true
@@ -221,7 +221,7 @@ function qx_iterate!(H::InfiniteMPO,ul::reg_form;kwargs...)
         end
         niter+=1
         loop=eta>1e-13 && niter<max_iter
-        if eta<1.0 && !quiet
+        if eta<1.0 && verbose
             @printf "%4i %1.1e\n" niter eta
         end
     end
