@@ -4,10 +4,15 @@ using Test
 using Revise
 
 @testset "ITensorMPOCompression.jl" begin
-    include("blocking.jl")
-    include("qx_unittests.jl")
-    include("hamiltonians.jl")
-    include("orthogonalize.jl")
-    include("truncate.jl")
+    @testset verbose=true "$filename" for filename in [
+        "blocking.jl",
+        "qx_unittests.jl",
+        "hamiltonians.jl",
+        "orthogonalize.jl",
+        "truncate.jl"
+        ]
+        print("$filename: ")
+        @time include(filename)
+    end
 end
 nothing #suppress messy dump from Test
