@@ -16,6 +16,7 @@ function make_random_qindex(d::Int64,nq::Int64)::Index
     return Index(qns,"Link,l=1")
 end
 
+@testset verbose = true "Hamiltonians" begin
 
 NNEs=[(1,-1.5066685458330529),(2,-1.4524087749432490),(3,-1.4516941302867301),(4,-1.4481111362390489)]
 @testset "MPOs hand coded versus autoMPO give same GS energies" for nne in NNEs
@@ -111,8 +112,8 @@ end
 @testset "Parker eq. 34 3-body Hamiltonian" begin
     N=15
     sites = siteinds("SpinHalf", N;conserve_qns=false)
-    Hnot=make_3body_MPO(sites;cutoff=-1.0) #No truncation inside autoMPO
-    H=make_3body_MPO(sites;cutoff=1e-15) #Truncated by autoMPO
+    Hnot=make_3body_AutoMPO(sites;cutoff=-1.0) #No truncation inside autoMPO
+    H=make_3body_AutoMPO(sites;cutoff=1e-15) #Truncated by autoMPO
     psi=randomMPS(sites)
     Enot=inner(psi',Hnot,psi)
     E=inner(psi',H,psi)
@@ -120,4 +121,7 @@ end
     @test E ≈ Enot atol = 3e-9
    
 end
+
+end #Hamiltonians testset
+
 nothing

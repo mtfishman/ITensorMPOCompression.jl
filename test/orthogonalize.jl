@@ -110,9 +110,9 @@ test_combos=[
 end
  
 @testset "Compare $ul tri rank reduction with AutoMPO, QNs=$qns" for ul in [lower,upper],qns in [false,true]
-    N=13
+    N=12
     sites = siteinds("SpinHalf", N;conserve_qns=qns)
-    for NNN in 3:N-1
+    for NNN in 3:div(N,2)
         Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul) 
         Dw_auto=get_Dw(Hauto)
         Hr=make_transIsing_MPO(sites,NNN;ul=ul) 

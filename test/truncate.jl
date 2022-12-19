@@ -236,7 +236,7 @@ end
 end
 
 @testset "Head to Head autoMPO with 2-body Hamiltonian ul=$ul, QNs=$qns" for ul in [lower,upper],qns in [false,true]
-    for N in 3:15
+    for N in 3:11
         NNN=div(N,2)
         svd_cutoff=1e-15 #same value auto MPO uses.
         rr_cutoff=1e-14
@@ -277,8 +277,8 @@ end
     for svd_cutoff in [1e-15,1e-12,1e-10]
         for N in [6,10,16,20,24]
             sites = siteinds("SpinHalf", N;conserve_qns=false)
-            Hnot=make_3body_MPO(sites;truncate=false) #No truncation inside autoMPO
-            H=make_3body_MPO(sites;truncate=true) #Truncated by autoMPO
+            Hnot=make_3body_AutoMPO(sites;truncate=false) #No truncation inside autoMPO
+            H=make_3body_AutoMPO(sites;truncate=true) #Truncated by autoMPO
             #@show get_Dw(Hnot)
             Dw_auto = get_Dw(H)
             psi=randomMPS(sites)
@@ -314,7 +314,7 @@ end
         @printf " Ncell  NNN  uncomp. left  right \n"
     end
 
-    for N in [1,2,4], NNN in [2,4] #3 site unit cell fails for qns=true.
+    for N in [1,2], NNN in [2,4] #3 site unit cell fails for qns=true.
         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
         H0=make_transIsing_iMPO(si,NNN;ul=ul)
         @test is_regular_form(H0)

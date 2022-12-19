@@ -1,12 +1,47 @@
--Should we be using findinds or just inds
--For RL_prime problems, try factor R+ = R'*M (instread of M*R) then R' will be square.
-  THis will only work if R' is orthogonal R_dagger'*R' = Id
+Questions:
+  -Should we be using findinds or just inds?
+  -Delete old branches, after merge?
+  -epsrr -> rr_cutoff or just cutoff like for SVD?
+  -Future of Model("model_name") framework.
+  -verbose mode? (only see it in ctmrg)
+
+More tests:
+-Test alternating S=1/2 and S=1 sites.
+-Test Fermions/Hubberd.
+-vumps GS example with timing for uncomp./comp.
+
+Features:
+-Verbose mode show all Dws and steps orth-right etc.
+-Put some content in Readme.md
+-make truncate, and orthogonalize that work on copies.
+
+Improvements:
+-Pare down unit test for shorter run time.
+  -Very hard, lots of CPU time on compiling inside ITensors for GS energy tests
+  -Using a sysimage for ITensors does not seem to help!
+-Profile and code coverage.
+-Gs returned by truncate should be Diag not Dense tensors.
+5) Use new is_upper functions using combiners to get rank-2 tensors.
+-Add some sort of Results section at the end ot tech docs.
 -Review high level algos
   -rules for smart_sweep
   -orthog inside truncate
   -convergence in truncate?
   -epsrr=0.0 not allowed in truncate?
--Put some content in Readme.md
+-Switch from epsrr to rr_cutoff
+-better name for pbc? inf open_chain, boundary_conditions
+-Clean up SetV code.  Use dummy Dw=1 index trick instead of SetV1 code.
+-Enforce expected type for all get(kwargs) calls
+
+
+Fix Unknown:
+-For RL_prime problems, try factor R+ = R'*M (instread of M*R) then R' will be square.
+  THis will only work if R' is orthogonal R_dagger'*R' = Id
+
+julia --sysimage /home/janr/.julia/sysimages/sys_itensors.so
+
+Old:
+
 Done: -Does block_qx really need to know n?
   Instead of r,c index we should really think in terms of f,r = forward, reverse
   R gets transferred in f/forward direction
@@ -16,27 +51,19 @@ Done: -Support make_transIsing_iMPO
 Done: -For the make hamiltonian functions put ul,hx,J into kwargs
   This will tie in with using the Model("model_name") framework Matt is using.
 Done: -Review all examples.  Add iMPO example.
--Reproduce 30 site example from Parker paper.
+Can't do (for now: -Reproduce 30 site example from Parker paper.
   I estimate Dw>>1000 for N=30.  They must be building H_hand more efficiently.
-  Anyway for N=9 we get Dw=206 which truncates nicely to Dw=9, takes about a minute though!
+  Anyway for N=9 we get Dw=206 which truncates nicely to Dw=9, takes about a minute just to build up H though!
 Done:  Need to build H-3body from scratch.
 Done:  Need code for W_1 + W_2
--vumps GS example with timing for uncomp./comp.
 Done: -Try using cutoff instead of truncate=false for autoMPO
 Done: -Clean up iMPO truncate code.
 Done: -Move i_orthog code into orthogonalize.jl files
 Done: -Review generated docs, upgrade for iMPO support.
--Pare down unit test for shorter run time.
 Done: -QN support for InfiniteSum code.
--Test alternating S=1/2 and S=1 sites.
--Test Fermions/Hubberd.
 Done: -Use Itensor spectrum instead of bond_spectrum.
-5) Use new is_upper functions using combiners to get rank-2 tensors.
--Profile and code coverage.
 Done: -Use sweep(H,lr) instead of the if blocks.
 Done: -Refactor the H[n]*U dag(U)*H[n+1] code for iMPO truncate.
--Gs returned by truncate should be Diag not Dense tensors.
--Verbose mode show all Dws and steps orth-right etc.
 
 Done: 1) Not seeing any rank reduction
 Done: 2) Upgrade tests to use ~ and atol.
@@ -97,7 +124,6 @@ Done: -Get rid of MPOpbs struct.
 Done: -Prevent Documter.jl from showing ITensor docs.
 Done: -Seeing flakey GS tests.  probably need to seed the randomMPS for consistency.
 Done: -Add a big lattice test and look at SVs
--make truncate, and orthogonalize that work on copies.
 Plan:
   90% Document what I have so far
   Done: Test with fixed autoMPO Hamiltonians (start the heisenberg with arbitrary neighbours)
