@@ -19,9 +19,9 @@ export detect_upper_lower,is_upper_lower,sweep
 # Hamiltonian related
 export make_transIsing_MPO,make_Heisenberg_AutoMPO,make_transIsing_AutoMPO,to_openbc,get_lr
 export make_transIsing_iMPO
-export fast_GS,make_3body_MPO,make_2body_op,make_3body_op,add_ops,make_3body_AutoMPO
+export fast_GS,make_3body_MPO,make_1body_op,make_2body_op,make_3body_op,add_ops,make_3body_AutoMPO,make_2body_sum
 # MPO and bond spectrum
-export get_Dw,min,max
+export get_Dw,max_Dw,min,max
 export bond_spectrums
 
 export add_or_replace # Handle inpenetrable kwargs

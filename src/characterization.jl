@@ -555,6 +555,10 @@ function is_upper_regular_form(H::AbstractMPS,eps::Float64=default_eps)::Bool
     return is_regular_form(H,upper,eps)
 end
 
+function max_Dw(H::AbstractMPS)::Int64
+    return maximum(get_Dw(H))
+end
+
 function get_Dw(H::MPO)::Vector{Int64}
     N=length(H)
     Dws=Vector{Int64}(undef,N-1)
@@ -564,6 +568,7 @@ function get_Dw(H::MPO)::Vector{Int64}
     end
     return Dws
 end
+
 function get_Dw(H::InfiniteMPO)::Vector{Int64}
     N=length(H)
     Dws=Vector{Int64}(undef,N)

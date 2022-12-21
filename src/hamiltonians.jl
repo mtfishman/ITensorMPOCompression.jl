@@ -218,9 +218,10 @@ function make_3body_MPO(sites;kwargs...)
     
     W=H[1]
     if get(kwargs,:Jprime,1.0)!=0.0
-        for m in 1:N-1
-            W = add_ops(W,make_2body_op(sites[1],l,r,m,ul;kwargs...))
-        end
+        # for m in 1:N-1
+        #     W = add_ops(W,make_2body_op(sites[1],l,r,m,ul;kwargs...))
+        # end
+        W = add_ops(W,make_2body_sum(sites[1],l,r,N-1,ul;kwargs...))
     end 
     
     if get(kwargs,:J,1.0)!=0.0
@@ -309,6 +310,38 @@ function make_2body_op(site::Index,r1::Index,c1::Index,n::Int64,ul::reg_form;kwa
         end
         assign!(W,Jn*Sz,r=>Dw-1,c=>Dw)
     end
+    return W
+end
+
+function make_2body_sum(site::Index,r1::Index,c1::Index,NNN::Int64,ul::reg_form;kwargs...)::ITensor
+    @assert NNN>=1
+    Jprime::Float64=get(kwargs,:Jprime,1.0)
+    Dw::Int64=2+NNN
+    #d,n,space=parse_site(site)
+    #use_qn=hasqns(site)
+    r,c=redim(r1,Dw),redim(c1,Dw)
+
+    is=dag(site) #site seem to have the wrong direction!
+    W=ITensor(0.0,r,c,is,dag(is'))
+    Id=op(is,"Id")
+    Sz=op(is,"Sz")
+    assign!(W,Id,r=>1 ,c=>1 )
+    assign!(W,Id,r=>Dw,c=>Dw)
+    if ul==lower
+        assign!(W,Sz,r=>Dw,c=>Dw-1)
+    else
+        assign!(W,Sz,r=>Dw-1,c=>Dw)
+    end
+    for n in 1:NNN
+        Jn=Jprime/n^4 #interactions need to decay with distance in order for H to extensive 
+        if ul==lower
+            assign!(W,Id   ,r=>Dw-n,c=>Dw-1-n)
+            assign!(W,Jn*Sz,r=>Dw-n,c=>1)
+        else
+            assign!(W,Id   ,r=>Dw-1-n,c=>Dw-n)
+            assign!(W,Jn*Sz,r=>1,c=>Dw-n)
+        end
+    end 
     return W
 end
 
