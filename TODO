@@ -4,6 +4,15 @@ Questions:
   -epsrr -> rr_cutoff or just cutoff like for SVD?
   -Future of Model("model_name") framework.
   -verbose mode? (only see it in ctmrg)
+  -subtensor function
+  	-Must handle block sparse
+  	-I only need it for link indices
+  	-Use combiners to combine all non-affected indices?
+  	-Do the work in NDTensors
+  	-functon interface
+  	subtensor(A::Itensor,i::Pair(Index,range)...)
+  -Is there use for a moving orthogonality center in MPOs?
+  	
 
 More tests:
 -Test alternating S=1/2 and S=1 sites.
@@ -22,7 +31,7 @@ Improvements:
 -Profile and code coverage.
 -Gs returned by truncate should be Diag not Dense tensors.
 5) Use new is_upper functions using combiners to get rank-2 tensors.
--Add some sort of Results section at the end ot tech docs.
+-Add some sort of Results section at the end of the tech docs.
 -Review high level algos
   -rules for smart_sweep
   -orthog inside truncate
