@@ -1,4 +1,5 @@
 
+
 @doc """
 make_3body_AutoMPO(sites;kwargs...)
 
@@ -32,35 +33,40 @@ end
 
 function make_2body(os::OpSum,N::Int64;kwargs...)::OpSum
     Jprime::Float64=get(kwargs,:Jprime,1.0)
-    for n=1:N
-        for m=n+1:N
-            Jnm=Jprime/abs(n-m)^4
-            add!(os, Jnm    ,"Sz", n, "Sz", m)
-            # if heis
-            #     add!(os, Jnm*0.5,"S+", n, "S-", m)
-            #     add!(os, Jnm*0.5,"S-", n, "S+", m)
-            # end
-        end
-    end
-return os
-end
-
-function make_3body(os::OpSum,N::Int64;kwargs...)::OpSum
-    J::Float64=get(kwargs,:J,1.0)
-    for k=1:N
-        for n=k+1:N
-            Jkn=J/abs(n-k)^2
+    if Jprime!=0.0
+        for n=1:N
             for m=n+1:N
-                Jnm=J/abs(m-n)^2
-                # if k==1
-                #     @show k,n,m,Jkn,Jnm
+                Jnm=Jprime/abs(n-m)^4
+                add!(os, Jnm    ,"Sz", n, "Sz", m)
+                # if heis
+                #     add!(os, Jnm*0.5,"S+", n, "S-", m)
+                #     add!(os, Jnm*0.5,"S-", n, "S+", m)
                 # end
-                add!(os, Jnm*Jkn    ,"Sz", k, "Sz", n,"Sz",m)
             end
         end
     end
     return os
 end
+
+function make_3body(os::OpSum,N::Int64;kwargs...)::OpSum
+    J::Float64=get(kwargs,:J,1.0)
+    if J!=0.0
+        for k=1:N
+            for n=k+1:N
+                Jkn=J/abs(n-k)^2
+                for m=n+1:N
+                    Jnm=J/abs(m-n)^2
+                    # if k==1
+                    #     @show k,n,m,Jkn,Jnm
+                    # end
+                    add!(os, Jnm*Jkn    ,"Sz", k, "Sz", n,"Sz",m)
+                end
+            end
+        end
+    end
+    return os
+end
+
 
 @doc """
 make_transIsing_AutoMPO(sites,NNN;kwargs...)
@@ -92,13 +98,14 @@ function make_transIsing_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
         end
     end
     for dj=1:NNN
-        f=J/dj
+        f=J/dj^4
         for j=1:N-dj
             add!(ampo, f    ,"Sz", j, "Sz", j+dj)
         end
     end
     return MPO(ampo,sites)
 end
+make_2body_AutoMPO(sites,NNN::Int64;kwargs...)=make_transIsing_AutoMPO(sites,NNN;kwargs...)
 
  
 

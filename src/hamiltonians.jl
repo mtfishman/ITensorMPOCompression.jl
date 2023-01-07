@@ -200,6 +200,75 @@ function add_ops(W1::ITensor,W2::ITensor)::ITensor
     return W
 end
 
+function make_2body_MPO(sites,NNN::Int64;kwargs...)
+    pbc::Bool=get(kwargs,:pbc,false)
+    N=length(sites)
+    H=MPO(N)
+    if pbc
+        l,r=Index(1,"Link,c=0,l=1"),Index(1,"Link,c=1,l=1")
+    else
+        l,r=Index(1,"Link,l=0"),Index(1,"Link,l=1")
+    end
+    ul=lower
+    H[1] = make_1body_op(sites[1],l,r,ul;kwargs...)
+    
+    for n in 2:N
+        H[n] = make_1body_op(sites[n],l,r,ul;kwargs...)
+    end
+    
+    W=H[1]
+    if get(kwargs,:Jprime,1.0)!=0.0
+        if get(kwargs,:presummed,true)
+            W = add_ops(W,make_2body_sum(sites[1],l,r,NNN,ul;kwargs...))
+        else
+            for n in 1:NNN
+                W = add_ops(W,make_2body_op(sites[1],l,r,n,ul;kwargs...))
+            end
+        end
+    end
+
+    H[1]=add_ops(H[1],W)
+    
+    for n in 2:N
+        #@show inds(H[n])
+        iw1,iw2=inds(W,tags="Link")
+        ih1,ih2=inds(H[n],tags="Link")
+        replacetags!(W,tags(iw2),tags(ih2))
+        replacetags!(W,tags(iw1),tags(ih1))
+        is=sites[n]
+        replaceinds!(W,inds(W,tags="Site"),(is,dag(is)'))
+        H[n]=add_ops(H[n],W)
+    end
+    
+    for n in 2:N
+        if pbc
+            ln=inds(H[n],tags="c=0")[1]
+            replacetags!(H[n],"c=1","c=$n")
+        else
+            ln=inds(H[n],tags="l=0")[1]
+            replacetags!(H[n],"l=1","l=$n")
+        end
+        l1,r1=parse_links(H[n-1])
+        #@show l1 r1 ln
+        #@show inds(H[n])
+        replaceind!(H[n],ln,r1)
+        #@show inds(H[n])
+    end
+    if pbc
+        i0=filterinds(H[1],tags="Link,c=0,l=$(N)")[1]
+        i0=replacetags(i0,"c=0","c=1")
+        in=filterinds(H[N],tags="Link,c=1,l=$(N)")[1]
+        H[N]=replaceind(H[N],in,i0)
+    end
+
+    if !pbc
+        H=ITensorMPOCompression.to_openbc(H) #contract with l* and *r at the edges.
+    end
+    
+    return H
+end
+
+
 function make_3body_MPO(sites;kwargs...)
     pbc::Bool=get(kwargs,:pbc,false)
     N=length(sites)
@@ -218,10 +287,13 @@ function make_3body_MPO(sites;kwargs...)
     
     W=H[1]
     if get(kwargs,:Jprime,1.0)!=0.0
-        # for m in 1:N-1
-        #     W = add_ops(W,make_2body_op(sites[1],l,r,m,ul;kwargs...))
-        # end
-        W = add_ops(W,make_2body_sum(sites[1],l,r,N-1,ul;kwargs...))
+        if get(kwargs,:presummed,true)
+            W = add_ops(W,make_2body_sum(sites[1],l,r,N-1,ul;kwargs...))
+        else
+        for m in 1:N-1
+            W = add_ops(W,make_2body_op(sites[1],l,r,m,ul;kwargs...))
+        end
+    end
     end 
     
     if get(kwargs,:J,1.0)!=0.0
