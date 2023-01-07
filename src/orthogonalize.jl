@@ -21,12 +21,21 @@ end
 
 function ITensors.orthogonalize!(H::MPO,ul::reg_form;kwargs...)
     lr::orth_type=get(kwargs, :orth, left)
+    verbose::Bool=get(kwargs, :verbose, false)
+    if verbose
+        previous_Dw=sum(get_Dw(H))
+    end
     N=length(H)
     rng=sweep(H,lr)
     for n in rng 
         nn=n+rng.step #index to neighbour
         H[n],H[nn]=orthogonalize!(H[n],H[nn],ul;kwargs...)
     end
+    if verbose
+        Dw=sum(get_Dw(H))
+        println("    MPO After $lr orth sweep sum(Dw) reduced from $previous_Dw to $Dw")
+    end
+
 end
 
 
@@ -103,43 +112,77 @@ true
 
 """
 function ITensors.orthogonalize!(H::MPO;kwargs...)
+    #
+    #  Establish uperr or lower regular form
+    #
     (bl,bu)=detect_regular_form(H,1e-14)
     if !(bl || bu)
         throw(ErrorException("orthogonalize!(H::MPO), H must be in either lower or upper regular form"))
     end
-    @assert !(bl && bu)
-    ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
-    
-    if length(kwargs)>0
-        kwargs=Dict(kwargs) #this allows us to set the dir elements
-    else
-        kwargs=Dict{Symbol, Any}(:orth => left)
-    end
-    lr=get(kwargs,:orth,left)
-    epsrr=get(kwargs,:epsrr,-1.0)
-    smart_sweep=epsrr>=0.0 #if rank reduction is allowed then do smart sweeps prior to final sweep
+    @assert !(bl && bu) #should not be diagonal.
+    ul::reg_form = bl ? lower : upper 
     #
-    # First sweep direction is critical for proper rank reduction upper:right, lower:left
+    #  Establish what options the user specified
     #
-    if smart_sweep
-        if ul==lower
-            orthogonalize!(H,ul;kwargs...,orth=left) #putting orth last overrides orth in kwargs
-            orthogonalize!(H,ul;kwargs...,orth=right)
-            if lr==left
-                orthogonalize!(H,ul;kwargs...,orth=left)
-            end
-        else
-            orthogonalize!(H,ul;kwargs...,orth=right)
-            orthogonalize!(H,ul;kwargs...,orth=left)
-            if lr==right
-                orthogonalize!(H,ul;kwargs...,orth=right)
-            end
-        end   
-    else
-        #println("Doing dumb sweep lr=$lr")
-        orthogonalize!(H,ul;kwargs...)
+    verbose::Bool=get(kwargs, :verbose, false)
+    request_lr::orth_type=get(kwargs,:orth,left)
+    epsrr::Float64=get(kwargs,:epsrr,1e-15)
+    max_sweeps::Int64=get(kwargs,:max_sweeps,5)
+    spec_lr::Bool=haskey(kwargs,:orth) #Did the user explictely request an orth. direction?
+    spec_ms::Bool=haskey(kwargs,:max_sweeps) #Did the user explictely request max_sweeps?
+    rr_enabled::Bool=epsrr>=0.0 #
+    sumDw::Int64=sum(get_Dw(H))
+    if verbose 
+        println("---------Ortho. Sweep rr_cutoff=$epsrr----------------")
     end
-  
+
+    if epsrr==0.0
+        @warn "orthogonalize!(::MPO) esprr=0.0 is not very effective for rank reduction. Set epsrr<0.0 to disable rank reduction, os set epsrr>=1e-15 for effective rank reduction."
+    end
+    #@show rr_enabled epsrr
+    if max_sweeps>1 && rr_enabled
+        lr=ul==lower ? left : right #optimal start direction depends on ul for some reason.
+        nsweeps=0
+        old_sumDw=sumDw+1
+        oldH=H
+        while nsweeps<max_sweeps && sumDw<old_sumDw
+            oldH=spec_lr ? copy(H) : nothing
+            old_sumDw=sumDw
+            orthogonalize!(H,ul;kwargs...,orth=lr)
+            nsweeps+=1
+            sumDw=sum(get_Dw(H))
+            lr=mirror(lr) #need to undo this after we break out.
+            @assert sumDw<=old_sumDw #Make sure Dw did not grow!!
+            #@show nsweeps max_sweeps Dw oldDw
+            
+        end
+        if nsweeps>=1
+            lr=mirror(lr) #undo last mirror op
+        end
+        #@show lr spec_lr request_lr 
+        #pprint(H)
+        #pprint(oldH)
+
+        # Now make sure we have lr that user specified
+        if request_lr!=lr
+            if oldH≠nothing && nsweeps>1
+                @assert is_orthogonal(oldH,request_lr)
+                #@show "copy oldH"
+                H.=oldH
+            else
+                # THis means we did 1 sweep with no change in Dw, and now need to
+                # to do another sweep to into the requested ortho. state.
+                orthogonalize!(H,ul;kwargs...,orth=request_lr)
+            end
+        end
+        
+    else 
+        old_sumDw=sumDw
+        orthogonalize!(H,ul;kwargs...,orth=request_lr)
+        sumDw=sum(get_Dw(H))
+    end
+    @assert is_orthogonal(H,request_lr)
+
 end
 
 
@@ -195,9 +238,11 @@ function qx_iterate!(H::InfiniteMPO,ul::reg_form;kwargs...)
     eps=1e-13
     niter=0
     max_iter=40
-    if verbose
-        @printf "niter eta\n" 
-    end
+    previous_Dw=max_Dw(H)
+    # if verbose
+    #     previous_Dw=Base.max(get_Dw(H)...)
+    #     @printf "niter eta\n" 
+    # end
     loop=true
     rng=sweep(H,lr)
     while loop
@@ -221,9 +266,13 @@ function qx_iterate!(H::InfiniteMPO,ul::reg_form;kwargs...)
         end
         niter+=1
         loop=eta>1e-13 && niter<max_iter
-        if eta<1.0 && verbose
-            @printf "%4i %1.1e\n" niter eta
-        end
+        # if eta<1.0 && verbose
+        #     @printf "%4i %1.1e\n" niter eta
+        # end
+    end
+    if verbose
+        Dw=Base.max(get_Dw(H)...)
+        println("   iMPO After $lr orth sweep, $niter iterations Dw reduced from $previous_Dw to $Dw")
     end
     return Gs
 end
@@ -291,8 +340,19 @@ function ITensors.orthogonalize!(H::InfiniteMPO;kwargs...)
     if !(bl || bu)
         throw(ErrorException("orthogonalize!(H::MPO), H must be in either lower or upper regular form"))
     end
-    @assert !(bl && bu)
+    if (bl && bu)
+        @pprint(H[1])
+    end
     ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
+    lr::orth_type=get(kwargs, :orth, left)
+    max_sweeps::Int64=get(kwargs,:max_sweeps,2)
+    if max_sweeps<0 || max_sweeps>2
+        @warn("orthogonalize!(iMPO) illegal value requested for max_sweeps=$max_sweeps.\n  Resetting to max_sweeps=2")
+    end
+    if  max_sweeps==2
+        orthogonalize!(H,ul;kwargs...,orth=mirror(lr))
+    end
+    
     return orthogonalize!(H,ul;kwargs...)
 end
 

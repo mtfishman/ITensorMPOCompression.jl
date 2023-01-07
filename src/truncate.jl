@@ -181,14 +181,24 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
     end
     @assert !(bl && bu)
     ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
-    #
+    
+    verbose::Bool=get(kwargs, :verbose, false)
+    if verbose
+        previous_Dw=Base.max(get_Dw(H)...)
+    end#
     # Now check if H required orthogonalization
     #
     ms=matrix_state(ul,lr)
     if !is_canonical(H,mirror(ms))
-        epsrr=get(kwargs,:epsrr,1e-12)
-        epsrr= epsrr==0 ? 1e-12 : epsrr #0.0 not allwed here.
-        orthogonalize!(H,epsrr=epsrr,orth=mirror(lr)) #TODO why fail if spec ul here??
+        if verbose
+            println("truncate detected non-orthogonal MPO, will now orthogonalize")
+        end
+        # epsrr=get(kwargs,:epsrr,1e-12)
+        # epsrr= epsrr==0 ? 1e-12 : epsrr #0.0 not allwed here.
+        orthogonalize!(H;kwargs...,orth=mirror(lr)) #TODO why fail if spec ul here??
+        if verbose
+            previous_Dw=Base.max(get_Dw(H)...)
+        end#
     end
     N=length(H)
     ss=bond_spectrums(undef,N-1)
@@ -201,6 +211,10 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
         H[nn]=RL*H[nn]
         is_regular_form(H[nn],ms.ul)
         ss[n+link_offest]=s
+    end
+    if verbose
+        Dw=Base.max(get_Dw(H)...)
+        println("After $lr truncation sweep Dw was reduced from $previous_Dw to $Dw")
     end
     return ss
 end
@@ -290,6 +304,8 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
     
     return truncate!(H,Hm,Gs,lr;kwargs...)
 end
+
+ITensors.truncate!(H::InfiniteMPO,Gs::CelledVector{ITensor},lr::orth_type;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any} = ITensors.truncate!(H,nothing,Gs,lr;kwargs...)
 
 function ITensors.truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::CelledVector{ITensor},lr::orth_type;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
     N=length(H)

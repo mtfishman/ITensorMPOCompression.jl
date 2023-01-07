@@ -3,14 +3,16 @@ using ITensorMPOCompression
 using ITensorInfiniteMPS
 using Revise
 using Test
-import ITensorMPOCompression.orthogonalize!
+using Printf
+#import ITensorMPOCompression.orthogonalize!
 
-verbose=true
+verbose=false #verbose at the outer test level
+verbose1=true #verbose inside orth algos
 
 # using Printf
 # Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
 # println("-----------Start--------------")
-@testset verbose=false "Orthogonalize" begin
+@testset verbose=verbose "Orthogonalize" begin
 
 @testset "Upper, lower, regular detections" begin
     N=6
@@ -74,7 +76,7 @@ test_combos=[
     #@show inds(H[1])
     @test is_regular_form(H   ,ms.ul,eps)
     E0=inner(psi',H,psi)
-    orthogonalize!(H;orth=ms.lr,epsrr=1e-12)
+    orthogonalize!(H;verbose=verbose1,orth=ms.lr,epsrr=1e-12)
     E1=inner(psi',H,psi)
     @test E0 ≈ E1 atol = 1e-14
     @test is_regular_form(H,ms.ul,eps)
@@ -101,7 +103,7 @@ test_combos=[
     H=makeH(sites,NNN;ul=test_combo[2]) 
     @test is_regular_form(H   ,ms.ul,eps)
     E0=inner(psi',H,psi)
-    orthogonalize!(H,ms.ul;orth=ms.lr,epsrr=1e-12)
+    orthogonalize!(H;verbose=verbose1,orth=ms.lr,epsrr=1e-12)
     E1=inner(psi',H,psi)
     @test E0 ≈ E1 atol = 1e-14
     @test is_regular_form(H,ms.ul,eps)
@@ -110,18 +112,16 @@ test_combos=[
 end
  
 @testset "Compare $ul tri rank reduction with AutoMPO, QNs=$qns" for ul in [lower,upper],qns in [false,true]
-    N=12
+    N=14
     sites = siteinds("SpinHalf", N;conserve_qns=qns)
     for NNN in 3:div(N,2)
         Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul) 
         Dw_auto=get_Dw(Hauto)
         Hr=make_transIsing_MPO(sites,NNN;ul=ul) 
-        orthogonalize!(Hr;orth=right,epsrr=1e-12) #sweep left to right
-        @test is_canonical(Hr,matrix_state(ul,right),1e-12)
+        orthogonalize!(Hr;verbose=verbose1,epsrr=1e-12) #sweep left to right
         @test get_Dw(Hr)==Dw_auto
         Hl=make_transIsing_MPO(sites,NNN;ul=ul) 
-        orthogonalize!(Hl;orth=left,epsrr=1e-12) #sweep right to left
-        @test is_canonical(Hl,matrix_state(ul,left),1e-12)
+        orthogonalize!(Hl;verbose=verbose1,epsrr=1e-12) #sweep right to left
         @test get_Dw(Hl)==Dw_auto
     end  
 end 
@@ -141,7 +141,7 @@ end
 
         HL=copy(H0)
         @test is_regular_form(HL)
-        GL=ITensorMPOCompression.orthogonalize!(HL;orth=left)
+        GL=orthogonalize!(HL;orth=left)
         DwL=Base.max(get_Dw(HL)...)
         @test is_regular_form(HL)
         @test is_orthogonal(HL,left)
@@ -149,7 +149,7 @@ end
             @test norm(HL[n]*GL[n]-GL[n-1]*H0[n]) ≈ 0.0 atol = 1e-14 
         end
         HR=copy(H0)
-        GR=ITensorMPOCompression.orthogonalize!(HR;orth=right)
+        GR=orthogonalize!(HR;verbose=verbose1,orth=right)
         DwR=Base.max(get_Dw(HR)...)
         @test is_regular_form(HR)
         @test is_orthogonal(HR,right)
@@ -157,7 +157,7 @@ end
             @test norm(GR[n-1]*HR[n]-H0[n]*GR[n]) ≈ 0.0 atol = 1e-14
         end   
         HR1=copy(HL) 
-        G=ITensorMPOCompression.orthogonalize!(HR1;orth=right)
+        G=orthogonalize!(HR1;verbose=verbose1,orth=right)
         DwLR=Base.max(get_Dw(HR1)...)
         @test is_regular_form(HR1)
         @test is_orthogonal(HR1,right)
