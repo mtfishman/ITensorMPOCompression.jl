@@ -7,7 +7,6 @@ using Test
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f) #dumb way to control float output
 
 @testset "Investigate suprise effects of the inital sweep direction" begin
-    l,r=Index(1,"Link,l=0"),Index(1,"Link,l=1")
     ul=lower
     initstate(n) = "↑"
     verbose=false
@@ -15,7 +14,7 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f) #dumb way to control flo
     @printf("                    Finite                      Infinite \n")
     @printf("   N  NNN     L1    L2    R1    R2        L1    L2    R1    R2  \n")
 
-    for NNN in [1,5,8,9,10,15]
+    for NNN in [1,5,8]
         # N needs to be big enough that there is block in the middle of lattice which 
         # exhibits no edge effects.
         N=2*NNN+4 
@@ -25,7 +24,10 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f) #dumb way to control flo
         si = infsiteinds("S=1/2", 1; initstate, conserve_szparity=false)
         HdumbL=make_2body_MPO(sites,NNNd;Jprime=1.0,presummed=false)
         Hdumb_pbc=make_2body_MPO(si,NNN;Jprime=1.0,presummed=false,pbc=true)
+        #@show inds(Hdumb_pbc[1])
         Hdumb_infL=InfiniteMPO([Hdumb_pbc[1]])
+        #@show inds(Hdumb_infL[1])
+        #@assert false
         Dw_raw=max_Dw(Hdumb_infL)
         HdumbR=copy(HdumbL)
         Hdumb_infR=copy(Hdumb_infL)
@@ -48,8 +50,6 @@ end
 
 
 @testset "Tabulate MPO Dw reduction for 2 body NNN interactions" begin
-    #l,r=Index(1,"Link,c=0,l=1"),Index(1,"Link,c=1,l=1")
-    l,r=Index(1,"Link,l=0"),Index(1,"Link,l=1")
     ul=lower
     initstate(n) = "↑"
     @printf("             |--------------------------max(Dw)-------------------------|\n")
