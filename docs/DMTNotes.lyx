@@ -1,0 +1,929 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry true
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 2cm
+\topmargin 2cm
+\rightmargin 2cm
+\bottommargin 2cm
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Density Matrix Thermalization
+\end_layout
+
+\begin_layout Author
+Jan Reimers
+\end_layout
+
+\begin_layout Date
+January 2023
+\end_layout
+
+\begin_layout Section
+Background
+\end_layout
+
+\begin_layout Standard
+These note are used for the development of the density matrix compression
+ methods described in 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "White2018"
+literal "false"
+
+\end_inset
+
+.
+ Notation differences between this document and the White et.
+ al.
+ paper are tabulated below.
+\begin_inset Float table
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Tabular
+<lyxtabular version="3" rows="6" columns="4">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Notation
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+White paper
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+This document
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Reason
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Internal degrees of freedom
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\sum_{\alpha=0}^{\chi-1}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\sum_{\alpha=1}^{\chi}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multirow="3" alignment="center" valignment="middle" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Julia and ITensors default to 
+\begin_inset Formula $1$
+\end_inset
+
+ based indexing
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Pauli matrices
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\hat{\sigma}^{\mu},\;\mu=0\ldots d^{2}-1$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\hat{\sigma}^{\mu},\;\mu=1\ldots d^{2}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multirow="4" alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+MPSmatrices
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $A^{\mu}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $\boldsymbol{A}^{\mu}$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+We try to use bold face for clarity
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Notation differences between this document and reference 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "White2018"
+literal "false"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+MPS rperesentations
+\end_layout
+
+\begin_layout Standard
+For a finite lattice with 
+\begin_inset Formula $L$
+\end_inset
+
+ sites, the MPS wave function with the orthogonality center on site 
+\begin_inset Formula $j$
+\end_inset
+
+ looks like
+\begin_inset Formula 
+\[
+\left|\psi\right\rangle =\sum_{\left\{ n\right\} }\boldsymbol{A}^{n_{1}}\boldsymbol{A}^{n_{2}}\ldots\boldsymbol{A}^{n_{j-1}}\boldsymbol{A}^{n_{j}}\boldsymbol{\lambda}^{j}\boldsymbol{B}^{n_{j+1}}\ldots\boldsymbol{B}^{n_{L}}\left|n_{1}\right\rangle \left|n_{2}\right\rangle \ldots\left|n_{L}\right\rangle 
+\]
+
+\end_inset
+
+Where as usual the sum over basis states is exponentially large and 
+\begin_inset Formula $\boldsymbol{\lambda}^{j}$
+\end_inset
+
+ is a diagonal matrix of Schmidt/singular values.
+ On each site 
+\begin_inset Formula $n=1\ldots d$
+\end_inset
+
+ spans the local Hilbert space.
+ The density operator representation of this pure state state looks like
+\begin_inset Formula 
+\[
+\hat{\rho}=\left|\psi\right\rangle \left\langle \psi\right|=\sum_{\left\{ n\right\} }\sum_{\left\{ m\right\} }\left[\boldsymbol{A}^{n_{1}}\boldsymbol{A}^{n_{2}}\ldots\boldsymbol{A}^{n_{j-1}}\boldsymbol{A}^{n_{j}}\boldsymbol{\lambda}^{j}\boldsymbol{B}^{n_{j+1}}\ldots\boldsymbol{B}^{n_{L}}\right]\left[\boldsymbol{B}^{\dagger m_{L}}\ldots\boldsymbol{B}^{\dagger m_{j+1}}\boldsymbol{\lambda}^{j}\boldsymbol{A}^{\dagger m_{j}}\ldots\boldsymbol{A}^{\dagger m_{1}}\right]\left|n_{1}\right\rangle \left\langle m_{1}\right|\ldots\left|n_{L}\right\rangle \left\langle m_{L}\right|
+\]
+
+\end_inset
+
+Defining
+\begin_inset Formula 
+\[
+\left\{ n_{i},m_{i}\right\} =\mu_{i},\quad\left|n_{i}\right\rangle \left\langle m_{i}\right|=\hat{\sigma}^{\mu_{i}},\quad i=1\ldots L,\quad\mu=1\ldots d^{2}
+\]
+
+\end_inset
+
+and
+\begin_inset Formula 
+\begin{equation}
+\boldsymbol{A}^{\mu_{i}}=\begin{bmatrix}\boldsymbol{A}^{n_{i}} & 0\\
+0 & \boldsymbol{A}^{\dagger m_{i}}
+\end{bmatrix},\quad\boldsymbol{B}^{\mu_{i}}=\begin{bmatrix}\boldsymbol{B}^{n_{i}} & 0\\
+0 & \boldsymbol{B}^{\dagger m_{i}}
+\end{bmatrix},\quad\boldsymbol{s}^{j}=\begin{bmatrix}\boldsymbol{\lambda}^{j} & 0\\
+0 & \boldsymbol{\lambda}^{j}
+\end{bmatrix}\label{eq:Blocks}
+\end{equation}
+
+\end_inset
+
+we can write
+\begin_inset Formula 
+\[
+\hat{\rho}=\sum_{\left\{ \mu\right\} }\left[\boldsymbol{A}^{\mu_{1}}\ldots\boldsymbol{A}^{\mu_{j}}\boldsymbol{s}^{j}\boldsymbol{B}^{\mu_{j+1}}\ldots\boldsymbol{B}^{\mu_{L}}\right]\hat{\sigma}^{\mu_{1}}\ldots\hat{\sigma}^{\mu_{L}}
+\]
+
+\end_inset
+
+ The zero off diagonal blocks in eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:Blocks"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ is an artifact of representing a pure state.
+ Those blocks will fill in at finite temperature.
+ In code we can use the ITensors 
+\begin_inset CommandInset href
+LatexCommand href
+name "outer()"
+target "https://itensor.github.io/ITensors.jl/stable/MPSandMPO.html#NDTensors.outer-Tuple{MPS,%20MPS}"
+literal "false"
+
+\end_inset
+
+ function which is discussed 
+\begin_inset CommandInset href
+LatexCommand href
+name "here"
+target "http://itensor.org/support/3217/how-to-get-density-matrix-operator-from-mps-wave-function"
+literal "false"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Section
+Efficient truncation of a DM state
+\end_layout
+
+\begin_layout Subsection
+Schmidt Decomposition
+\end_layout
+
+\begin_layout Standard
+Starting with a orthogonalized MPS representation of a density matrix operator
+ (which includes mixed states)
+\begin_inset Formula 
+\[
+\hat{\rho}=\sum_{\left\{ \mu\right\} }\boldsymbol{A}^{\mu_{1}}\ldots\boldsymbol{A}^{\mu_{j}}\boldsymbol{s}^{j}\boldsymbol{B}^{\mu_{j+1}}\ldots\boldsymbol{B}^{\mu_{L}}\hat{\sigma}^{\mu_{1}}\ldots\hat{\sigma}^{\mu_{L}}
+\]
+
+\end_inset
+
+As usual in code we just store the density matrix
+\begin_inset Formula 
+\[
+\rho_{\left\{ \mu\right\} }=\boldsymbol{A}^{\mu_{1}}\ldots\boldsymbol{A}^{\mu_{j}}\boldsymbol{s}^{j}\boldsymbol{B}^{\mu_{j+1}}\ldots\boldsymbol{B}^{\mu_{L}}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+=\sum_{\alpha=1}^{\chi}\left[\boldsymbol{A}^{\mu_{1}}\ldots\boldsymbol{A}^{\mu_{j}}\right]_{\alpha}s_{\alpha\alpha}^{j}\left[\boldsymbol{B}^{\mu_{j+1}}\ldots\boldsymbol{B}^{\mu_{L}}\right]_{\alpha}
+\]
+
+\end_inset
+
+where in the last line we have made explicit the contraction over bond singular
+ values.
+ When time evolving an MPS this is the summation that gets truncated.
+ For DM evolution our goal is to a find more optimal truncation scheme that
+ preserves
+\end_layout
+
+\begin_layout Enumerate
+The trace identiy relationship for 
+\begin_inset Formula $\rho_{\left\{ \mu\right\} }$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+The reduced dnesity matrices on either side of the bond 
+\begin_inset Formula $j$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We can now define left and right density operators around the orthogoality
+ center
+\begin_inset Formula 
+\[
+\hat{x}_{L\alpha}\left[j\right]=\sum_{\left\{ \mu\right\} }\left[\boldsymbol{A}^{\mu_{1}}\ldots\boldsymbol{A}^{\mu_{j}}\right]_{\alpha}\hat{\sigma}^{\mu_{1}}\ldots\hat{\sigma}^{\mu_{j}}=\sum_{\left\{ \mu\right\} }x_{L\alpha}^{\left\{ \mu\right\} }\left[j\right]\hat{\sigma}^{\mu_{1}}\ldots\hat{\sigma}^{\mu_{j}}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\hat{x}_{R\alpha}\left[j\right]=\sum_{\left\{ \mu\right\} }\left[\boldsymbol{B}^{\mu_{j+1}}\ldots\boldsymbol{B}^{\mu_{L}}\right]_{\alpha}\hat{\sigma}^{\mu_{j+1}}\ldots\hat{\sigma}^{\mu_{L}}=\sum_{\left\{ \mu\right\} }x_{R\alpha}^{\left\{ \mu\right\} }\left[j\right]\hat{\sigma}^{\mu_{j+1}}\ldots\hat{\sigma}^{\mu_{L}}
+\]
+
+\end_inset
+
+Again in code we just store
+\begin_inset Formula 
+\[
+x_{L\alpha}^{\left\{ \mu\right\} }=\left[\boldsymbol{A}^{\mu_{1}}\ldots\boldsymbol{A}^{\mu_{j}}\right]_{\alpha},\quad x_{R\alpha}^{\left\{ \mu\right\} }\left[j\right]=\left[\boldsymbol{B}^{\mu_{j+1}}\ldots\boldsymbol{B}^{\mu_{L}}\right]_{\alpha}
+\]
+
+\end_inset
+
+And from the orthogonality characteristics 
+\begin_inset Formula 
+\[
+\sum_{\mu_{i}}\boldsymbol{A}^{\dagger\mu_{i}}\boldsymbol{A}^{\mu_{i}}=tr\left[\boldsymbol{A}_{i}^{\dagger}\boldsymbol{A}_{i}\right]=tr\left[\boldsymbol{B}_{i}\boldsymbol{B}_{i}^{\dagger}\right]=\mathbb{I}
+\]
+
+\end_inset
+
+one can easily show that
+\begin_inset Formula 
+\[
+tr\left[x_{L\alpha}^{\dagger}x_{L\beta}\right]=tr\left[x_{R\alpha}x_{R\beta}^{\dagger}\right]=\delta_{\alpha\beta}
+\]
+
+\end_inset
+
+With these definitions we can write the density operator as 
+\begin_inset Formula 
+\begin{equation}
+\hat{\rho}=\sum_{\alpha=1}^{\chi}\hat{x}_{L\alpha}s_{\alpha\alpha}\hat{x}_{R\alpha}\label{eq:CompactDM}
+\end{equation}
+
+\end_inset
+
+where the dependence on the orthogonality center 
+\begin_inset Formula $j$
+\end_inset
+
+ is implicit.
+\end_layout
+
+\begin_layout Subsection
+Secret Sauce
+\end_layout
+
+\begin_layout Standard
+In order to achieve the two objectives above we start with a QR decomposition
+ of the contraction
+\begin_inset Formula 
+\[
+\sum_{\beta}Q_{L\alpha\beta}R_{L\beta}^{\mu}=tr\left[\hat{x}_{L\alpha}\hat{\sigma}^{\mu_{j}}\right]\propto\left[\boldsymbol{A}_{1}^{1}\boldsymbol{A}_{2}^{1}\ldots\boldsymbol{A}_{j-1}^{1}\boldsymbol{A}_{j}^{\mu}\right]_{\alpha}
+\]
+
+\end_inset
+
+where the trace over all 
+\begin_inset Formula $\left\{ \mu_{1},\mu_{2}\ldots\mu_{j-1}\right\} $
+\end_inset
+
+ will pick out only 
+\begin_inset Formula $\hat{\sigma}_{j}^{1}$
+\end_inset
+
+ component on each site becuase all the other operators are traceless.
+ The matrix that is subjected to QR has dimensions 
+\begin_inset Formula $\chi\times d^{2}$
+\end_inset
+
+.
+ The paper focuses on 
+\begin_inset Formula $S=\nicefrac{1}{2}$
+\end_inset
+
+ systems with 
+\begin_inset Formula $d^{2}=4$
+\end_inset
+
+ but in code we need to handle the general case.
+ The range of 
+\begin_inset Formula $\beta$
+\end_inset
+
+ should be 
+\begin_inset Formula $1\ldots\chi$
+\end_inset
+
+ unless some rank reduction appears.
+ A similar decomposition can alse be carried out to the right side of the
+ orthogonality center
+\begin_inset Formula 
+\[
+\sum_{\beta}Q_{R\alpha\beta}R_{R\beta}^{\mu}=tr\left[\hat{x}_{R\alpha}\hat{\sigma}^{\mu_{j+1}}\right]\propto\left[\boldsymbol{B}_{j+1}^{\mu}\boldsymbol{B}_{j+2}^{1}\ldots\boldsymbol{B}_{L-1}^{1}\boldsymbol{B}_{J}^{1}\right]_{\alpha}
+\]
+
+\end_inset
+
+We can now use 
+\begin_inset Formula $Q_{L}$
+\end_inset
+
+and 
+\begin_inset Formula $Q_{R}$
+\end_inset
+
+ to change the basis in eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:CompactDM"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ as follows
+\begin_inset Formula 
+\[
+\hat{y}_{L\beta}=\sum_{\alpha=1}^{\chi}\hat{x}_{L\alpha}Q_{L\alpha\beta}^{*}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\hat{y}_{R\beta}=\sum_{\alpha=1}^{\chi}Q_{R\alpha\beta}^{*}\hat{x}_{R\alpha}
+\]
+
+\end_inset
+
+Which will also satisfy the orthogonality relations
+\begin_inset Formula 
+\[
+tr\left[y_{L\alpha}^{\dagger}y_{L\beta}\right]=tr\left[y_{R\alpha}y_{R\beta}^{\dagger}\right]=\delta_{\alpha\beta}
+\]
+
+\end_inset
+
+Also we can show that
+\begin_inset Formula 
+\[
+tr\left[\hat{\sigma}_{j}^{\mu}\hat{y}_{L\beta}\right]=tr\left[\hat{\sigma}_{j}^{\mu}\sum_{\alpha=1}^{\chi}\hat{x}_{L\alpha}Q_{L\alpha\beta}^{*}\right]
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+=\sum_{\alpha=1}^{\chi}Q_{L\alpha\beta}^{*}tr\left[\hat{\sigma}_{j}^{\mu}\hat{x}_{L\alpha}\right]=\sum_{\alpha=1}^{\chi}Q_{L\alpha\beta}^{*}\sum_{\gamma}Q_{L\alpha\gamma}R_{L\gamma}^{\mu}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+=\sum_{\gamma}R_{L\gamma}^{\mu}\sum_{\alpha=1}^{\chi}Q_{L\alpha\beta}^{*}Q_{L\alpha\gamma}=\sum_{\gamma}R_{L\gamma}^{\mu}\delta_{\beta\gamma}=R_{L\beta}^{\mu}.
+\]
+
+\end_inset
+
+In summary
+\begin_inset Formula 
+\begin{equation}
+tr\left[\hat{\sigma}_{j}^{\mu}\hat{y}_{L\beta}\right]=R_{L\beta}^{\mu}\label{eq:TrSigYL}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+tr\left[\hat{\sigma}_{j+1}^{\mu}\hat{y}_{R\beta}\right]=R_{R\beta}^{\mu}\label{eq:TrSigYR}
+\end{equation}
+
+\end_inset
+
+In the new basis the density operator is
+\begin_inset Formula 
+\[
+\hat{\rho}=\sum_{\alpha=1}^{\chi}\hat{x}_{L\alpha}s_{\alpha\alpha}\hat{x}_{R\alpha}=\hat{\boldsymbol{x}}_{L}\boldsymbol{s}\hat{\boldsymbol{x}}_{R}=\left[\hat{\boldsymbol{x}}_{L}\boldsymbol{Q}_{L}^{*}\right]\left[\boldsymbol{Q}_{L}^{T}\boldsymbol{s}\boldsymbol{Q}_{R}\right]\left[\boldsymbol{Q}_{R}^{\dagger}\hat{\boldsymbol{x}}_{R}\right]
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+=\hat{\boldsymbol{y}}_{L}\boldsymbol{M}\hat{\boldsymbol{y}}_{R}
+\]
+
+\end_inset
+
+where
+\begin_inset Formula 
+\[
+\boldsymbol{M}=\boldsymbol{Q}_{L}^{T}\boldsymbol{s}\boldsymbol{Q}_{R}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Breaking down M
+\end_layout
+
+\begin_layout Standard
+It may seem like we have gone backwards by transforming a diagonal bond
+ matrix 
+\begin_inset Formula $s_{\alpha\alpha}$
+\end_inset
+
+ into a dense matrix 
+\begin_inset Formula $\boldsymbol{M}$
+\end_inset
+
+, but quite the opposite.
+ By presrving various blocks of 
+\begin_inset Formula $\boldsymbol{M}$
+\end_inset
+
+ and compressing the remainder we can achieve our objectives listed above.
+ We can begin my looking a the full trace of the density operator
+\begin_inset Formula 
+\[
+tr\left[\hat{\rho}\right]=\left(tr\left[\hat{\boldsymbol{y}}_{L}\right]\right)\boldsymbol{M}\left(tr\left[\hat{\boldsymbol{y}}_{R}\right]\right)=\left(tr\left[\hat{\boldsymbol{x}}_{L}Q_{L}^{*}\right]\right)\boldsymbol{M}\left(tr\left[Q_{R}^{\dagger}\hat{\boldsymbol{x}}_{R}\right]\right)
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+=\left(tr\left[R_{L\beta}^{1}\right]\right)\boldsymbol{M}\left(tr\left[R_{R\beta}^{1}\right]\right)=R_{L1}^{1}M_{11}R_{R1}^{1}.
+\]
+
+\end_inset
+
+So the statement that trace of the density opereator is preserved under
+ compression simply translated to: 
+\emph on
+Don't touch 
+\emph default
+
+\begin_inset Formula $M_{11}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+We also need to preserve a subset of correlations across the bond 
+\begin_inset Formula $j$
+\end_inset
+
+.
+ This can achieved by looking a the partial traces
+\begin_inset Formula 
+\[
+\hat{\rho}_{1\ldots j+1}=tr_{j+2\ldots L}\left[\hat{\rho}\right]=\left(\hat{\boldsymbol{y}}_{L}\boldsymbol{M}\right)_{\beta}\left(tr_{j+2\ldots L}\left[\hat{\boldsymbol{y}}_{R}\right]\right)_{\beta}
+\]
+
+\end_inset
+
+At this point we insert the identity 
+\begin_inset Formula $I=\frac{1}{2}\sum_{u}\left(\hat{\sigma}^{\mu}\right)^{2}$
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\hat{\rho}_{1\ldots j+1}=\left(\hat{\boldsymbol{y}}_{L}\boldsymbol{M}\right)_{\beta}\left(tr_{j+2\ldots L}\left[\hat{\boldsymbol{y}}_{R}\frac{1}{2}\sum_{u}\left(\hat{\sigma}^{\mu}\right)^{2}\right]\right)_{\beta}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+=\left(\hat{\boldsymbol{y}}_{L}\boldsymbol{M}\right)_{\beta}\left(\frac{1}{2}\sum_{u}\hat{\sigma}^{\mu}tr_{j+2\ldots L}\left[\hat{\boldsymbol{y}}_{R}\hat{\sigma}^{\mu}\right]\right)_{\beta}
+\]
+
+\end_inset
+
+and newwe can use eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:TrSigYR"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\hat{\rho}_{1\ldots j+1}=\left(\hat{\boldsymbol{y}}_{L}\boldsymbol{M}\right)_{\beta}\left(\frac{1}{2}\sum_{u}\hat{\sigma}^{\mu}R_{R\beta}^{\mu}\right)_{\beta}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\hat{\rho}_{1\ldots j+1}=\frac{1}{2}\sum_{u=1}^{d^{2}}\hat{\sigma}^{\mu}\sum_{\alpha,\beta}\hat{y}_{L\alpha}M_{\alpha\beta}R_{R\beta}^{\mu}
+\]
+
+\end_inset
+
+And similarly
+\begin_inset Formula 
+\[
+\hat{\rho}_{j\ldots L}=\frac{1}{2}\sum_{u=1}^{d^{2}}\hat{\sigma}^{\mu}\sum_{\alpha,\beta}R_{R\alpha}^{\mu}M_{\alpha\beta}\hat{y}_{R\beta}
+\]
+
+\end_inset
+
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+btprint "btPrintCited"
+bibfiles "MPS1"
+options "plain"
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document
