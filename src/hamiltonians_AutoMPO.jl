@@ -98,7 +98,7 @@ function make_transIsing_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
         end
     end
     for dj=1:NNN
-        f=J/dj^4
+        f=J/dj
         for j=1:N-dj
             add!(ampo, f    ,"Sz", j, "Sz", j+dj)
         end

@@ -42,6 +42,7 @@ NNEs=[(1,-1.5066685458330529),(2,-1.4524087749432490),(3,-1.4516941302867301),(4
     #  Make H directly ... should be lower triangular
     #
     Hdirect=make_transIsing_MPO(sites,NNN;model_kwargs...) #defaults to lower reg form
+    #@show Hauto[1] Hdirect[1]
     @test order(Hdirect[1])==3    
     @test inner(psi',Hdirect,psi) ≈ Eexpected atol = eps
     Edirect,psidirect=fast_GS(Hdirect,sites)

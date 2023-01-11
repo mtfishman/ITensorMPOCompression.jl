@@ -7,7 +7,7 @@ using Printf
 #import ITensorMPOCompression.orthogonalize!
 
 verbose=false #verbose at the outer test level
-verbose1=true #verbose inside orth algos
+verbose1=false #verbose inside orth algos
 
 # using Printf
 # Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
@@ -141,7 +141,7 @@ end
 
         HL=copy(H0)
         @test is_regular_form(HL)
-        GL=orthogonalize!(HL;orth=left)
+        GL=orthogonalize!(HL;verbose=verbose1,orth=left,max_sweeps=1)
         DwL=Base.max(get_Dw(HL)...)
         @test is_regular_form(HL)
         @test is_orthogonal(HL,left)
@@ -149,7 +149,7 @@ end
             @test norm(HL[n]*GL[n]-GL[n-1]*H0[n]) ≈ 0.0 atol = 1e-14 
         end
         HR=copy(H0)
-        GR=orthogonalize!(HR;verbose=verbose1,orth=right)
+        GR=orthogonalize!(HR;verbose=verbose1,orth=right,max_sweeps=1)
         DwR=Base.max(get_Dw(HR)...)
         @test is_regular_form(HR)
         @test is_orthogonal(HR,right)
@@ -157,7 +157,7 @@ end
             @test norm(GR[n-1]*HR[n]-H0[n]*GR[n]) ≈ 0.0 atol = 1e-14
         end   
         HR1=copy(HL) 
-        G=orthogonalize!(HR1;verbose=verbose1,orth=right)
+        G=orthogonalize!(HR1;verbose=verbose1,orth=right,max_sweeps=1)
         DwLR=Base.max(get_Dw(HR1)...)
         @test is_regular_form(HR1)
         @test is_orthogonal(HR1,right)

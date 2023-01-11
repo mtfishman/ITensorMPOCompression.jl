@@ -17,9 +17,10 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.1e", f)
 #
 using Random
 Random.Random.seed!(12345);
+ITensors.ITensors.disable_debug_checks() 
 
-verbose=true #verbose at the outer test level
-verbose1=true #verbose inside orth algos
+verbose=false #verbose at the outer test level
+verbose1=false #verbose inside orth algos
 
 function test_truncate(makeH,N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,epsSVD::Float64,
     epsrr::Float64,eps::Float64,qns::Bool)
@@ -85,156 +86,144 @@ end
 # end 
 
 
-# @testset "Compress full MPO no QNs" begin
-#     eps=2e-13
-#     epsSVD=1e-12
-#     epsrr=1e-12
-#     ll=matrix_state(lower,left)
-#     ul=matrix_state(upper,left)
-#     lr=matrix_state(lower,right)
-#     ur=matrix_state(upper,right)
-#     hx=0.5
+@testset "Compress full MPO no QNs" begin
+    eps=2e-13
+    epsSVD=1e-12
+    epsrr=1e-12
+    ll=matrix_state(lower,left)
+    ul=matrix_state(upper,left)
+    lr=matrix_state(lower,right)
+    ur=matrix_state(upper,right)
+    hx=0.5
 
-#     #                                 V=N sites
-#     #                                   V=Num Nearest Neighbours in H
-#     test_truncate(make_transIsing_MPO,5,1,hx,ll,epsSVD,epsrr,eps,false)
-#     test_truncate(make_transIsing_MPO,5,3,hx,ll,epsSVD,epsrr,eps,false)
-#     test_truncate(make_transIsing_MPO,5,3,hx,ul,epsSVD,epsrr,eps,false)
-#     test_truncate(make_transIsing_MPO,5,3,hx,lr,epsSVD,epsrr,eps,false)
-#     test_truncate(make_transIsing_MPO,5,3,hx,ur,epsSVD,epsrr,eps,false)
-#     test_truncate(make_transIsing_MPO,15,10,hx,ll,epsSVD,epsrr,eps,false) 
-#     test_truncate(make_transIsing_MPO,15,10,hx,lr,epsSVD,epsrr,eps,false) 
-#     # Rank revealing QR/RQ  won't fully reduce these two cases
-#     test_truncate(make_transIsing_MPO,14,13,hx,ll,epsSVD,epsrr,eps,false) 
-#     test_truncate(make_transIsing_MPO,14,13,hx,lr,epsSVD,epsrr,eps,false) 
+    #                                 V=N sites
+    #                                   V=Num Nearest Neighbours in H
+    test_truncate(make_transIsing_MPO,5,1,hx,ll,epsSVD,epsrr,eps,false)
+    test_truncate(make_transIsing_MPO,5,3,hx,ll,epsSVD,epsrr,eps,false)
+    test_truncate(make_transIsing_MPO,5,3,hx,ul,epsSVD,epsrr,eps,false)
+    test_truncate(make_transIsing_MPO,5,3,hx,lr,epsSVD,epsrr,eps,false)
+    test_truncate(make_transIsing_MPO,5,3,hx,ur,epsSVD,epsrr,eps,false)
+    test_truncate(make_transIsing_MPO,15,10,hx,ll,epsSVD,epsrr,eps,false) 
+    test_truncate(make_transIsing_MPO,15,10,hx,lr,epsSVD,epsrr,eps,false) 
+    # Rank revealing QR/RQ  won't fully reduce these two cases
+    test_truncate(make_transIsing_MPO,14,13,hx,ll,epsSVD,epsrr,eps,false) 
+    test_truncate(make_transIsing_MPO,14,13,hx,lr,epsSVD,epsrr,eps,false) 
 
-#     # epsSVD=.00001
-#     test_truncate(make_transIsing_MPO,10,7,hx,ll,epsSVD,epsrr,eps,false) 
-#     test_truncate(make_transIsing_MPO,10,7,hx,lr,epsSVD,epsrr,eps,false) 
-#     test_truncate(make_transIsing_MPO,10,7,hx,ur,epsSVD,epsrr,eps,false)
-#     test_truncate(make_transIsing_MPO,10,7,hx,ul,epsSVD,epsrr,eps,false)
+    # epsSVD=.00001
+    test_truncate(make_transIsing_MPO,10,7,hx,ll,epsSVD,epsrr,eps,false) 
+    test_truncate(make_transIsing_MPO,10,7,hx,lr,epsSVD,epsrr,eps,false) 
+    test_truncate(make_transIsing_MPO,10,7,hx,ur,epsSVD,epsrr,eps,false)
+    test_truncate(make_transIsing_MPO,10,7,hx,ul,epsSVD,epsrr,eps,false)
 
-#     #
-#     # Heisenberg from AutoMPO
-#     #
-#     # epsSVD=.00001
-#     test_truncate(make_Heisenberg_AutoMPO,10,7,hx,lr,epsSVD,epsrr,eps,false)
+    #
+    # Heisenberg from AutoMPO
+    #
+    # epsSVD=.00001
+    test_truncate(make_Heisenberg_AutoMPO,10,7,hx,lr,epsSVD,epsrr,eps,false)
 
-# end 
+end 
 
-# @testset "Compress full MPO with QNs" begin
-#     ITensors.ITensors.enable_debug_checks()
-#     eps=2e-13
-#     epsSVD=1e-12
-#     epsrr=1e-12
-#     hx=0.0
-#     ll=matrix_state(lower,left)
-#     ul=matrix_state(upper,left)
-#     lr=matrix_state(lower,right)
-#     ur=matrix_state(upper,right)
+@testset "Compress full MPO with QNs" begin
+    eps=2e-13
+    epsSVD=1e-12
+    epsrr=1e-12
+    hx=0.0
+    ll=matrix_state(lower,left)
+    ul=matrix_state(upper,left)
+    lr=matrix_state(lower,right)
+    ur=matrix_state(upper,right)
 
-#     #                                 V=N sites
-#     #                                   V=Num Nearest Neighbours in H
-#     test_truncate(make_transIsing_MPO,5,1,hx,ll,epsSVD,epsrr,eps,true)
-#     test_truncate(make_transIsing_MPO,5,3,hx,ll,epsSVD,epsrr,eps,true)
-#     test_truncate(make_transIsing_MPO,5,3,hx,ul,epsSVD,epsrr,eps,true)
-#     test_truncate(make_transIsing_MPO,5,3,hx,lr,epsSVD,epsrr,eps,true)
-#     test_truncate(make_transIsing_MPO,5,3,hx,ur,epsSVD,epsrr,eps,true)
-#     test_truncate(make_transIsing_MPO,15,10,hx,ll,epsSVD,epsrr,eps,true) 
-#     test_truncate(make_transIsing_MPO,15,10,hx,lr,epsSVD,epsrr,eps,true) 
-#     # Rank revealing QR/RQ  won't fully reduce these two cases
-#     test_truncate(make_transIsing_MPO,14,13,hx,ll,epsSVD,epsrr,eps,true) 
-#     test_truncate(make_transIsing_MPO,14,13,hx,lr,epsSVD,epsrr,eps,true) 
+    #                                 V=N sites
+    #                                   V=Num Nearest Neighbours in H
+    test_truncate(make_transIsing_MPO,5,1,hx,ll,epsSVD,epsrr,eps,true)
+    test_truncate(make_transIsing_MPO,5,3,hx,ll,epsSVD,epsrr,eps,true)
+    test_truncate(make_transIsing_MPO,5,3,hx,ul,epsSVD,epsrr,eps,true)
+    test_truncate(make_transIsing_MPO,5,3,hx,lr,epsSVD,epsrr,eps,true)
+    test_truncate(make_transIsing_MPO,5,3,hx,ur,epsSVD,epsrr,eps,true)
+    test_truncate(make_transIsing_MPO,15,10,hx,ll,epsSVD,epsrr,eps,true) 
+    test_truncate(make_transIsing_MPO,15,10,hx,lr,epsSVD,epsrr,eps,true) 
+    # Rank revealing QR/RQ  won't fully reduce these two cases
+    test_truncate(make_transIsing_MPO,14,13,hx,ll,epsSVD,epsrr,eps,true) 
+    test_truncate(make_transIsing_MPO,14,13,hx,lr,epsSVD,epsrr,eps,true) 
 
-#     epsSVD=.00001
-#     test_truncate(make_transIsing_MPO,10,7,hx,ll,epsSVD,epsrr,eps,true)  
-#     test_truncate(make_transIsing_MPO,10,7,hx,lr,epsSVD,epsrr,eps,true) 
-#     test_truncate(make_transIsing_MPO,10,7,hx,ur,epsSVD,epsrr,eps,true)
-#     test_truncate(make_transIsing_MPO,10,7,hx,ul,epsSVD,epsrr,eps,true)  
+    epsSVD=.00001
+    test_truncate(make_transIsing_MPO,10,7,hx,ll,epsSVD,epsrr,eps,true)  
+    test_truncate(make_transIsing_MPO,10,7,hx,lr,epsSVD,epsrr,eps,true) 
+    test_truncate(make_transIsing_MPO,10,7,hx,ur,epsSVD,epsrr,eps,true)
+    test_truncate(make_transIsing_MPO,10,7,hx,ul,epsSVD,epsrr,eps,true)  
 
-#     # #
-#     # # Heisenberg from AutoMPO
-#     # #
-#     # epsSVD=.00001
-#     # test_truncate(make_Heisenberg_AutoMPO,10,7,lr,epsSVD,epsrr,eps,false)
+    # #
+    # # Heisenberg from AutoMPO
+    # #
+    # epsSVD=.00001
+    # test_truncate(make_Heisenberg_AutoMPO,10,7,lr,epsSVD,epsrr,eps,false)
 
-# end 
+end 
 
-# @testset "Test ground states" begin
-#     eps=3e-13
-#     epsSVD=1e-12
-#     epsrr=1e-12
-#     N=10
-#     NNN=5
-#     hx=0.5
-#     db=ITensors.using_debug_checks()
+@testset "Test ground states" begin
+    eps=3e-13
+    epsSVD=1e-12
+    epsrr=1e-12
+    N=10
+    NNN=5
+    hx=0.5
 
-#     sites = siteinds("SpinHalf", N)
-#     H=make_transIsing_MPO(sites,NNN;hx=hx)
+    sites = siteinds("SpinHalf", N)
+    H=make_transIsing_MPO(sites,NNN;hx=hx)
 
-#     ITensors.ITensors.disable_debug_checks() 
-#     E0,psi0=fast_GS(H,sites)
-#     if db  ITensors.ITensors.enable_debug_checks() end
-#     truncate!(H;verbose=verbose1,orth=left,cutoff=epsSVD,epsrr=epsrr)
+    E0,psi0=fast_GS(H,sites)
+    truncate!(H;verbose=verbose1,orth=left,cutoff=epsSVD,epsrr=epsrr)
     
-#     ITensors.ITensors.disable_debug_checks() 
-#     E1,psi1=fast_GS(H,sites)
-#     if db  ITensors.ITensors.enable_debug_checks() end
+    E1,psi1=fast_GS(H,sites)
 
-#     overlap=abs(inner(psi0,psi1))
-#     RE=abs((E0-E1)/E0)
-#     if verbose
-#         @printf "Trans. Ising E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
-#     end
-#     @test E0 ≈ E1 atol = eps
-#     @test overlap ≈ 1.0 atol = eps
+    overlap=abs(inner(psi0,psi1))
+    RE=abs((E0-E1)/E0)
+    if verbose
+        @printf "Trans. Ising E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
+    end
+    @test E0 ≈ E1 atol = eps
+    @test overlap ≈ 1.0 atol = eps
 
-#     hx=0.0
-#     H=make_Heisenberg_AutoMPO(sites,NNN;hx=hx)
+    hx=0.0
+    H=make_Heisenberg_AutoMPO(sites,NNN;hx=hx)
+    E0,psi0=fast_GS(H,sites)
 
-#     ITensors.ITensors.disable_debug_checks() 
-#     E0,psi0=fast_GS(H,sites)
-#     if db  ITensors.ITensors.enable_debug_checks() end
+    truncate!(H;verbose=verbose1,orth=right,cutoff=epsSVD,epsrr=epsrr)
 
-#     truncate!(H;verbose=verbose1,orth=right,cutoff=epsSVD,epsrr=epsrr)
+    E1,psi1=fast_GS(H,sites)
+    overlap=abs(inner(psi0,psi1))
+    RE=abs((E0-E1)/E0)
+    if verbose
+        @printf "Heisenberg   E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
+    end
+    @test E0 ≈ E1 atol = eps
+    @test overlap ≈ 1.0 atol = eps
+end 
 
-#     ITensors.ITensors.disable_debug_checks() 
-#     E1,psi1=fast_GS(H,sites)
-#     if db  ITensors.ITensors.enable_debug_checks() end
+@testset "Look at bond singular values for large lattices" begin
+    NNN=5
 
-#     overlap=abs(inner(psi0,psi1))
-#     RE=abs((E0-E1)/E0)
-#     if verbose
-#         @printf "Heisenberg   E0/N=%1.15f E1/N=%1.15f rel. error=%.1e overlap-1.0=%.1e \n" E0/(N-1) E1/(N-1) RE overlap-1.0
-#     end
-#     @test E0 ≈ E1 atol = eps
-#     @test overlap ≈ 1.0 atol = eps
-# end 
-
-# @testset "Look at bond singular values for large lattices" begin
-#     NNN=5
-
-#     if verbose
-#         @printf "                 max(sv)           min(sv)\n"
-#         @printf "  N    Dw  left     mid    right   mid\n"
-#     end
-#     for N in [6,8,10,12,18,20,40,80]
-#         sites = siteinds("SpinHalf", N)
-#         H=make_transIsing_MPO(sites,NNN;hx=0.5)
-#         specs=truncate!(H;verbose=verbose1,cutoff=1e-10)
-#         imid::Int64=N/2-1
-#         max_1  =specs[1   ].eigs[1]
-#         max_mid=specs[imid].eigs[1]
-#         max_N  =specs[N-1 ].eigs[1]
-#         min_mid=specs[imid].eigs[end]
-#         Dw=maximum(get_Dw(H))
-#         if verbose
-#             @printf "%4i %4i %1.5f %1.5f %1.5f %1.5f\n" N Dw  max_1 max_mid max_N min_mid
-#         end
-#         @test (max_1-max_N)<1e-10
-#         @test max_mid<1.0
-#     end
-# end
+    if verbose
+        @printf "                 max(sv)           min(sv)\n"
+        @printf "  N    Dw  left     mid    right   mid\n"
+    end
+    for N in [6,8,10,12,18,20,40,80]
+        sites = siteinds("SpinHalf", N)
+        H=make_transIsing_MPO(sites,NNN;hx=0.5)
+        specs=truncate!(H;verbose=verbose1,cutoff=1e-10)
+        imid::Int64=div(N,2)
+        max_1  =specs[1   ].eigs[1]
+        max_mid=specs[imid].eigs[1]
+        max_N  =specs[N-1 ].eigs[1]
+        min_mid=specs[imid].eigs[end]
+        Dw=maximum(get_Dw(H))
+        if verbose
+            @printf "%4i %4i %1.5f %1.5f %1.5f %1.5f\n" N Dw  max_1 max_mid max_N min_mid
+        end
+        @test (max_1-max_N)<1e-10
+        @test max_mid<1.0
+    end
+end
 
 @testset "Head to Head autoMPO with 2-body Hamiltonian ul=$ul, QNs=$qns" for ul in [lower,upper],qns in [false,true]
     for N in 3:11
@@ -257,135 +246,135 @@ end
     end  
 end 
 
-# @testset "Head to Head autoMPO with 3-body Hamiltonian" begin
-#     if verbose
-#         @printf "+--------------+---------+------------------+------------------+\n"
-#         @printf "|              |autoMPO  |    1 truncation  | 2 truncations    |\n"
-#         @printf "|  N  epseSVD  | dE      |   dE     RE   Dw |   dE     RE   Dw |\n"
-#     end
+@testset "Head to Head autoMPO with 3-body Hamiltonian" begin
+    if verbose
+        @printf "+--------------+---------+--------------------+--------------------+\n"
+        @printf "|              |autoMPO  |    1 truncation    | 2 truncations      |\n"
+        @printf "|  N  epseSVD  | dE      |   dE     RE   Dw   |   dE     RE   Dw   |\n"
+    end
 
-#     for svd_cutoff in [1e-15,1e-12,1e-10]
-#         for N in [6,10,16,20,24]
-#             sites = siteinds("SpinHalf", N;conserve_qns=false)
-#             Hnot=make_3body_AutoMPO(sites;cutoff=-1.0) #No truncation inside autoMPO
-#             H=make_3body_AutoMPO(sites) #Truncated by autoMPO
-#             #@show get_Dw(Hnot)
-#             Dw_auto = get_Dw(H)
-#             psi=randomMPS(sites)
-#             Enot=inner(psi',Hnot,psi)
-#             E=inner(psi',H,psi)
-#             @test E ≈ Enot atol = sqrt(svd_cutoff)
-#             truncate!(Hnot;verbose=verbose1,epsrr=1e-14,cutoff=svd_cutoff)
-#             Dw_1=get_Dw(Hnot)
-#             delta_Dw_1=sum(Dw_auto-Dw_1)
-#             Enott1=inner(psi',Hnot,psi)
-#             @test E ≈ Enott1 atol = sqrt(svd_cutoff)
-#             RE1=abs(E-Enott1)/sqrt(svd_cutoff)
+    for svd_cutoff in [1e-15,1e-12,1e-10]
+        for N in [6,10,16,20,24]
+            sites = siteinds("SpinHalf", N;conserve_qns=false)
+            Hnot=make_3body_AutoMPO(sites;cutoff=-1.0) #No truncation inside autoMPO
+            H=make_3body_AutoMPO(sites) #Truncated by autoMPO
+            #@show get_Dw(Hnot)
+            Dw_auto = get_Dw(H)
+            psi=randomMPS(sites)
+            Enot=inner(psi',Hnot,psi)
+            E=inner(psi',H,psi)
+            @test E ≈ Enot atol = sqrt(svd_cutoff)
+            truncate!(Hnot;verbose=verbose1,epsrr=1e-14,cutoff=svd_cutoff)
+            Dw_1=get_Dw(Hnot)
+            delta_Dw_1=sum(Dw_auto-Dw_1)
+            Enott1=inner(psi',Hnot,psi)
+            @test E ≈ Enott1 atol = sqrt(svd_cutoff)
+            RE1=abs(E-Enott1)/sqrt(svd_cutoff)
 
-#             truncate!(Hnot;verbose=verbose1,cutoff=svd_cutoff)
-#             Dw_2=get_Dw(Hnot)
-#             delta_Dw_2=sum(Dw_auto-Dw_2)
-#             Enott2=inner(psi',Hnot,psi)
-#             @test E ≈ Enott2 atol = sqrt(svd_cutoff)
-#             RE2=abs(E-Enott2)/sqrt(svd_cutoff)
-#             if verbose
-#                 @printf "| %3i %1.1e  | %1.1e | %1.1e %1.3f %2i | %1.1e %1.3f %2i | \n" N svd_cutoff abs(E-Enot) abs(E-Enott1) RE1 delta_Dw_1 abs(E-Enott2) RE2 delta_Dw_2 
-#             end
-#         end
-#     end
-# end
+            truncate!(Hnot;verbose=verbose1,cutoff=svd_cutoff)
+            Dw_2=get_Dw(Hnot)
+            delta_Dw_2=sum(Dw_auto-Dw_2)
+            Enott2=inner(psi',Hnot,psi)
+            @test E ≈ Enott2 atol = sqrt(svd_cutoff)
+            RE2=abs(E-Enott2)/sqrt(svd_cutoff)
+            if verbose
+                @printf "| %3i %1.1e  | %1.1e | %1.1e %1.3f %4i | %1.1e %1.3f %4i | \n" N svd_cutoff abs(E-Enot) abs(E-Enott1) RE1 delta_Dw_1 abs(E-Enott2) RE2 delta_Dw_2 
+            end
+        end
+    end
+end
 
 
-# @testset "Truncate/Compress iMPO Check gauge relations, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
-#     initstate(n) = "↑"
-#     svd_cutoff=1e-15 #Same as autoMPO uses.
-#     if verbose
-#         @printf "               Dw     Dw    Dw   \n"
-#         @printf " Ncell  NNN  uncomp. left  right \n"
-#     end
+@testset "Truncate/Compress iMPO Check gauge relations, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
+    initstate(n) = "↑"
+    svd_cutoff=1e-15 #Same as autoMPO uses.
+    if verbose
+        @printf "               Dw     Dw    Dw   \n"
+        @printf " Ncell  NNN  uncomp. left  right \n"
+    end
 
-#     for N in [1,2], NNN in [2,4] #3 site unit cell fails for qns=true.
-#         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
-#         H0=make_transIsing_iMPO(si,NNN;ul=ul)
-#         @test is_regular_form(H0)
-#         Dw0=Base.max(get_Dw(H0)...)
-#         #
-#         #  Do truncate outputting left ortho Hamiltonian
-#         #
-#         HL=copy(H0)
-#         Ss,ss,HR=truncate!(HL;verbose=verbose1,orth=left,cutoff=svd_cutoff,h_mirror=true)
-#         DwL=Base.max(get_Dw(HL)...)
-#         @test is_regular_form(HL)
-#         @test is_orthogonal(HL,left)
-#         #
-#         #  Now test guage relations using the diagonal singular value matrices
-#         #  as the gauge transforms.
-#         #
-#         for n in 1:N
-#             @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
-#         end    
-#         #
-#         #  Do truncate from H0 outputting right ortho Hamiltonian
-#         #
-#         HR=copy(H0)
-#         Ss,ss,HL=truncate!(HR;verbose=verbose1,orth=right,cutoff=svd_cutoff,h_mirror=true)
-#         DwR=Base.max(get_Dw(HR)...)
-#         @test is_regular_form(HR)
-#         @test is_orthogonal(HR,right)
-#         for n in 1:N
-#             @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
-#         end   
-#         if verbose
-#             @printf " %4i %4i   %4i   %4i  %4i \n" N NNN Dw0 DwL DwR
-#         end
+    for N in [1,2], NNN in [2,4] #3 site unit cell fails for qns=true.
+        si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
+        H0=make_transIsing_iMPO(si,NNN;ul=ul)
+        @test is_regular_form(H0)
+        Dw0=Base.max(get_Dw(H0)...)
+        #
+        #  Do truncate outputting left ortho Hamiltonian
+        #
+        HL=copy(H0)
+        Ss,ss,HR=truncate!(HL;verbose=verbose1,orth=left,cutoff=svd_cutoff,h_mirror=true)
+        DwL=Base.max(get_Dw(HL)...)
+        @test is_regular_form(HL)
+        @test is_orthogonal(HL,left)
+        #
+        #  Now test guage relations using the diagonal singular value matrices
+        #  as the gauge transforms.
+        #
+        for n in 1:N
+            @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
+        end    
+        #
+        #  Do truncate from H0 outputting right ortho Hamiltonian
+        #
+        HR=copy(H0)
+        Ss,ss,HL=truncate!(HR;verbose=verbose1,orth=right,cutoff=svd_cutoff,h_mirror=true)
+        DwR=Base.max(get_Dw(HR)...)
+        @test is_regular_form(HR)
+        @test is_orthogonal(HR,right)
+        for n in 1:N
+            @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
+        end   
+        if verbose
+            @printf " %4i %4i   %4i   %4i  %4i \n" N NNN Dw0 DwL DwR
+        end
 
-#     end
-# end
+    end
+end
 
-# @testset "Orthogonalize/truncate verify gauge invariace of <ψ|H|ψ>, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
-#     initstate(n) = "↑"
-#     for N in [1], NNN in [2,4] #3 site unit cell fails for qns=true.
-#         svd_cutoff=1e-15 #Same as autoMPO uses.
-#         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
-#         ψ = InfMPS(si, initstate)
-#         for n in 1:N
-#             ψ[n] = randomITensor(inds(ψ[n]))
-#         end
-#         H0=make_transIsing_iMPO(si,NNN;ul=ul)
-#         Hsum0=InfiniteSum{MPO}(H0,NNN)
-#         E0=expect(ψ,Hsum0)
+@testset "Orthogonalize/truncate verify gauge invariace of <ψ|H|ψ>, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
+    initstate(n) = "↑"
+    for N in [1], NNN in [2,4] #3 site unit cell fails for qns=true.
+        svd_cutoff=1e-15 #Same as autoMPO uses.
+        si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
+        ψ = InfMPS(si, initstate)
+        for n in 1:N
+            ψ[n] = randomITensor(inds(ψ[n]))
+        end
+        H0=make_transIsing_iMPO(si,NNN;ul=ul)
+        Hsum0=InfiniteSum{MPO}(H0,NNN)
+        E0=expect(ψ,Hsum0)
 
-#         HL=copy(H0)
-#         orthogonalize!(HL;verbose=verbose1,orth=left)
-#         HsumL=InfiniteSum{MPO}(HL,NNN)
-#         EL=expect(ψ,HsumL)
-#         @test EL ≈ E0 atol = 1e-14
+        HL=copy(H0)
+        orthogonalize!(HL;verbose=verbose1,orth=left)
+        HsumL=InfiniteSum{MPO}(HL,NNN)
+        EL=expect(ψ,HsumL)
+        @test EL ≈ E0 atol = 1e-14
 
-#         HR=copy(HL)
-#         orthogonalize!(HR;verbose=verbose1,orth=right)
-#         HsumR=InfiniteSum{MPO}(HR,NNN)
-#         ER=expect(ψ,HsumR)
-#         @test ER ≈ E0 atol = 1e-14
+        HR=copy(HL)
+        orthogonalize!(HR;verbose=verbose1,orth=right)
+        HsumR=InfiniteSum{MPO}(HR,NNN)
+        ER=expect(ψ,HsumR)
+        @test ER ≈ E0 atol = 1e-14
 
-#         HL=copy(H0)
-#         truncate!(HL;verbose=verbose1,orth=left,cutoff=svd_cutoff)
-#         HsumL=InfiniteSum{MPO}(HL,NNN)
-#         EL=expect(ψ,HsumL)
-#         @test EL ≈ E0 atol = 1e-14
+        HL=copy(H0)
+        truncate!(HL;verbose=verbose1,orth=left,cutoff=svd_cutoff)
+        HsumL=InfiniteSum{MPO}(HL,NNN)
+        EL=expect(ψ,HsumL)
+        @test EL ≈ E0 atol = 1e-14
 
-#         HR=copy(H0)
-#         truncate!(HR;verbose=verbose1,orth=right,cutoff=svd_cutoff)
-#         HsumR=InfiniteSum{MPO}(HR,NNN)
-#         ER=expect(ψ,HsumR)
-#         @test ER ≈ E0 atol = 1e-14
-#         truncate!(HR;verbose=verbose1,orth=left,cutoff=svd_cutoff)
-#         HsumR=InfiniteSum{MPO}(HR,NNN)
-#         ER=expect(ψ,HsumR)
-#         @test ER ≈ E0 atol = 1e-14
+        HR=copy(H0)
+        truncate!(HR;verbose=verbose1,orth=right,cutoff=svd_cutoff)
+        HsumR=InfiniteSum{MPO}(HR,NNN)
+        ER=expect(ψ,HsumR)
+        @test ER ≈ E0 atol = 1e-14
+        truncate!(HR;verbose=verbose1,orth=left,cutoff=svd_cutoff)
+        HsumR=InfiniteSum{MPO}(HR,NNN)
+        ER=expect(ψ,HsumR)
+        @test ER ≈ E0 atol = 1e-14
 
-#         #@show get_Dw(H0) get_Dw(HL) get_Dw(HR)
-#     end
-# end
+        #@show get_Dw(H0) get_Dw(HL) get_Dw(HR)
+    end
+end
 
 end #@testset "Truncate/Compress" 
 nothing
