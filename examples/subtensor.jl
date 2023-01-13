@@ -39,16 +39,16 @@ end
     ir=IndexRange(i,2:4)
     jr=IndexRange(j,3:5)
     #
-    #  Extract subvector using two different methods. Ts1 and Ts2 will have different i,j indices
-    #  so we can't subtract them at the ITensor level.
+    #  Extract subvector using two different methods.  Use a mixture of pair in IndexRange.
     #
-    Ts1=T[ir,jr] #production version NDTensors. 
+    Ts1=T[i=>2:4,jr] #production version NDTensors. 
     Ts2=get_subtensor_I(T,ir,jr) #development version does everying at the ITensors level
+    # Ts1 and Ts2 have different i,j index IDs so we can't subtract them at the ITensor level.
     @test  norm(tensor(Ts2)-tensor(Ts1))==0.0 #should be the same index permuations are correct.
     #
     #  Now swap the order of the ranges, should have no effect
     #
-    Ts3=T[jr,ir]
+    Ts3=T[j=>range(jr),i=>range(ir)]
     Ts4=get_subtensor_I(T,jr,ir)
     @test  norm(tensor(Ts3)-tensor(Ts4))==0.0
     @test  norm(tensor(Ts1)-tensor(Ts3))==0.0
@@ -56,7 +56,7 @@ end
     #  Test assignment back into T
     #
     Ts1.*=2.121 #change the data
-    T[ir,jr]=Ts1 #bulk assignment
+    T[i=>range(ir),jr]=Ts1 #bulk assignment using mixed pair in IndexRange arguments.
     is1=inds(Ts1,tags="i")[1] #find the new inds of Ts1 
     js1=inds(Ts1,tags="j")[1] #k should be the same
     for iv in eachindval(is1)
@@ -81,7 +81,7 @@ end
     #  extract sub tensors
     #
     i1,i2=IndexRange(il[1],1:Dw-1),IndexRange(il[2],1:Dw-1)
-    V=W[i1,i2]
+    V=W[il[1]=>1:Dw-1,i2]
     V1=get_subtensor_I(W,i1,i2)
     @test  norm(tensor(dense(V))-tensor(dense(V1)))==0.0
 

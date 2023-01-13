@@ -8,6 +8,7 @@ import ITensors: QNIndex, addqns, rq, AbstractMPS
 import ITensors.BlockSparseTensor,ITensors.DenseTensor,ITensors.tensor
 
 import ITensorInfiniteMPS: AbstractInfiniteMPS
+
 export block_qx #qx related
 export slice,assign!,redim #operator handling
 export getV,setV,growRL,V_offsets #blocking related
@@ -30,7 +31,7 @@ export add_or_replace # Handle inpenetrable kwargs
 export orthogonalize!,truncate,truncate! #the punchline
 export @pprint
 #  subtebsor related
-export IndexRange, indices, ranges, getperm, permute, start
+export IndexRange, indices, range, ranges, getperm, permute, start
 
 
 

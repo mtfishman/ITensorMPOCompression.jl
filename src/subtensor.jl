@@ -1,6 +1,8 @@
 import ITensors: dim, dims, DenseTensor, eachindval, eachval, getindex, setindex!
 import NDTensors: getperm, permute, BlockDim
 import ITensorMPOCompression: redim
+import Base.range
+
 
 struct IndexRange
     index::Index
@@ -9,12 +11,17 @@ struct IndexRange
         return new(i,r)
     end
 end
+irPair{T}=Pair{<:Index{T},UnitRange{Int64}} where {T}
+irPairU{T}=Union{irPair{T},IndexRange} where {T}
+IndexRange(ir::irPair{T}) where {T} =IndexRange(ir.first,ir.second)
+IndexRange(ir::IndexRange)=IndexRange(ir.index,ir.range)
 
 start(ir::IndexRange)=range(ir).start
 range(ir::IndexRange)=ir.range
 range(i::Index)=1:dim(i)
 ranges(irs::Tuple) = ntuple(i -> range(irs[i]), Val(length(irs)))
 indices(irs::Tuple{Vararg{IndexRange}}) = map((ir)->ir.index ,irs)
+indranges(ips::Tuple{Vararg{irPairU}}) = map((ip)->IndexRange(ip) ,ips)
 
 dim(ir::IndexRange)=dim(range(ir))
 dim(r::UnitRange{Int64})=r.stop-r.start+1
@@ -168,7 +175,10 @@ function set_subtensor_ND(T::ITensor, A::ITensor,irs::IndexRange...)
     #@show T
 end
 
+
 getindex(T::ITensor, irs::Vararg{IndexRange,N}) where {N} = get_subtensor_ND(T,irs...)
+getindex(T::ITensor, irs::Vararg{irPairU,N}) where {N} = get_subtensor_ND(T,indranges(irs)...)
 setindex!(T::ITensor, A::ITensor,irs::Vararg{IndexRange,N}) where {N} = set_subtensor_ND(T,A,irs...)
+setindex!(T::ITensor, A::ITensor,irs::Vararg{irPairU,N}) where {N} = set_subtensor_ND(T,A,indranges(irs)...)
 
 
