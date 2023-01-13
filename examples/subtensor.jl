@@ -67,6 +67,13 @@ end
         end
     end
 
+    #
+    #  assign a value
+    #
+    T[i=>range(ir),jr]=3.14
+    Ts1=T[i=>range(ir),jr]
+    @test norm(tensor(Ts1).-3.14)==0
+
 end
 
 @testset "subtensor with block sparse storage" begin

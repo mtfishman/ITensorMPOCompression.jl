@@ -162,17 +162,18 @@ function set_subtensor_ND(T::ITensor, A::ITensor,irs::IndexRange...)
     isortT=ireqT...,inotT... #all indices sorted so user specified ones are first.
     p=getperm(inds(T), ntuple(n -> isortT[n], length(isortT))) # find p such that isort[p]==inds(T)
     rsortT=permute((ranges(irs)...,ranges(inotT)...),p) #sorted ranges for T
-    #@show isortT rsortT
     ireqAp=permute_tagplev(ireqA,ireqT) #match based on tags & plev, NOT IDs since dims are different.
-    # @show ireqAp inotT inds(T)
-    #@show ireqAp p
     isortA=permute((ireqAp...,inotA...),p) #inotA is the same inotT, using inotA here for a less confusing read.
-    #@show inds(A) isortA
-    # @show typeof(isortA)
     Ap=ITensors.permute(A,isortA...;allow_alias=true)
-    #@show inds(Ap) typeof(tensor(T)) typeof(tensor(A)) typeof(tensor(Ap)) A Ap
     tensor(T)[rsortT...]=tensor(Ap)
-    #@show T
+end
+function set_subtensor_ND(T::ITensor, v::Number,irs::IndexRange...)
+    ireqT=indices(irs) #indices caller requested ranges for
+    inotT=Tuple(noncommoninds(inds(T),ireqT)) #indices not requested by caller
+    isortT=ireqT...,inotT... #all indices sorted so user specified ones are first.
+    p=getperm(inds(T), ntuple(n -> isortT[n], length(isortT))) # find p such that isort[p]==inds(T)
+    rsortT=permute((ranges(irs)...,ranges(inotT)...),p) #sorted ranges for T
+    tensor(T)[rsortT...].=v
 end
 
 
@@ -180,5 +181,7 @@ getindex(T::ITensor, irs::Vararg{IndexRange,N}) where {N} = get_subtensor_ND(T,i
 getindex(T::ITensor, irs::Vararg{irPairU,N}) where {N} = get_subtensor_ND(T,indranges(irs)...)
 setindex!(T::ITensor, A::ITensor,irs::Vararg{IndexRange,N}) where {N} = set_subtensor_ND(T,A,irs...)
 setindex!(T::ITensor, A::ITensor,irs::Vararg{irPairU,N}) where {N} = set_subtensor_ND(T,A,indranges(irs)...)
+setindex!(T::ITensor, v::Number,irs::Vararg{IndexRange,N}) where {N} = set_subtensor_ND(T,v,irs...)
+setindex!(T::ITensor, v::Number,irs::Vararg{irPairU,N}) where {N} = set_subtensor_ND(T,v,indranges(irs)...)
 
 
