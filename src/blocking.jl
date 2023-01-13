@@ -137,63 +137,59 @@ end
 #  zeros as possible in M in order for the SVD decomp and compression to have maximum effect.
 #
 function getM(RL::ITensor,ms::matrix_state,eps::Float64)::Tuple{ITensor,ITensor,Index,Bool}
-    # if hasqns(RL)
-    #     @assert nnzblocks(RL)==1 #all qns should be on QL
-    #     # RLt=tensor(RL)
-    #     # RLt1=blockview(RLt,nzblocks(RLt)[1])
-    #     # RL=itensor(RLt1)
-    #     @show dense(RL)
-    #     @assert false
-    # end
-    # @show RL
     ils=filterinds(inds(RL),tags="Link") 
     iqx=findinds(ils,"qx")[1] #think of this as the row index
-    iln=noncommonind(ils,iqx) #think of this as the column index
-    Dwq,Dwn=dim(iqx),dim(iln)
-    Dwm=Base.min(Dwq,Dwn)
-    irm=Index(Dwm,"Link,m") #new common index between Mplus and RL_prime
-    imq=Index(Dwq-2,tags(iqx)) #mini version of iqx
-    imm=Index(Dwm-2,tags(irm)) #mini version of irm
-    M=ITensor(imq,imm)
-    # @show inds(M)
+    il=noncommonind(ils,iqx) #Get the remaining link index
+    Dwq,Dwl=dim(iqx),dim(il)
+    Dwm=Base.min(Dwq,Dwl)
+    im=Index(Dwm,"Link,m") #new common index between Mplus and RL_prime
+    
     shift=0
     if ms.ul==lower
-        shift=Base.max(0,Dwn-Dwq) #for upper rectangular R we want M over at the right
+        shift=Base.max(0,Dwl-Dwq) #for upper rectangular R we want M over at the right
     else #upper
-        shift=Base.max(0,Dwq-Dwn)
+        shift=Base.max(0,Dwq-Dwl)
     end
-    #@show shift,ms.ul,Dwn,Dwq
-    for j1 in 2:Dwq-1
-        for j2 in 2:Dwm-1
-            M[imq=>j1-1,imm=>j2-1]=RL[iqx=>j1,iln=>j2+shift]
-        end
-    end
+   
+    M=RL[iqx=>2:Dwq-1,il=>2:Dwm-1] #pull out the M sub block
+    M=replacetags(M,tags(il),tags(im)) #change Link,l=n to Link,m
     #
     # Now we need RL_prime such that RL=M*RL_prime.
     # RL_prime is just the perimeter of RL with 1's on the diagonal
-    # Well sort of, if RL is rectangular then htings get a little more involved.
+    # Well sort of, if RL is rectangular then things get a little more involved.
     #
-    #@show Dwm dim(iln) Dwn
-    non_zero=false
-    RL_prime=ITensor(0.0,irm,iln)
-    for j1 in 1:dim(irm) #or 1:Dwm
-        RL_prime[irm=>j1,iln=>1       ]=RL[iqx=>j1,iln=>1  ] #first col
-        RL_prime[irm=>j1,iln=>dim(iln)]=RL[iqx=>j1,iln=>dim(iln)] #last cols
-        #check for non-zero elements to right of where I is.
-        #@show Dwm iln
-        for j2 in Dwm:dim(iln)-1
-            #@show j2
-            non_zero = non_zero || abs(RL[iqx=>j1,iln=>j2]) >eps
-        end
-        RL_prime[irm=>j1,iln=>j1+shift]=1.0
+    RL=replacetags(RL,tags(iqx),tags(im))  #change Link,qx to Link,m
+    iqx=replacetags(iqx,tags(iqx),tags(im))
+    RL_prime=ITensor(0.0,im,il)
+    #
+    #  Copy over the perimeter of RL.
+    #  TODO: Tighten this up based on ms.ul, avoid copying zeros.
+    #
+    irm=im=>1:Dwm
+    irl=il=>1:Dwl
+    RL_prime[irm,il=>1:1]=RL[iqx=>1:Dwm,il=>1:1] #first col
+    RL_prime[irm,il=>Dwl:Dwl]=RL[iqx=>1:Dwm,il=>Dwl:Dwl] #last col
+    RL_prime[im=>1:1,irl]=RL[iqx=>1:1 ,irl] #first row
+    RL_prime[im=>Dwm:Dwm,irl]=RL[iqx=>Dwq:Dwq,irl] #last row
+    
+    # Fill in diaginal
+    for j1 in 1:Dwm #or 1:Dwm
+        RL_prime[im=>j1,il=>j1+shift]=1.0
     end
-    for j2 in 1:dim(iln)
-        RL_prime[irm=>1       ,iln=>j2]=RL[iqx=>1  ,iln=>j2]
-        RL_prime[irm=>dim(irm),iln=>j2]=RL[iqx=>Dwq,iln=>j2]
-    end
-    RL_prime[irm=>dim(irm),iln=>dim(iln)]=1.0
+    RL_prime[im=>Dwm,il=>dim(il)]=1.0
 
-    return M,RL_prime,irm,non_zero
+    #
+    #  Test for non-zero block in RLprime.
+    #
+    non_zero=false
+    if Dwm<=dim(il)-1
+        #we should only get here if truncate is not bailing our on rectangular RL.
+        ar=abs.(RL[iqx=>1:Dwm,il=>Dwm:dim(il)-1])
+        @show RL M ar dim(ar)
+        non_zero = dim(ar)>0 && maximum(ar)>0.0
+    end
+
+    return M,RL_prime,im,non_zero
 end
 
 #          |1 0 0|
