@@ -1,18 +1,19 @@
 using Printf
 
 #
+#  create a Vblock IndexRange using the supplied offset.
+#
+range(i::Index,offset::Int64) = i=>1+offset:dim(i)-1+offset
+#
 # functions for getting and setting V blocks required for block respecting QX and SVD
 #
 function getV(W::ITensor,off::V_offsets)::ITensor
     if order(W)==3
         w1=filterinds(inds(W),tags="Link")[1]
-        v1=IndexRange(w1,1+off.o1:dim(w1)-1+off.o1)
-        return W[v1]
+        return W[range(w1,off.o1)]
     elseif order(W)==4
         w1,w2=filterinds(inds(W),tags="Link")
-        v1=IndexRange(w1,1+off.o1:dim(w1)-1+off.o1)
-        v2=IndexRange(w2,1+off.o2:dim(w2)-1+off.o2)
-        return W[v1,v2]
+        return W[range(w1,off.o1),range(w2,off.o2)]
     else 
         @show inds(W)
         @error("getV(W::ITensor,off::V_offsets) Case with order(W)=$(order(W)) not supported.")
@@ -20,44 +21,26 @@ function getV(W::ITensor,off::V_offsets)::ITensor
 end
 # Handles W with only one link index
 function setV1(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
-    wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
-    vils=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
-    @assert length(wils)==1
-    @assert length(vils)==1
-    wil=wils[1]
-    vil=vils[1]
-    iss=filterinds(inds(W),tags="Site")
-    @assert iss==filterinds(inds(V),tags="Site")
+    iwl,=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
+    ivl,=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
+    @assert inds(W,tags="Site")==inds(V,tags="Site")
     off=V_offsets(ms)
     @assert(off.o1==off.o2)
     #
     #  If rank reduction occured in the QR process we may need to resize W.
     #
-    if dim(wil)>dim(vil)+1         #do we need to shrink W?
-        wil1=redim(wil,dim(vil)+1) #re-dimension the wil index.
+    if dim(iwl)>dim(ivl)+1         #do we need to shrink W?
+        iwl1=redim(iwl,dim(ivl)+1) #re-dimension the wil index.
         T=eltype(V)
-        W1=ITensor(T(0.0),wil1,iss)
-        rc= off.o1==1 ? 1 : dim(wil) #preserve row/col 1 or Dw
-        rc1= off.o1==1 ? 1 : dim(wil1)
-        irwl=IndexRange(wil,rc:rc)
-        irw1l=IndexRange(wil1,rc1:rc1)
-        W1[irw1l]=W[irwl]
+        W1=ITensor(T(0.0),iwl1,inds(W,tags="Site"))
+        rc= off.o1==1 ? 1 : dim(iwl) #preserve row/col 1 or Dw
+        rc1= off.o1==1 ? 1 : dim(iwl1)
+        W1[iwl1=>rc1:rc1]=W[iwl=>rc:rc]
         W=W1 #overwrite W with the resized W.
-        wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
-        wil=wil1 #overwrite the old Link index with the resized version.
-
-    # else
-    #     W1=W
-    #     wil1=wil
+        iwl=iwl1 #overwrite the old Link index with the resized version.
     end
-
-
-    V=replacetags(V,tags(vil),tags(wil)) #V needs to have the same Link tags as W for the assignment below to work.
-    #set up range for the V block.
-    irwil=IndexRange(wil,1+off.o1:dim(wil)-1+off.o1)
-    W[irwil]=V #Finally we can do the assingment of the V-block.
-    
-
+    V=replacetags(V,tags(ivl),tags(iwl)) #V needs to have the same Link tags as W for the assignment below to work.
+    W[range(iwl,off.o1)]=V #Finally we can do the assingment of the V-block.
     return W
 end
 
@@ -114,22 +97,12 @@ function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
         W1=ITensor(T(0.0),iw1qx,iwl,iss)
         rc= off.o1==1 ? 1 : dim(iwqx) #preserve row/col 1 or Dw
         rc1= off.o1==1 ? 1 : dim(iw1qx)
-        irwl=IndexRange(iwl,1:dim(iwl))
-        irwqx=IndexRange(iwqx,rc:rc)
-        irw1qx=IndexRange(iw1qx,rc1:rc1)
-        W1[irw1qx,irwl]=W[irwqx,irwl] #copy row/col rc/rc1
-
+        W1[iw1qx=>rc1:rc1,iwl=>1:dim(iwl)]=W[iwqx=>rc:rc,iwl=>1:dim(iwl)] #copy row/col rc/rc1
         W=W1 #overwrite W with the resized W.
-        wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
         iwqx=iw1qx #overwrite the old qx index with the resized version.
     end # if resize
-
-
     V=replacetags(V,tags(ivqx),tags(iwqx)) #V needs to have the same Link tags as W for the assignment below to work.
-    #set up ranges for the V block.
-    irwqx=IndexRange(iwqx,1+off.o1:dim(iwqx)-1+off.o1)
-    irwl=IndexRange(iwl,1+off.o2:dim(iwl)-1+off.o2)
-    W[irwqx,irwl]=V #Finally we can do the assingment of the V-block.
+    W[range(iwqx,off.o1),range(iwl,off.o2)]=V #Finally we can do the assingment of the V-block.
     return W
 end
 

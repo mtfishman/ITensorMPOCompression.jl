@@ -23,6 +23,7 @@ Done: -Verbose mode show all Dws and steps orth-right etc.
 
 Improvements:
 -Organize exports and imports.
+-Clean up index matching in SetV
 -Pare down unit test for shorter run time.
   -Very hard, lots of CPU time on compiling inside ITensors for GS energy tests
   -Using a sysimage for ITensors does not seem to help!
