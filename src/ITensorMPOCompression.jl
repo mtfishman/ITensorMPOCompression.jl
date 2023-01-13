@@ -24,10 +24,15 @@ export fast_GS,make_3body_MPO,make_1body_op,make_2body_op,make_3body_op,add_ops,
 export get_Dw,max_Dw,min,max
 export bond_spectrums
 
+
 export add_or_replace # Handle inpenetrable kwargs
 
 export orthogonalize!,truncate,truncate! #the punchline
 export @pprint
+#  subtebsor related
+export IndexRange, indices, ranges, getperm, permute, start
+
+
 
 default_eps=1e-14 #for characterization routines, floats abs()<default_eps are considered to be zero.
 
@@ -250,6 +255,7 @@ function set_scale!(RL::ITensor,Q::ITensor,off::V_offsets)
     Q.*=scale
 end
 
+include("subtensor.jl")
 include("util.jl")
 include("hamiltonians.jl")
 include("hamiltonians_AutoMPO.jl")

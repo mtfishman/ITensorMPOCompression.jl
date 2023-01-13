@@ -5,124 +5,7 @@ using Printf
 using Test
 using Revise
 
-import ITensors: dim, dims, DenseTensor, eachindval, eachval, getindex, setindex!
-import NDTensors: getperm, permute, BlockDim
-import ITensorMPOCompression: redim
-
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
-
-struct IndexRange
-    index::Index
-    range::UnitRange{Int64}
-    function IndexRange(i::Index,r::UnitRange)
-        return new(i,r)
-    end
-end
-
-start(ir::IndexRange)=range(ir).start
-range(ir::IndexRange)=ir.range
-range(i::Index)=1:dim(i)
-ranges(irs::Tuple) = ntuple(i -> range(irs[i]), Val(length(irs)))
-indices(irs::Tuple{Vararg{IndexRange}}) = map((ir)->ir.index ,irs)
-
-dim(ir::IndexRange)=dim(range(ir))
-dim(r::UnitRange{Int64})=r.stop-r.start+1
-dims(irs::Tuple{Vararg{IndexRange}})=map((ir)->dim(ir),irs)
-redim(irs::Tuple{Vararg{IndexRange}}) = map((ir)->redim(ir.index,dim(ir)) ,irs)
-
-
-eachval(ir::IndexRange) = range(ir)
-eachval(irs::Tuple{Vararg{IndexRange}}) = CartesianIndices(ranges(irs))
-
-eachindval(irs::Tuple{Vararg{IndexRange}}) = (indices(irs).=> Tuple(ns) for ns in eachval(irs))
-
-
-#--------------------------------------------------------------------------------------
-#
-#  NDTensor level code which distinguishes between Dense and BlockSparse storage
-#
-
-function fix_ranges(ds::NTuple{N, Int64},rs::UnitRange{Int64}...) where {N}
-    rs1=Vector{UnitRange{Int64}}(undef,N)
-    for i in eachindex(rs1)
-        if ds[i]==1
-            rs1[i]=1:1 
-        else
-            rs1[i]=rs[i]
-        end 
-    end
-    return Tuple(rs1)
-end
-
-function get_subtensor(T::BlockSparseTensor{ElT,N},new_inds,rs::UnitRange{Int64}...) where {ElT,N}
-    Ds = Vector{DenseTensor{ElT,N}}(undef, nnzblocks(T))
-    for (jj, b) in enumerate(eachnzblock(T))
-        blockT = blockview(T, b)
-        rs1=fix_ranges(dims(blockT),rs...)
-        Ds[jj]=blockT[rs1...] #dense subtensor
-    end
-    #
-    #  JR: All attempts at building the new indices here at the NDTensors level failed.
-    #  The only thing I could make work was to pass the new indices down from the ITensors
-    #  level and use those. 
-    #
-    T_sub = BlockSparseTensor(ElT, undef, nzblocks(T), new_inds)
-    for ib in eachindex(Ds)
-        blockT_sub = nzblocks(T_sub)[ib]
-        blockview(T_sub, blockT_sub) .= Ds[ib]
-    end
-    return T_sub
-end
-
-function set_subtensor(T::BlockSparseTensor{ElT,N},A::BlockSparseTensor{ElT,N},rs::UnitRange{Int64}...) where {ElT,N}
-    @assert nzblocks(T)==nzblocks(A)
-    for (tb,ab) in zip(eachnzblock(T),eachnzblock(A))
-        blockT = blockview(T, tb)
-        blockA = blockview(A, ab)
-        rs1=fix_ranges(dims(blockT),rs...)
-        blockT[rs1...]=blockA #Dense assignment for each block
-    end
-end
-
-
-#------------------------------------------------------------------------------------
-#
-#  ITensor level wrappers which allows us to handle the indices in a different manner
-#  depending on dense/block-sparse
-#
-function get_subtensor_wrapper(T::DenseTensor{ElT,N},new_inds,rs::UnitRange{Int64}...) where {ElT,N}
-    return ITensor(T[rs...],new_inds)
-end
-
-function get_subtensor_wrapper(T::BlockSparseTensor{ElT,N},new_inds,rs::UnitRange{Int64}...) where {ElT,N}
-    return ITensor(get_subtensor(T,new_inds,rs...))
-end
-
-
-function permute(indsT,irs::IndexRange...)
-    ispec=indices(irs) #indices caller specified ranges for
-    inot=Tuple(noncommoninds(indsT,ispec)) #indices not specified by caller
-    isort=ispec...,inot... #all indices sorted so user specified ones are first.
-    isort_sub=redim(irs)...,inot... #all indices for subtensor
-    p=getperm(indsT, ntuple(n -> isort[n], length(isort)))
-    return permute(isort_sub,p),permute((ranges(irs)...,ranges(inot)...),p)
-end
-#
-#  Use NDTensors T[3:4,1:3,1:6...] syntax to extract the subtensor.
-#
-function get_subtensor_ND(T::ITensor,irs::IndexRange...)
-    isub,rsub=permute(inds(T),irs...) #get indices and ranges for the subtensor
-    return get_subtensor_wrapper(tensor(T),isub,rsub...) #virtual dispatch based on Dense or BlockSparse
-end
-
-function set_subtensor_ND(T::ITensor, A::ITensor,irs::IndexRange...)
-    _,rsub=permute(inds(T),irs...) #get ranges for the subtensor
-    tensor(T)[rsub...]=tensor(A)
-end
-
-getindex(T::ITensor, irs::Vararg{IndexRange,N}) where {N} = get_subtensor_ND(T,irs...)
-setindex!(T::ITensor, A::ITensor,irs::Vararg{IndexRange,N}) where {N} = set_subtensor_ND(T,A,irs...)
-
 
 
 #-----------------------------------------------------------------------
@@ -135,7 +18,7 @@ function get_subtensor_I(T::ITensor,irs::IndexRange...)
     iso=is...,iothers...
     p=getperm(inds(T), ntuple(n -> iso[n], length(iso)))
     is_sub=redim(irs) #get re-dimensied Indices
-    iso_subp=permute((is_sub...,iothers...),p)
+    iso_subp=ITensorMPOCompression.permute((is_sub...,iothers...),p)
     
     T_sub=ITensor(eltype(T),iso_subp)
     for (i1,i) in zip(eachindval(is_sub),eachindval(irs))

@@ -7,10 +7,7 @@ Questions:
   -subtensor function
   	-Must handle block sparse
   	-I only need it for link indices
-  	-Use combiners to combine all non-affected indices?
   	-Do the work in NDTensors
-  	-functon interface
-  	subtensor(A::Itensor,i::Pair(Index,range)...)
   -Is there use for a moving orthogonality center in MPOs?
   	
 
@@ -25,6 +22,7 @@ Done: -Verbose mode show all Dws and steps orth-right etc.
 -make truncate, and orthogonalize that work on copies.
 
 Improvements:
+-Organize exports and imports.
 -Pare down unit test for shorter run time.
   -Very hard, lots of CPU time on compiling inside ITensors for GS energy tests
   -Using a sysimage for ITensors does not seem to help!
@@ -40,7 +38,7 @@ No:  -convergence in truncate?
 -Switch from epsrr to rr_cutoff
 -better name for pbc? inf open_chain, boundary_conditions
 -Clean up SetV code.  Use dummy Dw=1 index trick instead of SetV1 code.
-   make a subtensor function first.
+  Done: make a subtensor function first.
 -Enforce expected type for all get(kwargs) calls
 -clean up kwargs=Dict(kwargs) is not needed.
 -If user doesn;t set epsrr, set to 1e-15
