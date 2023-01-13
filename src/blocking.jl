@@ -111,31 +111,18 @@ end
 #   0   at bottom, Dw1+1    0   at right, Dw2+1
 #   1   at top, 1           1   at left, 1
 #
-function growRL(RL::ITensor,iWlink::Index,off::V_offsets)::Tuple{ITensor,Index}
+function growRL(RL::ITensor,iwl::Index,off::V_offsets)::Tuple{ITensor,Index}
     @assert order(RL)==2
-    iLlink=filterinds(inds(RL),tags=tags(iWlink))[1] #find the link index of RL
-    iLqx=copy(noncommonind(inds(RL),iLlink)) #find the qx link of RL
-    Dwl=dim(iLlink)
-    Dwq=dim(iLqx)
-    @assert dim(iWlink)==Dwl+1
-    iq=redim(iLqx,Dwq+1) 
+    irl,=filterinds(inds(RL),tags=tags(iwl)) #find the link index of RL
+    irqx=noncommonind(inds(RL),irl) #find the qx link of RL
+    @assert dim(iwl)==dim(irl)+1
+    ipqx=redim(irqx,dim(irqx)+1) 
     T=eltype(RL)
-    RLplus=ITensor(T(0.0),iq,iWlink)
-    @assert norm(RLplus)==0.0
-    for jq in eachindval(iLqx)
-        for jl in eachindval(iLlink)
-            ip=(IndexVal(iq,jq.second+off.o1),IndexVal(iWlink,jl.second+off.o2))
-            RLplus[ip...]=RL[jq,jl]
-        end
-    end
-    #add diagonal 1.0
-    if !(off.o1==1 && off.o2==1)
-        RLplus[iq=>Dwq+1,iWlink=>Dwl+1]=1.0
-    end
-    if !(off.o1==0 && off.o2==0)
-        RLplus[iq=>1,iWlink=>1]=1.0
-    end
-    return RLplus,dag(iq)
+    RLplus=ITensor(T(0.0),ipqx,iwl)
+    RLplus[ipqx=>1,iwl=>1]=1.0 #add 1.0's in the corners
+    RLplus[ipqx=>dim(ipqx),iwl=>dim(iwl)]=1.0
+    RLplus[range(ipqx,off.o1),range(iwl,off.o2)]=RL #plop in RL in approtriate sub block.
+    return RLplus,dag(ipqx)
 end
 
 #

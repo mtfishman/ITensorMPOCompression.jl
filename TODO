@@ -22,6 +22,8 @@ Done: -Verbose mode show all Dws and steps orth-right etc.
 -make truncate, and orthogonalize that work on copies.
 
 Improvements:
+-Subtensor support a mix of i=>1:5 pairs and j=>3 single IndexVal pairs.
+  just convert j=>3 to j=>3:3 under the hood.
 -Organize exports and imports.
 -Clean up index matching in SetV
 -Pare down unit test for shorter run time.
