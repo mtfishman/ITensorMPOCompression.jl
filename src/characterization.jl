@@ -213,26 +213,13 @@ function detect_upper_lower(r::Index,W::ITensor,c::Index,eps::Float64=default_ep
     elseif dim(c)==1
         return true,true,'C'
     end
-    ord=order(W)
     zero_upper=true
     zero_lower=true
     dr=Base.max(0,dim(c)-dim(r))
     dc=Base.max(0,dim(r)-dim(c))
-    for ir in eachindval(r)
-        for ic in eachindval(c)
-            if ord==4
-                oprc=norm(slice(W,ir,ic))
-            else #ord=2
-                oprc=abs(W[ir,ic])
-            end
-            is_zero=oprc<eps
-            if (ic.second>ir.second+dr) #above diagonal
-                zero_upper = zero_upper && is_zero
-            end
-            if (ic.second+dc<ir.second) #below diagonal
-                zero_lower = zero_lower && is_zero
-            end
-        end
+    for ir in eachval(r)
+        zero_upper = zero_upper && norm(W[r=>ir:ir,c=>ir+dr+1:dim(c)])<eps
+        zero_lower = zero_lower && norm(W[r=>ir:ir,c=>1:ir-1-dc])<eps
     end
     return zero_upper,zero_lower,' '
 end

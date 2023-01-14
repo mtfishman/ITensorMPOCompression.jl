@@ -31,24 +31,32 @@ verbose1=false #verbose inside orth algos
     Sz=op(is,"Sz")
     assign!(W,Sz,r=>1,c=>2) #stuff any op on the top row
     @test !is_lower_regular_form(W,eps)
+    @test !is_upper_lower(H   ,lower,eps)
+    @test !is_upper_lower(H   ,upper,eps)
     W=H[3]
     r,c=parse_links(W)
     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
     Sz=op(is,"Sz")
     assign!(W,Sz,r=>2,c=>dim(c)) #stuff any op on the right column
     @test !is_lower_regular_form(W,eps)
+    @test !is_upper_lower(H   ,lower,eps)
+    @test !is_upper_lower(H   ,upper,eps)
     W=H[4]
     r,c=parse_links(W)
     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
     Sz=op(is,"Sz")
     assign!(W,Sz,r=>2,c=>2) #stuff any op on the diag
     @test is_lower_regular_form(W,eps) #this one should still be regular
+    @test  is_upper_lower(W   ,lower,eps)
+    @test !is_upper_lower(W   ,upper,eps)
     W=H[5]
     r,c=parse_links(W)
     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
     Id=op(is,"Id")
     assign!(W,Id,r=>2,c=>2) #stuff unit op on the diag
     @test is_lower_regular_form(W,eps) #this one should still be regular, but should see a warning
+    @test  is_upper_lower(W   ,lower,eps)
+    @test !is_upper_lower(W   ,upper,eps)
     # at this point the whole H should fail since we stuffed ops in the all wrong places.
     @test !is_lower_regular_form(H,eps)
 
