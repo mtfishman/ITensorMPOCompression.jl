@@ -7,7 +7,7 @@ sites = siteinds("S=1/2",N);
 H=make_transIsing_MPO(sites,NNN);
 is_lower_regular_form(H)==true
 pprint(H[2])
-orthogonalize!(H;epsrr=1e-14)
+orthogonalize!(H;rr_cutoff=1e-14)
 pprint(H[2])
 get_Dw(H)
 is_lower_regular_form(H)==true

@@ -24,7 +24,7 @@ verbose=false #verbose at the outer test level
 verbose1=false #verbose inside orth algos
 
 function test_truncate(makeH,N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,epsSVD::Float64,
-    epsrr::Float64,eps::Float64,qns::Bool)
+    rr_cutoff::Float64,eps::Float64,qns::Bool)
     mlr=mirror(ms.lr)
 
     sites = siteinds("SpinHalf", N;conserve_qns=qns)
@@ -36,7 +36,7 @@ function test_truncate(makeH,N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,ep
     H=makeH(sites,NNN;hx=hx,ul=ms.ul)
     E0l=inner(psi',H,psi)/(N-1)
     @test is_regular_form(H,ms.ul,eps)
-    orthogonalize!(H;verbose=verbose1,orth=ms.lr,epsrr=epsrr)
+    orthogonalize!(H;verbose=verbose1,orth=ms.lr,rr_cutoff=rr_cutoff)
     
     E1l=inner(psi',H,psi)/(N-1)
     RE=abs((E0l-E1l)/E0l)
@@ -47,7 +47,7 @@ function test_truncate(makeH,N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,ep
 
     truncate!(H;verbose=verbose1,orth=mlr,cutoff=epsSVD)
     truncate!(H;verbose=verbose1,orth=ms.lr,cutoff=epsSVD)
-    if epsrr<0.0 #no rank reduction so do two more sweeps to make sure
+    if rr_cutoff<0.0 #no rank reduction so do two more sweeps to make sure
         truncate!(H;verbose=verbose1,orth=mlr,cutoff=epsSVD)
         truncate!(H;verbose=verbose1,orth=ms.lr,cutoff=epsSVD)
     end
@@ -69,7 +69,7 @@ end
 # @testset "Compress insideous cases with no rank reduction, no QNs" begin
 #     eps=2e-13
 #     epsSVD=1e-12
-#     epsrr=-1.0
+#     rr_cutoff=-1.0
 #     ll=matrix_state(lower,left)
 #     ul=matrix_state(upper,left)
 #     lr=matrix_state(lower,right)
@@ -79,10 +79,10 @@ end
 #     #                                 V=N sites
 #     #                                   V=Num Nearest Neighbours in H
 #     for N in 4:15
-#         test_truncate(make_transIsing_MPO,N,N,hx,ll,epsSVD,epsrr,eps,false)
-#         test_truncate(make_transIsing_MPO,N,N,hx,ul,epsSVD,epsrr,eps,false)
-#         test_truncate(make_transIsing_MPO,N,N,hx,lr,epsSVD,epsrr,eps,false)
-#         test_truncate(make_transIsing_MPO,N,N,hx,ur,epsSVD,epsrr,eps,false)
+#         test_truncate(make_transIsing_MPO,N,N,hx,ll,epsSVD,rr_cutoff,eps,false)
+#         test_truncate(make_transIsing_MPO,N,N,hx,ul,epsSVD,rr_cutoff,eps,false)
+#         test_truncate(make_transIsing_MPO,N,N,hx,lr,epsSVD,rr_cutoff,eps,false)
+#         test_truncate(make_transIsing_MPO,N,N,hx,ur,epsSVD,rr_cutoff,eps,false)
 #     end
 # end 
 
@@ -90,7 +90,7 @@ end
 @testset "Compress full MPO no QNs" begin
     eps=2e-13
     epsSVD=1e-12
-    epsrr=1e-12
+    rr_cutoff=1e-12
     ll=matrix_state(lower,left)
     ul=matrix_state(upper,left)
     lr=matrix_state(lower,right)
@@ -99,35 +99,35 @@ end
 
     #                                 V=N sites
     #                                   V=Num Nearest Neighbours in H
-    test_truncate(make_transIsing_MPO,5,1,hx,ll,epsSVD,epsrr,eps,false)
-    test_truncate(make_transIsing_MPO,5,3,hx,ll,epsSVD,epsrr,eps,false)
-    test_truncate(make_transIsing_MPO,5,3,hx,ul,epsSVD,epsrr,eps,false)
-    test_truncate(make_transIsing_MPO,5,3,hx,lr,epsSVD,epsrr,eps,false)
-    test_truncate(make_transIsing_MPO,5,3,hx,ur,epsSVD,epsrr,eps,false)
-    test_truncate(make_transIsing_MPO,15,10,hx,ll,epsSVD,epsrr,eps,false) 
-    test_truncate(make_transIsing_MPO,15,10,hx,lr,epsSVD,epsrr,eps,false) 
+    test_truncate(make_transIsing_MPO,5,1,hx,ll,epsSVD,rr_cutoff,eps,false)
+    test_truncate(make_transIsing_MPO,5,3,hx,ll,epsSVD,rr_cutoff,eps,false)
+    test_truncate(make_transIsing_MPO,5,3,hx,ul,epsSVD,rr_cutoff,eps,false)
+    test_truncate(make_transIsing_MPO,5,3,hx,lr,epsSVD,rr_cutoff,eps,false)
+    test_truncate(make_transIsing_MPO,5,3,hx,ur,epsSVD,rr_cutoff,eps,false)
+    test_truncate(make_transIsing_MPO,15,10,hx,ll,epsSVD,rr_cutoff,eps,false) 
+    test_truncate(make_transIsing_MPO,15,10,hx,lr,epsSVD,rr_cutoff,eps,false) 
     # Rank revealing QR/RQ  won't fully reduce these two cases
-    test_truncate(make_transIsing_MPO,14,13,hx,ll,epsSVD,epsrr,eps,false) 
-    test_truncate(make_transIsing_MPO,14,13,hx,lr,epsSVD,epsrr,eps,false) 
+    test_truncate(make_transIsing_MPO,14,13,hx,ll,epsSVD,rr_cutoff,eps,false) 
+    test_truncate(make_transIsing_MPO,14,13,hx,lr,epsSVD,rr_cutoff,eps,false) 
 
     # epsSVD=.00001
-    test_truncate(make_transIsing_MPO,10,7,hx,ll,epsSVD,epsrr,eps,false) 
-    test_truncate(make_transIsing_MPO,10,7,hx,lr,epsSVD,epsrr,eps,false) 
-    test_truncate(make_transIsing_MPO,10,7,hx,ur,epsSVD,epsrr,eps,false)
-    test_truncate(make_transIsing_MPO,10,7,hx,ul,epsSVD,epsrr,eps,false)
+    test_truncate(make_transIsing_MPO,10,7,hx,ll,epsSVD,rr_cutoff,eps,false) 
+    test_truncate(make_transIsing_MPO,10,7,hx,lr,epsSVD,rr_cutoff,eps,false) 
+    test_truncate(make_transIsing_MPO,10,7,hx,ur,epsSVD,rr_cutoff,eps,false)
+    test_truncate(make_transIsing_MPO,10,7,hx,ul,epsSVD,rr_cutoff,eps,false)
 
     #
     # Heisenberg from AutoMPO
     #
     # epsSVD=.00001
-    test_truncate(make_Heisenberg_AutoMPO,10,7,hx,lr,epsSVD,epsrr,eps,false)
+    test_truncate(make_Heisenberg_AutoMPO,10,7,hx,lr,epsSVD,rr_cutoff,eps,false)
 
 end 
 
 @testset "Compress full MPO with QNs" begin
     eps=2e-13
     epsSVD=1e-12
-    epsrr=1e-12
+    rr_cutoff=1e-12
     hx=0.0
     ll=matrix_state(lower,left)
     ul=matrix_state(upper,left)
@@ -136,35 +136,35 @@ end
 
     #                                 V=N sites
     #                                   V=Num Nearest Neighbours in H
-    test_truncate(make_transIsing_MPO,5,1,hx,ll,epsSVD,epsrr,eps,true)
-    test_truncate(make_transIsing_MPO,5,3,hx,ll,epsSVD,epsrr,eps,true)
-    test_truncate(make_transIsing_MPO,5,3,hx,ul,epsSVD,epsrr,eps,true)
-    test_truncate(make_transIsing_MPO,5,3,hx,lr,epsSVD,epsrr,eps,true)
-    test_truncate(make_transIsing_MPO,5,3,hx,ur,epsSVD,epsrr,eps,true)
-    test_truncate(make_transIsing_MPO,15,10,hx,ll,epsSVD,epsrr,eps,true) 
-    test_truncate(make_transIsing_MPO,15,10,hx,lr,epsSVD,epsrr,eps,true) 
+    test_truncate(make_transIsing_MPO,5,1,hx,ll,epsSVD,rr_cutoff,eps,true)
+    test_truncate(make_transIsing_MPO,5,3,hx,ll,epsSVD,rr_cutoff,eps,true)
+    test_truncate(make_transIsing_MPO,5,3,hx,ul,epsSVD,rr_cutoff,eps,true)
+    test_truncate(make_transIsing_MPO,5,3,hx,lr,epsSVD,rr_cutoff,eps,true)
+    test_truncate(make_transIsing_MPO,5,3,hx,ur,epsSVD,rr_cutoff,eps,true)
+    test_truncate(make_transIsing_MPO,15,10,hx,ll,epsSVD,rr_cutoff,eps,true) 
+    test_truncate(make_transIsing_MPO,15,10,hx,lr,epsSVD,rr_cutoff,eps,true) 
     # Rank revealing QR/RQ  won't fully reduce these two cases
-    test_truncate(make_transIsing_MPO,14,13,hx,ll,epsSVD,epsrr,eps,true) 
-    test_truncate(make_transIsing_MPO,14,13,hx,lr,epsSVD,epsrr,eps,true) 
+    test_truncate(make_transIsing_MPO,14,13,hx,ll,epsSVD,rr_cutoff,eps,true) 
+    test_truncate(make_transIsing_MPO,14,13,hx,lr,epsSVD,rr_cutoff,eps,true) 
 
     epsSVD=.00001
-    test_truncate(make_transIsing_MPO,10,7,hx,ll,epsSVD,epsrr,eps,true)  
-    test_truncate(make_transIsing_MPO,10,7,hx,lr,epsSVD,epsrr,eps,true) 
-    test_truncate(make_transIsing_MPO,10,7,hx,ur,epsSVD,epsrr,eps,true)
-    test_truncate(make_transIsing_MPO,10,7,hx,ul,epsSVD,epsrr,eps,true)  
+    test_truncate(make_transIsing_MPO,10,7,hx,ll,epsSVD,rr_cutoff,eps,true)  
+    test_truncate(make_transIsing_MPO,10,7,hx,lr,epsSVD,rr_cutoff,eps,true) 
+    test_truncate(make_transIsing_MPO,10,7,hx,ur,epsSVD,rr_cutoff,eps,true)
+    test_truncate(make_transIsing_MPO,10,7,hx,ul,epsSVD,rr_cutoff,eps,true)  
 
     # #
     # # Heisenberg from AutoMPO
     # #
     # epsSVD=.00001
-    # test_truncate(make_Heisenberg_AutoMPO,10,7,lr,epsSVD,epsrr,eps,false)
+    # test_truncate(make_Heisenberg_AutoMPO,10,7,lr,epsSVD,rr_cutoff,eps,false)
 
 end 
 
 @testset "Test ground states" begin
     eps=3e-13
     epsSVD=1e-12
-    epsrr=1e-12
+    rr_cutoff=1e-12
     N=10
     NNN=5
     hx=0.5
@@ -173,7 +173,7 @@ end
     H=make_transIsing_MPO(sites,NNN;hx=hx)
 
     E0,psi0=fast_GS(H,sites)
-    truncate!(H;verbose=verbose1,orth=left,cutoff=epsSVD,epsrr=epsrr)
+    truncate!(H;verbose=verbose1,orth=left,cutoff=epsSVD,rr_cutoff=rr_cutoff)
     
     E1,psi1=fast_GS(H,sites)
 
@@ -189,7 +189,7 @@ end
     H=make_Heisenberg_AutoMPO(sites,NNN;hx=hx)
     E0,psi0=fast_GS(H,sites)
 
-    truncate!(H;verbose=verbose1,orth=right,cutoff=epsSVD,epsrr=epsrr)
+    truncate!(H;verbose=verbose1,orth=right,cutoff=epsSVD,rr_cutoff=rr_cutoff)
 
     E1,psi1=fast_GS(H,sites)
     overlap=abs(inner(psi0,psi1))
@@ -235,7 +235,7 @@ end
         Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul) 
         Dw_auto=get_Dw(Hauto)
         Hr=make_transIsing_MPO(sites,NNN;ul=ul) 
-        truncate!(Hr;verbose=verbose1,epsrr=rr_cutoff,cutoff=svd_cutoff) #sweep left to right
+        truncate!(Hr;verbose=verbose1,rr_cutoff=rr_cutoff,cutoff=svd_cutoff) #sweep left to right
         delta_Dw=sum(get_Dw(Hr)-Dw_auto)
         #@test delta_Dw<=0
         if verbose && delta_Dw<0 
@@ -266,7 +266,7 @@ end
 #             Enot=inner(psi',Hnot,psi)
 #             E=inner(psi',H,psi)
 #             @test E ≈ Enot atol = sqrt(svd_cutoff)
-#             truncate!(Hnot;verbose=verbose1,epsrr=1e-14,cutoff=svd_cutoff)
+#             truncate!(Hnot;verbose=verbose1,rr_cutoff=1e-14,cutoff=svd_cutoff)
 #             Dw_1=get_Dw(Hnot)
 #             delta_Dw_1=sum(Dw_auto-Dw_1)
 #             Enott1=inner(psi',Hnot,psi)

@@ -1,7 +1,7 @@
 Questions:
   -Should we be using findinds or just inds?
   -Delete old branches, after merge?
-  -epsrr -> rr_cutoff or just cutoff like for SVD?
+  -rr_cutoff -> rr_cutoff or just cutoff like for SVD?
   -Future of Model("model_name") framework.
   -verbose mode? (only see it in ctmrg)
   -subtensor function
@@ -27,9 +27,13 @@ Bugs:
 - Check for unit ops along the diagonal: For rectangluar matrices we seem to be looking a the  wrong diagonal.
 
 Improvements:
--Save regular_form upper/lower/unknown in the MPO struct so we never have to call
+-assign!() is still wildley inefficient.  We need a way to do
+  W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
+  at the NDTensors level.
+-Save regular_form upper/lower/irreg/unknown in the MPO struct so we never have to call
  detect_regular_form.
-Wont Do: -Subtensor support a mix of i=>1:5 pairs and j=>3 single IndexVal pairs.
+   This requires a mod to ITensors MPO struct
+On hold: -Subtensor support a mix of i=>1:5 pairs and j=>3 single IndexVal pairs.
   just convert j=>3 to j=>3:3 under the hood.
   May conflict with ITensors.get_index() so maybe not worth it.
 -Organize exports and imports.
@@ -47,14 +51,14 @@ Done: -Add some sort of Results section at the end ot tech docs.
 Done:  -rules for smart_sweep
 Done:  -orthog inside truncate
 No:  -convergence in truncate?
-  -epsrr=0.0 not allowed in truncate?
--Switch from epsrr to rr_cutoff
+  -rr_cutoff=0.0 not allowed in truncate?
+-Switch from rr_cutoff to rr_cutoff
 -better name for pbc? inf open_chain, boundary_conditions
 -Clean up SetV code.  Use dummy Dw=1 index trick instead of SetV1 code.
   Done: make a subtensor function first.
 -Enforce expected type for all get(kwargs) calls
 -clean up kwargs=Dict(kwargs) is not needed.
--If user doesn;t set epsrr, set to 1e-15
+-If user doesn;t set rr_cutoff, set to 1e-15
 -Refactor out all the link fixing and PBC code for MPO making functions.
 -iMPO truncate fails with a trivial 2x2 hamiltonian.
 -qx_iterate! clean up GS init loop
@@ -144,7 +148,7 @@ Fixed: -for lower,right SetV seems to require the last column(above I)  should b
   but why?       It should be zeros.  Index ordering?
 Done: -Make rank reaviling an option for block_qx
 Done: -For obc MPO try compressing 2..N-1, what do we end up with for W[N].  Then try N..2, what does W[1] look like??  Can we get around PBC issue this way?
-Done: -Test canonical with epsrr=0.0 and compare.  need an max_Dw(H::MPO) function.  
+Done: -Test canonical with rr_cutoff=0.0 and compare.  need an max_Dw(H::MPO) function.  
 -Use  # Exact energy for transverse field Ising model J=-1, hx=-1
     # with open boundary conditions at criticality
     energy_exact = 1.0 - 1.0 / sin(π / (4 * N + 2))

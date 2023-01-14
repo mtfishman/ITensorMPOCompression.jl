@@ -46,8 +46,8 @@ Bring an MPO into left or right canonical form using block respecting QR decompo
 
 # Keywords
 - `orth::orth_type = left` : choose `left` or `right` canonical form
-- `epsrr::Float64 = -1.0` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
-   All rows with max(abs(R[r,:]))<epsrr are considered zero and removed. epsrr=`1.0 indicates no rank reduction.
+- `rr_cutoff::Float64 = -1.0` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
+   All rows with max(abs(R[r,:]))<rr_cutoff are considered zero and removed. rr_cutoff=`1.0 indicates no rank reduction.
 
 # Examples
 ```julia
@@ -82,7 +82,7 @@ S 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 #  Now we can orthogonalize or bring it into canonical form.
 #  Defaults are left orthogonal with rank reduction.
 #
-julia> orthogonalize!(H;epsrr=1e-14)
+julia> orthogonalize!(H;rr_cutoff=1e-14)
 #
 #  Wahoo .. rank reduction knocked the size of H way down, and we haven't
 #  tried compressing yet!
@@ -124,20 +124,20 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
     #
     verbose::Bool=get(kwargs, :verbose, false)
     request_lr::orth_type=get(kwargs,:orth,left)
-    epsrr::Float64=get(kwargs,:epsrr,1e-15)
+    rr_cutoff::Float64=get(kwargs,:rr_cutoff,1e-15)
     max_sweeps::Int64=get(kwargs,:max_sweeps,5)
     spec_lr::Bool=haskey(kwargs,:orth) #Did the user explictely request an orth. direction?
     spec_ms::Bool=haskey(kwargs,:max_sweeps) #Did the user explictely request max_sweeps?
-    rr_enabled::Bool=epsrr>=0.0 #
+    rr_enabled::Bool=rr_cutoff>=0.0 #
     sumDw::Int64=sum(get_Dw(H))
     if verbose 
-        println("---------Ortho. Sweep rr_cutoff=$epsrr----------------")
+        println("---------Ortho. Sweep rr_cutoff=$rr_cutoff----------------")
     end
 
-    if epsrr==0.0
-        @warn "orthogonalize!(::MPO) esprr=0.0 is not very effective for rank reduction. Set epsrr<0.0 to disable rank reduction, os set epsrr>=1e-15 for effective rank reduction."
+    if rr_cutoff==0.0
+        @warn "orthogonalize!(::MPO) esprr=0.0 is not very effective for rank reduction. Set rr_cutoff<0.0 to disable rank reduction, os set rr_cutoff>=1e-15 for effective rank reduction."
     end
-    #@show rr_enabled epsrr
+    #@show rr_enabled rr_cutoff
     if max_sweeps>1 && rr_enabled
         lr=ul==lower ? left : right #optimal start direction depends on ul for some reason.
         nsweeps=0
@@ -191,7 +191,7 @@ end
 function qx_step!(W::ITensor,n::Int64,ul::reg_form,eps::Float64;kwargs...)
     lr::orth_type=get(kwargs, :orth, left)
     forward,reverese=parse_links(W,lr)
-    Q,RL,iq=block_qx(W,forward,ul;epsrr=1e-12,kwargs...) # r-Q-qx qx-RL-c
+    Q,RL,iq=block_qx(W,forward,ul;rr_cutoff=1e-12,kwargs...) # r-Q-qx qx-RL-c
     #
     #  How far are we from RL==Id ?
     #
@@ -298,7 +298,7 @@ If you intend to also call `truncate!` then do not bother calling `orthogonalize
 
 # Keywords
 - `orth::orth_type = left` : choose `left` or `right` canonical form
-- `epsrr::Float64 = -1.0` : cutoff for rank revealing QX which removes zero pivot rows and columns. All rows with max(abs(R[r,:]))<epsrr are considered zero and removed. epsrr=-11.0 indicate no rank reduction.
+- `rr_cutoff::Float64 = -1.0` : cutoff for rank revealing QX which removes zero pivot rows and columns. All rows with max(abs(R[r,:]))<rr_cutoff are considered zero and removed. rr_cutoff=-11.0 indicate no rank reduction.
 
 # Returns
 - Vector{ITensor} with the gauge transforms between the input and output iMPOs
@@ -318,11 +318,11 @@ julia> H=make_transIsing_MPO(sites,NNN);
 julia> get_Dw(H)
 1-element Vector{Int64}:
  17
-julia> orthogonalize!(H;orth=right,epsrr=1e-15);
+julia> orthogonalize!(H;orth=right,rr_cutoff=1e-15);
 julia> get_Dw(H)
 1-element Vector{Int64}:
  14
-julia> orthogonalize!(H;orth=left,epsrr=1e-15);
+julia> orthogonalize!(H;orth=left,rr_cutoff=1e-15);
 julia> get_Dw(H)
  1-element Vector{Int64}:
   13

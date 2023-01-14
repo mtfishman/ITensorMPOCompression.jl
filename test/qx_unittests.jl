@@ -47,14 +47,14 @@ end
 #     #
 #     #  RQ decomp
 #     #
-#     R,Q,iq=rq(W,r;positive=true,epsrr=1e-10)
+#     R,Q,iq=rq(W,r;positive=true,rr_cutoff=1e-10)
 #     @test dim(c)-dim(iq) == 5 #make sure rank reduction worked.
 #     @test Q * prime(Q,iq) ≈ δ(Float64, iq, iq') atol = eps
 #     @test W ≈ R*Q atol = eps
 #     #
 #     #  QL decomp
 #     #
-#     Q,L,iq=ql(W,Rind;positive=true,epsrr=1e-10)
+#     Q,L,iq=ql(W,Rind;positive=true,rr_cutoff=1e-10)
 #     @test dim(c)-dim(iq) == 5 #make sure rank reduction worked.
 #     @test Q * prime(Q,iq) ≈ δ(Float64, iq, iq') atol = eps
 #     @test W ≈ L*Q atol = eps
@@ -74,14 +74,14 @@ end
 #     #
 #     #  QR decomp
 #     #
-#     Q,R,iq=qr(W,Rind;positive=true,epsrr=1e-10)
+#     Q,R,iq=qr(W,Rind;positive=true,rr_cutoff=1e-10)
 #     @test dim(c)-dim(iq) == 5 #make sure rank reduction worked.
 #     @test Q * prime(Q,iq) ≈ δ(Float64, iq, iq') atol = eps
 #     @test W ≈ R*Q atol = eps   
 #     #
 #     #  LQ decomp
 #     #
-#     L,Q,iq=lq(W,r;positive=true,epsrr=1e-10)
+#     L,Q,iq=lq(W,r;positive=true,rr_cutoff=1e-10)
 #     @test dim(c)-dim(iq) == 5 #make sure rank reduction worked.
 #     @test Q * prime(Q,iq) ≈ δ(Float64, iq, iq') atol = eps
 #     @test W ≈ L*Q atol = eps

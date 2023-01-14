@@ -7,9 +7,9 @@ initstate(n) = "↑"
 sites = infsiteinds("S=1/2", 1;initstate, conserve_szparity=false)
 H=make_transIsing_iMPO(sites,5);
 H0=copy(H);
-orthogonalize!(H;orth=right,epsrr=1e-15);
+orthogonalize!(H;orth=right,rr_cutoff=1e-15);
 Dw1=get_Dw(H)[1];
-Gs=orthogonalize!(H;orth=left,epsrr=1e-15);
+Gs=orthogonalize!(H;orth=left,rr_cutoff=1e-15);
 Dw2=get_Dw(H)[1]
 Dw0=get_Dw(H0)[1]
 @pprint(H[1]) #Shows regular and triangular form are preserved.

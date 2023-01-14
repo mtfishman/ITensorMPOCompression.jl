@@ -4,7 +4,7 @@ sites = infsiteinds("S=1/2", 1;initstate, conserve_szparity=false)
 H=make_transIsing_iMPO(sites,7);
 is_lower_regular_form(H)==true
 H0=copy(H)
-Ss,spectrum=truncate!(H;epsrr=1e-15,cutoff=1e-15)
+Ss,spectrum=truncate!(H;rr_cutoff=1e-15,cutoff=1e-15)
 Dw1=get_Dw(H)[1]
 Dw0=get_Dw(H0)[1]
 @pprint(H[1]) #Shows regular form is preserve but triangularity is not.

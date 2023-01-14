@@ -4,7 +4,6 @@ using ITensorInfiniteMPS
 using Revise
 using Test
 using Printf
-#import ITensorMPOCompression.orthogonalize!
 
 verbose=false #verbose at the outer test level
 verbose1=false #verbose inside orth algos
@@ -76,7 +75,7 @@ test_combos=[
     #@show inds(H[1])
     @test is_regular_form(H   ,ms.ul,eps)
     E0=inner(psi',H,psi)
-    orthogonalize!(H;verbose=verbose1,orth=ms.lr,epsrr=1e-12)
+    orthogonalize!(H;verbose=verbose1,orth=ms.lr,rr_cutoff=1e-12)
     E1=inner(psi',H,psi)
     @test E0 ≈ E1 atol = 1e-14
     @test is_regular_form(H,ms.ul,eps)
@@ -103,7 +102,7 @@ test_combos=[
     H=makeH(sites,NNN;ul=test_combo[2]) 
     @test is_regular_form(H   ,ms.ul,eps)
     E0=inner(psi',H,psi)
-    orthogonalize!(H;verbose=verbose1,orth=ms.lr,epsrr=1e-12)
+    orthogonalize!(H;verbose=verbose1,orth=ms.lr,rr_cutoff=1e-12)
     E1=inner(psi',H,psi)
     @test E0 ≈ E1 atol = 1e-14
     @test is_regular_form(H,ms.ul,eps)
@@ -118,10 +117,10 @@ end
         Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul) 
         Dw_auto=get_Dw(Hauto)
         Hr=make_transIsing_MPO(sites,NNN;ul=ul) 
-        orthogonalize!(Hr;verbose=verbose1,epsrr=1e-12) #sweep left to right
+        orthogonalize!(Hr;verbose=verbose1,rr_cutoff=1e-12) #sweep left to right
         @test get_Dw(Hr)==Dw_auto
         Hl=make_transIsing_MPO(sites,NNN;ul=ul) 
-        orthogonalize!(Hl;verbose=verbose1,epsrr=1e-12) #sweep right to left
+        orthogonalize!(Hl;verbose=verbose1,rr_cutoff=1e-12) #sweep right to left
         @test get_Dw(Hl)==Dw_auto
     end  
 end 

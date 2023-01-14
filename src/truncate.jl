@@ -14,11 +14,11 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
     (tsvd,tuv) = lr==left ? ("qx","Link,u") : ("m","Link,v")
 #
 # Block repecting QR/QL/LQ/RQ factorization.  RL=L or R for upper and lower.
-# here we purposely turn off rank reavealing feature (epsrr=0.0) to (mostly) avoid
+# here we purposely turn off rank reavealing feature (rr_cutoff=0.0) to (mostly) avoid
 # horizontal rectangular RL matricies which are hard to handle accurately.
 #
    
-    Q,RL,lq=block_qx(W,ul;epsrr=-1.0,kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
+    Q,RL,lq=block_qx(W,ul;rr_cutoff=-1.0,kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
     if order(Q)==4
         @mpoc_assert is_canonical(Q,ms,eps)
         @mpoc_assert is_regular_form(Q,ul,eps)
@@ -189,8 +189,8 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
         if verbose
             println("truncate detected non-orthogonal MPO, will now orthogonalize")
         end
-        # epsrr=get(kwargs,:epsrr,1e-12)
-        # epsrr= epsrr==0 ? 1e-12 : epsrr #0.0 not allwed here.
+        # rr_cutoff=get(kwargs,:rr_cutoff,1e-12)
+        # rr_cutoff= rr_cutoff==0 ? 1e-12 : rr_cutoff #0.0 not allwed here.
         orthogonalize!(H;kwargs...,orth=mirror(lr)) #TODO why fail if spec ul here??
         if verbose
             previous_Dw=Base.max(get_Dw(H)...)
@@ -227,8 +227,8 @@ It is not nessecary (or recommended) to call the `orthogonalize!` function prior
 
 # Keywords
 - `orth::orth_type = left` : choose `left` or `right` canonical form for the output
-- `epsrr::Float64 = -1.0` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
-   All rows with max(abs(R[r,:]))<epsrr are considered zero and removed. epsrr=1.0 indicate no rank reduction.
+- `rr_cutoff::Float64 = -1.0` : cutoff for rank revealing QX which removes zero pivot rows and columns. 
+   All rows with max(abs(R[r,:]))<rr_cutoff are considered zero and removed. rr_cutoff=1.0 indicate no rank reduction.
 - `cutoff::Float64 = 0.0` : Using a `cutoff` allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy. 
 - `maxdim::Int64` : If the number of singular values exceeds `maxdim`, only the largest `maxdim` will be retained.
 - `mindim::Int64` : At least `mindim` singular values will be retained, even if some fall below the cutoff
@@ -247,7 +247,7 @@ julia> sites = infsiteinds("S=1/2", 1;initstate, conserve_szparity=false)
 julia> H=make_transIsing_iMPO(sites,7);
 julia> get_Dw(H)[1]
 30
-julia> Ss,spectrum=truncate!(H;epsrr=1e-15,cutoff=1e-15);
+julia> Ss,spectrum=truncate!(H;rr_cutoff=1e-15,cutoff=1e-15);
 julia> get_Dw(H)[1]
 9
 julia> pprint(H[1])
@@ -286,11 +286,11 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
     #
     ms=matrix_state(ul,lr)
     if !is_canonical(H,ms)
-        epsrr=get(kwargs, :cutoff, 1e-15)
-        orthogonalize!(H;orth=mirror(lr),epsrr=epsrr,max_sweeps=1) 
+        rr_cutoff=get(kwargs, :cutoff, 1e-15)
+        orthogonalize!(H;orth=mirror(lr),rr_cutoff=rr_cutoff,max_sweeps=1) 
         Hm=h_mirror ? copy(H) : nothing
         @mpoc_assert is_orthogonal(H,mirror(lr))
-        Gs=orthogonalize!(H;orth=lr,epsrr=epsrr,max_sweeps=1) #TODO why fail if spec ul here??
+        Gs=orthogonalize!(H;orth=lr,rr_cutoff=rr_cutoff,max_sweeps=1) #TODO why fail if spec ul here??
         @mpoc_assert is_orthogonal(H,lr)
     else
         # user supplied canonical H but not the Gs so we cannot proceed unless we do one more
