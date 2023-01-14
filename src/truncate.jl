@@ -350,6 +350,7 @@ function transform(H::Nothing,uv::ITensor,n::Int64) end
 function truncate(G::ITensor,igl::Index;kwargs...)
     @assert order(G)==2
     igr=noncommonind(G,igl)
+    #@assert tags(igl)!=tags(igr)
     M,iml=getM(G,igl,igr)
     U,s,V,spectrum,iu,iv=svd(M,iml;kwargs...)
     # iu=commonind(U,s)

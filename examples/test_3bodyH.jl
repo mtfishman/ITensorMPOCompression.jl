@@ -14,7 +14,7 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f) #dumb way to control flo
     @printf("                        Finite                      Infinite \n")
     @printf("   N  Raw autoMPO    L1    L2    R1    R2        L1    L2    R1    R2  \n")
 
-    for N in 3:8
+    for N in 3:10
         # N needs to be big enough that there is block in the middle of lattice which 
         # exhibits no edge effects.
         sites = siteinds("S=1/2",N);
@@ -50,7 +50,7 @@ end
     @printf("          AutoMPO               hand built\n")
     @printf("          Finite               Finite              Infinite\n")
     @printf("  N    raw orth trunc   raw orth tr1 tr2 tr3   orth trunc\n")
-    for N in 3:11
+    for N in 3:10
         sites = siteinds("S=1/2",N);
         si = infsiteinds("S=1/2", 1; initstate, conserve_szparity=false)
         Hhand=make_3body_MPO(sites,N)
@@ -93,28 +93,28 @@ end
     end
 end
 
-@testset "Test if autoMPO 3 body Hamiltonians can be further compressed" begin
-    ul=lower
-    initstate(n) = "↑"
-    @printf("     |-----max(Dw)-----|\n")
-    @printf("          AutoMPO\n")
-    @printf("          Finite\n")
-    @printf("  N    raw orth trunc\n")
-    for N in 3:30
-        sites = siteinds("S=1/2",N);
-        si = infsiteinds("S=1/2", 1; initstate, conserve_szparity=false)
-        Hauto=make_3body_AutoMPO(sites)
-        Dw_auto_raw=max_Dw(Hauto)
-        orthogonalize!(Hauto;epsrr=1e-14)
-        Dw_auto_orth=max_Dw(Hauto)
-        ss_auto=truncate!(Hauto;cutoff=1e-15,epsrr=1e-15)
-        Dw_auto_trunc=max_Dw(Hauto)
-        mins=ITensorMPOCompression.min(ss_auto)
+# @testset "Test if autoMPO 3 body Hamiltonians can be further compressed" begin
+#     ul=lower
+#     initstate(n) = "↑"
+#     @printf("     |-----max(Dw)-----|\n")
+#     @printf("          AutoMPO\n")
+#     @printf("          Finite\n")
+#     @printf("  N    raw orth trunc\n")
+#     for N in 3:30
+#         sites = siteinds("S=1/2",N);
+#         si = infsiteinds("S=1/2", 1; initstate, conserve_szparity=false)
+#         Hauto=make_3body_AutoMPO(sites)
+#         Dw_auto_raw=max_Dw(Hauto)
+#         orthogonalize!(Hauto;epsrr=1e-14)
+#         Dw_auto_orth=max_Dw(Hauto)
+#         ss_auto=truncate!(Hauto;cutoff=1e-15,epsrr=1e-15)
+#         Dw_auto_trunc=max_Dw(Hauto)
+#         mins=ITensorMPOCompression.min(ss_auto)
         
-        @printf("%3i   %3i  %3i  %3i  %1.2e\n", N,  Dw_auto_raw,Dw_auto_orth,Dw_auto_trunc,mins)
+#         @printf("%3i   %3i  %3i  %3i  %1.2e\n", N,  Dw_auto_raw,Dw_auto_orth,Dw_auto_trunc,mins)
     
-    end
-end
+#     end
+# end
 
 # @testset "Verify auto MPO and hand built 3-body Hamiltonians as identical" begin
 #     #l,r=Index(1,"Link,c=0,l=1"),Index(1,"Link,c=1,l=1")

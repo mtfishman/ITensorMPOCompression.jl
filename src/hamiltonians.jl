@@ -159,44 +159,17 @@ function add_ops(W1::ITensor,W2::ITensor)::ITensor
     Id=slice(W1,l1=>1,r1=>1)
     assign!(W,Id,l=>1,r=>1)
     assign!(W,Id,l=>χl+2,r=>χr+2)
-    # b1 block
-    for i1 in 2:χl1+1
-        op=slice(W1,l1=>i1,r1=>1)
-        assign!(W,op,l=>i1,r=>1)
-    end
-    # b2 block
-    for i2 in 2:χl2+1
-        op=slice(W2,l2=>i2,r2=>1)
-        assign!(W,op,l=>χl1+i2,r=>1)
-    end
     # d1+d2 block
     d1=slice(W1,l1=>χl1+2,r1=>1)
     d2=slice(W2,l2=>χl2+2,r2=>1)
     assign!(W,d1+d2,l=>χl+2,r=>1)
-    # c1 block
-    for j1 in 2:χr1+1
-        op=slice(W1,l1=>χl1+2,r1=>j1)
-        assign!(W,op,l=>χl+2,r=>j1)
-    end
-    # c2 block
-    for j2 in 2:χr2+1
-        op=slice(W2,l2=>χl2+2,r2=>j2)
-        assign!(W,op,l=>χl+2,r=>χr1+j2)
-    end
-    # A1 block
-    for i1 in 2:χl1+1
-        for j1 in 2:χr1+1
-            op=slice(W1,l1=>i1,r1=>j1)
-            assign!(W,op,l=>i1,r=>j1)
-        end
-    end
-    # A2 block
-    for i2 in 2:χl2+1
-        for j2 in 2:χr2+1
-            op=slice(W2,l2=>i2,r2=>j2)
-            assign!(W,op,l=>χl1+i2,r=>χr1+j2)
-        end
-    end
+   
+    W[l=>2:χl1+1,r=>1:1]=W1[l1=>2:χl1+1,r1=>1:1]  # b1 block
+    W[l=>χl1+2:χl1+χl2+1,r=>1:1]=W2[l2=>2:χl2+1,r2=>1:1]  # b2 block
+    W[l=>χl+2:χl+2,r=>2:χr1+1]=W1[l1=>χl1+2:χl1+2,r1=>2:χr1+1]  # c1 block
+    W[l=>χl+2:χl+2,r=>χr1+2:χr1+χr2+1]=W2[l2=>χl2+2:χl2+2,r2=>2:χr2+1]  # c2 block
+    W[l=>2:χl1+1,r=>2:χr1+1]=W1[l1=>2:χl1+1,r1=>2:χr1+1]  # A1 block
+    W[l=>χl1+2:χl1+χl2+1,r=>χr1+2:χr1+χr2+1]=W2[l2=>2:χl2+1,r2=>2:χr2+1]  # A2 block
     return W
 end
 

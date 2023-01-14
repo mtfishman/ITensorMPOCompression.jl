@@ -21,6 +21,11 @@ Done: -Verbose mode show all Dws and steps orth-right etc.
 -Put some content in Readme.md
 -make truncate, and orthogonalize that work on copies.
 
+Bugs:
+-iMPO, if Ncell=1 the left/right tags of H[1] are the same.  We need to prime one of them
+  prior to truncation, maybe during or prior to orthogonalization.
+- Check for unit ops along the diagonal: For rectangluar matrices we seem to be looking a the  wrong diagonal.
+
 Improvements:
 -Subtensor support a mix of i=>1:5 pairs and j=>3 single IndexVal pairs.
   just convert j=>3 to j=>3:3 under the hood.

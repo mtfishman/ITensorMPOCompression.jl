@@ -198,6 +198,9 @@ end
 #
 function getM(G::ITensor,igl::Index,igr::Index)::Tuple{ITensor,Index}
     @assert order(G)==2
+    #@assert tags(igl)!=tags(igr) can't use subtensor until this works.
+    # M1=G[igl=>2:dim(igl)-1,igr=>2:dim(igr)-1]
+    # iml1,=inds(M1,tags=tags(igl))
     Dwl,Dwr=dim(igl),dim(igr)
     iml,imr=Index(Dwl-2,tags(igl)),Index(Dwr-2,tags(igr))
     M=ITensor(iml,imr)
@@ -215,33 +218,11 @@ end
 #                      |0 0 1|
 #
 function grow(A::ITensor,ig1::Index,ig2::Index)
-    ils=inds(A)
-    #
-    # we need to connect the indices of A with ig1,ig2 indices based on matching tags.
-    #
-    if hastags(ils[1],tags(ig1))
-        ia1=ils[1]
-        @assert hastags(ils[2],tags(ig2))
-        ia2=ils[2]
-    elseif hastags(ils[1],tags(ig2))
-        ia2=ils[1]
-        @assert hastags(ils[2],tags(ig1))
-        ia1=ils[2]
-    else
-        @assert false
-    end
-    chi1,chi2=dim(ia1),dim(ia2)
-    @assert dim(ig1)==chi1+2
-    @assert dim(ig2)==chi2+2
-
+    Dw1,Dw2=dim(ig1),dim(ig2)
     G=ITensor(0.0,ig1,ig2) #would be nice to use delta() but we can't set elements on it.
-    G[ig1=>1     ,ig2=>1     ]=1.0;
-    G[ig1=>chi1+2,ig2=>chi2+2]=1.0;
-    for j1 in 1:chi1
-        for j2 in 1:chi2
-            G[ig1=>j1+1,ig2=>j2+1]=A[ia1=>j1,ia2=>j2]
-        end
-    end
+    G[ig1=>1  ,ig2=>1  ]=1.0;
+    G[ig1=>Dw1,ig2=>Dw2]=1.0;
+    G[ig1=>2:Dw1-1,ig2=>2:Dw2-1]=A
     return G
 end
 

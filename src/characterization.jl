@@ -83,22 +83,6 @@ function parse_site(is::Index)
     return dim(is),nsite,space
 end
 
-#
-#  fix up nsite based on unit cell number
-#
-# function parse_link(il::Index,Ncell::Int64)::Int64
-#     n,c=parse_link(il)
-#     if Ncell>0 && c!=undef_int
-#         n=c*Ncell+n
-#     end
-#     if Ncell<=0 && c!=undef_int
-#         #caller didn't provide Ncell
-#         @assert false
-#     end
-#     return n
-# end
-
-
 function parse_link(il::Index)::Tuple{Int64,Int64}
     @assert hastags(il,"Link")
     nsite=ncell=undef_int #sentinel values
