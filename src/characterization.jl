@@ -329,39 +329,25 @@ function detect_regular_form(W::ITensor,eps::Float64=default_eps)::Tuple{Bool,Bo
     irf=irf && is_unit(slice(W,r=>1  ,c=>1  ),eps)
     irf=irf && is_unit(slice(W,r=>Dw1,c=>Dw2),eps)
     # now look for zeroed partial rows and columns, avoiding the corner unit matricies.
-    top_row_zero=true #lower
-    bot_row_zero=true #upper tri
-    left__col_zero=true #upper tri
-    right_col_zero=true #lower tri
-    #lower tri zero tests
-    for ic in 2:Dw2
-        top_row_zero=top_row_zero     && norm(slice(W,r=>1  ,c=>ic))<eps
-    end
-    for ir in 1:Dw1-1
-        right_col_zero=right_col_zero && norm(slice(W,r=>ir,c=>Dw2))<eps
-    end
-    #upper tri zero tests
-    for ic in 1:Dw2-1
-        bot_row_zero=bot_row_zero     && norm(slice(W,r=>Dw1,c=>ic))<eps
-    end
-    for ir in 2:Dw1
-        left__col_zero=left__col_zero && norm(slice(W,r=>ir,c=>1  ))<eps
-    end
+    top_row_zero=norm(W[r=>1:1,c=>2:Dw2])<eps
+    right_col_zero=norm(W[r=>1:Dw1-1,c=>Dw2:Dw2])<eps
+    bot_row_zero=norm(W[r=>Dw1:Dw1,c=>1:Dw2-1])<eps
+    left__col_zero=norm(W[r=>2:Dw1,c=>1:1])<eps
     reg_lower=irf && top_row_zero && right_col_zero
     reg_upper=irf && bot_row_zero && left__col_zero
     # before returning we should also check for any unit matricies along the diagonal
     # this gets a bit tricky for non-square matrices.
-    diag_unit = false
-    if Dw1>=Dw2
-        for ic in 2:Dw2-1
-            diag_unit = diag_unit || is_unit(slice(W,r=>ic,c=>ic  ),eps)
-        end
-    else
-        dr=Dw2-Dw1
-        for ir in 2:Dw1-1
-            diag_unit = diag_unit || is_unit(slice(W,r=>ir,c=>ir+dr),eps)
-        end
-    end
+    # diag_unit = false
+    # if Dw1>=Dw2
+    #     for ic in 2:Dw2-1
+    #         diag_unit = diag_unit || is_unit(slice(W,r=>ic,c=>ic  ),eps)
+    #     end
+    # else
+    #     dr=Dw2-Dw1
+    #     for ir in 2:Dw1-1
+    #         diag_unit = diag_unit || is_unit(slice(W,r=>ir,c=>ir+dr),eps)
+    #     end
+    # end
     #
     #  Not sure how to hanlde this right now ... unit ops seem to appear with alarming
     #  frequency after compression.
