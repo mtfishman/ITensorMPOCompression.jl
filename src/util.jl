@@ -206,19 +206,4 @@ function pprint(H::MPO,eps::Float64=default_eps)
     end
 end
 
-#
-#  In general it is useful to pass kwargs from a parent function to a child
-#  in addition in the parent function we may want add or replace and existing key=>val parse_links
-#  for some reason this seems to be a nasty uphill battle, especially if kwargs is empty.
-#
-function add_or_replace(kwargs,key::Any,val::Any)
-    if length(kwargs)>0
-        kwargs=Dict{Symbol, Any}(kwargs) #this allows us to set an element
-        kwargs[key]=val
-    else
-        kwargs=Dict{Symbol, Any}(key => val)
-    end
-    return kwargs
-end
-
-export pprint,is_unit,slice
+#export pprint,is_unit,slice

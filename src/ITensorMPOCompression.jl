@@ -25,9 +25,6 @@ export fast_GS,make_3body_MPO,make_1body_op,make_2body_op,make_3body_op,add_ops,
 export get_Dw,max_Dw,min,max
 export bond_spectrums
 
-
-export add_or_replace # Handle inpenetrable kwargs
-
 export orthogonalize!,truncate,truncate! #the punchline
 export @pprint
 #  subtebsor related

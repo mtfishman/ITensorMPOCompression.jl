@@ -170,7 +170,6 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
     # decide left/right and upper/lower
     #
     lr::orth_type=get(kwargs, :orth, left)
-    kwargs=add_or_replace(kwargs,:orth,lr) #if lr is not yet in kwargs, we need to stuff in there
     (bl,bu)=detect_regular_form(H)
     if !(bl || bu)
         throw(ErrorException("truncate!(H::MPO), H must be in either lower or upper regular form"))
@@ -189,8 +188,6 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
         if verbose
             println("truncate detected non-orthogonal MPO, will now orthogonalize")
         end
-        # rr_cutoff=get(kwargs,:rr_cutoff,1e-12)
-        # rr_cutoff= rr_cutoff==0 ? 1e-12 : rr_cutoff #0.0 not allwed here.
         orthogonalize!(H;kwargs...,orth=mirror(lr)) #TODO why fail if spec ul here??
         if verbose
             previous_Dw=Base.max(get_Dw(H)...)
@@ -202,7 +199,7 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
     rng=sweep(H,lr)
     for n in rng 
         nn=n+rng.step #index to neighbour
-        W,RL,s=truncate(H[n],ul;kwargs...)
+        W,RL,s=truncate(H[n],ul;kwargs...,orth=lr)
         H[n]=W
         H[nn]=RL*H[nn]
         is_regular_form(H[nn],ms.ul)
@@ -274,7 +271,6 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
     #
     h_mirror::Bool=get(kwargs, :h_mirror, false) #Calculate and return mirror of H
     lr::orth_type=get(kwargs, :orth, left) #this specifies the final output orth direction.
-    kwargs=add_or_replace(kwargs,:orth,lr) #if lr is not yet in kwargs, we need to stuff in there
     (bl,bu)=detect_regular_form(H)
     if !(bl || bu)
         throw(ErrorException("truncate!(H::MPO), H must be in either lower or upper regular form"))

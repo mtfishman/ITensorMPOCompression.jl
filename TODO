@@ -52,9 +52,9 @@ Done:  -rules for smart_sweep
 Done:  -orthog inside truncate
 No:  -convergence in truncate?
   -rr_cutoff=0.0 not allowed in truncate?
--Switch from rr_cutoff to rr_cutoff
+Done: -Switch from epsrr to rr_cutoff
 -better name for pbc? inf open_chain, boundary_conditions
--Clean up SetV code.  Use dummy Dw=1 index trick instead of SetV1 code.
+Done: -Clean up SetV code.  Use dummy Dw=1 index trick instead of SetV1 code.
   Done: make a subtensor function first.
 -Enforce expected type for all get(kwargs) calls
 -clean up kwargs=Dict(kwargs) is not needed.
