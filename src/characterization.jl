@@ -153,10 +153,11 @@ function is_canonical(W::ITensor,ms::matrix_state,eps::Float64=default_eps)::Boo
     V=getV(W,V_offsets(ms))
     forward,reverse=parse_links(V,ms.lr)
     d,n,space=parse_site(W)
+    DwDw=dim(forward)*dim(reverse)
     
     Id=V*prime(dag(V),forward)/d
     if order(Id)==2
-        is_can = norm(dense(Id)-delta(forward,dag(forward')))<eps
+        is_can = norm(dense(Id)-delta(forward,dag(forward')))/sqrt(DwDw)<eps
     elseif order(Id)==0
         is_can = abs(scalar(Id)-d)<eps
     end
