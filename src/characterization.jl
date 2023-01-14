@@ -41,7 +41,7 @@ function parse_links(A::ITensor)::Tuple{Index,Index}
         elseif n2>n1
             return ils[1],ils[2]
         else
-            @assert false #no way to dermine order of links
+            @mpoc_assert false #no way to dermine order of links
         end
     elseif length(ils)==1
         n,c=parse_link(ils[1])
@@ -54,7 +54,7 @@ function parse_links(A::ITensor)::Tuple{Index,Index}
         end
     else
         @show ils
-        @assert false
+        @mpoc_assert false
     end
 end
 undef_int=-99999
@@ -65,7 +65,7 @@ function parse_site(W::ITensor)
 end
 
 function parse_site(is::Index)
-    @assert hastags(is,"Site")
+    @mpoc_assert hastags(is,"Site")
     nsite=undef_int #sentenal value
     for t in tags(is)
         ts=String(t)
@@ -79,12 +79,12 @@ function parse_site(is::Index)
             space=ts[3:end]
         end
     end
-    @assert nsite>=0
+    @mpoc_assert nsite>=0
     return dim(is),nsite,space
 end
 
 function parse_link(il::Index)::Tuple{Int64,Int64}
-    @assert hastags(il,"Link")
+    @mpoc_assert hastags(il,"Link")
     nsite=ncell=undef_int #sentinel values
     for t in tags(il)
         ts=String(t)
@@ -106,7 +106,7 @@ end
 #
 function infer_site_numbers(n1::Int64,n2::Int64,nsite::Int64)::Tuple{Int64,Int64}
     if n1==undef_int && n2==undef_int
-        @assert false
+        @mpoc_assert false
     end
     if n1==undef_int
         if n2==nsite
@@ -114,7 +114,7 @@ function infer_site_numbers(n1::Int64,n2::Int64,nsite::Int64)::Tuple{Int64,Int64
         elseif n2==nsite-1
             n1=nsite 
         else
-            @assert false
+            @mpoc_assert false
         end
     end
     if n2==undef_int
@@ -123,7 +123,7 @@ function infer_site_numbers(n1::Int64,n2::Int64,nsite::Int64)::Tuple{Int64,Int64
         elseif n1==nsite-1
             n2=nsite 
         else
-            @assert false
+            @mpoc_assert false
         end
     end    
     return n1,n2
@@ -175,7 +175,7 @@ end
 
 function is_canonical(H::AbstractMPS,lr::orth_type,eps::Float64=default_eps)::Bool
     l,u=detect_regular_form(H)
-    @assert u || l
+    @mpoc_assert u || l
     ul = u ? upper : lower
     return is_canonical(H,matrix_state(ul,lr),eps)
 end
@@ -260,7 +260,7 @@ is_upper(W::ITensor,eps::Float64=default_eps)::Bool = is_upper_lower(W,upper,eps
     
 
 function detect_upper_lower(H::MPO,eps::Float64=default_eps)::Tuple{Bool,Bool}
-    @assert length(H)>1
+    @mpoc_assert length(H)>1
     l,u=detect_upper_lower(H[2],eps) #skip left and right sites in case MPO is obc
     for n in 3:length(H)-1
         il,iu=detect_upper_lower(H[n],eps)

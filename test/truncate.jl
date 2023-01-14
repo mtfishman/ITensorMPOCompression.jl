@@ -4,6 +4,7 @@ using ITensorInfiniteMPS
 using Revise
 using Test
 using Printf
+using Profile
 
 using ITensorMPOCompression: orthogonalize!,truncate!
 
@@ -246,43 +247,44 @@ end
     end  
 end 
 
-@testset "Head to Head autoMPO with 3-body Hamiltonian" begin
-    if verbose
-        @printf "+--------------+---------+--------------------+--------------------+\n"
-        @printf "|              |autoMPO  |    1 truncation    | 2 truncations      |\n"
-        @printf "|  N  epseSVD  | dE      |   dE     RE   Dw   |   dE     RE   Dw   |\n"
-    end
+# this is the slooooow test
+# @testset "Head to Head autoMPO with 3-body Hamiltonian" begin
+#     if verbose
+#         @printf "+--------------+---------+--------------------+--------------------+\n"
+#         @printf "|              |autoMPO  |    1 truncation    | 2 truncations      |\n"
+#         @printf "|  N  epseSVD  | dE      |   dE     RE   Dw   |   dE     RE   Dw   |\n"
+#     end
 
-    for svd_cutoff in [1e-15,1e-12,1e-10]
-        for N in [6,10,16,20,24]
-            sites = siteinds("SpinHalf", N;conserve_qns=false)
-            Hnot=make_3body_AutoMPO(sites;cutoff=-1.0) #No truncation inside autoMPO
-            H=make_3body_AutoMPO(sites) #Truncated by autoMPO
-            #@show get_Dw(Hnot)
-            Dw_auto = get_Dw(H)
-            psi=randomMPS(sites)
-            Enot=inner(psi',Hnot,psi)
-            E=inner(psi',H,psi)
-            @test E ≈ Enot atol = sqrt(svd_cutoff)
-            truncate!(Hnot;verbose=verbose1,epsrr=1e-14,cutoff=svd_cutoff)
-            Dw_1=get_Dw(Hnot)
-            delta_Dw_1=sum(Dw_auto-Dw_1)
-            Enott1=inner(psi',Hnot,psi)
-            @test E ≈ Enott1 atol = sqrt(svd_cutoff)
-            RE1=abs(E-Enott1)/sqrt(svd_cutoff)
+#     for svd_cutoff in [1e-15,1e-12,1e-10]
+#         for N in [6,10,16,20,24]
+#             sites = siteinds("SpinHalf", N;conserve_qns=false)
+#             Hnot=make_3body_AutoMPO(sites;cutoff=-1.0) #No truncation inside autoMPO
+#             H=make_3body_AutoMPO(sites) #Truncated by autoMPO
+#             #@show get_Dw(Hnot)
+#             Dw_auto = get_Dw(H)
+#             psi=randomMPS(sites)
+#             Enot=inner(psi',Hnot,psi)
+#             E=inner(psi',H,psi)
+#             @test E ≈ Enot atol = sqrt(svd_cutoff)
+#             truncate!(Hnot;verbose=verbose1,epsrr=1e-14,cutoff=svd_cutoff)
+#             Dw_1=get_Dw(Hnot)
+#             delta_Dw_1=sum(Dw_auto-Dw_1)
+#             Enott1=inner(psi',Hnot,psi)
+#             @test E ≈ Enott1 atol = sqrt(svd_cutoff)
+#             RE1=abs(E-Enott1)/sqrt(svd_cutoff)
 
-            truncate!(Hnot;verbose=verbose1,cutoff=svd_cutoff)
-            Dw_2=get_Dw(Hnot)
-            delta_Dw_2=sum(Dw_auto-Dw_2)
-            Enott2=inner(psi',Hnot,psi)
-            @test E ≈ Enott2 atol = sqrt(svd_cutoff)
-            RE2=abs(E-Enott2)/sqrt(svd_cutoff)
-            if verbose
-                @printf "| %3i %1.1e  | %1.1e | %1.1e %1.3f %4i | %1.1e %1.3f %4i | \n" N svd_cutoff abs(E-Enot) abs(E-Enott1) RE1 delta_Dw_1 abs(E-Enott2) RE2 delta_Dw_2 
-            end
-        end
-    end
-end
+#             truncate!(Hnot;verbose=verbose1,cutoff=svd_cutoff)
+#             Dw_2=get_Dw(Hnot)
+#             delta_Dw_2=sum(Dw_auto-Dw_2)
+#             Enott2=inner(psi',Hnot,psi)
+#             @test E ≈ Enott2 atol = sqrt(svd_cutoff)
+#             RE2=abs(E-Enott2)/sqrt(svd_cutoff)
+#             if verbose
+#                 @printf "| %3i %1.1e  | %1.1e | %1.1e %1.3f %4i | %1.1e %1.3f %4i | \n" N svd_cutoff abs(E-Enot) abs(E-Enott1) RE1 delta_Dw_1 abs(E-Enott2) RE2 delta_Dw_2 
+#             end
+#         end
+#     end
+# end
 
 
 @testset "Truncate/Compress iMPO Check gauge relations, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]

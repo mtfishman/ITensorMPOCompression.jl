@@ -29,15 +29,15 @@ Bugs:
 Improvements:
 -Save regular_form upper/lower/unknown in the MPO struct so we never have to call
  detect_regular_form.
--Subtensor support a mix of i=>1:5 pairs and j=>3 single IndexVal pairs.
+Wont Do: -Subtensor support a mix of i=>1:5 pairs and j=>3 single IndexVal pairs.
   just convert j=>3 to j=>3:3 under the hood.
   May conflict with ITensors.get_index() so maybe not worth it.
 -Organize exports and imports.
 -Clean up index matching in SetV
--Pare down unit test for shorter run time.
+Done: -Pare down unit test for shorter run time.
   -Very hard, lots of CPU time on compiling inside ITensors for GS energy tests
   -Using a sysimage for ITensors does not seem to help!
--Profile and code coverage.
+Done: -Profile and code coverage.
    Spends most of the time in detect_regular_form.  We should keep this info in the MPO
    struct.
 -Gs returned by truncate should be Diag not Dense tensors.
@@ -71,7 +71,7 @@ open("/home/janr/prof1.txt", "w") do s
            Profile.print(IOContext(s, :displaysize => (24, 500)),format=:flat)
        end
 
-       
+
 Old:
 
 Done: -Does block_qx really need to know n?

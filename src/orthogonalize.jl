@@ -4,7 +4,7 @@
 function ITensors.orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form;kwargs...)
     W1,Lplus=block_qx(W1,ul;kwargs...) 
     W2=Lplus*W2
-    @assert order(W2)<=4 #make sure there was something to contract. 
+    @mpoc_assert order(W2)<=4 #make sure there was something to contract. 
  
     iq=filterinds(inds(Lplus),tags="qx")[1]
     il=noncommonind(Lplus,iq)
@@ -12,10 +12,8 @@ function ITensors.orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form;kwargs...)
     il=redim(il,dim(iq)) #Index(dim(iq),tags(il))
     replaceind!(W1,iq,il)
     replaceind!(W2,iq,il)
-    ITensors.@debug_check begin
-        @assert is_regular_form(W1,ul,1e-14)
-        @assert is_regular_form(W2,ul,1e-14)
-    end
+    @mpoc_assert is_regular_form(W1,ul,1e-14)
+    @mpoc_assert is_regular_form(W2,ul,1e-14)
     return W1,W2 #We should not need to return these if W1 and W2 were truely passed by reference.
 end
 
@@ -119,7 +117,7 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
     if !(bl || bu)
         throw(ErrorException("orthogonalize!(H::MPO), H must be in either lower or upper regular form"))
     end
-    @assert !(bl && bu) #should not be diagonal.
+    @mpoc_assert !(bl && bu) #should not be diagonal.
     ul::reg_form = bl ? lower : upper 
     #
     #  Establish what options the user specified
@@ -152,7 +150,7 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
             nsweeps+=1
             sumDw=sum(get_Dw(H))
             lr=mirror(lr) #need to undo this after we break out.
-            @assert sumDw<=old_sumDw #Make sure Dw did not grow!!
+            @mpoc_assert sumDw<=old_sumDw #Make sure Dw did not grow!!
             #@show nsweeps max_sweeps Dw oldDw
             
         end
@@ -166,7 +164,7 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
         # Now make sure we have lr that user specified
         if request_lr!=lr
             if oldH≠nothing && nsweeps>1
-                @assert is_orthogonal(oldH,request_lr)
+                @mpoc_assert is_orthogonal(oldH,request_lr)
                 #@show "copy oldH"
                 H.=oldH
             else
@@ -181,7 +179,7 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
         orthogonalize!(H,ul;kwargs...,orth=request_lr)
         sumDw=sum(get_Dw(H))
     end
-    @assert is_orthogonal(H,request_lr)
+    @mpoc_assert is_orthogonal(H,request_lr)
 
 end
 
@@ -254,7 +252,7 @@ function qx_iterate!(H::InfiniteMPO,ul::reg_form;kwargs...)
             else
                 Gs[n-1]=noprime(RLs[n]*Gs[n-1])  #  Update the accumulated gauge transform
             end
-            @assert order(Gs[n])==2 #This will fail if the indices somehow got messed up.
+            @mpoc_assert order(Gs[n])==2 #This will fail if the indices somehow got messed up.
             eta=Base.max(eta,etan)
         end
         #

@@ -3,7 +3,7 @@ using Printf
 function is_unit(O::ITensor,eps::Float64)::Bool
     s=inds(O)
     @ITensors.debug_check begin
-        @assert(length(s)==2)
+        @mpoc_assert(length(s)==2)
     end
     Id=delta(s[1],s[2])
     if hasqns(s)
@@ -68,7 +68,7 @@ end
 
 function pprint(W::ITensor,r::Index,eps::Float64=default_eps)
     c=noncommoninds(W,r)
-    @assert length(c)==1
+    @mpoc_assert length(c)==1
     pprint(r,W,c[1],eps)
 end
 
@@ -94,8 +94,8 @@ end
 
 
 function pprint(r::Index,W::ITensor,c::Index,eps::Float64=default_eps)
-    # @assert hasind(W,r) can't assume this becuse parse_links could return a Dw=1 dummy index.
-    # @assert hasind(W,c)
+    # @mpoc_assert hasind(W,r) can't assume this becuse parse_links could return a Dw=1 dummy index.
+    # @mpoc_assert hasind(W,c)
     isl=filterinds(W,tags="Link")
     ord=order(W)
     if length(isl)==2
@@ -104,7 +104,7 @@ function pprint(r::Index,W::ITensor,c::Index,eps::Float64=default_eps)
                 if ord==4
                     Oij=slice(W,ir,ic)
                 else
-                    @assert ord==2
+                    @mpoc_assert ord==2
                     Oij=abs(W[ir,ic])
                 end
                 Base.print(to_char(Oij,eps))

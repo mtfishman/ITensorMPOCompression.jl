@@ -27,7 +27,7 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f) #dumb way to control flo
         #@show inds(Hdumb_pbc[1])
         Hdumb_infL=InfiniteMPO([Hdumb_pbc[1]])
         #@show inds(Hdumb_infL[1])
-        #@assert false
+        #@mpoc_assert false
         Dw_raw=max_Dw(Hdumb_infL)
         HdumbR=copy(HdumbL)
         Hdumb_infR=copy(Hdumb_infL)

@@ -23,9 +23,9 @@ end
 function setV1(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     iwl,=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
     ivl,=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
-    @assert inds(W,tags="Site")==inds(V,tags="Site")
+    @mpoc_assert inds(W,tags="Site")==inds(V,tags="Site")
     off=V_offsets(ms)
-    @assert(off.o1==off.o2)
+    @mpoc_assert(off.o1==off.o2)
     #
     #  If rank reduction occured in the QR process we may need to resize W.
     #
@@ -57,10 +57,10 @@ function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
         return setV1(W,V,ms) #Handle row/col vectors
     end
     vils=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
-    @assert length(wils)==2
-    @assert length(vils)==2
+    @mpoc_assert length(wils)==2
+    @mpoc_assert length(vils)==2
     iss=filterinds(inds(W),tags="Site")
-    @assert iss==filterinds(inds(V),tags="Site")
+    @mpoc_assert iss==filterinds(inds(V),tags="Site")
     #
     #  these need to loop in the correct order in order to get the W and V indices to line properly.
     #  one index from each of W & V should have the same tags, so we just need get these
@@ -72,14 +72,14 @@ function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     if tags(wils[1])!=tags(vils[1]) && tags(wils[2])!=tags(vils[2])
         vils=vils[2],vils[1] #swap tags the same on index 1 or 2.
     end
-    @assert tags(wils[1])==tags(vils[1]) || tags(wils[2])==tags(vils[2])
+    @mpoc_assert tags(wils[1])==tags(vils[1]) || tags(wils[2])==tags(vils[2])
     if hastags(vils[1],"qx")
         ivqx=vils[1]
         iwqx=wils[1]
         ivl=vils[2]
         iwl=wils[2]
     else
-        @assert hastags(vils[2],"qx")
+        @mpoc_assert hastags(vils[2],"qx")
         ivqx=vils[2]
         iwqx=wils[2]
         ivl=vils[1]
@@ -87,7 +87,7 @@ function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     end
 
     off=V_offsets(ms)
-    @assert off.o1==off.o2
+    @mpoc_assert off.o1==off.o2
     #
     #  If rank reduction occured in the QR process we may need to resize W.
     #
@@ -112,10 +112,10 @@ end
 #   1   at top, 1           1   at left, 1
 #
 function growRL(RL::ITensor,iwl::Index,off::V_offsets)::Tuple{ITensor,Index}
-    @assert order(RL)==2
+    @mpoc_assert order(RL)==2
     irl,=filterinds(inds(RL),tags=tags(iwl)) #find the link index of RL
     irqx=noncommonind(inds(RL),irl) #find the qx link of RL
-    @assert dim(iwl)==dim(irl)+1
+    @mpoc_assert dim(iwl)==dim(irl)+1
     ipqx=redim(irqx,dim(irqx)+1) 
     T=eltype(RL)
     RLplus=ITensor(T(0.0),ipqx,iwl)
@@ -197,8 +197,8 @@ end
 #          |0 0 1|
 #
 function getM(G::ITensor,igl::Index,igr::Index)::Tuple{ITensor,Index}
-    @assert order(G)==2
-    #@assert tags(igl)!=tags(igr) can't use subtensor until this works.
+    @mpoc_assert order(G)==2
+    #@mpoc_assert tags(igl)!=tags(igr) can't use subtensor until this works.
     # M1=G[igl=>2:dim(igl)-1,igr=>2:dim(igr)-1]
     # iml1,=inds(M1,tags=tags(igl))
     Dwl,Dwr=dim(igl),dim(igr)
@@ -227,19 +227,19 @@ function grow(A::ITensor,ig1::Index,ig2::Index)
 end
 
 function grow(A::ITensor,ig1::QNIndex,ig2::Index)
-    @assert !hasqns(A)
-    @assert !hasqns(ig2)
+    @mpoc_assert !hasqns(A)
+    @mpoc_assert !hasqns(ig2)
     G=grow(A,removeqns(ig1),ig2) #grow A into G as dense tensors
     ig2q=addqns(ig2,[QN()=>dim(ig2)];dir=dir(dag(ig1))) #make a QN version of index ig2
-    @assert id(ig2)==id(ig2q) #If the ID changes then subsequent contractions will fail.
+    @mpoc_assert id(ig2)==id(ig2q) #If the ID changes then subsequent contractions will fail.
     return convert_blocksparse(G,ig1,ig2q) #fabricate a 1-block blocksparse version.
 end
 function grow(A::ITensor,ig1::Index,ig2::QNIndex)
-    @assert !hasqns(A)
-    @assert !hasqns(ig1)
+    @mpoc_assert !hasqns(A)
+    @mpoc_assert !hasqns(ig1)
     G=grow(A,ig1,removeqns(ig2)) #grow A into G as dense tensors
     ig1q=addqns(ig1,[QN()=>dim(ig1)];dir=dir(dag(ig2))) #make a QN version of index ig1
-    @assert id(ig1)==id(ig1q) #If the ID changes then subsequent contractions will fail.
+    @mpoc_assert id(ig1)==id(ig1q) #If the ID changes then subsequent contractions will fail.
     return convert_blocksparse(G,ig1q,ig2) #fabricate a 1-block blocksparse version.
 end
 #
@@ -249,7 +249,7 @@ end
 #  deep copy.
 #
 function convert_blocksparse(A::ITensor,inds::QNIndex...)
-    @assert order(A)==2 #required for Block(1,1) to be correct.
+    @mpoc_assert order(A)==2 #required for Block(1,1) to be correct.
     bst=BlockSparseTensor(eltype(A),[Block(1,1)],inds )
     b=nzblocks(bst)[1]
     blockview(bst, b) .= A #is this deep copy???
@@ -261,14 +261,14 @@ end
 #  info to establish QN() space and direction for the inds of A.
 #
 function make_qninds(A::ITensor,sample_inds::Index...)
-    @assert order(A)==2
-    @assert !hasqns(A)
-    @assert hasqns(sample_inds)
+    @mpoc_assert order(A)==2
+    @mpoc_assert !hasqns(A)
+    @mpoc_assert hasqns(sample_inds)
     ic=commonind(inds(A),sample_inds)
     ins =noncommonind(ic,sample_inds)
     inA =noncommonind(ic,inds(A))
     ics =noncommonind(ins,sample_inds)
-    @assert hasqns(ics)
+    @mpoc_assert hasqns(ics)
     #can't use space(ins) to get QNs because dim could be different.
     in=addqns(inA,[QN()=>dim(inA)];dir=dir(ins)) #make a QN version of index inA
     iset=IndexSet(in, ics)

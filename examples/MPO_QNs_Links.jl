@@ -1,7 +1,7 @@
 using ITensors
 function make_Heisenberg_AutoMPO(sites,NNN::Int64=1)::MPO
     N=length(sites)
-    @assert(N>=NNN)
+    @mpoc_assert(N>=NNN)
     ampo = OpSum()
     for dj=1:NNN
         f=1.0/dj
@@ -15,7 +15,7 @@ function make_Heisenberg_AutoMPO(sites,NNN::Int64=1)::MPO
 end
 function make_transIsing_AutoMPO(sites,NNN::Int64=1)::MPO
     N=length(sites)
-    @assert(N>NNN)
+    @mpoc_assert(N>NNN)
     ampo = OpSum()
     for dj=1:NNN
         f=1.0/dj

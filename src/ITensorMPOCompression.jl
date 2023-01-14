@@ -33,7 +33,9 @@ export @pprint
 #  subtebsor related
 export IndexRange, indices, range, ranges, getperm, permute, start
 
-
+macro mpoc_assert(ex)
+    esc(:($Base.@assert $ex))
+end
 
 default_eps=1e-14 #for characterization routines, floats abs()<default_eps are considered to be zero.
 
@@ -90,8 +92,8 @@ struct V_offsets
     # The purpose of this struct is to ensure the asserts below
     #
     V_offsets(o1_::Int64, o2_::Int64) = begin
-        @assert o1_==0 || o1_==1
-        @assert o2_==0 || o2_==1 
+        @mpoc_assert o1_==0 || o1_==1
+        @mpoc_assert o2_==0 || o2_==1 
         new(o1_,o2_)
     end 
 end
@@ -192,7 +194,7 @@ function redim(i::Index,Dw::Int64,offset::Int64=0)::Index
             # We need grow the space.  If there are multiple QNs, where to add the space?
             # Lets add to the end for now.
             #
-            @assert offset==0 #not ready to handle this case yet.
+            @mpoc_assert offset==0 #not ready to handle this case yet.
             delta=Dw-dim(i)
             dq=qns[end].second #dim of space for last QN
             qns[end]=qns[end].first=>dq+delta
@@ -209,7 +211,7 @@ function redim(i::Index,Dw::Int64,offset::Int64=0)::Index
                 qns[n]=qns[n].first=>d_remain #update dim of QN
                 start_offset-=(dq-d_remain) #decrement start_offset 
                 if start_offset==0 break end #are we done?
-                @assert start_offset>0 #sanity check
+                @mpoc_assert start_offset>0 #sanity check
             end
 
             for n in reverse(eachindex(qns))
@@ -218,7 +220,7 @@ function redim(i::Index,Dw::Int64,offset::Int64=0)::Index
                 qns[n]=qns[n].first=>d_remain #update dim of QN
                 end_offset-=(dq-d_remain) #decrement end_offset 
                 if end_offset==0 break end #are we done?
-                @assert end_offset>0 #sanity check
+                @mpoc_assert end_offset>0 #sanity check
             end
         
             #
@@ -230,7 +232,7 @@ function redim(i::Index,Dw::Int64,offset::Int64=0)::Index
                     append!(qns_trim,[q])
                 end
             end
-            @assert Dw==sum(map((q)->q.second,qns_trim))
+            @mpoc_assert Dw==sum(map((q)->q.second,qns_trim))
             return Index(qns_trim;dir=dir(i),tags=tags(i),plev=plev(i))
         end #if Dw>dim(i)
     else
@@ -245,13 +247,13 @@ Fix the gauge freedom between QR/QL after a block respecting QR/QL decomposition
 gauge fix is to ensure that either the top left or bottom right corner of `R` is 1.0. 
 """
 function set_scale!(RL::ITensor,Q::ITensor,off::V_offsets)
-    @assert order(RL)==2
+    @mpoc_assert order(RL)==2
     is=inds(RL)
     Dw1,Dw2=map(dim,is)
     i1= off.o1==0 ? 1 : Dw1
     i2= off.o2==0 ? 1 : Dw2
     scale=RL[is[1]=>i1,is[2]=>i2]
-    @assert abs(scale)>1e-12
+    @mpoc_assert abs(scale)>1e-12
     RL./=scale
     Q.*=scale
 end

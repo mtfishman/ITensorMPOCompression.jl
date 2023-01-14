@@ -19,11 +19,9 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
 #
    
     Q,RL,lq=block_qx(W,ul;epsrr=-1.0,kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
-    ITensors.@debug_check begin
-        if order(Q)==4
-            @assert is_canonical(Q,ms,eps)
-            @assert is_regular_form(Q,ul,eps)
-        end
+    if order(Q)==4
+        @mpoc_assert is_canonical(Q,ms,eps)
+        @mpoc_assert is_regular_form(Q,ul,eps)
     end
     c=noncommonind(RL,lq) #if size changed the old c is not lnger valid
     #
@@ -44,11 +42,11 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
 #  TODO: use multiple dispatch on getM to get all QN specific code out of this funtion.
 #
     if (hasqns(RL))
-        @assert nnzblocks(RL)==1
+        @mpoc_assert nnzblocks(RL)==1
     end
    
     M,RL_prime,im,RLnz=getM(dense(RL),ms,eps) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
-    @assert RLnz==0 #make RL_prime does not require any fix ups.
+    @mpoc_assert RLnz==0 #make RL_prime does not require any fix ups.
 #  
 #  At last we can svd and compress M using epsSVD as the cutoff.  M should be dense.
 #    
@@ -73,7 +71,7 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
         RL=grow(s*V,luv,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
         Uplus=grow(U,dag(lq),luv)
         if hasqns(lq)
-            @assert hasqns(Uplus)
+            @mpoc_assert hasqns(Uplus)
         end
         W=Q*Uplus #W[l=n-1,u]
     else # right
@@ -81,7 +79,7 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
         
         Vplus=grow(V,dag(lq),luv) #lq has the dir of Q so want the opposite on Vplus
         if hasqns(lq)
-            @assert hasqns(Vplus)
+            @mpoc_assert hasqns(Vplus)
         end
         W=Vplus*Q #W[l=n-1,v]
     end
@@ -92,10 +90,8 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
         iRL=make_qninds(RL,RLinds...)
         RL=convert_blocksparse(RL,iRL...)
     end
-    ITensors.@debug_check begin
-        @assert is_regular_form(W,ul,eps)
-        @assert is_canonical(W,ms,eps)
-    end
+    @mpoc_assert is_regular_form(W,ul,eps)
+    @mpoc_assert is_canonical(W,ms,eps)
     return W,RL,spectrum
 end
 
@@ -179,7 +175,7 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
     if !(bl || bu)
         throw(ErrorException("truncate!(H::MPO), H must be in either lower or upper regular form"))
     end
-    @assert !(bl && bu)
+    @mpoc_assert !(bl && bu)
     ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
     
     verbose::Bool=get(kwargs, :verbose, false)
@@ -283,7 +279,7 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
     if !(bl || bu)
         throw(ErrorException("truncate!(H::MPO), H must be in either lower or upper regular form"))
     end
-    @assert !(bl && bu)
+    @mpoc_assert !(bl && bu)
     ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
     #
     # Now check if H requires orthogonalization
@@ -293,13 +289,13 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
         epsrr=get(kwargs, :cutoff, 1e-15)
         orthogonalize!(H;orth=mirror(lr),epsrr=epsrr,max_sweeps=1) 
         Hm=h_mirror ? copy(H) : nothing
-        @assert is_orthogonal(H,mirror(lr))
+        @mpoc_assert is_orthogonal(H,mirror(lr))
         Gs=orthogonalize!(H;orth=lr,epsrr=epsrr,max_sweeps=1) #TODO why fail if spec ul here??
-        @assert is_orthogonal(H,lr)
+        @mpoc_assert is_orthogonal(H,lr)
     else
         # user supplied canonical H but not the Gs so we cannot proceed unless we do one more
         # wasteful sweeps
-        @assert false #for now.
+        @mpoc_assert false #for now.
     end
     
     return truncate!(H,Hm,Gs,lr;kwargs...)
@@ -341,16 +337,16 @@ end
 function transform(H::InfiniteMPO,uv::ITensor,n::Int64)
     H[n]=H[n]*uv
     H[n+1]=dag(uv)*H[n+1]
-    @assert order(H[n])==4
-    @assert order(H[n+1])==4
+    @mpoc_assert order(H[n])==4
+    @mpoc_assert order(H[n+1])==4
 end
 function transform(H::Nothing,uv::ITensor,n::Int64) end
 
 
 function truncate(G::ITensor,igl::Index;kwargs...)
-    @assert order(G)==2
+    @mpoc_assert order(G)==2
     igr=noncommonind(G,igl)
-    #@assert tags(igl)!=tags(igr)
+    #@mpoc_assert tags(igl)!=tags(igr)
     M,iml=getM(G,igl,igr)
     U,s,V,spectrum,iu,iv=svd(M,iml;kwargs...)
     # iu=commonind(U,s)
@@ -370,7 +366,7 @@ function truncate(G::ITensor,igl::Index;kwargs...)
     replacetags!(Sp,tags(iu),tags(igl))
     replacetags!(Sp,tags(iv),tags(igr))
     replacetags!(Vp,tags(iv),tags(igr))
-    #@assert norm(dense(G)-dense(Up)*Sp*dense(Vp))<1e-12    expensive!!!
+    #@mpoc_assert norm(dense(G)-dense(Up)*Sp*dense(Vp))<1e-12    expensive!!!
     return Up,Sp,Vp,spectrum
 end
 

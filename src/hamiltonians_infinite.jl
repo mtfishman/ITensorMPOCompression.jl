@@ -8,7 +8,7 @@
 #  
 #
 function InfiniteSum{MPO}(impo::InfiniteMPO,NNN::Int64)
-    @assert length(impo)==1  #for now.
+    @mpoc_assert length(impo)==1  #for now.
     N=NNN+1
     mpo=MPO(N)
     for n in 1:N

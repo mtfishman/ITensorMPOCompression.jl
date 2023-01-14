@@ -116,7 +116,7 @@ function block_qx(W_::ITensor,forward::Index,ul::reg_form=lower;kwargs...)::Tupl
   RLplus,iqx=growRL(RL,ilw,offset) #Now make a full size version of RL
   ilw=filterinds(W,tags=tags(forward))[1]
   replaceind!(W,ilw,iqx) #this function purposely ignores dir(iqx) and preserves dir(ilw)
-  @assert dir(W,iqx)==dir(iqx) #so they better match or everything crashes!!
-  @assert hastags(W,"qx")
+  @mpoc_assert dir(W,iqx)==dir(iqx) #so they better match or everything crashes!!
+  @mpoc_assert hastags(W,"qx")
   return W,RLplus,iqx
 end

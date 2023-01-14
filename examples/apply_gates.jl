@@ -15,7 +15,7 @@ end
 function fix_link_tags!(W::ITensor)
     is=filterinds(inds(W),tags="Site")[1]
     ts2=String(tags(is)[3])
-    @assert ts2[1:2]=="n="
+    @mpoc_assert ts2[1:2]=="n="
     nsite::Int64=tryparse(Int64,ts2[3:end])
     ils=filterinds(inds(W),"Link")
     n1::Int64=tryparse(Int64,String(tags(ils[1])[2])[3:end])

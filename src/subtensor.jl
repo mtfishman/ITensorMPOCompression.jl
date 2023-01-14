@@ -73,7 +73,7 @@ function get_subtensor(T::BlockSparseTensor{ElT,N},new_inds,rs::UnitRange{Int64}
 end
 
 function set_subtensor(T::BlockSparseTensor{ElT,N},A::BlockSparseTensor{ElT,N},rs::UnitRange{Int64}...) where {ElT,N}
-    @assert nzblocks(T)==nzblocks(A)
+    @mpoc_assert nzblocks(T)==nzblocks(A)
     for (tb,ab) in zip(eachnzblock(T),eachnzblock(A))
         blockT = blockview(T, tb)
         blockA = blockview(A, ab)

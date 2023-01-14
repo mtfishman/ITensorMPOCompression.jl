@@ -3,7 +3,7 @@ using ITensorMPOCompression
 
 function make_2D_Heisenberg_AutoMPO(sites,Nx::Int64,Ny::Int64,hz::Float64=0.0,J::Float64=1.0)
     N=length(sites)
-    @assert N==Nx*Ny
+    @mpoc_assert N==Nx*Ny
     ampo = OpSum()
     for j=1:N
         add!(ampo, hz   ,"Sz", j)

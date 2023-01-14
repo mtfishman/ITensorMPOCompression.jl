@@ -59,7 +59,7 @@ function make_Ising_index(Dw::Int64,tags::String,use_qn::Bool,dir)
         if tags[1:4]=="Link"
             ind=Index(QN("Sz",0)=>Dw;dir=dir,tags=tags)
         else
-            @assert tags[1:4]=="Site"
+            @mpoc_assert tags[1:4]=="Site"
             ind=Index(QN("Sz",1)=>Dw;dir=dir,tags=tags)
         end
     else
@@ -72,7 +72,7 @@ end
 #    NNN=1 corresponds to nearest neighbour
 #    NNN=2 corresponds to nearest and next nearest neighbour
 function make_transIsing_op(site::Index,prev_link::Index,NNN::Int64,J::Float64,hx::Float64=0.0,ul::reg_form=lower,pbc::Bool=false)::ITensor
-    @assert NNN>=1
+    @mpoc_assert NNN>=1
     do_field = hx!=0.0
     Dw::Int64=transIsing_Dw(NNN)
     d,n,space=parse_site(site)
@@ -146,11 +146,11 @@ function add_ops(W1::ITensor,W2::ITensor)::ITensor
     #@pprint(W2)
     is1=inds(W1,tags="Site",plev=0)[1]
     is2=inds(W2,tags="Site",plev=0)[1]
-    @assert is1==is2
+    @mpoc_assert is1==is2
     l1,r1=parse_links(W1)
     l2,r2=parse_links(W2)
-    @assert tags(l1)==tags(l2)
-    @assert tags(r1)==tags(r2)
+    @mpoc_assert tags(l1)==tags(l2)
+    @mpoc_assert tags(r1)==tags(r2)
     χl1,χr1=dim(l1)-2,dim(r1)-2
     χl2,χr2=dim(l2)-2,dim(r2)-2
     χl,χr=χl1+χl2, χr1+χr2
@@ -315,7 +315,7 @@ end
 #  J_1n * Z_1*Z_n
 #
 function make_2body_op(site::Index,r1::Index,c1::Index,n::Int64,ul::reg_form;kwargs...)::ITensor
-    @assert n>=1
+    @mpoc_assert n>=1
     Jprime::Float64=get(kwargs,:Jprime,1.0)
     Dw::Int64=2+n
     #d,n,space=parse_site(site)
@@ -346,7 +346,7 @@ function make_2body_op(site::Index,r1::Index,c1::Index,n::Int64,ul::reg_form;kwa
 end
 
 function make_2body_sum(site::Index,r1::Index,c1::Index,NNN::Int64,ul::reg_form;kwargs...)::ITensor
-    @assert NNN>=1
+    @mpoc_assert NNN>=1
     Jprime::Float64=get(kwargs,:Jprime,1.0)
     Dw::Int64=2+NNN
     #d,n,space=parse_site(site)
@@ -381,8 +381,8 @@ end
 #  J1n*Jnm * Z_1*Z_n*Z_m
 #
 function make_3body_op(site::Index,r1::Index,c1::Index,n::Int64,m::Int64,ul::reg_form;kwargs...)::ITensor
-    @assert n>=1
-    @assert m>n
+    @mpoc_assert n>=1
+    @mpoc_assert m>n
     J::Float64=get(kwargs,:J,1.0)
     W=make_2body_op(site,r1,c1,m-1,ul)
     #@pprint(W)
@@ -409,8 +409,8 @@ function to_openbc(mpo::MPO)::MPO
     l,r=get_lr(mpo)    
     mpo[1]=l*mpo[1]
     mpo[N]=mpo[N]*r
-    @assert length(filterinds(inds(mpo[1]),tags="Link"))==1
-    @assert length(filterinds(inds(mpo[N]),tags="Link"))==1
+    @mpoc_assert length(filterinds(inds(mpo[1]),tags="Link"))==1
+    @mpoc_assert length(filterinds(inds(mpo[N]),tags="Link"))==1
     return mpo
 end
 

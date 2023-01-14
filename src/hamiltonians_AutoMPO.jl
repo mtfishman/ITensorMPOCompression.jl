@@ -90,7 +90,7 @@ function make_transIsing_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
 
     do_field = hx!=0.0
     N=length(sites)
-    @assert(N>NNN)
+    @mpoc_assert(N>NNN)
     ampo = OpSum()
     if do_field
         for j=1:N
@@ -131,7 +131,7 @@ The MPO is returned in lower regular form.
     hz::Float64=get(kwargs,:hz,0.0)
     J::Float64=get(kwargs,:J,1.0)
     N=length(sites)
-    @assert(N>=NNN)
+    @mpoc_assert(N>=NNN)
     ampo = OpSum()
     for j=1:N
         add!(ampo, hz   ,"Sz", j)

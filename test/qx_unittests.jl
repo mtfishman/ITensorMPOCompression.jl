@@ -43,7 +43,7 @@ end
 
 #     Lind=noncommoninds(inds(W),c)
 #     Rind=noncommoninds(inds(W),r)
-#     @assert dim(c)==dim(r)
+#     @mpoc_assert dim(c)==dim(r)
 #     #
 #     #  RQ decomp
 #     #
@@ -69,7 +69,7 @@ end
 
 #     Lind=noncommoninds(inds(W),c)
 #     Rind=noncommoninds(inds(W),r)
-#     @assert dim(c)==dim(r)
+#     @mpoc_assert dim(c)==dim(r)
 
 #     #
 #     #  QR decomp
