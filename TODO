@@ -9,6 +9,7 @@ Questions:
   	-I only need it for link indices
   	-Do the work in NDTensors
   -Is there use for a moving orthogonality center in MPOs?
+  -Do we need to support multiple truncate sweeps for iMPOs?
   	
 
 More tests:
@@ -25,6 +26,7 @@ Bugs:
 -iMPO, if Ncell=1 the left/right tags of H[1] are the same.  We need to prime one of them
   prior to truncation, maybe during or prior to orthogonalization.
 - Check for unit ops along the diagonal: For rectangluar matrices we seem to be looking a the  wrong diagonal.
+-Handle 3 site unit cell for iMPO with QNs.
 
 Improvements:
 -assign!() is still wildley inefficient.  We need a way to do

@@ -192,26 +192,6 @@ function getM(RL::ITensor,ms::matrix_state,eps::Float64)::Tuple{ITensor,ITensor,
     return M,RL_prime,im,non_zero
 end
 
-#          |1 0 0|
-#  given G=|0 M 0| spit out M and its left index iml
-#          |0 0 1|
-#
-function getM(G::ITensor,igl::Index,igr::Index)::Tuple{ITensor,Index}
-    @mpoc_assert order(G)==2
-    #@mpoc_assert tags(igl)!=tags(igr) can't use subtensor until this works.
-    # M1=G[igl=>2:dim(igl)-1,igr=>2:dim(igr)-1]
-    # iml1,=inds(M1,tags=tags(igl))
-    Dwl,Dwr=dim(igl),dim(igr)
-    iml,imr=Index(Dwl-2,tags(igl)),Index(Dwr-2,tags(igr))
-    M=ITensor(iml,imr)
-    for jl in 2:Dwl-1
-        for jr in 2:Dwr-1
-            M[iml=>jl-1,imr=>jr-1]=G[igl=>jl,igr=>jr]
-        end
-    end
-    return M,iml
-end
-
 
 #                      |1 0 0|
 #  given A, spit out G=|0 A 0| , indices of G are provided.
@@ -242,6 +222,11 @@ function grow(A::ITensor,ig1::Index,ig2::QNIndex)
     @mpoc_assert id(ig1)==id(ig1q) #If the ID changes then subsequent contractions will fail.
     return convert_blocksparse(G,ig1q,ig2) #fabricate a 1-block blocksparse version.
 end
+function grow(A::ITensor,ig1::QNIndex,ig2::QNIndex)
+    #@mpoc_assert !hasqns(A)
+    G=grow(A,removeqns(ig1),removeqns(ig2)) #grow A into G as dense tensors
+    return convert_blocksparse(G,ig1,ig2) #fabricate a 1-block blocksparse version.
+end
 #
 #  Convert a order 2 dense tensor into a single block, block-sparse tensor
 #  using provided QNIndexes.  
@@ -262,7 +247,7 @@ end
 #
 function make_qninds(A::ITensor,sample_inds::Index...)
     @mpoc_assert order(A)==2
-    @mpoc_assert !hasqns(A)
+#    @mpoc_assert !hasqns(A)
     @mpoc_assert hasqns(sample_inds)
     ic=commonind(inds(A),sample_inds)
     ins =noncommonind(ic,sample_inds)

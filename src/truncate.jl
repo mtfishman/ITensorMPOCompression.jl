@@ -281,7 +281,8 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
     # Now check if H requires orthogonalization
     #
     ms=matrix_state(ul,lr)
-    if !is_canonical(H,ms)
+    can1,can2=is_canonical(H,ms),is_canonical(H,mirror(ms))
+    if !(can1 || can2)
         rr_cutoff=get(kwargs, :cutoff, 1e-15)
         orthogonalize!(H;orth=mirror(lr),rr_cutoff=rr_cutoff,max_sweeps=1) 
         Hm=h_mirror ? copy(H) : nothing
@@ -290,7 +291,7 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
         @mpoc_assert is_orthogonal(H,lr)
     else
         # user supplied canonical H but not the Gs so we cannot proceed unless we do one more
-        # wasteful sweeps
+        # wasteful sweep
         @mpoc_assert false #for now.
     end
     
@@ -303,14 +304,19 @@ function ITensors.truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::Ce
     N=length(H)
     ss=bond_spectrums(undef,N)
     Ss=CelledVector{ITensor}(undef,N)
-    
     for n in 1:N 
+        #prime the right index of G so that indices can be distinguished.
+        #Ideally orthogonalize!() would spit out Gs that are already like this.
+        _,igr=inds(Gs[n])
+        Gs[n]=replaceind(Gs[n],igr,prime(igr))
         if lr==left
+            #println("-----------------Left----------------------")
             il,igl=parse_links(H[n]) #right link of H is the left link of G
             U,Sp,V,spectrum=truncate(Gs[n],dag(igl);kwargs...)
             transform(H,U,n)
             transform(Hm,dag(V),n)
         else
+            #println("-----------------Right----------------------")
             il,ir=parse_links(H[n+1]) #left link of H[n+1] is the right link of G[n]
             igl=noncommonind(Gs[n],il)
             U,Sp,V,spectrum=truncate(Gs[n],igl;kwargs...) 
@@ -342,19 +348,18 @@ function transform(H::Nothing,uv::ITensor,n::Int64) end
 function truncate(G::ITensor,igl::Index;kwargs...)
     @mpoc_assert order(G)==2
     igr=noncommonind(G,igl)
-    #@mpoc_assert tags(igl)!=tags(igr)
-    M,iml=getM(G,igl,igr)
+    @mpoc_assert tags(igl)!=tags(igr) || plev(igl)!=plev(igr) #Make sure subtensr can distinguish igl and igr
+    M=G[igl=>2:dim(igl)-1,igr=>2:dim(igr)-1]
+    iml,=inds(M,plev=plev(igl)) #tags are the same, so plev is the only way to distinguish
     U,s,V,spectrum,iu,iv=svd(M,iml;kwargs...)
-    # iu=commonind(U,s)
-    # iv=commonind(V,s)
     #
     # Build up U+, S+ and V+
     #
     iup=redim(iu,dim(iu)+2) #Use redim to preserve QNs
     ivp=redim(iv,dim(iv)+2) 
-    Up=grow(U,igl,iup)
+    Up=grow(noprime(U),noprime(igl),dag(iup))
     Sp=grow(s,iup,ivp)
-    Vp=grow(V,ivp,igr)
+    Vp=grow(noprime(V),dag(ivp),noprime(igr))
     #
     #  But external link tags in so contractions with W[n] tensors will work.
     #

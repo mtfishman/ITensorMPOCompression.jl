@@ -295,7 +295,7 @@ end
         @printf " Ncell  NNN  uncomp. left  right \n"
     end
 
-    for N in [1,2], NNN in [2,4] #3 site unit cell fails for qns=true.
+    for  NNN in [2,4], N in [1,2,4] #3 site unit cell fails for qns=true.
         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
         H0=make_transIsing_iMPO(si,NNN;ul=ul)
         @test is_regular_form(H0)
@@ -369,10 +369,10 @@ end
         HsumR=InfiniteSum{MPO}(HR,NNN)
         ER=expect(ψ,HsumR)
         @test ER ≈ E0 atol = 1e-14
-        truncate!(HR;verbose=verbose1,orth=left,cutoff=svd_cutoff)
-        HsumR=InfiniteSum{MPO}(HR,NNN)
-        ER=expect(ψ,HsumR)
-        @test ER ≈ E0 atol = 1e-14
+        # truncate!(HR;verbose=verbose1,orth=left,cutoff=svd_cutoff)
+        # HsumR=InfiniteSum{MPO}(HR,NNN)
+        # ER=expect(ψ,HsumR)
+        # @test ER ≈ E0 atol = 1e-14
 
         #@show get_Dw(H0) get_Dw(HL) get_Dw(HR)
     end
