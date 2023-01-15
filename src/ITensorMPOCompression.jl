@@ -26,7 +26,7 @@ export get_Dw,max_Dw,min,max
 export bond_spectrums
 
 export orthogonalize!,truncate,truncate! #the punchline
-export @pprint
+export @pprint,pprint
 #  subtebsor related
 export IndexRange, indices, range, ranges, getperm, permute, start
 
