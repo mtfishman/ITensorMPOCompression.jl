@@ -10,6 +10,8 @@ Questions:
   	-Do the work in NDTensors
   -Is there use for a moving orthogonality center in MPOs?
   -Do we need to support multiple truncate sweeps for iMPOs?
+  -Should orthognalize!(iMPO) spit out primed Gs?
+  -Support RQ/QL/LQ in factorize?
   	
 
 More tests:
@@ -23,18 +25,27 @@ Done: -Verbose mode show all Dws and steps orth-right etc.
 -make truncate, and orthogonalize that work on copies.
 
 Bugs:
--iMPO, if Ncell=1 the left/right tags of H[1] are the same.  We need to prime one of them
+Done -iMPO, if Ncell=1 the left/right tags of H[1] are the same.  We need to prime one of them
   prior to truncation, maybe during or prior to orthogonalization.
 - Check for unit ops along the diagonal: For rectangluar matrices we seem to be looking a the  wrong diagonal.
 -Handle 3 site unit cell for iMPO with QNs.
 
 Improvements:
+- Use smart sum 2body for Make_transIsing functions.  
+- use maxlinkdim for max_Dw
+-Can we use linkind(MPO,bond::Integer) to get link indices? Less use or parsle_links?
 -assign!() is still wildley inefficient.  We need a way to do
   W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
   at the NDTensors level.
 -Save regular_form upper/lower/irreg/unknown in the MPO struct so we never have to call
  detect_regular_form.
    This requires a mod to ITensors MPO struct
+-User llim and rlim in MPO/iMPO structs to save ortho status.
+  -unortho llim=0, rlim=N+1
+  -Ortho on b llim=b-1, rlim=b+1
+  -Useful functions in abtractmps.jl: leftlim rightlim setleftlim! setrightlim! ortho_lims
+    set_ortho_lims! reset_ortho_lims! isortho orthocenter 
+    linkind linkinds defaultlinktags hasdefaultlinktags eachlinkinds eachsiteinds
 On hold: -Subtensor support a mix of i=>1:5 pairs and j=>3 single IndexVal pairs.
   just convert j=>3 to j=>3:3 under the hood.
   May conflict with ITensors.get_index() so maybe not worth it.

@@ -1,7 +1,8 @@
 using ITensors
 using ITensorMPOCompression
 using Test
-using Revise
+using Revise,Printf
+Base.show(io::IO, f::Float64) = @printf(io, "%1.1f", f) #dumb way to control float output
 
 @testset "Blocking functions" begin
 
@@ -10,7 +11,7 @@ using Revise
 
     W=ITensor(0.0,Index(4,"Link,l=0"),Index(4,"Link,l=1"),is,is')
     W=setV(W,V,matrix_state(lower,left))
-    @test matrix(slice(W,is=>1,is'=>1)) == 
+    @test reshape(array(W[is=>1:1,is'=>1:1]),4,4) == 
     [0.0 0.0 0.0 0.0; 
      0.0 1.0 1.0 1.0;
      0.0 1.0 1.0 1.0;
@@ -18,7 +19,7 @@ using Revise
    
     W=ITensor(0.0,Index(4,"Link,l=0"),Index(4,"Link,l=1"),is,is')
     W=setV(W,V,matrix_state(lower,right))
-    @test matrix(slice(W,is=>1,is'=>1)) == 
+    @test reshape(array(W[is=>1:1,is'=>1:1]),4,4)  == 
     [1.0 1.0 1.0 0.0; 
      1.0 1.0 1.0 0.0;
      1.0 1.0 1.0 0.0;
@@ -42,7 +43,7 @@ using Revise
     V=ITensor(0.5,Index(3,"Link,l=0"),Index(3,"Link,qx"),is,is')
     W=ITensor(eltype(A),A,Index(4,"Link,l=0"),Index(4,"Link,l=1"),is,is')
     W=setV(W,V,matrix_state(lower,left))
-    @test matrix(slice(W,is=>1,is'=>1)) == 
+    @test reshape(array(W[is=>1:1,is'=>1:1]),4,4) == 
     [1.0 5.0 9.0 13.0 ; 
      2.0 0.5 0.5  0.5 ;
      3.0 0.5 0.5  0.5 ;
@@ -54,7 +55,7 @@ using Revise
     V=ITensor(0.5,Index(3,"Link,l=0"),Index(2,"Link,qx"),is,is')
     W=ITensor(eltype(A),A,Index(4,"Link,l=0"),Index(4,"Link,l=1"),is,is')
     W=setV(W,V,matrix_state(lower,left))
-    @test transpose(matrix(slice(W,is=>1,is'=>1))) == 
+    @test transpose(reshape(array(W[is=>1:1,is'=>1:1]),3,4) ) == 
     [1.0 0.0  0.0 ; #top row gets zeroed out on resizing 
      2.0 0.5  0.5 ;
      3.0 0.5  0.5 ;
@@ -65,7 +66,7 @@ using Revise
     
     W=setV(W,V,matrix_state(lower,right))
    
-    @test matrix(slice(W,is=>1,is'=>1)) == 
+    @test reshape(array(W[is=>1:1,is'=>1:1]),3,4)  == 
     [0.5   0.5  0.5  0.0 ; 
      0.5   0.5  0.5  0.0 ;
      13.0 14.0 15.0 16.0 ]
@@ -75,7 +76,7 @@ using Revise
 
     W=ITensor(eltype(A),A,Index(4,"Link,l=0"),Index(4,"Link,l=1"),is,is')
     W=setV(W,V,matrix_state(lower,left))
-    @test matrix(slice(W,is=>1,is'=>1)) == 
+    @test reshape(array(W[is=>1:1,is'=>1:1]),3,4)  == 
     [1.0 5.0 9.0 13.0; 
      0.0 0.5 0.5  0.5;
      0.0 0.5 0.5  0.5]
@@ -83,7 +84,7 @@ using Revise
     W=ITensor(eltype(A),A,Index(4,"Link,l=0"),Index(4,"Link,l=1"),is,is')
     
     W=setV(W,V,matrix_state(lower,right))
-    @test matrix(slice(W,is=>1,is'=>1)) == 
+    @test reshape(array(W[is=>1:1,is'=>1:1]),3,4)  == 
     [0.5 0.5  0.5 0.0; 
      0.5 0.5  0.5 0.0;
      4.0 8.0 12.0 16.0]
