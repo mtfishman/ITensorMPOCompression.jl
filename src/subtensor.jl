@@ -122,6 +122,7 @@ function match_tagplev(i1::Index,i2s::Index...)
             return i
         end
     end
+    @error("match_tagplev: unable to find tag/plev for $i1 in Index set $i2s.")
     return nothing
 end
 
