@@ -43,7 +43,8 @@ function test_truncate(makeH,N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,ep
     #@printf "E0=%1.5f E1=%1.5f rel. error=%.5e  \n" E0l E1l RE 
     @test RE ≈ 0 atol = 2*eps
     @test is_regular_form(H,ms.ul,eps)
-    @test is_canonical(H,ms,eps)
+    @test isortho(H,ms.lr)
+    @test check_ortho(H,ms,eps)
 
     truncate!(H;verbose=verbose1,orth=mlr,cutoff=epsSVD)
     truncate!(H;verbose=verbose1,orth=ms.lr,cutoff=epsSVD)
@@ -52,7 +53,8 @@ function test_truncate(makeH,N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,ep
         truncate!(H;verbose=verbose1,orth=ms.lr,cutoff=epsSVD)
     end
     @test is_regular_form(H,ms.ul,eps)
-    @test is_canonical(H,ms,eps)
+    @test isortho(H,ms.lr)
+    @test check_ortho(H,ms,eps)
     # make sure the energy in unchanged
     E2l=inner(psi',H,psi)/(N-1)
     RE=abs((E0l-E2l)/E0l)
@@ -307,7 +309,8 @@ end
         Ss,ss,HR=truncate!(HL;verbose=verbose1,orth=left,cutoff=svd_cutoff,h_mirror=true)
         DwL=Base.max(get_Dw(HL)...)
         @test is_regular_form(HL)
-        @test is_orthogonal(HL,left)
+        @test isortho(HL,left)
+        @test check_ortho(HL,left)
         #
         #  Now test guage relations using the diagonal singular value matrices
         #  as the gauge transforms.
@@ -322,7 +325,8 @@ end
         Ss,ss,HL=truncate!(HR;verbose=verbose1,orth=right,cutoff=svd_cutoff,h_mirror=true)
         DwR=Base.max(get_Dw(HR)...)
         @test is_regular_form(HR)
-        @test is_orthogonal(HR,right)
+        @test isortho(HR,right)
+        @test check_ortho(HR,right)
         for n in 1:N
             @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
         end   

@@ -24,7 +24,7 @@ using Printf
         W=H[n]
         @test is_regular_form(W,ms.ul)
         Q,RL,lq=block_qx(W,ms.ul;orth=ms.lr)
-        @test is_canonical(Q,ms,eps)
+        @test check_ortho(Q,ms,eps)
     end
 end
     

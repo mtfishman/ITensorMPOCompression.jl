@@ -4,7 +4,7 @@ using ITensors
 using ITensors.NDTensors
 using ITensorInfiniteMPS
 
-import ITensors: QNIndex, addqns, rq, AbstractMPS
+import ITensors: QNIndex, addqns, rq, AbstractMPS, isortho, orthocenter
 import ITensors.BlockSparseTensor,ITensors.DenseTensor,ITensors.tensor
 
 import ITensorInfiniteMPS: AbstractInfiniteMPS
@@ -15,8 +15,9 @@ export getV,setV,growRL,V_offsets #blocking related
 # lots of characterization functions
 export reg_form,orth_type,matrix_state,upper,lower,left,right,mirror
 export parse_links,parse_link,parse_site,is_regular_form,getM,grow,detect_regular_form
-export is_lower_regular_form,is_upper_regular_form,is_canonical,is_orthogonal
+export is_lower_regular_form,is_upper_regular_form
 export detect_upper_lower,is_upper_lower,sweep
+export isortho, check_ortho
 # Hamiltonian related
 export make_transIsing_MPO,make_Heisenberg_AutoMPO,make_transIsing_AutoMPO,to_openbc,get_lr
 export make_transIsing_iMPO,make_2body_AutoMPO

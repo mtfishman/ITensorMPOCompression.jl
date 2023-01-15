@@ -129,25 +129,6 @@ function infer_site_numbers(n1::Int64,n2::Int64,nsite::Int64)::Tuple{Int64,Int64
     return n1,n2
 end
 
-#----------------------------------------------------------------------------
-#
-#  Detection of canonical (orthogonal) forms
-#
-function is_canonical(W::ITensor,ms::matrix_state,eps::Float64=default_eps)::Bool
-    V=getV(W,V_offsets(ms))
-    forward,reverse=parse_links(V,ms.lr)
-    d,n,space=parse_site(W)
-    DwDw=dim(forward)*dim(reverse)
-    
-    Id=V*prime(dag(V),forward)/d
-    if order(Id)==2
-        is_can = norm(dense(Id)-delta(forward,dag(forward')))/sqrt(DwDw)<eps
-    elseif order(Id)==0
-        is_can = abs(scalar(Id)-d)<eps
-    end
-    return is_can    
-end
-
 #
 #  Handles direction and leaving out the last element in the sweep.
 #
@@ -164,24 +145,38 @@ function sweep(H::AbstractInfiniteMPS,lr::orth_type)::StepRange{Int64, Int64}
     return lr==left ? (1:1:N) : (N:-1:1)
 end
 
-function is_canonical(H::AbstractMPS,ms::matrix_state,eps::Float64=default_eps)::Bool
+
+#----------------------------------------------------------------------------
+#
+#  Detection of canonical (orthogonal) forms
+#
+function check_ortho(W::ITensor,ms::matrix_state,eps::Float64=default_eps)::Bool
+    V=getV(W,V_offsets(ms))
+    forward,reverse=parse_links(V,ms.lr)
+    d,n,space=parse_site(W)
+    DwDw=dim(forward)*dim(reverse)
+    
+    Id=V*prime(dag(V),forward)/d
+    if order(Id)==2
+        is_can = norm(dense(Id)-delta(forward,dag(forward')))/sqrt(DwDw)<eps
+    elseif order(Id)==0
+        is_can = abs(scalar(Id)-d)<eps
+    end
+    return is_can    
+end
+
+
+function check_ortho(H::AbstractMPS,ms::matrix_state,eps::Float64=default_eps)::Bool
     N=length(H)
     ic=true
     for n in sweep(H,ms.lr) #skip the edge row/col opertors
-        ic=ic &&  is_canonical(H[n],ms,eps)
+        ic=ic &&  check_ortho(H[n],ms,eps)
     end
     return ic
 end
 
-function is_canonical(H::AbstractMPS,lr::orth_type,eps::Float64=default_eps)::Bool
-    l,u=detect_regular_form(H)
-    @mpoc_assert u || l
-    ul = u ? upper : lower
-    return is_canonical(H,matrix_state(ul,lr),eps)
-end
-
 @doc """
-is_orthogonal(H,lr[,eps])::Bool
+check_ortho(H,lr[,eps])::Bool
 
 Test if all sites in an MPO statisfty the condition for `lr` orthogonal (canonical) form.
 
@@ -190,11 +185,42 @@ Test if all sites in an MPO statisfty the condition for `lr` orthogonal (canonic
 - `lr::orth_type` : choose `left` or `right` orthogonality condition to test for.
 - `eps::Float64 = 1e-14` : operators inside H with norm(W[i,j])<eps are assumed to be zero.
 
-Returns `true` if the MPO is in `lr` orthogonal (canonical) form
-"""
-is_orthogonal(H::AbstractMPS,lr::orth_type,eps::Float64=default_eps)::Bool = is_canonical(H,lr,eps)
+Returns `true` if the MPO is in `lr` orthogonal (canonical) form.  This is an expensive operation which scales as N*Dw^3 which should mostly be used only for unit testing code or in debug mode.  In production code use isortho which looks at the cached ortho state.
 
-#-
+"""
+function check_ortho(H::AbstractMPS,lr::orth_type,eps::Float64=default_eps)::Bool
+    l,u=detect_regular_form(H)
+    @mpoc_assert u || l
+    ul = u ? upper : lower
+    return check_ortho(H,matrix_state(ul,lr),eps)
+end
+
+@doc """
+isortho(H,lr)::Bool
+
+Test if anMPO is in `lr` orthogonal (canonical) form by checking the cached orthogonality center.
+
+# Arguments
+- `H:MPO` : MPO to be characterized.
+- `lr::orth_type` : choose `left` or `right` orthogonality condition to test for.
+
+Returns `true` if the MPO is in `lr` orthogonal (canonical) form.  This is a fast operation and should be safe to use in time critical production code.  The one exception is for iMPO with Ncell=1, where currently the ortho center does not distinguis between left/right or un-orthognal states.
+"""
+function isortho(H::AbstractMPS,lr::orth_type)::Bool 
+    io=false
+    if length(H)==1
+        io=check_ortho(H,lr) #Expensive!!
+    else
+        if isortho(H)
+            if lr==left
+                io= orthocenter(H)==length(H)
+            else
+                io=orthocenter(H) == 1
+            end
+        end
+    end
+    return  io
+end
 
 #----------------------------------------------------------------------------
 #
@@ -555,8 +581,8 @@ function get_traits(W::ITensor,eps::Float64)
     tri = bl ? lower : upper
     msl=matrix_state(tri,left)
     msr=matrix_state(tri,right)
-    is__left=is_canonical(W,msl,eps)
-    is_right=is_canonical(W,msr,eps)
+    is__left=check_ortho(W,msl,eps)
+    is_right=check_ortho(W,msr,eps)
     if is__left && is_right
         lr='B'
     elseif is__left && !is_right

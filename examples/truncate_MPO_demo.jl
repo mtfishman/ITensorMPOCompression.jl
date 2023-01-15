@@ -12,4 +12,5 @@ pprint(H[7])
 @show get_Dw(H)
 @show spectrums
 is_lower_regular_form(H)==true
-is_orthogonal(H,left)==true
+isortho(H,left)==true
+check_ortho(H,left)==true

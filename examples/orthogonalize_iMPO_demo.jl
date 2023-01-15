@@ -13,6 +13,8 @@ Gs=orthogonalize!(H;orth=left,rr_cutoff=1e-15);
 Dw2=get_Dw(H)[1]
 Dw0=get_Dw(H0)[1]
 @pprint(H[1]) #Shows regular and triangular form are preserved.
+@show H.llim H.rlim ortho_lims(H) isortho(H)
+
 println("Starting Dw=$Dw0, After one orthogonalize sweep Dw=$Dw1, after two sweeps Dw=$Dw2")
 #
 #  Make random state

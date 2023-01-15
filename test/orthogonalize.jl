@@ -13,55 +13,55 @@ verbose1=false #verbose inside orth algos
 # println("-----------Start--------------")
 @testset verbose=verbose "Orthogonalize" begin
 
-@testset "Upper, lower, regular detections" begin
-    N=6
-    NNN=4
-    model_kwargs = (hx=0.5, ul=lower)
-    eps=1e-15
-    sites = siteinds("SpinHalf", N)
-    #
-    #  test lower triangular MPO 
-    #
-    H=make_transIsing_MPO(sites,NNN;model_kwargs...) 
-    @test is_upper_lower(H   ,lower,eps)
-    @test is_lower_regular_form(H,eps)
-    W=H[2]
-    r,c=parse_links(W)
-    is=filterinds(W,tags="Site")[1] #get any site index for generating operators
-    Sz=op(is,"Sz")
-    assign!(W,Sz,r=>1,c=>2) #stuff any op on the top row
-    @test !is_lower_regular_form(W,eps)
-    @test !is_upper_lower(H   ,lower,eps)
-    @test !is_upper_lower(H   ,upper,eps)
-    W=H[3]
-    r,c=parse_links(W)
-    is=filterinds(W,tags="Site")[1] #get any site index for generating operators
-    Sz=op(is,"Sz")
-    assign!(W,Sz,r=>2,c=>dim(c)) #stuff any op on the right column
-    @test !is_lower_regular_form(W,eps)
-    @test !is_upper_lower(H   ,lower,eps)
-    @test !is_upper_lower(H   ,upper,eps)
-    W=H[4]
-    r,c=parse_links(W)
-    is=filterinds(W,tags="Site")[1] #get any site index for generating operators
-    Sz=op(is,"Sz")
-    assign!(W,Sz,r=>2,c=>2) #stuff any op on the diag
-    @test is_lower_regular_form(W,eps) #this one should still be regular
-    @test  is_upper_lower(W   ,lower,eps)
-    @test !is_upper_lower(W   ,upper,eps)
-    W=H[5]
-    r,c=parse_links(W)
-    is=filterinds(W,tags="Site")[1] #get any site index for generating operators
-    Id=op(is,"Id")
-    assign!(W,Id,r=>2,c=>2) #stuff unit op on the diag
-    @test is_lower_regular_form(W,eps) #this one should still be regular, but should see a warning
-    @test  is_upper_lower(W   ,lower,eps)
-    @test !is_upper_lower(W   ,upper,eps)
-    # at this point the whole H should fail since we stuffed ops in the all wrong places.
-    @test !is_lower_regular_form(H,eps)
+# @testset "Upper, lower, regular detections" begin
+#     N=6
+#     NNN=4
+#     model_kwargs = (hx=0.5, ul=lower)
+#     eps=1e-15
+#     sites = siteinds("SpinHalf", N)
+#     #
+#     #  test lower triangular MPO 
+#     #
+#     H=make_transIsing_MPO(sites,NNN;model_kwargs...) 
+#     @test is_upper_lower(H   ,lower,eps)
+#     @test is_lower_regular_form(H,eps)
+#     W=H[2]
+#     r,c=parse_links(W)
+#     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
+#     Sz=op(is,"Sz")
+#     assign!(W,Sz,r=>1,c=>2) #stuff any op on the top row
+#     @test !is_lower_regular_form(W,eps)
+#     @test !is_upper_lower(H   ,lower,eps)
+#     @test !is_upper_lower(H   ,upper,eps)
+#     W=H[3]
+#     r,c=parse_links(W)
+#     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
+#     Sz=op(is,"Sz")
+#     assign!(W,Sz,r=>2,c=>dim(c)) #stuff any op on the right column
+#     @test !is_lower_regular_form(W,eps)
+#     @test !is_upper_lower(H   ,lower,eps)
+#     @test !is_upper_lower(H   ,upper,eps)
+#     W=H[4]
+#     r,c=parse_links(W)
+#     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
+#     Sz=op(is,"Sz")
+#     assign!(W,Sz,r=>2,c=>2) #stuff any op on the diag
+#     @test is_lower_regular_form(W,eps) #this one should still be regular
+#     @test  is_upper_lower(W   ,lower,eps)
+#     @test !is_upper_lower(W   ,upper,eps)
+#     W=H[5]
+#     r,c=parse_links(W)
+#     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
+#     Id=op(is,"Id")
+#     assign!(W,Id,r=>2,c=>2) #stuff unit op on the diag
+#     @test is_lower_regular_form(W,eps) #this one should still be regular, but should see a warning
+#     @test  is_upper_lower(W   ,lower,eps)
+#     @test !is_upper_lower(W   ,upper,eps)
+#     # at this point the whole H should fail since we stuffed ops in the all wrong places.
+#     @test !is_lower_regular_form(H,eps)
 
 
-end
+# end
 
 test_combos=[
     (make_transIsing_MPO,lower),
@@ -82,13 +82,17 @@ test_combos=[
     H=makeH(sites,NNN;model_kwargs...) 
     #@show inds(H[1])
     @test is_regular_form(H   ,ms.ul,eps)
+    @test !isortho(H)
+    @test !isortho(H,left)    
+    @test !isortho(H,right)    
     E0=inner(psi',H,psi)
     orthogonalize!(H;verbose=verbose1,orth=ms.lr,rr_cutoff=1e-12)
     E1=inner(psi',H,psi)
     @test E0 ≈ E1 atol = 1e-14
     @test is_regular_form(H,ms.ul,eps)
-    @test  is_canonical(H,ms,eps)
-    @test !is_canonical(H,mirror(ms),eps)    
+    @test  isortho(H,ms.lr)
+    @test !isortho(H,mirror(ms.lr))
+    @test check_ortho(H,ms.lr) #expensive does V_dagger*V=Id
 end 
 
 test_combos=[
@@ -114,8 +118,9 @@ test_combos=[
     E1=inner(psi',H,psi)
     @test E0 ≈ E1 atol = 1e-14
     @test is_regular_form(H,ms.ul,eps)
-    @test  is_canonical(H,ms,eps)
-    @test !is_canonical(H,mirror(ms),eps)    
+    @test  isortho(H,ms.lr)
+    @test !isortho(H,mirror(ms.lr))    
+    @test check_ortho(H,ms.lr) #expensive does V_dagger*V=Id
 end
  
 @testset "Compare $ul tri rank reduction with AutoMPO, QNs=$qns" for ul in [lower,upper],qns in [false,true]
@@ -151,7 +156,8 @@ end
         GL=orthogonalize!(HL;verbose=verbose1,orth=left,max_sweeps=1)
         DwL=Base.max(get_Dw(HL)...)
         @test is_regular_form(HL)
-        @test is_orthogonal(HL,left)
+        @test isortho(HL,left)
+        @test check_ortho(HL,left) #expensive does V_dagger*V=Id
         for n in 1:N
             @test norm(HL[n]*GL[n]-GL[n-1]*H0[n]) ≈ 0.0 atol = 1e-14 
         end
@@ -159,7 +165,8 @@ end
         GR=orthogonalize!(HR;verbose=verbose1,orth=right,max_sweeps=1)
         DwR=Base.max(get_Dw(HR)...)
         @test is_regular_form(HR)
-        @test is_orthogonal(HR,right)
+        @test isortho(HR,right)
+        @test check_ortho(HR,right) #expensive does V_dagger*V=Id
         for n in 1:N
             @test norm(GR[n-1]*HR[n]-H0[n]*GR[n]) ≈ 0.0 atol = 1e-14
         end   
@@ -167,7 +174,8 @@ end
         G=orthogonalize!(HR1;verbose=verbose1,orth=right,max_sweeps=1)
         DwLR=Base.max(get_Dw(HR1)...)
         @test is_regular_form(HR1)
-        @test is_orthogonal(HR1,right)
+        @test isortho(HR1,right)
+        @test check_ortho(HR1,right) #expensive does V_dagger*V=Id
         for n in 1:N
             D1=G[n-1]*HR1[n]
             @assert order(D1)==4

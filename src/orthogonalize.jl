@@ -23,12 +23,13 @@ function ITensors.orthogonalize!(H::MPO,ul::reg_form;kwargs...)
     if verbose
         previous_Dw=sum(get_Dw(H))
     end
-    N=length(H)
     rng=sweep(H,lr)
     for n in rng 
-        nn=n+rng.step #index to neighbour
+        nn=n+rng.step #index to next neighbour in the sweep direction.
         H[n],H[nn]=orthogonalize!(H[n],H[nn],ul;kwargs...)
     end
+    H.rlim = rng.stop+rng.step+1
+    H.llim = rng.stop+rng.step-1
     if verbose
         Dw=sum(get_Dw(H))
         println("    MPO After $lr orth sweep sum(Dw) reduced from $previous_Dw to $Dw")
@@ -102,7 +103,7 @@ julia> get_Dw(H)
 #
 julia> is_lower_regular_form(H)==true
 true
-julia> is_orthogonal(H,left)==true
+julia> isortho(H,left)==true
 true
 
 
@@ -164,9 +165,12 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
         # Now make sure we have lr that user specified
         if request_lr!=lr
             if oldH≠nothing && nsweeps>1
-                @mpoc_assert is_orthogonal(oldH,request_lr)
+                @mpoc_assert isortho(oldH,request_lr)
                 #@show "copy oldH"
+                # TODO can we just do H=copy(oldH)
                 H.=oldH
+                H.llim=oldH.llim
+                H.rlim=oldH.rlim
             else
                 # THis means we did 1 sweep with no change in Dw, and now need to
                 # to do another sweep to into the requested ortho. state.
@@ -179,7 +183,7 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
         orthogonalize!(H,ul;kwargs...,orth=request_lr)
         sumDw=sum(get_Dw(H))
     end
-    @mpoc_assert is_orthogonal(H,request_lr)
+    @mpoc_assert isortho(H,request_lr)
 
 end
 
@@ -268,6 +272,9 @@ function qx_iterate!(H::InfiniteMPO,ul::reg_form;kwargs...)
         #     @printf "%4i %1.1e\n" niter eta
         # end
     end
+    H.rlim = rng.stop+1
+    H.llim = rng.stop-1
+
     if verbose
         Dw=Base.max(get_Dw(H)...)
         println("   iMPO After $lr orth sweep, $niter iterations Dw reduced from $previous_Dw to $Dw")
@@ -326,7 +333,7 @@ julia> orthogonalize!(H;orth=left,rr_cutoff=1e-15);
 julia> get_Dw(H)
  1-element Vector{Int64}:
   13
-julia> is_orthogonal(H,left)
+julia> isortho(H,left)
 true
 
 

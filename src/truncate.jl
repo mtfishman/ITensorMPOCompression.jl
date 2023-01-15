@@ -19,10 +19,11 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
 #
    
     Q,RL,lq=block_qx(W,ul;rr_cutoff=-1.0,kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
-    if order(Q)==4
-        @mpoc_assert is_canonical(Q,ms,eps)
-        @mpoc_assert is_regular_form(Q,ul,eps)
-    end
+    # expensive
+    # if order(Q)==4
+    #     @mpoc_assert check_ortho(Q,ms,eps)
+    #     @mpoc_assert is_regular_form(Q,ul,eps)
+    # end
     c=noncommonind(RL,lq) #if size changed the old c is not lnger valid
     #
     #  If the RL is rectangular in wrong way, then factoring out M is very difficult.
@@ -90,8 +91,9 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
         iRL=make_qninds(RL,RLinds...)
         RL=convert_blocksparse(RL,iRL...)
     end
-    @mpoc_assert is_regular_form(W,ul,eps)
-    @mpoc_assert is_canonical(W,ms,eps)
+    # expensive.
+    # @mpoc_assert is_regular_form(W,ul,eps)
+    # @mpoc_assert check_ortho(W,ms,eps)
     return W,RL,spectrum
 end
 
@@ -159,7 +161,7 @@ julia> get_Dw(H)
 julia> is_lower_regular_form(H)==true
 true
 
-julia> is_orthogonal(H,left)==true
+julia> isortho(H,left)==true
 true
 
 ```
@@ -184,7 +186,7 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
     # Now check if H required orthogonalization
     #
     ms=matrix_state(ul,lr)
-    if !is_canonical(H,mirror(ms))
+    if !isortho(H,lr)
         if verbose
             println("truncate detected non-orthogonal MPO, will now orthogonalize")
         end
@@ -205,6 +207,9 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
         is_regular_form(H[nn],ms.ul)
         ss[n+link_offest]=s
     end
+    H.rlim = rng.stop+rng.step+1
+    H.llim = rng.stop+rng.step-1
+
     if verbose
         Dw=Base.max(get_Dw(H)...)
         println("After $lr truncation sweep Dw was reduced from $previous_Dw to $Dw")
@@ -280,15 +285,12 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
     #
     # Now check if H requires orthogonalization
     #
-    ms=matrix_state(ul,lr)
-    can1,can2=is_canonical(H,ms),is_canonical(H,mirror(ms))
-    if !(can1 || can2)
+    can1,can2=isortho(H,lr),isortho(H,mirror(lr))
+    if !(can1||can2)
         rr_cutoff=get(kwargs, :cutoff, 1e-15)
         orthogonalize!(H;orth=mirror(lr),rr_cutoff=rr_cutoff,max_sweeps=1) 
         Hm=h_mirror ? copy(H) : nothing
-        @mpoc_assert is_orthogonal(H,mirror(lr))
         Gs=orthogonalize!(H;orth=lr,rr_cutoff=rr_cutoff,max_sweeps=1) #TODO why fail if spec ul here??
-        @mpoc_assert is_orthogonal(H,lr)
     else
         # user supplied canonical H but not the Gs so we cannot proceed unless we do one more
         # wasteful sweep

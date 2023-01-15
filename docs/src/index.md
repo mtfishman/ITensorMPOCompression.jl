@@ -163,7 +163,8 @@ Where the summation limits depend on where the V-block is for `left`/`right` and
 
 ```@docs
 orth_type
-is_orthogonal
+isortho
+check_ortho
 ```
 
 # Some utility functions

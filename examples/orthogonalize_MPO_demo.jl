@@ -11,4 +11,6 @@ orthogonalize!(H;rr_cutoff=1e-14)
 pprint(H[2])
 get_Dw(H)
 is_lower_regular_form(H)==true
-is_orthogonal(H,left)==true
+isortho(H,left)==true
+@show H.llim H.rlim ortho_lims(H)
+pprint(H)

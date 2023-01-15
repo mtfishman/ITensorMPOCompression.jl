@@ -12,6 +12,8 @@ Questions:
   -Do we need to support multiple truncate sweeps for iMPOs?
   -Should orthognalize!(iMPO) spit out primed Gs?
   -Support RQ/QL/LQ in factorize?
+  -InfiniteMPO using llim=b-1,rlim=b+1 for b=orthcenter(H) fail when N=1, becie left and right
+   become indistinguishable.
   	
 
 More tests:
@@ -40,12 +42,13 @@ Improvements:
 -Save regular_form upper/lower/irreg/unknown in the MPO struct so we never have to call
  detect_regular_form.
    This requires a mod to ITensors MPO struct
--User llim and rlim in MPO/iMPO structs to save ortho status.
+Done: -User llim and rlim in MPO/iMPO structs to save ortho status.
   -unortho llim=0, rlim=N+1
   -Ortho on b llim=b-1, rlim=b+1
   -Useful functions in abtractmps.jl: leftlim rightlim setleftlim! setrightlim! ortho_lims
     set_ortho_lims! reset_ortho_lims! isortho orthocenter 
     linkind linkinds defaultlinktags hasdefaultlinktags eachlinkinds eachsiteinds
+  -Encountered ambiguity problems with iMPO when N=1.
 On hold: -Subtensor support a mix of i=>1:5 pairs and j=>3 single IndexVal pairs.
   just convert j=>3 to j=>3:3 under the hood.
   May conflict with ITensors.get_index() so maybe not worth it.
