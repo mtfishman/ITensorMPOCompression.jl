@@ -46,46 +46,25 @@ end
 
 #
 #  This function is non trivial for 3 reasons:
-#   1) V could have truncted number of rows or columns as a result of rank revealing QX
-#      W then has to re-sized accordingly
-#   2) If W gets resized we need to preserve the last row or column from the old W.
-#   3) V and W should one common link index so we need to find those and pair them together.
+#   1) V could have a truncted number of rows or columns as a result of rank revealing QX
+#      W then has to be re-sized accordingly
+#   2) If W gets resized we need to preserve particular rows/columns outside the Vblock from the old W.
+#   3) V and W should have one common link index so we need to find those and pair them together. But we
+#      need to match on tags&plev because dims are different so ID matching won't work. 
 #
 function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
-    wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
-    if length(wils)==1
+    if order(W)==3
         return setV1(W,V,ms) #Handle row/col vectors
     end
+    @mpoc_assert order(W)==4
+    wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
     vils=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
     @mpoc_assert length(wils)==2
     @mpoc_assert length(vils)==2
-    iss=filterinds(inds(W),tags="Site")
-    @mpoc_assert iss==filterinds(inds(V),tags="Site")
-    #
-    #  these need to loop in the correct order in order to get the W and V indices to line properly.
-    #  one index from each of W & V should have the same tags, so we just need get these
-    #  indices paired up so they can loop together.
-    #
-    # this would be perfect but it only looks at the first tag "Link", 
-    # we are interested in the second tag l=$n :(
-   
-    if tags(wils[1])!=tags(vils[1]) && tags(wils[2])!=tags(vils[2])
-        vils=vils[2],vils[1] #swap tags the same on index 1 or 2.
-    end
-    @mpoc_assert tags(wils[1])==tags(vils[1]) || tags(wils[2])==tags(vils[2])
-    if hastags(vils[1],"qx")
-        ivqx=vils[1]
-        iwqx=wils[1]
-        ivl=vils[2]
-        iwl=wils[2]
-    else
-        @mpoc_assert hastags(vils[2],"qx")
-        ivqx=vils[2]
-        iwqx=wils[2]
-        ivl=vils[1]
-        iwl=wils[1]
-    end
-
+    ivqx,=inds(V,tags="Link,qx") #get the qx index.  This is the one that can change size
+    ivl=noncommonind(vils,ivqx)  #get the other link l=n index on V
+    iwl=wils[match_tagplev(ivl,wils...)] #now find the W link index with the same tags/plev as ivl
+    iwqx=noncommonind(wils,iwl) #get the other link l=n index on W
     off=V_offsets(ms)
     @mpoc_assert off.o1==off.o2
     #
@@ -93,6 +72,7 @@ function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     #
     if dim(iwqx)>dim(ivqx)+1
         iw1qx=redim(iwqx,dim(ivqx)+1) #re-dimension the wqx index.
+        iss=filterinds(inds(W),tags="Site")
         T=eltype(V)
         W1=ITensor(T(0.0),iw1qx,iwl,iss)
         rc= off.o1==1 ? 1 : dim(iwqx) #preserve row/col 1 or Dw

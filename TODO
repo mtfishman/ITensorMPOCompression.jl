@@ -35,7 +35,7 @@ Done -iMPO, if Ncell=1 the left/right tags of H[1] are the same.  We need to pri
 Improvements:
 - Use smart sum 2body for Make_transIsing functions.  
 - use maxlinkdim for max_Dw
--Can we use linkind(MPO,bond::Integer) to get link indices? Less use or parsle_links?
+Done: -Can we use linkind(MPO,bond::Integer) to get link indices? Less use or parsle_links?
 -assign!() is still wildley inefficient.  We need a way to do
   W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
   at the NDTensors level.
@@ -50,17 +50,18 @@ Done: -User llim and rlim in MPO/iMPO structs to save ortho status.
     linkind linkinds defaultlinktags hasdefaultlinktags eachlinkinds eachsiteinds
   -Encountered ambiguity problems with iMPO when N=1.
 On hold: -Subtensor support a mix of i=>1:5 pairs and j=>3 single IndexVal pairs.
-  just convert j=>3 to j=>3:3 under the hood.
+  No !!! just convert j=>3 to j=>3:3 under the hood.
+   j=>3 = slice (order reduction),  j=>3:3 = no slice, keep order intact.
   May conflict with ITensors.get_index() so maybe not worth it.
 -Organize exports and imports.
--Clean up index matching in SetV
+Done: -Clean up index matching in SetV
 Done: -Pare down unit test for shorter run time.
   -Very hard, lots of CPU time on compiling inside ITensors for GS energy tests
   -Using a sysimage for ITensors does not seem to help!
 Done: -Profile and code coverage.
    Spends most of the time in detect_regular_form.  We should keep this info in the MPO
    struct.
--Gs returned by truncate should be Diag not Dense tensors.
+-Gs/Ss returned by truncate should be Diag not Dense tensors.
 Done -Use new is_upper functions using combiners to get rank-2 tensors.
    Not sure the combiners do what we want here for an op-valued matrix.
    Using norm and no slice to test for zeros
@@ -68,18 +69,20 @@ Done: -Add some sort of Results section at the end ot tech docs.
 -Review high level algos
 Done:  -rules for smart_sweep
 Done:  -orthog inside truncate
-No:  -convergence in truncate?
+-convergence in truncate for finite MPO?
+  -Keep sweeping until there are no bailouts.
   -rr_cutoff=0.0 not allowed in truncate?
+
 Done: -Switch from epsrr to rr_cutoff
 -better name for pbc? inf open_chain, boundary_conditions
 Done: -Clean up SetV code.  Use dummy Dw=1 index trick instead of SetV1 code.
   Done: make a subtensor function first.
 -Enforce expected type for all get(kwargs) calls
--clean up kwargs=Dict(kwargs) is not needed.
+Done: -clean up kwargs=Dict(kwargs) is not needed.
 -If user doesn;t set rr_cutoff, set to 1e-15
 -Refactor out all the link fixing and PBC code for MPO making functions.
 -iMPO truncate fails with a trivial 2x2 hamiltonian.
--qx_iterate! clean up GS init loop
+Done: -qx_iterate! clean up GS init loop
 -
 
 
