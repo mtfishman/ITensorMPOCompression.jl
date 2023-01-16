@@ -76,6 +76,9 @@ function block_qx(W::ITensor,ul::reg_form=lower;kwargs...)::Tuple{ITensor,ITenso
   return block_qx(W,f,ul;kwargs...)
 end
 
+#
+#  try to use this one for internal development.
+#
 function block_qx(W_::ITensor,forward::Index,ul::reg_form=lower;kwargs...)::Tuple{ITensor,ITensor,Index}
   #
   # Copy so that we don't mess up the original MPO

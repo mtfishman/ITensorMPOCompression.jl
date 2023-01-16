@@ -8,8 +8,7 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
     lr::orth_type=get(kwargs, :orth, right)
     ms=matrix_state(ul,lr)
     eps=1e-14 #relax used for testing upper/lower/regular-form etc.
-    forward,reverse=parse_links(W,lr) # W[l=$(n-1)l=$n]=W[r,c]
-    d,n,space=parse_site(W)
+    forward,_=parse_links(W,lr) # W[l=$(n-1)l=$n]=W[r,c]
     # establish some tag strings then depend on lr.
     (tsvd,tuv) = lr==left ? ("qx","Link,u") : ("m","Link,v")
 #
@@ -18,7 +17,7 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
 # horizontal rectangular RL matricies which are hard to handle accurately.
 #
    
-    Q,RL,lq=block_qx(W,ul;rr_cutoff=-1.0,kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
+    Q,RL,lq=block_qx(W,forward,ul;rr_cutoff=-1.0,kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
     # expensive
     # if order(Q)==4
     #     @mpoc_assert check_ortho(Q,ms,eps)
@@ -47,7 +46,7 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
     end
    
     M,RL_prime,im,RLnz=getM(dense(RL),ms,eps) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
-    @mpoc_assert RLnz==0 #make RL_prime does not require any fix ups.
+    @mpoc_assert RLnz==0 #make sure RL_prime does not require any fix ups.
 #  
 #  At last we can svd and compress M using epsSVD as the cutoff.  M should be dense.
 #    
@@ -71,17 +70,10 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
     if lr==left
         RL=grow(s*V,luv,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
         Uplus=grow(U,dag(lq),luv)
-        if hasqns(lq)
-            @mpoc_assert hasqns(Uplus)
-        end
         W=Q*Uplus #W[l=n-1,u]
     else # right
         RL=RL_prime*grow(U*s,im,luv) #RL[l=n-1,v] dim Dw1 x ns+2
-        
         Vplus=grow(V,dag(lq),luv) #lq has the dir of Q so want the opposite on Vplus
-        if hasqns(lq)
-            @mpoc_assert hasqns(Vplus)
-        end
         W=Vplus*Q #W[l=n-1,v]
     end
     replacetags!(RL,tuv,tags(forward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
@@ -311,16 +303,16 @@ function ITensors.truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::Ce
         #Ideally orthogonalize!() would spit out Gs that are already like this.
         _,igr=inds(Gs[n])
         Gs[n]=replaceind(Gs[n],igr,prime(igr))
+        iln=linkind(H,n) #Link between Hn amd Hn+1
         if lr==left
             #println("-----------------Left----------------------")
-            il,igl=parse_links(H[n]) #right link of H is the left link of G
+            igl=iln #right link of Hn is the left link of Gn
             U,Sp,V,spectrum=truncate(Gs[n],dag(igl);kwargs...)
             transform(H,U,n)
             transform(Hm,dag(V),n)
         else
             #println("-----------------Right----------------------")
-            il,ir=parse_links(H[n+1]) #left link of H[n+1] is the right link of G[n]
-            igl=noncommonind(Gs[n],il)
+            igl=noncommonind(Gs[n],iln) #left link of Hn+1 is the right link Gn
             U,Sp,V,spectrum=truncate(Gs[n],igl;kwargs...) 
             transform(H,dag(V),n)
             transform(Hm,U,n)

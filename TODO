@@ -12,8 +12,8 @@ Questions:
   -Do we need to support multiple truncate sweeps for iMPOs?
   -Should orthognalize!(iMPO) spit out primed Gs?
   -Support RQ/QL/LQ in factorize?
-  -InfiniteMPO using llim=b-1,rlim=b+1 for b=orthcenter(H) fail when N=1, becie left and right
-   become indistinguishable.
+  -InfiniteMPO using llim=b-1,rlim=b+1 for b=orthcenter(H) fails when N=1, because left/right/unorth
+   all become indistinguishable.
   	
 
 More tests:

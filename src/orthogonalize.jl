@@ -2,7 +2,8 @@
 #  Functions for bringing an MPO into left or right canonical form
 #
 function ITensors.orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form;kwargs...)
-    W1,Lplus=block_qx(W1,ul;kwargs...) 
+    iln=commonind(W1,W2)
+    W1,Lplus=block_qx(W1,iln,ul;kwargs...) 
     W2=Lplus*W2
     @mpoc_assert order(W2)<=4 #make sure there was something to contract. 
  
@@ -166,8 +167,7 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
         if request_lr!=lr
             if oldH≠nothing && nsweeps>1
                 @mpoc_assert isortho(oldH,request_lr)
-                #@show "copy oldH"
-                # TODO can we just do H=copy(oldH)
+                # THis fails to copy data and lims: H=copy(oldH)
                 H.=oldH
                 H.llim=oldH.llim
                 H.rlim=oldH.rlim
@@ -194,7 +194,7 @@ end
 #
 function qx_step!(W::ITensor,n::Int64,ul::reg_form,eps::Float64;kwargs...)
     lr::orth_type=get(kwargs, :orth, left)
-    forward,reverese=parse_links(W,lr)
+    forward,_=parse_links(W,lr)
     Q,RL,iq=block_qx(W,forward,ul;rr_cutoff=1e-12,kwargs...) # r-Q-qx qx-RL-c
     #
     #  How far are we from RL==Id ?
@@ -227,15 +227,10 @@ function qx_iterate!(H::InfiniteMPO,ul::reg_form;kwargs...)
     #
     Gs=CelledVector{ITensor}(undef,N)
     for n in 1:N
-        forward,reverse=parse_links(H[n],lr) #get left and right indices
-        if lr==left
-            Gs[n]=δ(Float64,dag(forward),forward') 
-        else
-            Gs[n-1]=δ(Float64,dag(forward),forward') 
-        end
+        ln=lr==left ? linkind(H,n) : dag(linkind(H,n)) #get the forward link index
+        Gs[n]=δ(Float64,dag(ln),ln') 
     end
     RLs=CelledVector{ITensor}(undef,N)
-    
     
     eps=1e-13
     niter=0

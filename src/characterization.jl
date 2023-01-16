@@ -145,6 +145,10 @@ function sweep(H::AbstractInfiniteMPS,lr::orth_type)::StepRange{Int64, Int64}
     return lr==left ? (1:1:N) : (N:-1:1)
 end
 
+function linkind(M::AbstractInfiniteMPS, j::Integer)
+    return commonind(M[j], M[j + 1])
+end
+  
 
 #----------------------------------------------------------------------------
 #
@@ -547,8 +551,8 @@ function get_Dw(H::MPO)::Vector{Int64}
     N=length(H)
     Dws=Vector{Int64}(undef,N-1)
     for n in 1:N-1
-        r,c=parse_links(H[n])
-        Dws[n]=dim(c)
+        l=commonind(H[n],H[n+1])
+        Dws[n]=dim(l)
     end
     return Dws
 end
@@ -557,8 +561,8 @@ function get_Dw(H::InfiniteMPO)::Vector{Int64}
     N=length(H)
     Dws=Vector{Int64}(undef,N)
     for n in 1:N
-        r,c=parse_links(H[n])
-        Dws[n]=dim(c)
+        l=commonind(H[n],H[n+1])
+        Dws[n]=dim(l)
     end
     return Dws
 end
