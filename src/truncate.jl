@@ -177,18 +177,16 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
     end#
     # Now check if H required orthogonalization
     #
-    ms=matrix_state(ul,lr)
     if !isortho(H,lr)
         if verbose
             println("truncate detected non-orthogonal MPO, will now orthogonalize")
         end
-        orthogonalize!(H;kwargs...,orth=mirror(lr)) #TODO why fail if spec ul here??
+        orthogonalize!(H,ul;kwargs...,orth=mirror(lr)) #TODO why fail if spec ul here??
         if verbose
             previous_Dw=Base.max(get_Dw(H)...)
         end#
     end
-    N=length(H)
-    ss=bond_spectrums(undef,N-1)
+    ss=bond_spectrums(undef,length(H)-1)
     link_offest = lr==left ? 0 : -1
     rng=sweep(H,lr)
     for n in rng 
@@ -196,7 +194,7 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
         W,RL,s=truncate(H[n],ul;kwargs...,orth=lr)
         H[n]=W
         H[nn]=RL*H[nn]
-        is_regular_form(H[nn],ms.ul)
+        @mpoc_assert is_regular_form(H[nn],ul)
         ss[n+link_offest]=s
     end
     H.rlim = rng.stop+rng.step+1
@@ -280,9 +278,9 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
     can1,can2=isortho(H,lr),isortho(H,mirror(lr))
     if !(can1||can2)
         rr_cutoff=get(kwargs, :cutoff, 1e-15)
-        orthogonalize!(H;orth=mirror(lr),rr_cutoff=rr_cutoff,max_sweeps=1) 
+        orthogonalize!(H,ul;orth=mirror(lr),rr_cutoff=rr_cutoff,max_sweeps=1) 
         Hm=h_mirror ? copy(H) : nothing
-        Gs=orthogonalize!(H;orth=lr,rr_cutoff=rr_cutoff,max_sweeps=1) #TODO why fail if spec ul here??
+        Gs=orthogonalize!(H,ul;orth=lr,rr_cutoff=rr_cutoff,max_sweeps=1) #TODO why fail if spec ul here??
     else
         # user supplied canonical H but not the Gs so we cannot proceed unless we do one more
         # wasteful sweep

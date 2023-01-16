@@ -18,7 +18,7 @@ function ITensors.orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form;kwargs...)
     return W1,W2 #We should not need to return these if W1 and W2 were truely passed by reference.
 end
 
-function ITensors.orthogonalize!(H::MPO,ul::reg_form;kwargs...)
+function one_ortho_sweep!(H::MPO,ul::reg_form;kwargs...)
     lr::orth_type=get(kwargs, :orth, left)
     verbose::Bool=get(kwargs, :verbose, false)
     if verbose
@@ -121,6 +121,10 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
     end
     @mpoc_assert !(bl && bu) #should not be diagonal.
     ul::reg_form = bl ? lower : upper 
+    return orthogonalize!(H,ul;kwargs...)
+end
+
+function ITensors.orthogonalize!(H::MPO,ul::reg_form;kwargs...)
     #
     #  Establish what options the user specified
     #
@@ -148,7 +152,7 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
         while nsweeps<max_sweeps && sumDw<old_sumDw
             oldH=spec_lr ? copy(H) : nothing
             old_sumDw=sumDw
-            orthogonalize!(H,ul;kwargs...,orth=lr)
+            one_ortho_sweep!(H,ul;kwargs...,orth=lr)
             nsweeps+=1
             sumDw=sum(get_Dw(H))
             lr=mirror(lr) #need to undo this after we break out.
@@ -174,13 +178,13 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
             else
                 # THis means we did 1 sweep with no change in Dw, and now need to
                 # to do another sweep to into the requested ortho. state.
-                orthogonalize!(H,ul;kwargs...,orth=request_lr)
+                one_ortho_sweep!(H,ul;kwargs...,orth=request_lr)
             end
         end
         
     else 
         old_sumDw=sumDw
-        orthogonalize!(H,ul;kwargs...,orth=request_lr)
+        one_ortho_sweep!(H,ul;kwargs...,orth=request_lr)
         sumDw=sum(get_Dw(H))
     end
     @mpoc_assert isortho(H,request_lr)
