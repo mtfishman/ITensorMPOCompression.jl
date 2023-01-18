@@ -8,6 +8,7 @@ import ITensors: QNIndex, addqns, rq, AbstractMPS, isortho, orthocenter
 import ITensors.BlockSparseTensor,ITensors.DenseTensor,ITensors.tensor
 
 import ITensorInfiniteMPS: AbstractInfiniteMPS
+import Base: similar
 
 export block_qx #qx related
 export slice,assign!,redim #operator handling

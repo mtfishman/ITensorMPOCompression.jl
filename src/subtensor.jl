@@ -185,4 +185,36 @@ setindex!(T::ITensor, A::ITensor,irs::Vararg{irPairU,N}) where {N} = set_subtens
 setindex!(T::ITensor, v::Number,irs::Vararg{IndexRange,N}) where {N} = set_subtensor_ND(T,v,irs...)
 setindex!(T::ITensor, v::Number,irs::Vararg{irPairU,N}) where {N} = set_subtensor_ND(T,v,indranges(irs)...)
 
+#--------------------------------------------------------------------------------
+#
+#  Some overloads of similar so we can easily create new ITensors from a template.
+#
+function similar(T::DenseTensor{ElT},is::Index...) where {ElT}
+    return ITensor(DenseTensor(ElT, undef, is))
+end
+function similar(T::BlockSparseTensor{ElT},is::Index...) where {ElT}
+    return ITensor(BlockSparseTensor(ElT, undef, nzblocks(T), is))
+end
+
+function similar(T::DiagTensor{ElT},is::Index...) where {ElT}
+    ds=[dims(is)...]
+    if !all(y->y==ds[1],ds)
+        @error("similar(DiagTensor): All indices must have the same dimensions, dims(is)=$(dims(is)).")
+    end
+    N=dim(is[1])
+    return ITensor(Diag(ElT, N),is)
+end
+function similar(T::DiagBlockSparseTensor{ElT},is::Index...) where {ElT}
+    ds=[dims(is)...]
+    if !all(y->y==ds[1],ds)
+        @error("similar(DiagTensor): All indices must have the same dimensions, dims(is)=$(dims(is)).")
+    end
+    N=dim(is[1])
+    return ITensor(DiagBlockSparseTensor(ElT, undef, nzblocks(T), is))
+end
+
+function similar(T::ITensor,is::Index...)
+    return similar(tensor(T),is...)
+end
+
 
