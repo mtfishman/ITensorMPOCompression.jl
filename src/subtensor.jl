@@ -81,7 +81,32 @@ function set_subtensor(T::BlockSparseTensor{ElT,N},A::BlockSparseTensor{ElT,N},r
         blockT[rs1...]=blockA #Dense assignment for each block
     end
 end
+function set_subtensor(T::DiagBlockSparseTensor{ElT,N},A::DiagBlockSparseTensor{ElT,N},rs::UnitRange{Int64}...) where {ElT,N}
+    @mpoc_assert nzblocks(T)==nzblocks(A)
+    for (tb,ab) in zip(eachnzblock(T),eachnzblock(A))
+        blockT = blockview(T, tb)
+        blockA = blockview(A, ab)
+        rs1=fix_ranges(dims(blockT),rs...)
+        blockT[rs1...]=blockA #Diag assignment for each block
+    end
+end
+
+function set_subtensor(T::DiagTensor{ElT},A::DiagTensor{ElT},rs::UnitRange{Int64}...) where {ElT}
+    if !all(y->y==rs[1],rs)
+        @error("set_subtensor(DiagTensor): All ranges must be the same, rs=$(rs).")
+    end
+    N=length(rs)
+    #only assign along the diagonal.
+    for i in rs[1]
+        is=ntuple(i1 -> i , N)
+        js=ntuple(j1 -> i-rs[1].start+1 , N)
+        T[is...]=A[js...]
+    end
+end
+
 setindex!(T::BlockSparseTensor{ElT,N},A::BlockSparseTensor{ElT,N},irs::Vararg{UnitRange{Int64},N}) where {ElT,N} = set_subtensor(T,A,irs...)
+setindex!(T::DiagTensor{ElT,N},A::DiagTensor{ElT,N},irs::Vararg{UnitRange{Int64},N}) where {ElT,N} = set_subtensor(T,A,irs...)
+setindex!(T::DiagBlockSparseTensor{ElT,N},A::DiagBlockSparseTensor{ElT,N},irs::Vararg{UnitRange{Int64},N}) where {ElT,N} = set_subtensor(T,A,irs...)
 
 
 #------------------------------------------------------------------------------------
@@ -209,9 +234,9 @@ function similar(T::DiagBlockSparseTensor{ElT},is::Index...) where {ElT}
     if !all(y->y==ds[1],ds)
         @error("similar(DiagTensor): All indices must have the same dimensions, dims(is)=$(dims(is)).")
     end
-    N=dim(is[1])
     return ITensor(DiagBlockSparseTensor(ElT, undef, nzblocks(T), is))
 end
+
 
 function similar(T::ITensor,is::Index...)
     return similar(tensor(T),is...)
