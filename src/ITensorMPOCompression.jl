@@ -5,7 +5,7 @@ using ITensors.NDTensors
 using ITensorInfiniteMPS
 
 import ITensors: QNIndex, addqns, rq, AbstractMPS, isortho, orthocenter
-import ITensors.BlockSparseTensor,ITensors.DenseTensor,ITensors.tensor
+import ITensors.BlockSparseTensor,ITensors.DenseTensor,ITensors.DiagTensor,ITensors.tensor
 
 import ITensorInfiniteMPS: AbstractInfiniteMPS
 import Base: similar
@@ -28,7 +28,7 @@ export get_Dw,max_Dw,min,max
 export bond_spectrums
 
 export orthogonalize!,truncate,truncate! #the punchline
-export @pprint,pprint
+export @pprint,pprint,@mpoc_assert
 #  subtebsor related
 export IndexRange, indices, range, ranges, getperm, permute, start
 

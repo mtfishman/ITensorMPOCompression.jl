@@ -9,7 +9,7 @@ using Profile
 using ITensorMPOCompression: orthogonalize!,truncate!
 
 #brute force method to control the default float display format.
-Base.show(io::IO, f::Float64) = @printf(io, "%1.1e", f)
+Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
 
 #
 #  We need consistent output from randomMPS in order to avoid flakey unit testset
@@ -307,6 +307,7 @@ end
         #
         HL=copy(H0)
         Ss,ss,HR=truncate!(HL;verbose=verbose1,orth=left,cutoff=svd_cutoff,h_mirror=true)
+        @test typeof(storage(Ss[1])) == (qns ? BlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
         DwL=Base.max(get_Dw(HL)...)
         @test is_regular_form(HL)
         @test isortho(HL,left)
@@ -323,6 +324,7 @@ end
         #
         HR=copy(H0)
         Ss,ss,HL=truncate!(HR;verbose=verbose1,orth=right,cutoff=svd_cutoff,h_mirror=true)
+        @test typeof(storage(Ss[1])) == (qns ? BlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
         DwR=Base.max(get_Dw(HR)...)
         @test is_regular_form(HR)
         @test isortho(HR,right)

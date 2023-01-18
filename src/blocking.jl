@@ -179,14 +179,17 @@ end
 #
 function grow(A::ITensor,ig1::Index,ig2::Index)
     Dw1,Dw2=dim(ig1),dim(ig2)
-    G=ITensor(0.0,ig1,ig2) #would be nice to use delta() but we can't set elements on it.
+    G=similar(A,ig1,ig2)
+    G.=0.0
+    #G=ITensor(Gt,ig1,ig2)
+#    G=ITensor(0.0,ig1,ig2) #would be nice to use delta() but we can't set elements on it.
     G[ig1=>1  ,ig2=>1  ]=1.0;
     G[ig1=>Dw1,ig2=>Dw2]=1.0;
     G[ig1=>2:Dw1-1,ig2=>2:Dw2-1]=A
     return G
 end
 
-function grow(A::ITensor,ig1::QNIndex,ig2::Index)
+function grow(A::ITensor,ig1::QNIndex,ig2::Index{Int64})
     @mpoc_assert !hasqns(A)
     @mpoc_assert !hasqns(ig2)
     G=grow(A,removeqns(ig1),ig2) #grow A into G as dense tensors
@@ -194,7 +197,7 @@ function grow(A::ITensor,ig1::QNIndex,ig2::Index)
     @mpoc_assert id(ig2)==id(ig2q) #If the ID changes then subsequent contractions will fail.
     return convert_blocksparse(G,ig1,ig2q) #fabricate a 1-block blocksparse version.
 end
-function grow(A::ITensor,ig1::Index,ig2::QNIndex)
+function grow(A::ITensor,ig1::Index{Int64},ig2::QNIndex)
     @mpoc_assert !hasqns(A)
     @mpoc_assert !hasqns(ig1)
     G=grow(A,ig1,removeqns(ig2)) #grow A into G as dense tensors
@@ -202,11 +205,11 @@ function grow(A::ITensor,ig1::Index,ig2::QNIndex)
     @mpoc_assert id(ig1)==id(ig1q) #If the ID changes then subsequent contractions will fail.
     return convert_blocksparse(G,ig1q,ig2) #fabricate a 1-block blocksparse version.
 end
-function grow(A::ITensor,ig1::QNIndex,ig2::QNIndex)
-    #@mpoc_assert !hasqns(A)
-    G=grow(A,removeqns(ig1),removeqns(ig2)) #grow A into G as dense tensors
-    return convert_blocksparse(G,ig1,ig2) #fabricate a 1-block blocksparse version.
-end
+# function grow(A::ITensor,ig1::QNIndex,ig2::QNIndex)
+#     #@mpoc_assert !hasqns(A)
+#     G=grow(A,ig1,ig2) #grow A into G as dense tensors
+#     return convert_blocksparse(G,ig1,ig2) #fabricate a 1-block blocksparse version.
+# end
 #
 #  Convert a order 2 dense tensor into a single block, block-sparse tensor
 #  using provided QNIndexes.  

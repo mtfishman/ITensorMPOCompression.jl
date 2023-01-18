@@ -334,7 +334,7 @@ function transform(H::InfiniteMPO,uv::ITensor,n::Int64)
     @mpoc_assert order(H[n])==4
     @mpoc_assert order(H[n+1])==4
 end
-function transform(H::Nothing,uv::ITensor,n::Int64) end
+function transform(::Nothing,::ITensor,::Int64) end
 
 
 function truncate(G::ITensor,igl::Index;kwargs...)
@@ -359,7 +359,7 @@ function truncate(G::ITensor,igl::Index;kwargs...)
     replacetags!(Sp,tags(iu),tags(igl))
     replacetags!(Sp,tags(iv),tags(igr))
     replacetags!(Vp,tags(iv),tags(igr))
-    #@mpoc_assert norm(dense(G)-dense(Up)*Sp*dense(Vp))<1e-12    expensive!!!
+    #@mpoc_assert norm(dense(noprime(G))-dense(Up)*Sp*dense(Vp))<1e-12    #expensive!!!
     return Up,Sp,Vp,spectrum
 end
 

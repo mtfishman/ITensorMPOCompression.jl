@@ -61,8 +61,8 @@ Done: -Pare down unit test for shorter run time.
 Done: -Profile and code coverage.
    Spends most of the time in detect_regular_form.  We should keep this info in the MPO
    struct.
--Gs/Ss returned by truncate should be Diag not Dense tensors.
-Done -Use new is_upper functions using combiners to get rank-2 tensors.
+Done: -Gs/Ss returned by truncate should be Diag not Dense tensors.
+Done: -Use new is_upper functions using combiners to get rank-2 tensors.
    Not sure the combiners do what we want here for an op-valued matrix.
    Using norm and no slice to test for zeros
 Done: -Add some sort of Results section at the end ot tech docs.
