@@ -16,6 +16,7 @@ More tests:
 -Test alternating S=1/2 and S=1 sites.
 -Test Fermions/Hubberd.
 -vumps GS example with timing for uncomp./comp.
+-Test with Julia 1.7 and 1.8
 
 Features:
 -Put some content in Readme.md
@@ -23,21 +24,18 @@ Features:
 
 Bugs:
 
-
-Improvements:
-- use maxlinkdim for maxlinkdim
--assign!() is still wildley inefficient.  We need a way to do
-  W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
-  at the NDTensors level.
+Improvements requiring changes to other modules:
 -Save regular_form upper/lower/irreg/unknown in the MPO struct so we never have to call
  detect_regular_form.
    This requires a mod to ITensors MPO struct
+
+Improvements:
+Done: - use maxlinkdim for maxlinkdim
+-assign!() is still wildley inefficient.  We need a way to do
+  W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
+  at the NDTensors level.
 -Organize exports and imports.
--Review high level algos
-  MPO truncate shoudl iterate until no bailouts.
--convergence in truncate for finite MPO?
-  -Keep sweeping until there are no bailouts.
-  -rr_cutoff=0.0 not allowed in truncate?
+
 
 -better name for pbc? inf open_chain, boundary_conditions
   Done: make a subtensor function first.
@@ -60,6 +58,12 @@ open("/home/janr/prof1.txt", "w") do s
 
 
 Old:
+Done: -Review high level algos
+  MPO truncate should iterate until no bailouts.
+-Done: convergence in truncate for finite MPO?
+  -Keep sweeping until there are no bailouts.
+ 
+No: -rr_cutoff=0.0 not allowed in truncate?
 Not a bug: -Handle 3 site unit cell for iMPO with QNs.
   This crashed when creating sites inside ITensorInfiniteMPS with error:
   Dividing ITensors.QNVal(SzParity, 1, 2) by 3, the resulting QN value is not an integer

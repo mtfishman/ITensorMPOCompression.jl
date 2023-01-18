@@ -4,7 +4,7 @@ using Printf
 #
 #  Compress one site
 #
-function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spectrum}
+function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spectrum,Bool}
     lr::orth_type=get(kwargs, :orth, right)
     ms=matrix_state(ul,lr)
     eps=1e-14 #relax used for testing upper/lower/regular-form etc.
@@ -31,7 +31,7 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
     if dim(c)>dim(lq) || dim(c)<3
         replacetags!(RL,"Link,qx",tags(forward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
         replacetags!(Q ,"Link,qx",tags(forward)) #W[l=n-1,l=n]
-        return Q,RL,Spectrum([],0)
+        return Q,RL,Spectrum([],0),true
     end
     RLinds=inds(RL) # we will need the QN space info later to reconstruct a block sparse RL.
     
@@ -63,7 +63,7 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
         @printf "High normD(D)=%.1e min(s)=%.1e \n" norm(D) Base.min(diag(array(s))...)
         replacetags!(RL,"Link,qx",tags(forward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
         replacetags!(Q ,"Link,qx",tags(forward)) #W[l=n-1,l=n]
-        return Q,RL,spectrum
+        return Q,RL,spectrum,bool
     end
    
     luv=Index(ns+2,"Link,$tuv") #link for expanded U,Us,V,sV matricies.
@@ -86,8 +86,35 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
     # expensive.
     # @mpoc_assert is_regular_form(W,ul,eps)
     # @mpoc_assert check_ortho(W,ms,eps)
-    return W,RL,spectrum
+    return W,RL,spectrum,false
 end
+
+function one_trunc_sweep!(H::MPO,ul::reg_form;kwargs...)
+    lr::orth_type=get(kwargs, :orth, left)
+    verbose::Bool=get(kwargs, :verbose, false)
+    ss=bond_spectrums(undef,length(H)-1)
+    link_offest = lr==left ? 0 : -1
+    rng=sweep(H,lr)
+    encountered_bailout=false
+    for n in rng 
+        nn=n+rng.step #index to neighbour
+        W,RL,s,bail=truncate(H[n],ul;kwargs...,orth=lr)
+        encountered_bailout=encountered_bailout||bail
+        H[n]=W
+        H[nn]=RL*H[nn]
+        @mpoc_assert is_regular_form(H[nn],ul)
+        ss[n+link_offest]=s
+    end
+    H.rlim = rng.stop+rng.step+1
+    H.llim = rng.stop+rng.step-1
+
+    if verbose
+        Dw=Base.max(get_Dw(H)...)
+        println("After $lr truncation sweep Dw was reduced from $previous_Dw to $Dw")
+    end
+    return ss,encountered_bailout
+end
+
 
 @doc """
     truncate!(H::MPO)
@@ -186,25 +213,21 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
             previous_Dw=Base.max(get_Dw(H)...)
         end#
     end
-    ss=bond_spectrums(undef,length(H)-1)
-    link_offest = lr==left ? 0 : -1
-    rng=sweep(H,lr)
-    for n in rng 
-        nn=n+rng.step #index to neighbour
-        W,RL,s=truncate(H[n],ul;kwargs...,orth=lr)
-        H[n]=W
-        H[nn]=RL*H[nn]
-        @mpoc_assert is_regular_form(H[nn],ul)
-        ss[n+link_offest]=s
-    end
-    H.rlim = rng.stop+rng.step+1
-    H.llim = rng.stop+rng.step-1
 
-    if verbose
-        Dw=Base.max(get_Dw(H)...)
-        println("After $lr truncation sweep Dw was reduced from $previous_Dw to $Dw")
+    svd_cutoff=get(kwargs, :cutoff, 1e-15)
+    ss,encountered_bailout=one_trunc_sweep!(H,ul;kwargs...,cutoff=svd_cutoff)
+    max_sweeps::Int64=get(kwargs,:max_sweeps,5)
+   
+    nsweeps=1
+    while encountered_bailout && nsweeps<=max_sweeps
+        if verbose
+            println("Encountered bailout, doing extra truncation sweeps")
+        end
+        lr=mirror(lr)
+        ss,encountered_bailout=one_trunc_sweep!(H,ul;kwargs...,orth=lr,cutoff=svd_cutoff)
+        nsweeps+=1
     end
-    return ss
+    return ss 
 end
 
 @doc """
@@ -286,7 +309,6 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
         # wasteful sweep
         @mpoc_assert false #for now.
     end
-    
     return truncate!(H,Hm,Gs,lr;kwargs...)
 end
 

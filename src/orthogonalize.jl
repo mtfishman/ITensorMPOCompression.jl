@@ -38,6 +38,75 @@ function one_ortho_sweep!(H::MPO,ul::reg_form;kwargs...)
 
 end
 
+function ITensors.orthogonalize!(H::MPO,ul::reg_form;kwargs...)
+    #
+    #  Establish what options the user specified
+    #
+    verbose::Bool=get(kwargs, :verbose, false)
+    request_lr::orth_type=get(kwargs,:orth,left)
+    rr_cutoff::Float64=get(kwargs,:rr_cutoff,1e-15)
+    max_sweeps::Int64=get(kwargs,:max_sweeps,5)
+    spec_lr::Bool=haskey(kwargs,:orth) #Did the user explictely request an orth. direction?
+    spec_ms::Bool=haskey(kwargs,:max_sweeps) #Did the user explictely request max_sweeps?
+    rr_enabled::Bool=rr_cutoff>=0.0 #
+    sumDw::Int64=sum(get_Dw(H))
+    if verbose 
+        println("---------Ortho. Sweep rr_cutoff=$rr_cutoff----------------")
+    end
+
+    if rr_cutoff==0.0
+        @warn "orthogonalize!(::MPO) esprr=0.0 is not very effective for rank reduction. Set rr_cutoff<0.0 to disable rank reduction, os set rr_cutoff>=1e-15 for effective rank reduction."
+    end
+    #@show rr_enabled rr_cutoff
+    if max_sweeps>1 && rr_enabled
+        lr=ul==lower ? left : right #optimal start direction depends on ul for some reason.
+        nsweeps=0
+        old_sumDw=sumDw+1
+        oldH=H
+        while nsweeps<max_sweeps && sumDw<old_sumDw
+            oldH=spec_lr ? copy(H) : nothing
+            old_sumDw=sumDw
+            one_ortho_sweep!(H,ul;kwargs...,orth=lr)
+            nsweeps+=1
+            sumDw=sum(get_Dw(H))
+            lr=mirror(lr) #need to undo this after we break out.
+            @mpoc_assert sumDw<=old_sumDw #Make sure Dw did not grow!!
+            #@show nsweeps max_sweeps Dw oldDw
+            
+        end
+        if nsweeps>=1
+            lr=mirror(lr) #undo last mirror op
+        end
+        #@show lr spec_lr request_lr 
+        #pprint(H)
+        #pprint(oldH)
+
+        # Now make sure we have lr that user specified
+        if request_lr!=lr
+            if oldH≠nothing && nsweeps>1
+                @mpoc_assert isortho(oldH,request_lr)
+                # THis fails to copy data and lims: H=copy(oldH)
+                H.=oldH
+                H.llim=oldH.llim
+                H.rlim=oldH.rlim
+            else
+                # THis means we did 1 sweep with no change in Dw, and now need to
+                # to do another sweep to into the requested ortho. state.
+                one_ortho_sweep!(H,ul;kwargs...,orth=request_lr)
+            end
+        end
+        
+    else 
+        old_sumDw=sumDw
+        one_ortho_sweep!(H,ul;kwargs...,orth=request_lr)
+        sumDw=sum(get_Dw(H))
+    end
+    @mpoc_assert isortho(H,request_lr)
+
+end
+
+
+
 
 @doc """
     orthogonalize!(H::MPO)
@@ -123,74 +192,6 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
     ul::reg_form = bl ? lower : upper 
     return orthogonalize!(H,ul;kwargs...)
 end
-
-function ITensors.orthogonalize!(H::MPO,ul::reg_form;kwargs...)
-    #
-    #  Establish what options the user specified
-    #
-    verbose::Bool=get(kwargs, :verbose, false)
-    request_lr::orth_type=get(kwargs,:orth,left)
-    rr_cutoff::Float64=get(kwargs,:rr_cutoff,1e-15)
-    max_sweeps::Int64=get(kwargs,:max_sweeps,5)
-    spec_lr::Bool=haskey(kwargs,:orth) #Did the user explictely request an orth. direction?
-    spec_ms::Bool=haskey(kwargs,:max_sweeps) #Did the user explictely request max_sweeps?
-    rr_enabled::Bool=rr_cutoff>=0.0 #
-    sumDw::Int64=sum(get_Dw(H))
-    if verbose 
-        println("---------Ortho. Sweep rr_cutoff=$rr_cutoff----------------")
-    end
-
-    if rr_cutoff==0.0
-        @warn "orthogonalize!(::MPO) esprr=0.0 is not very effective for rank reduction. Set rr_cutoff<0.0 to disable rank reduction, os set rr_cutoff>=1e-15 for effective rank reduction."
-    end
-    #@show rr_enabled rr_cutoff
-    if max_sweeps>1 && rr_enabled
-        lr=ul==lower ? left : right #optimal start direction depends on ul for some reason.
-        nsweeps=0
-        old_sumDw=sumDw+1
-        oldH=H
-        while nsweeps<max_sweeps && sumDw<old_sumDw
-            oldH=spec_lr ? copy(H) : nothing
-            old_sumDw=sumDw
-            one_ortho_sweep!(H,ul;kwargs...,orth=lr)
-            nsweeps+=1
-            sumDw=sum(get_Dw(H))
-            lr=mirror(lr) #need to undo this after we break out.
-            @mpoc_assert sumDw<=old_sumDw #Make sure Dw did not grow!!
-            #@show nsweeps max_sweeps Dw oldDw
-            
-        end
-        if nsweeps>=1
-            lr=mirror(lr) #undo last mirror op
-        end
-        #@show lr spec_lr request_lr 
-        #pprint(H)
-        #pprint(oldH)
-
-        # Now make sure we have lr that user specified
-        if request_lr!=lr
-            if oldH≠nothing && nsweeps>1
-                @mpoc_assert isortho(oldH,request_lr)
-                # THis fails to copy data and lims: H=copy(oldH)
-                H.=oldH
-                H.llim=oldH.llim
-                H.rlim=oldH.rlim
-            else
-                # THis means we did 1 sweep with no change in Dw, and now need to
-                # to do another sweep to into the requested ortho. state.
-                one_ortho_sweep!(H,ul;kwargs...,orth=request_lr)
-            end
-        end
-        
-    else 
-        old_sumDw=sumDw
-        one_ortho_sweep!(H,ul;kwargs...,orth=request_lr)
-        sumDw=sum(get_Dw(H))
-    end
-    @mpoc_assert isortho(H,request_lr)
-
-end
-
 
 #--------------------------------------------------------------------------------------------
 #
