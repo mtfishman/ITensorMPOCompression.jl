@@ -543,8 +543,9 @@ function is_upper_regular_form(H::AbstractMPS,eps::Float64=default_eps)::Bool
     return is_regular_form(H,upper,eps)
 end
 
-function max_Dw(H::AbstractMPS)::Int64
-    return maximum(get_Dw(H))
+# function maxlinkdim(H::AbstractMPS)::Int64
+#     return maxlinkdim(H)
+#    return maximum(get_Dw(H))
 end
 
 function get_Dw(H::MPO)::Vector{Int64}

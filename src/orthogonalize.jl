@@ -239,7 +239,7 @@ function qx_iterate!(H::InfiniteMPO,ul::reg_form;kwargs...)
     eps=1e-13
     niter=0
     max_iter=40
-    previous_Dw=max_Dw(H)
+    previous_Dw=maxlinkdim(H)
     # if verbose
     #     previous_Dw=Base.max(get_Dw(H)...)
     #     @printf "niter eta\n" 

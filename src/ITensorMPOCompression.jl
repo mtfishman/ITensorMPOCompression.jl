@@ -24,7 +24,7 @@ export make_transIsing_MPO,make_Heisenberg_AutoMPO,make_transIsing_AutoMPO,to_op
 export make_transIsing_iMPO,make_2body_AutoMPO
 export fast_GS,make_3body_MPO,make_1body_op,make_2body_op,make_3body_op,add_ops,make_3body_AutoMPO,make_2body_sum,make_2body_MPO
 # MPO and bond spectrum
-export get_Dw,max_Dw,min,max
+export get_Dw,maxlinkdim,min,max
 export bond_spectrums
 
 export orthogonalize!,truncate,truncate! #the punchline

@@ -25,8 +25,7 @@ Bugs:
 
 
 Improvements:
-- Use smart sum 2body for Make_transIsing functions.  
-- use maxlinkdim for max_Dw
+- use maxlinkdim for maxlinkdim
 -assign!() is still wildley inefficient.  We need a way to do
   W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
   at the NDTensors level.
@@ -170,7 +169,7 @@ Fixed: -for lower,right SetV seems to require the last column(above I)  should b
   but why?       It should be zeros.  Index ordering?
 Done: -Make rank reaviling an option for block_qx
 Done: -For obc MPO try compressing 2..N-1, what do we end up with for W[N].  Then try N..2, what does W[1] look like??  Can we get around PBC issue this way?
-Done: -Test canonical with rr_cutoff=0.0 and compare.  need an max_Dw(H::MPO) function.  
+Done: -Test canonical with rr_cutoff=0.0 and compare.  need an maxlinkdim(H::MPO) function.  
 -Use  # Exact energy for transverse field Ising model J=-1, hx=-1
     # with open boundary conditions at criticality
     energy_exact = 1.0 - 1.0 / sin(π / (4 * N + 2))

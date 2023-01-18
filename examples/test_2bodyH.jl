@@ -28,7 +28,7 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f) #dumb way to control flo
         Hdumb_infL=InfiniteMPO([Hdumb_pbc[1]])
         #@show inds(Hdumb_infL[1])
         #@mpoc_assert false
-        Dw_raw=max_Dw(Hdumb_infL)
+        Dw_raw=maxlinkdim(Hdumb_infL)
         HdumbR=copy(HdumbL)
         Hdumb_infR=copy(Hdumb_infL)
 
@@ -36,12 +36,12 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f) #dumb way to control flo
         orthogonalize!(HdumbR;verbose=verbose,orth=right,max_sweeps=1,rr_cutoff=1e-14)
         orthogonalize!(Hdumb_infL;verbose=verbose,orth=left,max_sweeps=1,rr_cutoff=1e-14)
         orthogonalize!(Hdumb_infR;verbose=verbose,orth=right,max_sweeps=1,rr_cutoff=1e-14)
-        Dw1_L,Dw1_R,Dw1i_L,Dw1i_R=max_Dw(HdumbL),max_Dw(HdumbR),max_Dw(Hdumb_infL),max_Dw(Hdumb_infR)
+        Dw1_L,Dw1_R,Dw1i_L,Dw1i_R=maxlinkdim(HdumbL),maxlinkdim(HdumbR),maxlinkdim(Hdumb_infL),maxlinkdim(Hdumb_infR)
         orthogonalize!(HdumbL;verbose=verbose,orth=right,max_sweeps=1,rr_cutoff=1e-14)
         orthogonalize!(HdumbR;verbose=verbose,orth=left,max_sweeps=1,rr_cutoff=1e-14)
         orthogonalize!(Hdumb_infL;verbose=verbose,orth=right,max_sweeps=1,rr_cutoff=1e-14)
         orthogonalize!(Hdumb_infR;verbose=verbose,orth=left,max_sweeps=1,rr_cutoff=1e-14)
-        Dw2_L,Dw2_R,Dw2i_L,Dw2i_R=max_Dw(HdumbL),max_Dw(HdumbR),max_Dw(Hdumb_infL),max_Dw(Hdumb_infR)
+        Dw2_L,Dw2_R,Dw2i_L,Dw2i_R=maxlinkdim(HdumbL),maxlinkdim(HdumbR),maxlinkdim(Hdumb_infL),maxlinkdim(Hdumb_infR)
 
         @printf("%4i %4i   %4i  %4i  %4i  %4i      %4i  %4i  %4i  %4i \n",N,NNN,
         Dw1_L,Dw2_L,Dw1_R,Dw2_R,Dw1i_L,Dw2i_L,Dw1i_R,Dw2i_R)
@@ -71,21 +71,21 @@ end
         Hdumb_pbc=make_2body_MPO(si,NNN;presummed=false,pbc=true)
         Hpres_inf=InfiniteMPO([Hpres_pbc[1]])
         Hdumb_inf=InfiniteMPO([Hdumb_pbc[1]])
-        Dw_ps_raw,Dw_ds_raw,Dw_auto_raw=max_Dw(Hpres),max_Dw(Hdumb),max_Dw(Hauto)
+        Dw_ps_raw,Dw_ds_raw,Dw_auto_raw=maxlinkdim(Hpres),maxlinkdim(Hdumb),maxlinkdim(Hauto)
         orthogonalize!(Hpres;rr_cutoff=1e-14)
         orthogonalize!(Hdumb;rr_cutoff=1e-14)
         orthogonalize!(Hauto;rr_cutoff=1e-14)
         Gs_pres=orthogonalize!(Hpres_inf;rr_cutoff=1e-14)
         Gs_dumb=orthogonalize!(Hdumb_inf;rr_cutoff=1e-14)
-        Dw_ps_orth,Dw_ds_orth,Dw_auto_orth=max_Dw(Hpres),max_Dw(Hdumb),max_Dw(Hauto)
-        Dw_psinf_orth,Dw_dsinf_orth=max_Dw(Hpres_inf),max_Dw(Hdumb_inf)
+        Dw_ps_orth,Dw_ds_orth,Dw_auto_orth=maxlinkdim(Hpres),maxlinkdim(Hdumb),maxlinkdim(Hauto)
+        Dw_psinf_orth,Dw_dsinf_orth=maxlinkdim(Hpres_inf),maxlinkdim(Hdumb_inf)
         ss_pres=truncate!(Hpres;cutoff=1e-15,rr_cutoff=1e-15)
         ss_dumb=truncate!(Hdumb;cutoff=1e-15,rr_cutoff=1e-15)
         ss_auto=truncate!(Hauto;cutoff=1e-15,rr_cutoff=1e-15)
         truncate!(Hpres_inf,Gs_pres,left;cutoff=1e-15,rr_cutoff=1e-15)
         truncate!(Hdumb_inf,Gs_dumb,left;cutoff=1e-15,rr_cutoff=1e-15)
-        Dw_ps_trunc,Dw_ds_trunc,Dw_auto_trunc=max_Dw(Hpres),max_Dw(Hdumb),max_Dw(Hauto)
-        Dw_psinf_trunc,Dw_dsinf_trunc=max_Dw(Hpres_inf),max_Dw(Hdumb_inf)
+        Dw_ps_trunc,Dw_ds_trunc,Dw_auto_trunc=maxlinkdim(Hpres),maxlinkdim(Hdumb),maxlinkdim(Hauto)
+        Dw_psinf_trunc,Dw_dsinf_trunc=maxlinkdim(Hpres_inf),maxlinkdim(Hdumb_inf)
         
         @printf("%3i %3i  %3i  %3i  %3i    %3i  %3i  %3i    %3i  %3i      %3i  %3i  %3i   %3i  %3i \n",
         N,NNN,
