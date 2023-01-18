@@ -297,7 +297,7 @@ end
         @printf " Ncell  NNN  uncomp. left  right \n"
     end
 
-    for  NNN in [2,4], N in [1,2,4] #3 site unit cell fails for qns=true.
+    for  NNN in [2,4], N in [1,2,4] #3 site unit cell fails inside ITensorInfiniteMPS for qns=true.
         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
         H0=make_transIsing_iMPO(si,NNN;ul=ul)
         @test is_regular_form(H0)
