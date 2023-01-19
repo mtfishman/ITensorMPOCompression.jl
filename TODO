@@ -30,7 +30,6 @@ Improvements requiring changes to other modules:
    This requires a mod to ITensors MPO struct
 
 Improvements:
-Done: - use maxlinkdim for maxlinkdim
 -assign!() is still wildley inefficient.  We need a way to do
   W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
   at the NDTensors level.
@@ -38,9 +37,7 @@ Done: - use maxlinkdim for maxlinkdim
 
 
 -better name for pbc? inf open_chain, boundary_conditions
-  Done: make a subtensor function first.
--Enforce expected type for all get(kwargs) calls
--If user doesn;t set rr_cutoff, set to 1e-15
+-Consider default rr_cutoff=1e-14?
 -Refactor out all the link fixing and PBC code for MPO making functions.
 -iMPO truncate fails with a trivial 2x2 hamiltonian.
 -
@@ -58,6 +55,9 @@ open("/home/janr/prof1.txt", "w") do s
 
 
 Old:
+Done: -If user doesn;t set rr_cutoff, set to 1e-15
+Done: -Enforce expected type for all get(kwargs) calls
+Done: - use maxlinkdim for maxlinkdim
 Done: -Review high level algos
   MPO truncate should iterate until no bailouts.
 -Done: convergence in truncate for finite MPO?
