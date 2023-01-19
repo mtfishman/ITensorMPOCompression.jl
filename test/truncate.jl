@@ -9,7 +9,7 @@ using Profile
 using ITensorMPOCompression: orthogonalize!,truncate!
 
 #brute force method to control the default float display format.
-Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
+Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f)
 
 #
 #  We need consistent output from randomMPS in order to avoid flakey unit testset
@@ -139,6 +139,56 @@ end
     end
 end
 
+@testset "Try a lattice with alternating S=1/2 and S=1 sites. Qns=$qns" for qns in [false,true]
+    N=10
+    NNN=4
+    eps=1e-14
+    sites = siteinds(n->isodd(n) ? "S=1/2" : "S=1",N; conserve_qns=qns)
+    Ha=make_transIsing_AutoMPO(sites,NNN)
+    H=make_transIsing_MPO(sites,NNN)
+    #@show get_Dw(H)
+    state=[isodd(n) ? "Up" : "Dn" for n=1:N]
+    psi=randomMPS(sites,state)
+    Ea=inner(psi',Ha,psi)
+    E0=inner(psi',H,psi)
+    @test E0 ≈ Ea atol = eps
+    Ho=copy(H)
+    orthogonalize!(Ho;verbose=verbose1,rr_cutoff=1e-12)
+    #@show get_Dw(Ho)
+    Eo=inner(psi',Ho,psi)
+    @test E0 ≈ Eo atol = eps
+    Ht=copy(H)
+    ss=truncate!(Ht)
+    #@show get_Dw(Ht)
+    #@show ss
+    Et=inner(psi',Ht,psi)
+    #@show E0 Ea Eo Et E0-Eo E0-Et
+    @test E0 ≈ Et atol = eps
+    #
+    #  Run some GS calculations
+    #
+    #E0,psi0=fast_GS(H,sites) unreliable
+    # All of these use and emperically determined number of sweeps to get full convergence
+    # This model can easily get stuck in a false minimum. 
+    Ea,psia=fast_GS(Ha,sites,6) 
+    Eo,psio=fast_GS(Ho,sites,8)
+    Et,psit=fast_GS(Ht,sites,7)
+    #@show Ea Eo Et Ea-Eo Ea-Et
+    E2a=inner(Ha,psia,Ha,psia)
+    E2o=inner(Ho,psio,Ho,psio)
+    E2t=inner(Ht,psit,Ht,psit)
+    #@show E2a-Ea^2 E2o-Eo^2 E2t-Et^2
+    @test E2a-Ea^2 ≈ 0.0 atol = eps
+    @test E2o-Eo^2 ≈ 0.0 atol = eps
+    @test E2t-Et^2 ≈ 0.0 atol = eps
+    @test Ea ≈ Eo atol = eps
+    @test Ea ≈ Et atol = eps
+
+
+end
+
+
+# Slow test, turn of if you are making big changes.
 # @testset "Head to Head autoMPO with 2-body Hamiltonian ul=$ul, QNs=$qns" for ul in [lower,upper],qns in [false,true]
 #     for N in 3:15
 #         NNN=N-1#div(N,2)
@@ -158,6 +208,7 @@ end
 #     end  
 # end 
 
+# Slow test, turn of if you are making big changes.
 # @testset "Head to Head autoMPO with 3-body Hamiltonian" begin
 #     if verbose
 #         @printf "+-----+---------+--------------------+--------------------+\n"

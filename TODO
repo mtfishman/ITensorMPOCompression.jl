@@ -13,7 +13,8 @@ Questions:
   	
 
 More tests:
--Test alternating S=1/2 and S=1 sites.
+Done: -Test alternating S=1/2 and S=1 sites for MPO.
+-Test alternating S=1/2 and S=1 sites for iMPO.
 -Test Fermions/Hubberd.
 -vumps GS example with timing for uncomp./comp.
 -Test with Julia 1.7 and 1.8
