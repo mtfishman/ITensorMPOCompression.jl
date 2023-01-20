@@ -139,7 +139,7 @@ end
     end
 end
 
-@testset "Try a lattice with alternating S=1/2 and S=1 sites. Qns=$qns" for qns in [false,true]
+@testset "Try a lattice with alternating S=1/2 and S=1 sites. MPO. Qns=$qns" for qns in [false,true]
     N=10
     NNN=4
     eps=1e-14
@@ -281,6 +281,60 @@ end
         HR=copy(H0)
         Ss,ss,HL=truncate!(HR;verbose=verbose1,orth=right,h_mirror=true)
         @test typeof(storage(Ss[1])) == (qns ? BlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
+        DwR=Base.max(get_Dw(HR)...)
+        @test is_regular_form(HR)
+        @test isortho(HR,right)
+        @test check_ortho(HR,right)
+        for n in 1:N
+            @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
+        end   
+        if verbose
+            @printf " %4i %4i   %4i   %4i  %4i \n" N NNN Dw0 DwL DwR
+        end
+
+    end
+end
+
+#
+#  This one is tricky to set for QNs=true up due to QN flux constraints.
+#  An Ncell=3 with S={1/2,1,1/2} seems to work. 
+#
+@testset "Try a lattice with alternating S=1/2 and S=1 sites. iMPO. Qns=$qns" for qns in [false,true]
+    initstate(n) = isodd(n) ? "Dn" : "Up"
+    ul=lower
+    if verbose
+        @printf "               Dw     Dw    Dw   \n"
+        @printf " Ncell  NNN  uncomp. left  right \n"
+    end
+
+    for  NNN in [2,4,6], N in [3] #3 site unit cell fails inside ITensorInfiniteMPS for qns=true.
+        si = infsiteinds(n->isodd(n) ? "S=1" : "S=1/2",N; initstate, conserve_qns=qns)
+        H0=make_transIsing_iMPO(si,NNN;ul=ul)
+        @test is_regular_form(H0)
+        Dw0=Base.max(get_Dw(H0)...)
+        #
+        #  Do truncate outputting left ortho Hamiltonian
+        #
+        HL=copy(H0)
+        Ss,ss,HR=truncate!(HL;verbose=verbose1,orth=left,h_mirror=true)
+        #@test typeof(storage(Ss[1])) == (qns ? BlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
+        DwL=Base.max(get_Dw(HL)...)
+        @test is_regular_form(HL)
+        @test isortho(HL,left)
+        @test check_ortho(HL,left)
+        #
+        #  Now test guage relations using the diagonal singular value matrices
+        #  as the gauge transforms.
+        #
+        for n in 1:N
+            @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
+        end    
+        #
+        #  Do truncate from H0 outputting right ortho Hamiltonian
+        #
+        HR=copy(H0)
+        Ss,ss,HL=truncate!(HR;verbose=verbose1,orth=right,h_mirror=true)
+        #@test typeof(storage(Ss[1])) == (qns ? BlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
         DwR=Base.max(get_Dw(HR)...)
         @test is_regular_form(HR)
         @test isortho(HR,right)
