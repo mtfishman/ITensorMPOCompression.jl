@@ -26,7 +26,9 @@ indranges(ips::Tuple{Vararg{irPairU}}) = map((ip)->IndexRange(ip) ,ips)
 dim(ir::IndexRange)=dim(range(ir))
 dim(r::UnitRange{Int64})=r.stop-r.start+1
 dims(irs::Tuple{Vararg{IndexRange}})=map((ir)->dim(ir),irs)
-redim(irs::Tuple{Vararg{IndexRange}}) = map((ir)->redim(ir.index,dim(ir)) ,irs)
+redim(ip::irPair{T}) where {T} = redim(IndexRange(ip))
+redim(ir::IndexRange) = redim(ir.index,dim(ir),start(ir)-1)
+redim(irs::Tuple{Vararg{IndexRange}}) = map((ir)->redim(ir) ,irs)
 
 
 eachval(ir::IndexRange) = range(ir)
