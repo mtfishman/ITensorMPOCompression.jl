@@ -1,5 +1,5 @@
 import ITensors: dim, dims, DenseTensor, eachindval, eachval, getindex, setindex!
-import NDTensors: getperm, permute, BlockDim
+import NDTensors: getperm, permute, BlockDim, blockstart, blockend
 import ITensorMPOCompression: redim
 import Base.range
 
@@ -41,55 +41,179 @@ eachindval(irs::Tuple{Vararg{IndexRange}}) = (indices(irs).=> Tuple(ns) for ns i
 #
 #  NDTensor level code which distinguishes between Dense and BlockSparse storage
 #
-
-function fix_ranges(ds::NTuple{N, Int64},rs::UnitRange{Int64}...) where {N}
-    rs1=Vector{UnitRange{Int64}}(undef,N)
-    for i in eachindex(rs1)
-        if ds[i]==1
-            rs1[i]=1:1 
-        else
-            rs1[i]=rs[i]
-        end 
+function in_range(block_start::NTuple{N, Int64},block_end::NTuple{N, Int64},rs::UnitRange{Int64}...) where {N}
+    ret=true
+    for i in eachindex(rs)
+        if block_start[i]>rs[i].stop || block_end[i]<rs[i].start
+            ret=false
+            #@show "out of range" block_start block_end rs
+            break
+        end
     end
+    return ret
+end
+
+function fix_ranges(dest_block_start::NTuple{N, Int64},dest_block_end::NTuple{N, Int64},rs::UnitRange{Int64}...) where {N}
+    rs1=Vector{UnitRange{Int64}}(undef,N)
+    @assert length(rs)==N
+    #@show b ds rs
+    for i in eachindex(rs1)
+        @assert dest_block_start[i]<=rs[i].stop || dest_block_end[i]>=rs[i].start #in range?
+        istart=Base.max(dest_block_start[i],rs[i].start)
+        istop=Base.min(dest_block_end[i],rs[i].stop)
+        rs1[i]=istart-dest_block_start[i]+1:istop-dest_block_start[i]+1
+    end
+    #@show rs1
+    return Tuple(rs1)
+end
+function fix_ranges(dest_range::NTuple{N,UnitRange{Int64}},src_range::NTuple{N,UnitRange{Int64}},rs::UnitRange{Int64}...) where {N}
+    rs1=Vector{UnitRange{Int64}}(undef,N)
+    @assert length(rs)==N
+    #@show rs dest_range src_range
+    for i in eachindex(rs1)
+        @assert dest_range[i].start<=rs[i].stop || dest_range[i].stop>=rs[i].start #in range?
+        @assert  src_range[i].start<=rs[i].stop ||  src_range[i].stop>=rs[i].start #in range?
+        ds_start=Base.max(dest_range[i].start,src_range[i].start)
+        dsrc  = src_range[i].stop-src_range[i].start
+        istart=Base.max(ds_start,rs[i].start) -dest_range[i].start+1
+        #istop=Base.min(ds_end,rs[i].stop)
+        #@show i ds_start  dsrc istart
+        rs1[i]=istart:istart+dsrc
+        #@show rs1[i]
+    end
+    #@show rs1
     return Tuple(rs1)
 end
 
+#
+#  the range r will in general start at some index start(r) >1.  This function
+#  counts how many QN blocks are between 1 and start(r)
+#
+function get_offset_block_count(in::QNIndex,r::UnitRange{Int64})
+    rs=r.start-1
+    if rs==0
+        return 0
+    end
+    @mpoc_assert rs>0
+    nb=0
+    qns=space(in)
+    for n in eachindex(qns)
+        rs-=qns[n].second #dim of space
+        nb+=1 #increment block counts
+        if rs==0
+            break
+        elseif rs<0
+            nb-=1
+            # @show in r
+            # @error("Slicing mid block is not supported yet.")
+        end
+    end
+    return nb
+end
+
+using StaticArrays
+function get_offset_block_counts(inds::NTuple{N,IndsT},rs::UnitRange{Int64}...) where {N,IndsT}
+    dbs=StaticArrays.MVector{N,UInt}(undef)
+    for i in eachindex(inds)
+        dbi=get_offset_block_count(inds[i],rs[i])
+        dbs[i]=dbi
+    end
+    return Block{N}(dbs)
+end
+
 function get_subtensor(T::BlockSparseTensor{ElT,N},new_inds,rs::UnitRange{Int64}...) where {ElT,N}
-    Ds = Vector{DenseTensor{ElT,N}}(undef, nnzblocks(T))
+    Ds = Vector{DenseTensor{ElT,N}}()
+    bs = Vector{Block{N}}()
+    dbs=get_offset_block_counts(inds(T),rs...)
     for (jj, b) in enumerate(eachnzblock(T))
         blockT = blockview(T, b)
-        rs1=fix_ranges(dims(blockT),rs...)
-        Ds[jj]=blockT[rs1...] #dense subtensor
+        if in_range(blockstart(T,b),blockend(T,b),rs...)
+            rs1=fix_ranges(blockstart(T,b),blockend(T,b),rs...)
+            #@show "In of range" b dims(blockT) rs rs1 NDTensors.blockstart(T,b)
+            push!(Ds,blockT[rs1...])
+            bc=CartesianIndex(b)-CartesianIndex(dbs)
+            b=bc #Decrement block numbers by the number of skipped blocks.
+            push!(bs,b)
+        end
+    end
+    if length(Ds)==0
+        return BlockSparseTensor(new_inds)
     end
     #
     #  JR: All attempts at building the new indices here at the NDTensors level failed.
     #  The only thing I could make work was to pass the new indices down from the ITensors
     #  level and use those. 
     #
-    T_sub = BlockSparseTensor(ElT, undef, nzblocks(T), new_inds)
+    #@show bs[1] inds(T) new_inds space(new_inds[1]) Block(bs[1][1])
+    #bd=blockdim(new_inds[1],bs[1][1])
+    #@show bs rs new_inds
+    T_sub = BlockSparseTensor(ElT, undef, bs, new_inds)
     for ib in eachindex(Ds)
-        blockT_sub = nzblocks(T_sub)[ib]
+        blockT_sub = bs[ib]
         blockview(T_sub, blockT_sub) .= Ds[ib]
     end
     return T_sub
 end
 
+function blockrange(T::Tensor{<:Number,N},tb::Block{N})::NTuple{N,UnitRange{Int64}} where {N}
+    bs=blockstart(T,tb)
+    be=blockend(T,tb)
+    return ntuple(i->bs[i]:be[i],N)
+end
+
 function set_subtensor(T::BlockSparseTensor{ElT,N},A::BlockSparseTensor{ElT,N},rs::UnitRange{Int64}...) where {ElT,N}
-    @mpoc_assert nzblocks(T)==nzblocks(A)
-    for (tb,ab) in zip(eachnzblock(T),eachnzblock(A))
-        blockT = blockview(T, tb)
-        blockA = blockview(A, ab)
-        rs1=fix_ranges(dims(blockT),rs...)
-        blockT[rs1...]=blockA #Dense assignment for each block
+#    @mpoc_assert nzblocks(T)==nzblocks(A)
+    dbs=get_offset_block_counts(inds(T),rs...)
+    dbs_ci=CartesianIndex(dbs)
+    rsa=ntuple(i->rs[i].start-dbs_ci[i]:rs[i].stop-dbs_ci[i],N)
+    #@show rsa nzblocks(A)
+    for ab in eachnzblock(A)
+        #@show CartesianIndex(dbs) CartesianIndex(ab)
+        #@show rs dbs ab blockstart(A,ab) blockend(A,ab) 
+
+        if in_range(blockstart(A,ab),blockend(A,ab),rsa...)
+            it=blockstart(A,ab)
+            it=ntuple(i->it[i]+dbs_ci[i],N)
+            #@show "inrange"
+            index_within_block,tb=blockindex(T,Tuple(it)...)
+            blockT = blockview(T, tb)
+            #@show it index_within_block tb blockT
+            if blockT==nothing
+                #tb=Block{N}(it)
+            
+                insertblock!(T,tb)
+                blockT = blockview(T, tb)
+                #@show "insert missing block" tb inds(T)
+                #@assert false
+                # index_within_block,tb=blockindex(T,Tuple(it)...)
+                # @show index_within_block tb 
+            end
+            blockA = blockview(A, ab)
+            rs1=fix_ranges(blockrange(T,tb),blockrange(A,ab),rs...)
+            #@show rs1 ab tb  
+            
+            blockT[rs1...]=blockA #Dense assignment for each block
+            #@show blockT blockA 
+        end
     end
+    #@show "---------------------------------"
 end
 function set_subtensor(T::DiagBlockSparseTensor{ElT,N},A::DiagBlockSparseTensor{ElT,N},rs::UnitRange{Int64}...) where {ElT,N}
-    @mpoc_assert nzblocks(T)==nzblocks(A)
-    for (tb,ab) in zip(eachnzblock(T),eachnzblock(A))
-        blockT = blockview(T, tb)
-        blockA = blockview(A, ab)
-        rs1=fix_ranges(dims(blockT),rs...)
-        blockT[rs1...]=blockA #Diag assignment for each block
+    dbs=get_offset_block_counts(inds(T),rs...)
+    dbs_ci=CartesianIndex(dbs)
+    rsa=ntuple(i->rs[i].start-dbs_ci[i]:rs[i].stop-dbs_ci[i],N)
+    for ab in eachnzblock(A)
+        if in_range(blockstart(A,ab),blockend(A,ab),rsa...)
+            it=blockstart(A,ab)
+            it=ntuple(i->it[i]+dbs_ci[i],N)
+            index_within_block,tb=blockindex(T,Tuple(it)...)
+            blockT = blockview(T, tb)
+            blockA = blockview(A, ab)
+            rs1=fix_ranges(blockrange(T,tb),blockrange(A,ab),rs...)
+            #@show rs1 ab tb  
+            
+            blockT[rs1...]=blockA #Diag assignment for each block
+        end
     end
 end
 
