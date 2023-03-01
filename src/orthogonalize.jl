@@ -6,13 +6,9 @@ function ITensors.orthogonalize!(W1::ITensor,W2::ITensor,ul::reg_form;kwargs...)
     W1,Lplus=block_qx(W1,iln,ul;kwargs...) 
     W2=Lplus*W2
     @mpoc_assert order(W2)<=4 #make sure there was something to contract. 
- 
-    iq=filterinds(inds(Lplus),tags="qx")[1]
-    il=noncommonind(Lplus,iq)
-    #pprint(iq,Lplus,il,1e-14)
-    il=redim(il,dim(iq)) #Index(dim(iq),tags(il))
-    replaceind!(W1,iq,il)
-    replaceind!(W2,iq,il)
+    ilnt=String(tags(iln)[2]) #get the l=n part of the tags.
+    W1=replacetags(W1,"qx",ilnt) #replace qx tag with l=n
+    W2=replacetags(W2,"qx",ilnt)
     @mpoc_assert is_regular_form(W1,ul,1e-14)
     @mpoc_assert is_regular_form(W2,ul,1e-14)
     return W1,W2 #We should not need to return these if W1 and W2 were truely passed by reference.
@@ -44,7 +40,7 @@ function ITensors.orthogonalize!(H::MPO,ul::reg_form;kwargs...)
     #
     verbose::Bool=get(kwargs, :verbose, false)
     request_lr::orth_type=get(kwargs,:orth,left)
-    rr_cutoff::Float64=get(kwargs,:rr_cutoff,1e-15)
+    rr_cutoff::Float64=get(kwargs,:rr_cutoff,1e-14)
     max_sweeps::Int64=get(kwargs,:max_sweeps,5)
     spec_lr::Bool=haskey(kwargs,:orth) #Did the user explictely request an orth. direction?
     spec_ms::Bool=haskey(kwargs,:max_sweeps) #Did the user explictely request max_sweeps?
@@ -66,7 +62,7 @@ function ITensors.orthogonalize!(H::MPO,ul::reg_form;kwargs...)
         while nsweeps<max_sweeps && sumDw<old_sumDw
             oldH=spec_lr ? copy(H) : nothing
             old_sumDw=sumDw
-            one_ortho_sweep!(H,ul;kwargs...,orth=lr)
+            one_ortho_sweep!(H,ul;kwargs...,orth=lr,rr_cutoff=rr_cutoff)
             nsweeps+=1
             sumDw=sum(get_Dw(H))
             lr=mirror(lr) #need to undo this after we break out.
@@ -92,13 +88,13 @@ function ITensors.orthogonalize!(H::MPO,ul::reg_form;kwargs...)
             else
                 # THis means we did 1 sweep with no change in Dw, and now need to
                 # to do another sweep to into the requested ortho. state.
-                one_ortho_sweep!(H,ul;kwargs...,orth=request_lr)
+                one_ortho_sweep!(H,ul;kwargs...,orth=request_lr,rr_cutoff=rr_cutoff)
             end
         end
         
     else 
         old_sumDw=sumDw
-        one_ortho_sweep!(H,ul;kwargs...,orth=request_lr)
+        one_ortho_sweep!(H,ul;kwargs...,orth=request_lr,rr_cutoff=rr_cutoff)
         sumDw=sum(get_Dw(H))
     end
     @mpoc_assert isortho(H,request_lr)

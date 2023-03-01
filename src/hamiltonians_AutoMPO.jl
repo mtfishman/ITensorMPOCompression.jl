@@ -90,7 +90,6 @@ function make_transIsing_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
 
     do_field = hx!=0.0
     N=length(sites)
-    @mpoc_assert(N>NNN)
     ampo = OpSum()
     if do_field
         for j=1:N

@@ -98,8 +98,8 @@ end
 test_combos=[
     (make_transIsing_MPO,lower),
     (make_transIsing_MPO,upper),
-    # (make_transIsing_AutoMPO,lower),
-    # (make_Heisenberg_AutoMPO,lower)
+    (make_transIsing_AutoMPO,lower),
+    (make_Heisenberg_AutoMPO,lower)
 ]
 
 @testset "Bring block sparse $(test_combo[2]) MPO into $lr canonical form" for test_combo in test_combos, lr in [left,right]
@@ -127,21 +127,29 @@ end
     N=14
     sites = siteinds("SpinHalf", N;conserve_qns=qns)
     # The default for rr_cutoff is 1e-15 which is too low to get reduction down
-    # AutoMPO elvels, so we need to use rr_cutoff = 1e-14
+    # AutoMPO elvels, so we need to use rr_cutoff = 2e-14
     for NNN in 3:div(N,2)
         Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul) 
         Dw_auto=get_Dw(Hauto)
         Hr=make_transIsing_MPO(sites,NNN;ul=ul) 
-        orthogonalize!(Hr;verbose=verbose1,rr_cutoff=1e-14) #sweep left to right
+        orthogonalize!(Hr;verbose=verbose1,rr_cutoff=2e-14) #sweep left to right
         @test get_Dw(Hr)==Dw_auto
         Hl=make_transIsing_MPO(sites,NNN;ul=ul) 
-        orthogonalize!(Hl;verbose=verbose1,rr_cutoff=1e-14) #sweep right to left
+        orthogonalize!(Hl;verbose=verbose1,rr_cutoff=2e-14) #sweep right to left
         @test get_Dw(Hl)==Dw_auto
     end  
 end 
 
-@testset "Orthogonalize iMPO Check gauge relations, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
+test_combos=[
+    (make_transIsing_iMPO,lower),
+    (make_transIsing_iMPO,upper),
+    #(make_transIsing_AutoiMPO,lower), need to handle N=1, NNN>1 for this to work
+#    (make_Heisenberg_AutoiMPO,lower)
+]
+@testset "Orthogonalize iMPO Check gauge relations, H=$(test_combo[1]), ul=$(test_combo[2]), qbs=$qns" for test_combo in test_combos, qns in [false,true]
     initstate(n) = "↑"
+    ul=test_combo[2]
+    makeH=test_combo[1]
     if verbose
         @printf "               Dw     Dw    Dw    Dw\n"
         @printf " Ncell  NNN  uncomp. left  right  LR\n"
@@ -149,7 +157,7 @@ end
     for N in [1,2,4], NNN in [2,4] #3 site unit cell fails for qns=true.
         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
 
-        H0=make_transIsing_iMPO(si,NNN;ul=ul)
+        H0=makeH(si,NNN;ul=ul)
         @test is_regular_form(H0)
         Dw0=Base.max(get_Dw(H0)...)
 

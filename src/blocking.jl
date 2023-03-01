@@ -20,28 +20,28 @@ function getV(W::ITensor,off::V_offsets)::ITensor
     end
 end
 # Handles W with only one link index
-function setV1(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
+function setV1(W::ITensor,V::ITensor,iqx::Index,ms::matrix_state)::ITensor
     iwl,=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
     ivl,=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
     @mpoc_assert inds(W,tags="Site")==inds(V,tags="Site")
     off=V_offsets(ms)
     @mpoc_assert(off.o1==off.o2)
+    # 
+    # W & V need to have the same Link tags as W1 for the assignments below to work.
     #
-    #  If rank reduction occured in the QR process we may need to resize W.
+    W=replacetags(W,tags(iwl),tags(iqx))
+    V=replacetags(V,tags(ivl),tags(iqx)) 
+    iwl,=inds(W,tags=tags(iqx))
     #
-    if dim(iwl)>dim(ivl)+1         #do we need to shrink W?
-        iwl1=redim(iwl,dim(ivl)+1) #re-dimension the wil index.
-        T=eltype(V)
-        W1=ITensor(T(0.0),iwl1,inds(W,tags="Site"))
-        rc= off.o1==1 ? 1 : dim(iwl) #preserve row/col 1 or Dw
-        rc1= off.o1==1 ? 1 : dim(iwl1)
-        W1[iwl1=>rc1:rc1]=W[iwl=>rc:rc]
-        W=W1 #overwrite W with the resized W.
-        iwl=iwl1 #overwrite the old Link index with the resized version.
-    end
-    V=replacetags(V,tags(ivl),tags(iwl)) #V needs to have the same Link tags as W for the assignment below to work.
-    W[range(iwl,off.o1)]=V #Finally we can do the assingment of the V-block.
-    return W
+    #  Make a new tensor to copy V and one row of W into
+    #
+    T=eltype(V)
+    W1=ITensor(T(0.0),iqx,inds(W,tags="Site"))
+    rc= off.o1==1 ? 1 : dim(iwl) #preserve row/col 1 or Dw
+    rc1= off.o1==1 ? 1 : dim(iqx)
+    W1[iqx=>rc1:rc1]=W[iwl=>rc:rc]
+    W1[range(iqx,off.o1)]=V #Finally we can do the assingment of the V-block.
+    return W1
 end
 
 #
@@ -52,10 +52,13 @@ end
 #   3) V and W should have one common link index so we need to find those and pair them together. But we
 #      need to match on tags&plev because dims are different so ID matching won't work. 
 #
-function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
+function setV(W::ITensor,V::ITensor,iqx::Index,ms::matrix_state)::ITensor
     if order(W)==3
-        return setV1(W,V,ms) #Handle row/col vectors
+        return setV1(W,V,iqx,ms) #Handle row/col vectors
     end
+    #
+    #  Deduce all link indices
+    #
     @mpoc_assert order(W)==4
     wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
     vils=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
@@ -67,23 +70,27 @@ function setV(W::ITensor,V::ITensor,ms::matrix_state)::ITensor
     iwqx=noncommonind(wils,iwl) #get the other link l=n index on W
     off=V_offsets(ms)
     @mpoc_assert off.o1==off.o2
+    # 
+    # W & V need to have the same Link tags as W1 for the assignments below to work.
     #
-    #  If rank reduction occured in the QR process we may need to resize W.
+    W=replacetags(W,tags(iwqx),tags(iqx))
+    V=replacetags(V,tags(ivqx),tags(iqx)) #V needs to have the same Link tags as W for the assignment below to work.
+    iwqx,=inds(W,tags=tags(iqx))
     #
-    if dim(iwqx)>dim(ivqx)+1
-        iw1qx=redim(iwqx,dim(ivqx)+1) #re-dimension the wqx index.
-        iss=filterinds(inds(W),tags="Site")
-        T=eltype(V)
-        W1=ITensor(T(0.0),iw1qx,iwl,iss)
-        rc= off.o1==1 ? 1 : dim(iwqx) #preserve row/col 1 or Dw
-        rc1= off.o1==1 ? 1 : dim(iw1qx)
-        W1[iw1qx=>rc1:rc1,iwl=>1:dim(iwl)]=W[iwqx=>rc:rc,iwl=>1:dim(iwl)] #copy row/col rc/rc1
-        W=W1 #overwrite W with the resized W.
-        iwqx=iw1qx #overwrite the old qx index with the resized version.
-    end # if resize
-    V=replacetags(V,tags(ivqx),tags(iwqx)) #V needs to have the same Link tags as W for the assignment below to work.
-    W[range(iwqx,off.o1),range(iwl,off.o2)]=V #Finally we can do the assingment of the V-block.
-    return W
+    #  Make a new tensor to copy V and one row of W into
+    #
+    iss=filterinds(inds(W),tags="Site")
+    T=eltype(V)
+    W1=ITensor(T(0.0),iqx,iwl,iss)
+    rc= off.o1==1 ? 1 : dim(iwqx) #preserve row/col 1 or Dw
+    rc1= off.o1==1 ? 1 : dim(iqx)
+    #@show iwqx rc iqx rc1 iwl
+    #@pprint W
+    #@show W[iwqx=>rc:rc,iwl=>1:dim(iwl)]
+    W1[iqx=>rc1:rc1,iwl=>1:dim(iwl)]=W[iwqx=>rc:rc,iwl=>1:dim(iwl)] #copy row/col rc/rc1
+    #@pprint W1
+    W1[range(iqx,off.o1),range(iwl,off.o2)]=V #Finally we can do the assingment of the V-block.
+    return W1
 end
 
 #
@@ -96,12 +103,23 @@ function growRL(RL::ITensor,iwl::Index,off::V_offsets)::Tuple{ITensor,Index}
     irl,=filterinds(inds(RL),tags=tags(iwl)) #find the link index of RL
     irqx=noncommonind(inds(RL),irl) #find the qx link of RL
     @mpoc_assert dim(iwl)==dim(irl)+1
-    ipqx=redim(irqx,dim(irqx)+1) 
+    if hasqns(iwl)
+        ipqx=redim(irqx,dim(irqx)+1,off.o1) 
+        #@show irqx ipqx 
+        #ipqx=Index(space(iwl),tags=tags(irqx),plev=plev(irqx),dir=dir(irqx))
+    else
+        ipqx=redim(irqx,dim(irqx)+1) 
+    end
     T=eltype(RL)
-    RLplus=ITensor(T(0.0),ipqx,iwl)
+    #RLplus=ITensor(T(0.0),ipqx,iwl)
+    RLplus=ITensor(T(0.0),iwl,ipqx)
     RLplus[ipqx=>1,iwl=>1]=1.0 #add 1.0's in the corners
     RLplus[ipqx=>dim(ipqx),iwl=>dim(iwl)]=1.0
+    #@show RL RLplus irqx ipqx iwl range(ipqx,off.o1) range(iwl,off.o2)
+    #@show RL RLplus flux(RL) flux(RLplus)
     RLplus[range(ipqx,off.o1),range(iwl,off.o2)]=RL #plop in RL in approtriate sub block.
+    #@show dense(RL) dense(RLplus)
+    #@assert false
     return RLplus,dag(ipqx)
 end
 
@@ -172,20 +190,42 @@ function getM(RL::ITensor,ms::matrix_state,eps::Float64)::Tuple{ITensor,ITensor,
     return M,RL_prime,im,non_zero
 end
 
+function my_similar(::DenseTensor{ElT,N},inds...) where {ElT,N}
+    return ITensor(inds...)
+end
 
+function my_similar(::BlockSparseTensor{ElT,N},inds...) where {ElT,N}
+    return ITensor(inds...)
+end
+
+function my_similar(::DiagTensor{ElT,N},inds...) where {ElT,N}
+    return diagITensor(inds...)
+end
+
+function my_similar(::DiagBlockSparseTensor{ElT,N},inds...) where {ElT,N}
+    return diagITensor(inds...)
+end
+
+function my_similar(T::ITensor,inds...)
+    return my_similar(tensor(T),inds...)
+end
 #                      |1 0 0|
 #  given A, spit out G=|0 A 0| , indices of G are provided.
 #                      |0 0 1|
 #
 function grow(A::ITensor,ig1::Index,ig2::Index)
     Dw1,Dw2=dim(ig1),dim(ig2)
-    G=similar(A,ig1,ig2)
-    G.=0.0
-    #G=ITensor(Gt,ig1,ig2)
-#    G=ITensor(0.0,ig1,ig2) #would be nice to use delta() but we can't set elements on it.
+    #@show A
+    G=my_similar(A,ig1,ig2)
+    #@show G A
+    #G.=0.0
+    # G=ITensor(Gt,ig1,ig2)
+    # G=ITensor(0.0,ig1,ig2) #would be nice to use delta() but we can't set elements on it.
     G[ig1=>1  ,ig2=>1  ]=1.0;
     G[ig1=>Dw1,ig2=>Dw2]=1.0;
+    #@show G 
     G[ig1=>2:Dw1-1,ig2=>2:Dw2-1]=A
+   
     return G
 end
 
@@ -216,12 +256,12 @@ end
 #  TODO: There is probably a better way to do this without any risk of doing A
 #  deep copy.
 #
-function convert_blocksparse(A::ITensor,inds::QNIndex...)
+function convert_blocksparse(A::ITensor,is::QNIndex...)
     @mpoc_assert order(A)==2 #required for Block(1,1) to be correct.
-    bst=BlockSparseTensor(eltype(A),[Block(1,1)],inds )
-    b=nzblocks(bst)[1]
-    blockview(bst, b) .= A #is this deep copy???
-    return itensor(bst)
+    bst=ITensor(0.0,is)
+    #@show is inds(A)
+    bst[is[1]=>1:dim(is[1]),is[2]=>1:dim(is[2])]=A
+    return bst
 end
 
 #
@@ -238,6 +278,7 @@ function make_qninds(A::ITensor,sample_inds::Index...)
     ics =noncommonind(ins,sample_inds)
     @mpoc_assert hasqns(ics)
     #can't use space(ins) to get QNs because dim could be different.
+#    in=addqns(inA,space(ins)[1:dim(inA)];dir=dir(ins)) #make a QN version of index inA
     in=addqns(inA,[QN()=>dim(inA)];dir=dir(ins)) #make a QN version of index inA
     iset=IndexSet(in, ics)
     if inds(A) != iset

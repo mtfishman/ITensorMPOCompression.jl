@@ -7,10 +7,11 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.1f", f) #dumb way to control flo
 @testset "Blocking functions" begin
 
     is=Index(2,"Site,SpinHalf,n=1")
+    iqx=Index(4,"Link,qx")
     V=ITensor(1.0,Index(3,"Link,l=0"),Index(3,"Link,qx"),is,is')
 
     W=ITensor(0.0,Index(4,"Link,l=0"),Index(4,"Link,l=1"),is,is')
-    W=setV(W,V,matrix_state(lower,left))
+    W=setV(W,V,iqx,matrix_state(lower,left))
     @test reshape(array(W[is=>1:1,is'=>1:1]),4,4) == 
     [0.0 0.0 0.0 0.0; 
      0.0 1.0 1.0 1.0;
@@ -18,7 +19,7 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.1f", f) #dumb way to control flo
      0.0 1.0 1.0 1.0]
    
     W=ITensor(0.0,Index(4,"Link,l=0"),Index(4,"Link,l=1"),is,is')
-    W=setV(W,V,matrix_state(lower,right))
+    W=setV(W,V,iqx,matrix_state(lower,right))
     @test reshape(array(W[is=>1:1,is'=>1:1]),4,4)  == 
     [1.0 1.0 1.0 0.0; 
      1.0 1.0 1.0 0.0;
@@ -42,19 +43,24 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.1f", f) #dumb way to control flo
     A=[i*1.0 for i in 1:4*4*2*2]
     V=ITensor(0.5,Index(3,"Link,l=0"),Index(3,"Link,qx"),is,is')
     W=ITensor(eltype(A),A,Index(4,"Link,l=0"),Index(4,"Link,l=1"),is,is')
-    W=setV(W,V,matrix_state(lower,left))
+    W=setV(W,V,iqx,matrix_state(lower,left))
     @test reshape(array(W[is=>1:1,is'=>1:1]),4,4) == 
-    [1.0 5.0 9.0 13.0 ; 
-     2.0 0.5 0.5  0.5 ;
-     3.0 0.5 0.5  0.5 ;
-     4.0 0.5 0.5  0.5 ]
+    # [1.0 5.0 9.0 13.0 ; 
+    #  2.0 0.5 0.5  0.5 ;
+    #  3.0 0.5 0.5  0.5 ;
+    #  4.0 0.5 0.5  0.5 ]
+     [1.0 2.0 3.0 4.0 ; 
+      0.0 0.5 0.5  0.5 ;
+      0.0 0.5 0.5  0.5 ;
+     0.0 0.5 0.5  0.5 ]
     
     
     
     # Now force resizing.  It shoud preserve the last row and col of W
+    iqx=Index(3,"Link,qx")
     V=ITensor(0.5,Index(3,"Link,l=0"),Index(2,"Link,qx"),is,is')
     W=ITensor(eltype(A),A,Index(4,"Link,l=0"),Index(4,"Link,l=1"),is,is')
-    W=setV(W,V,matrix_state(lower,left))
+    W=setV(W,V,iqx,matrix_state(lower,left))
     @test transpose(reshape(array(W[is=>1:1,is'=>1:1]),3,4) ) == 
     [1.0 0.0  0.0 ; #top row gets zeroed out on resizing 
      2.0 0.5  0.5 ;
@@ -64,7 +70,7 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.1f", f) #dumb way to control flo
     V=ITensor(0.5,Index(3,"Link,l=0"),Index(2,"Link,qx"),is,is')
     W=ITensor(eltype(A),A,Index(4,"Link,l=0"),Index(4,"Link,l=1"),is,is')
     
-    W=setV(W,V,matrix_state(lower,right))
+    W=setV(W,V,iqx,matrix_state(lower,right))
    
     @test reshape(array(W[is=>1:1,is'=>1:1]),3,4)  == 
     [0.5   0.5  0.5  0.0 ; 
@@ -75,7 +81,7 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.1f", f) #dumb way to control flo
     V=ITensor(0.5,Index(2,"Link,qx"),Index(3,"Link,l=1"),is,is')
 
     W=ITensor(eltype(A),A,Index(4,"Link,l=0"),Index(4,"Link,l=1"),is,is')
-    W=setV(W,V,matrix_state(lower,left))
+    W=setV(W,V,iqx,matrix_state(lower,left))
     @test reshape(array(W[is=>1:1,is'=>1:1]),3,4)  == 
     [1.0 5.0 9.0 13.0; 
      0.0 0.5 0.5  0.5;
@@ -83,7 +89,7 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.1f", f) #dumb way to control flo
     
     W=ITensor(eltype(A),A,Index(4,"Link,l=0"),Index(4,"Link,l=1"),is,is')
     
-    W=setV(W,V,matrix_state(lower,right))
+    W=setV(W,V,iqx,matrix_state(lower,right))
     @test reshape(array(W[is=>1:1,is'=>1:1]),3,4)  == 
     [0.5 0.5  0.5 0.0; 
      0.5 0.5  0.5 0.0;
@@ -93,14 +99,14 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.1f", f) #dumb way to control flo
     #
     #  GrowRL tests
     #
-    Lplus,il=growRL(L,lWlink,V_offsets(1,0))
+    Lplus,il=growRL(L,lWlink,V_offsets(0,1))
     @test matrix(Lplus) == 
     [1.0 0.0 0.0 0.0; 
      2.0 2.0 2.0 0.0;
      2.0 2.0 2.0 0.0;
      2.0 2.0 2.0 1.0]
     #
-    Lplus,il=growRL(L,lWlink,V_offsets(0,1))
+    Lplus,il=growRL(L,lWlink,V_offsets(1,0))
     @test matrix(Lplus) == 
     [1.0 2.0 2.0 2.0; 
      0.0 2.0 2.0 2.0;

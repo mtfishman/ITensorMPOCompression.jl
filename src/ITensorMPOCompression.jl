@@ -13,6 +13,7 @@ import Base: similar
 export block_qx #qx related
 export slice,assign!,redim #operator handling
 export getV,setV,growRL,V_offsets #blocking related
+export my_similar
 # lots of characterization functions
 export reg_form,orth_type,matrix_state,upper,lower,left,right,mirror
 export parse_links,parse_link,parse_site,is_regular_form,getM,grow,detect_regular_form
@@ -21,8 +22,9 @@ export detect_upper_lower,is_upper_lower,sweep
 export isortho, check_ortho
 # Hamiltonian related
 export make_transIsing_MPO,make_Heisenberg_AutoMPO,make_transIsing_AutoMPO,to_openbc,get_lr
-export make_transIsing_iMPO,make_2body_AutoMPO
+export make_transIsing_iMPO,make_2body_AutoMPO,make_Hubbard_AutoMPO,make_Heisenberg_MPO
 export fast_GS,make_3body_MPO,make_1body_op,make_2body_op,make_3body_op,add_ops,make_3body_AutoMPO,make_2body_sum,make_2body_MPO
+export make_transIsing_AutoiMPO
 # MPO and bond spectrum
 export get_Dw,maxlinkdim,min,max
 export bond_spectrums
@@ -193,10 +195,19 @@ function redim(i::Index,Dw::Int64,offset::Int64=0)::Index
             # We need grow the space.  If there are multiple QNs, where to add the space?
             # Lets add to the end for now.
             #
-            @mpoc_assert offset==0 #not ready to handle this case yet.
-            delta=Dw-dim(i)
-            dq=qns[end].second #dim of space for last QN
-            qns[end]=qns[end].first=>dq+delta
+            @mpoc_assert offset==0 || offset==1 #not ready to handle other cases yet.
+            nq=Dw-dim(i)
+            q=QN()=>1
+            if offset==0
+                # dq=qns[end].second #dim of space for last QN
+                # qns[end]=qns[end].first=>dq+delta
+                newqs=fill(q,nq)
+                qns=vcat(qns,newqs)
+            else
+                newqs=fill(q,nq-1)
+                qns=vcat([q],qns)
+                qns=vcat(qns,newqs)
+            end
             return Index(qns;dir=dir(i),tags=tags(i),plev=plev(i))
         else
             start_offset=offset
@@ -238,6 +249,44 @@ function redim(i::Index,Dw::Int64,offset::Int64=0)::Index
         return Index(Dw;tags=tags(i),plev=plev(i))
     end
 end
+
+function redim(i::Index,j::Index,offset::Int64=0)::Index
+    if hasqns(i)
+        @mpoc_assert hasqns(j)
+        qnsi=space(i)
+        pnsj=space(i)
+        qns=Pair{QN, Int64}[]
+        for q in space(i)
+            @mpoc_assert q.second<=offset
+            push!(qns,q)
+            offset-=q.second
+            if offset==0
+                break
+            end
+        end
+        d=dim(j)
+        for q in space(j)
+            @mpoc_assert q.second<=d
+            push!(qns,q)
+            d-=q.second
+            if d==0
+                break
+            end
+        end
+        d=sum(map((q)->q.second,qns))
+        d1=0
+        for q in space(i)
+            d1+=q.second
+            if d1>d
+                push!(qns,q) 
+            end
+        end
+        return Index(qns;dir=dir(i),tags=tags(i),plev=plev(i))
+    else
+        return redim(i,dim(j),offset)
+    end
+end
+
 
 """
     set_scale!(RL::ITensor,Q::ITensor,off::V_offsets)

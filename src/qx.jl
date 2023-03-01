@@ -76,6 +76,54 @@ function block_qx(W::ITensor,ul::reg_form=lower;kwargs...)::Tuple{ITensor,ITenso
   return block_qx(W,f,ul;kwargs...)
 end
 
+function δ_split(i1::Index, i2::Index,perm::Vector)
+  d = emptyITensor(i1, i2)
+  for n in 1:Base.min(dim(i1), dim(i2))
+    d[n, perm[n]] = 1
+  end
+  return d
+end
+
+
+# function permute1(Q::ITensor,RL::ITensor,p::Vector)
+#   iq=commonind(Q,RL)
+#   @show p
+#   iqp=NDTensors.permuteblocks(iq,p)
+#   Qp=ITensor(iqp,noncommoninds(Q,iq))
+#   RLp=ITensor(0.0,dag(iqp),noncommoninds(RL,iq))
+#   @show RL RLp
+#   #@show inds(Q) inds(Qp) inds(RL) inds(RLp)
+#   for i in 1:dim(iq)
+#     @show i p[i]
+#     #op=slice(Q,iq=>i)
+#     #@show op space(iq)[i] space(iqp)[p[i]]
+#     #op2=slice(Qp,iqp=>p[i])
+#     #@show op2 flux(op) flux(op2)
+#     #assign!(Qp,op,iqp=>p[i])
+#     op=slice(RL,dag(iq)=>i)
+#     @show op
+#     assign!(RLp,op,iqp=>p[i])
+#   end
+#   return Qp,RLp
+# end
+
+function getperm1(RL::ITensor,eps::Float64=1e-14)
+  @mpoc_assert order(RL)==2
+  c,=inds(RL,tags="Link,qx")
+  r=noncommonind(RL,c)
+  first_rows=zeros(Int64,dim(c))
+  for ic in eachindval(c)
+    for ir in eachindval(r)
+      if abs(RL[ir,ic])>=eps
+        first_rows[ic.second]=ir.second
+        break
+      end
+    end
+  end
+  p=sortperm(first_rows)
+  return p
+end
+
 #
 #  try to use this one for internal development.
 #
@@ -94,9 +142,10 @@ function block_qx(W_::ITensor,forward::Index,ul::reg_form=lower;kwargs...)::Tupl
   V=getV(W,offset) #extract the V block
   ind_on_V=filterinds(inds(V),tags=tags(ilw))[1] #link to next site 
   inds_on_Q=noncommoninds(inds(V),ind_on_V) #group all other indices for QX factorization
-  
+  #@show get(kwargs,:rr_cutoff,-999.0)
   if ul==lower
     if lr==left
+      #@show inds(V) inds_on_Q
       Q,RL,iq=ql(V,inds_on_Q;positive=true,tags="Link,qx",kwargs...) #block respecting QL decomposition
     else #right
       RL,Q,iq=lq(V,ind_on_V;positive=true,tags="Link,qx",kwargs...) #block respecting LQ decomposition
@@ -108,18 +157,35 @@ function block_qx(W_::ITensor,forward::Index,ul::reg_form=lower;kwargs...)::Tupl
       RL,Q,iq=rq(V,ind_on_V;positive=true,tags="Link,qx",kwargs...) #block respecting RQ decomposition
     end
   end
+  #@show RL flux(Q) flux(RL)
+  if hasqns(iq)
+    iqs=splitblocks(iq)
+    p=getperm1(RL)
+    #@show inds(RL,tags="Link") dense(RL) p iqs
+    iqsp=NDTensors.permuteblocks(iqs,p)
+    d=δ_split(dag(iqsp'),iq,p)
+    #@show flux(d)
+    RL=noprime(RL*d)
+    Q=noprime(Q*dag(d),tags="Link,qx")
+    #@show flux(Q) flux(RL)
+    #@show norm(dense(V)-dense(RL*Q)) dense(RL)
+  end
   set_scale!(RL,Q,offset) #rescale so the L(n,n)==1.0
+  
   ITensors.@debug_check begin
     err=norm(V-RL*Q)
     if  err>1e-11
       @warn "Loss of precision in block_qx, norm(V-RL*Q)=$err"
     end
   end
-  W=setV(W,Q,ms) #Q is the new V, stuff Q into W. THis can resize W
   RLplus,iqx=growRL(RL,ilw,offset) #Now make a full size version of RL
-  ilw=filterinds(W,tags=tags(forward))[1]
-  replaceind!(W,ilw,iqx) #this function purposely ignores dir(iqx) and preserves dir(ilw)
-  @mpoc_assert dir(W,iqx)==dir(iqx) #so they better match or everything crashes!!
+  #@pprint Q
+  #@pprint W
+  W=setV(W,Q,iqx,ms) #Q is the new V, stuff Q into W. This can resize W
+  #@show flux(RLplus) flux(W)
+  #@pprint W
+  @mpoc_assert dir(W,iqx)==dir(iqx) #Check and QN directions are consistent
   @mpoc_assert hastags(W,"qx")
+  @mpoc_assert hastags(RLplus,"qx")
   return W,RLplus,iqx
 end

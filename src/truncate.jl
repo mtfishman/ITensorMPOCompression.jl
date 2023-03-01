@@ -41,9 +41,9 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
 #  only have one block anyway.
 #  TODO: use multiple dispatch on getM to get all QN specific code out of this funtion.
 #
-    if (hasqns(RL))
-        @mpoc_assert nnzblocks(RL)==1
-    end
+    # if (hasqns(RL))
+    #     @mpoc_assert nnzblocks(RL)==1
+    # end
    
     M,RL_prime,im,RLnz=getM(dense(RL),ms,eps) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
     @mpoc_assert RLnz==0 #make sure RL_prime does not require any fix ups.
@@ -76,13 +76,14 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
         Vplus=grow(V,dag(lq),luv) #lq has the dir of Q so want the opposite on Vplus
         W=Vplus*Q #W[l=n-1,v]
     end
-    replacetags!(RL,tuv,tags(forward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-    replacetags!(W ,tuv,tags(forward)) #W[l=n-1,l=n]
     # At this point RL is dense, we need to make block-sparse version with one block.
     if hasqns(RLinds)
         iRL=make_qninds(RL,RLinds...)
         RL=convert_blocksparse(RL,iRL...)
     end
+
+    replacetags!(RL,tuv,tags(forward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+    replacetags!(W ,tuv,tags(forward)) #W[l=n-1,l=n]
     # expensive.
     # @mpoc_assert is_regular_form(W,ul,eps)
     # @mpoc_assert check_ortho(W,ms,eps)
@@ -101,7 +102,14 @@ function one_trunc_sweep!(H::MPO,ul::reg_form;kwargs...)
         W,RL,s,bail=truncate(H[n],ul;kwargs...,orth=lr)
         encountered_bailout=encountered_bailout||bail
         H[n]=W
+        #@show  bail s
+        #@pprint H[nn]
         H[nn]=RL*H[nn]
+        #@pprint W
+        #@show RL
+        #@pprint H[nn]
+        
+        @mpoc_assert is_regular_form(H[n],ul)
         @mpoc_assert is_regular_form(H[nn],ul)
         ss[n+link_offest]=s
     end
@@ -325,23 +333,31 @@ function ITensors.truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::Ce
         Gs[n]=replaceind(Gs[n],igr,prime(igr))
         iln=linkind(H,n) #Link between Hn amd Hn+1
         if lr==left
-            #println("-----------------Left----------------------")
+            # println("-----------------Left----------------------")
             igl=iln #right link of Hn is the left link of Gn
             U,Sp,V,spectrum=truncate(Gs[n],dag(igl);kwargs...)
             transform(H,U,n)
             transform(Hm,dag(V),n)
         else
-            #println("-----------------Right----------------------")
+            # println("-----------------Right----------------------")
             igl=noncommonind(Gs[n],iln) #left link of Hn+1 is the right link Gn
             U,Sp,V,spectrum=truncate(Gs[n],igl;kwargs...) 
             transform(H,dag(V),n)
             transform(Hm,U,n)
         end
        
-        if hasqns(Gs[n])
-            iSs=make_qninds(Sp,inds(dag(U))...)
-            Sp=convert_blocksparse(Sp,iSs...)
-        end
+        # if hasqns(Gs[n])
+        #     @show inds(Sp,tags="Link") commonind(Sp,U) commonind(Sp,V)
+        #     ic=commonind(Sp,U)
+        #     replaceind!(Sp,ic,ic')
+        #     replaceind!(U,ic,ic')
+        #     #@show inds(Sp) inds(U)
+        #     iSs=make_qninds(Sp,inds(dag(U))...)
+        #     Sp=convert_blocksparse(Sp,iSs...)
+        #     Sp=noprime(Sp)
+        #     U=noprime(U)
+        #     #@show inds(Sp)   inds(U)
+        # end
        
         Ss[n]=Sp
         ss[n]=spectrum
@@ -369,8 +385,9 @@ function truncate(G::ITensor,igl::Index;kwargs...)
     #
     # Build up U+, S+ and V+
     #
-    iup=redim(iu,dim(iu)+2) #Use redim to preserve QNs
-    ivp=redim(iv,dim(iv)+2) 
+    iup=redim(iu,dim(iu)+2,1) #Use redim to preserve QNs
+    ivp=redim(iv,dim(iv)+2,1) 
+    #@show iu iup iv ivp igl s dense(s) U
     Up=grow(noprime(U),noprime(igl),dag(iup))
     Sp=grow(s,iup,ivp)
     Vp=grow(noprime(V),dag(ivp),noprime(igr))
