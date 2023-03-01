@@ -126,6 +126,41 @@ function make_transIsing_op(site::Index,prev_link::Index,NNN::Int64,J::Float64,h
     return W
 end
 
+function make_Heisenberg_MPO(sites,NNN::Int64;kwargs...)
+#    ul::reg_form=get(kwargs,:ul,lower)
+    ul=lower
+    pbc::Bool=get(kwargs,:pbc,false)
+    use_qn::Bool=hasqns(sites[1])
+    io = ul==lower ? ITensors.Out : ITensors.In
+    Dw=5
+    N=length(sites)
+    H=MPO(N)
+    if pbc
+        l=make_Ising_index(Dw,"Link,c=0,l=1",use_qn,io)
+        r=make_Ising_index(Dw,"Link,c=1,l=1",use_qn,io)
+    else
+        l=make_Ising_index(Dw,"Link,l=0",use_qn,io)
+        r=make_Ising_index(Dw,"Link,l=1",use_qn,io)
+    end
+    H[1] = make_1body_op(sites[1],l,r,ul;kwargs...)
+    
+    for n in 2:N
+        H[n] = make_1body_op(sites[n],l,r,ul;kwargs...)
+    end
+    
+    W=H[1]
+    if get(kwargs,:J,1.0)!=0.0
+        @assert NNN==1
+        for n in 1:NNN
+            W = add_ops(W,make_2body_Hop(sites[1],l,r,n,ul;kwargs...))
+        end
+    end
+    addW!(sites,H,W)
+    daisychain_links!(H;kwargs...)
+    return H
+end
+
+
 #
 #  implement eq. E3 from the Parker paper.
 #
@@ -374,6 +409,47 @@ function make_2body_sum(site::Index,r1::Index,c1::Index,NNN::Int64,ul::reg_form;
             assign!(W,Jn*Sz,r=>1,c=>Dw-n)
         end
     end 
+    return W
+end
+#
+#  J_1n * Z_1*Z_n
+#
+function make_2body_Hop(site::Index,r1::Index,c1::Index,n::Int64,ul::reg_form;kwargs...)::ITensor
+    @mpoc_assert n==1
+    J::Float64=get(kwargs,:J,1.0)
+    Dw::Int64=2+3*n
+    r,c=redim(r1,Dw),redim(c1,Dw)
+
+    is=dag(site) #site seem to have the wrong direction!
+    W=ITensor(0.0,r,c,is,dag(is'))
+    Id=op(is,"Id")
+    Sz=op(is,"Sz")
+    Sp=0.5*op(is,"S+")
+    Sm=0.5*op(is,"S-")
+    assign!(W,Id,r=>1 ,c=>1 )
+    assign!(W,Id,r=>Dw,c=>Dw)
+    Jn=J/n^1 #interactions need to decay with distance in order for H to extensive 
+    if ul==lower
+        assign!(W,Sz,r=>2,c=>1)
+        assign!(W,Sp,r=>3,c=>1)
+        assign!(W,Sm,r=>4,c=>1)
+        for j in 1:n-1
+            assign!(W,Id,r=>2+j,c=>1+j)
+        end
+        assign!(W,Jn*Sz,r=>Dw,c=>Dw-3)
+        assign!(W,Jn*Sp,r=>Dw,c=>Dw-2)
+        assign!(W,Jn*Sm,r=>Dw,c=>Dw-1)
+    else
+        assign!(W,Sz,r=>1,c=>2)
+        assign!(W,Sz,r=>1,c=>3)
+        assign!(W,Sz,r=>1,c=>4)
+        for j in 1:n-1
+            assign!(W,Id,r=>1+j,c=>2+j)
+        end
+        assign!(W,Jn*Sz,r=>Dw-3,c=>Dw)
+        assign!(W,Jn*Sp,r=>Dw-2,c=>Dw)
+        assign!(W,Jn*Sm,r=>Dw-1,c=>Dw)
+    end
     return W
 end
 
