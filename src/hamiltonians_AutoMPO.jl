@@ -146,3 +146,26 @@ The MPO is returned in lower regular form.
     end
     return MPO(ampo,sites)
 end
+
+function make_Hubbard_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
+    U::Float64=get(kwargs,:U,1.0)
+    t::Float64=get(kwargs,:t,1.0)
+    V::Float64=get(kwargs,:V,0.5)
+    N=length(sites)
+    @mpoc_assert(N>=NNN)
+    os = OpSum()
+    for i in 1:N
+      os += (U, "Nupdn", i)
+    end
+    for dn=1:NNN
+        tj,Vj=t/dn,V/dn
+        for n in 1:(N - dn)
+        # os += -tj, "Cdagup", n, "Cup", n + dn
+        # os += -tj, "Cdagup", n + dn, "Cup", n
+        # os += -tj, "Cdagdn", n, "Cdn", n + dn
+        # os += -tj, "Cdagdn", n + dn, "Cdn", n
+        os +=  Vj, "Ntot"  , n, "Ntot", n + dn
+        end
+    end
+    return MPO(os, sites;kwargs...)
+end
