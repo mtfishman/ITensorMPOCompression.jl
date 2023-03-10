@@ -8,8 +8,8 @@ using Printf
 verbose=false #verbose at the outer test level
 verbose1=false #verbose inside orth algos
 
-# using Printf
-# Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
+ using Printf
+ Base.show(io::IO, f::Float64) = @printf(io, "%1.1e", f)
 # println("-----------Start--------------")
 @testset verbose=verbose "Orthogonalize" begin
 
@@ -64,20 +64,22 @@ verbose1=false #verbose inside orth algos
 end
 
 test_combos=[
-    (make_transIsing_MPO,lower),
-    (make_transIsing_MPO,upper),
-    (make_transIsing_AutoMPO,lower),
-    (make_Heisenberg_AutoMPO,lower)
+    (make_transIsing_MPO,lower,"S=1/2"),
+    (make_transIsing_MPO,upper,"S=1/2"),
+    (make_transIsing_AutoMPO,lower,"S=1/2"),
+    (make_Heisenberg_AutoMPO,lower,"S=1/2"),
+    (make_Heisenberg_AutoMPO,lower,"S=1"),
+    (make_Hubbard_AutoMPO,lower,"Electron")
 ]
 
 @testset "Bring dense $(test_combo[2]) MPO into $lr canonical form" for test_combo in test_combos, lr in [left,right]
     N=10
-    NNN=4
+    NNN=7
     eps=1e-14
     model_kwargs = (ul=test_combo[2], )
     ms=matrix_state(test_combo[2],lr )
     makeH=test_combo[1]
-    sites = siteinds("SpinHalf", N;conserve_qns=false)
+    sites = siteinds(test_combo[3], N;conserve_qns=false)
     psi=randomMPS(sites)
     H=makeH(sites,NNN;model_kwargs...) 
     #@show inds(H[1])
@@ -96,19 +98,21 @@ test_combos=[
 end 
 
 test_combos=[
-    (make_transIsing_MPO,lower),
-    (make_transIsing_MPO,upper),
-    (make_transIsing_AutoMPO,lower),
-    (make_Heisenberg_AutoMPO,lower)
+    (make_transIsing_MPO,lower,"S=1/2"),
+    (make_transIsing_MPO,upper,"S=1/2"),
+    (make_transIsing_AutoMPO,lower,"S=1/2"),
+    (make_Heisenberg_AutoMPO,lower,"S=1/2"),
+    (make_Heisenberg_AutoMPO,lower,"S=1"),
+    (make_Hubbard_AutoMPO,lower,"Electron")
 ]
 
-@testset "Bring block sparse $(test_combo[2]) MPO into $lr canonical form" for test_combo in test_combos, lr in [left,right]
+@testset "Bring block sparse $(test_combo[2]) $(test_combo[1]) MPO into $lr canonical form" for test_combo in test_combos, lr in [left,right]
     N=10
-    NNN=4
+    NNN=7
     eps=1e-14
     ms=matrix_state(test_combo[2],lr )
     makeH=test_combo[1]
-    sites = siteinds("SpinHalf", N;conserve_qns=true)
+    sites = siteinds(test_combo[3], N;conserve_qns=true)
     state=[isodd(n) ? "Up" : "Dn" for n=1:N]
     psi=randomMPS(sites,state)
     H=makeH(sites,NNN;ul=test_combo[2]) 

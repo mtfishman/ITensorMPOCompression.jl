@@ -102,7 +102,7 @@ function make_transIsing_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
             add!(ampo, f    ,"Sz", j, "Sz", j+dj)
         end
     end
-    return MPO(ampo,sites)
+    return MPO(ampo,sites;kwargs...)
 end
 make_2body_AutoMPO(sites,NNN::Int64;kwargs...)=make_transIsing_AutoMPO(sites,NNN;kwargs...)
 
@@ -159,10 +159,10 @@ function make_Hubbard_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
     for dn=1:NNN
         tj,Vj=t/dn,V/dn
         for n in 1:(N - dn)
-        # os += -tj, "Cdagup", n, "Cup", n + dn
-        # os += -tj, "Cdagup", n + dn, "Cup", n
-        # os += -tj, "Cdagdn", n, "Cdn", n + dn
-        # os += -tj, "Cdagdn", n + dn, "Cdn", n
+        os += -tj, "Cdagup", n, "Cup", n + dn
+        os += -tj, "Cdagup", n + dn, "Cup", n
+        os += -tj, "Cdagdn", n, "Cdn", n + dn
+        os += -tj, "Cdagdn", n + dn, "Cdn", n
         os +=  Vj, "Ntot"  , n, "Ntot", n + dn
         end
     end
