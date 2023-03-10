@@ -2,9 +2,9 @@ using ITensors
 using ITensorMPOCompression
 using Test
 using Revise,Printf
-Base.show(io::IO, f::Float64) = @printf(io, "%1.1f", f) #dumb way to control float output
+Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
 
-@testset "Blocking functions" begin
+@testset "Blocking functions for dense matrices" begin
 
     is=Index(2,"Site,SpinHalf,n=1")
     iqx=Index(4,"Link,qx")
@@ -121,4 +121,40 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.1f", f) #dumb way to control flo
      0.0 0.0 0.0 1.0]
     
 end
+
+
+@testset "Sub tensor assign for block sparse matrices with compatable QN spaces" begin 
+    qns=[QN("Sz",0)=>1,QN("Sz",0)=>3,QN("Sz",0)=>2]
+    i,j=Index(qns,"i"),Index(qns,"j")
+    A=randomITensor(i,j)
+    nr,nc=dims(A)
+    B=copy(A)
+    for dr in 0:nr-1
+        for dc in 0:nc-1
+            B[i=>1:nr-dr,j=>1:nc-dc]=A[i=>1:nr-dr,j=>1:nc-dc]
+            @test norm(B-A)==0
+            B[i=>1+dr:nr,j=>1:nc-dc]=A[i=>1+dr:nr,j=>1:nc-dc]
+            @test norm(B-A)==0
+        end
+    end
+end
+
+#
+#  This is a tough nut to crack.  But it is not needed for MPO compression.
+#
+# @testset "Sub tensor assign for block sparse matrices with in-compatable QN spaces" begin 
+#     qns=[QN("Sz",0)=>1,QN("Sz",0)=>3,QN("Sz",0)=>2]
+#     qnsC=[QN("Sz",0)=>2,QN("Sz",0)=>2,QN("Sz",0)=>2] #purposely miss allgined.
+#     i,j=Index(qns,"i"),Index(qns,"j")
+#     A=randomITensor(i,j)
+#     nr,nc=dims(A)
+#     ic,jc=Index(qnsC,"i"),Index(qnsC,"j")
+#     C=randomITensor(ic,jc)
+#     @show dense(A) dense(C)
+#     C[ic=>1:nr,jc=>1:nc]=A[i=>1:nr,j=>1:nc]
+#     @show matrix(A)-matrix(C)
+#     @test norm(matrix(A)-matrix(C))==0
+# end
+
+
 nothing
