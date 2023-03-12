@@ -7,8 +7,7 @@ using Printf
 function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spectrum,Bool}
     lr::orth_type=get(kwargs, :orth, right)
     ms=matrix_state(ul,lr)
-    eps=1e-14 #relax used for testing upper/lower/regular-form etc.
-    forward,_=parse_links(W,lr) # W[l=$(n-1)l=$n]=W[r,c]
+    iforward,_=parse_links(W,lr) # W[l=$(n-1)l=$n]=W[r,c]
     # establish some tag strings then depend on lr.
     (tsvd,tuv) = lr==left ? ("qx","Link,u") : ("m","Link,v")
 #
@@ -18,97 +17,69 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
 # should have been done in the ortho process anyway.
 #
    
-    Q,RL,lq=block_qx(W,forward,ul;rr_cutoff=-1.0,kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
+    Q,RL,iqx=block_qx(W,iforward,ul;rr_cutoff=-1.0,kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
     # expensive
     # if order(Q)==4
     #     @mpoc_assert check_ortho(Q,ms,eps)
     #     @mpoc_assert is_regular_form(Q,ul,eps)
     # end
-    c=noncommonind(RL,lq) #if size changed the old c is not lnger valid
+    c=noncommonind(RL,iqx) #if size changed the old c is not lnger valid
     #
     #  If the RL is rectangular in wrong way, then factoring out M is very difficult.
     #  For now we just bail out.
     #
-    if dim(c)>dim(lq) || dim(c)<3
-        replacetags!(RL,"Link,qx",tags(forward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-        replacetags!(Q ,"Link,qx",tags(forward)) #W[l=n-1,l=n]
+    if dim(c)>dim(iqx) || dim(c)<3
+        replacetags!(RL,"Link,qx",tags(iforward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+        replacetags!(Q ,"Link,qx",tags(iforward)) #W[l=n-1,l=n]
         return Q,RL,Spectrum([],0),true
     end
-    RLinds=inds(RL) # we will need the QN space info later to reconstruct a block sparse RL.
     
 #
 #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
 #  For blocksparse W, at this point we switch to dense for all RL manipulations and RL should
 #  only have one block anyway.
-#  TODO: use multiple dispatch on getM to get all QN specific code out of this funtion.
 #
-    # if (hasqns(RL))
-    #     @mpoc_assert nnzblocks(RL)==1
-    # end
-   
-    M,RL_prime,im,RLnz=getMq(dense(RL),ms) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
-    Mq,RL_primeq,imq,RLnzq=getMq(RL,ms) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
+    M,RL_prime,im,RLnz=getMq(RL,ms.ul) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
     @mpoc_assert RLnz==0 #make sure RL_prime does not require any fix ups.
 #  
 #  At last we can svd and compress M using epsSVD as the cutoff.  M should be dense.
 #    
     isvd=findinds(M,tsvd)[1] #decide the left index
-    U,s,V,spectrum=svd(M,isvd;kwargs...) # ns sing. values survive compression
+    U,s,V,spectrum,iu,iv=svd(M,isvd;kwargs...) # ns sing. values survive compression
     ns=dim(inds(s)[1])
 
-    isvdq=findinds(Mq,tsvd)[1] #decide the left index
-    Uq,sq,Vq,spectrum,iuq,ivq=svd(Mq,isvdq;kwargs...) # ns sing. values survive compression
-    nsq=dim(inds(sq)[1])
-
     #@show diag(array(s))
-    Mplus=grow(M,removeqns(lq),im)
-    D=dense(RL)-Mplus*RL_prime
 
-    Mplusq=grow(Mq,dag(lq),imq)
-    #@show inds(RL) inds(Mplusq) inds(RL_primeq) inds(Mplusq*RL_primeq)
-    Dq=RL-Mplusq*RL_primeq
-    @show norm(Dq)
+    Mplus=grow(M,dag(iqx),im)
+    D=RL-Mplus*RL_prime
+    #@show norm(Dq)
     # Check accuracy of RL_prime.
     if norm(D)>get(kwargs, :cutoff, 1e-14)
         @printf "High normD(D)=%.1e min(s)=%.1e \n" norm(D) Base.min(diag(array(s))...)
-        replacetags!(RL,"Link,qx",tags(forward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-        replacetags!(Q ,"Link,qx",tags(forward)) #W[l=n-1,l=n]
+        replacetags!(RL,"Link,qx",tags(iforward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+        replacetags!(Q ,"Link,qx",tags(iforward)) #W[l=n-1,l=n]
         return Q,RL,spectrum,true
     end
    
-    luv=Index(ns+2,"Link,$tuv") #link for expanded U,Us,V,sV matricies.
-    luq=redim(iuq,ns+2,1)
-    lvq=redim(ivq,ns+2,1)
     if lr==left
-        RL=grow(s*V,luv,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
-        Uplus=grow(U,dag(lq),luv)
+        iup=redim(iu,ns+2,1)
+        RL=grow(s*V,dag(iup),im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
+        Uplus=grow(U,dag(iqx),iup)
         W=Q*Uplus #W[l=n-1,u]
-
-        RLq=grow(sq*Vq,dag(luq),imq)*RL_primeq #RL[l=n,u] dim ns+2 x Dw2
-        Uplusq=grow(Uq,dag(lq),luq)
-        Wq=Q*Uplusq #W[l=n-1,u]
     else # right
-        RL=RL_prime*grow(U*s,im,luv) #RL[l=n-1,v] dim Dw1 x ns+2
-        Vplus=grow(V,dag(lq),luv) #lq has the dir of Q so want the opposite on Vplus
+        ivp=redim(iv,ns+2,1)
+        RL=RL_prime*grow(U*s,im,ivp) #RL[l=n-1,v] dim Dw1 x ns+2
+        Vplus=grow(V,dag(iqx),dag(ivp)) #lq has the dir of Q so want the opposite on Vplus
         W=Vplus*Q #W[l=n-1,v]
-
-        RLq=RL_primeq*grow(Uq*sq,imq,lvq) #RL[l=n-1,v] dim Dw1 x ns+2
-        Vplusq=grow(Vq,dag(lq),dag(lvq)) #lq has the dir of Q so want the opposite on Vplus
-        Wq=Vplusq*Q #W[l=n-1,v]
-    end
-    # At this point RL is dense, we need to make block-sparse version with one block.
-    if hasqns(RLinds)
-        iRL=make_qninds(RL,RLinds...)
-        RL=convert_blocksparse(RL,iRL...)
     end
 
-    replacetags!(RLq,tuv,tags(forward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-    replacetags!(Wq ,tuv,tags(forward)) #W[l=n-1,l=n]
+    replacetags!(RL,tuv,tags(iforward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+    replacetags!(W ,tuv,tags(iforward)) #W[l=n-1,l=n]
     # expensive.
     # @mpoc_assert is_regular_form(W,ul,eps)
     # @mpoc_assert check_ortho(W,ms,eps)
     #@show luq lvq inds(Q) inds(Wq) inds(RLq)
-    return Wq,RLq,spectrum,false
+    return W,RL,spectrum,false
 end
 
 function one_trunc_sweep!(H::MPO,ul::reg_form;kwargs...)

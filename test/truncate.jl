@@ -64,7 +64,7 @@ end
 
 @testset verbose=true "Truncate/Compress" begin
 
-@testset "Compress full MPO with ul=$ul, lr=$lr, QNs=$qns" for ul in [lower], lr in [left,right], qns in [true]
+@testset "Compress full MPO with ul=$ul, lr=$lr, QNs=$qns" for ul in [lower], lr in [left,right], qns in [false,true]
     hx= qns ? 0.0 : 0.5 
     ms=matrix_state(ul,lr)
     #                                 V=N sites
@@ -76,13 +76,13 @@ end
     # test_truncate(make_transIsing_MPO,14,13,hx,ms,qns) 
 end 
 
-@testset "Test ground states" begin
+@testset "Test ground states" for qns in [false,true]
     eps=3e-13
     N=10
     NNN=5
-    hx=0.5
+    hx= qns ? 0.0 : 0.5 
 
-    sites = siteinds("SpinHalf", N)
+    sites = siteinds("SpinHalf", N;conserve_qns=qns)
     H=make_transIsing_MPO(sites,NNN;hx=hx)
 
     E0,psi0=fast_GS(H,sites)
@@ -346,156 +346,156 @@ end
 # end
 
 
-# @testset "Truncate/Compress iMPO Check gauge relations, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
-#     initstate(n) = "↑"
-#     if verbose
-#         @printf "               Dw     Dw    Dw   \n"
-#         @printf " Ncell  NNN  uncomp. left  right \n"
-#     end
+@testset "Truncate/Compress iMPO Check gauge relations, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
+    initstate(n) = "↑"
+    if verbose
+        @printf "               Dw     Dw    Dw   \n"
+        @printf " Ncell  NNN  uncomp. left  right \n"
+    end
 
-#     for  NNN in [2,4], N in [1,2,4] #3 site unit cell fails inside ITensorInfiniteMPS for qns=true.
-#         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
-#         H0=make_transIsing_iMPO(si,NNN;ul=ul)
-#         @test is_regular_form(H0)
-#         Dw0=Base.max(get_Dw(H0)...)
-#         #
-#         #  Do truncate outputting left ortho Hamiltonian
-#         #
-#         HL=copy(H0)
-#         Ss,ss,HR=truncate!(HL;verbose=verbose1,orth=left,h_mirror=true)
-#         @test typeof(storage(Ss[1])) == (qns ? NDTensors.DiagBlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
+    for  NNN in [2,4], N in [1,2,4] #3 site unit cell fails inside ITensorInfiniteMPS for qns=true.
+        si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
+        H0=make_transIsing_iMPO(si,NNN;ul=ul)
+        @test is_regular_form(H0)
+        Dw0=Base.max(get_Dw(H0)...)
+        #
+        #  Do truncate outputting left ortho Hamiltonian
+        #
+        HL=copy(H0)
+        Ss,ss,HR=truncate!(HL;verbose=verbose1,orth=left,h_mirror=true)
+        @test typeof(storage(Ss[1])) == (qns ? NDTensors.DiagBlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
 
-#         DwL=Base.max(get_Dw(HL)...)
-#         @test is_regular_form(HL)
-#         @test isortho(HL,left)
-#         @test check_ortho(HL,left)
-#         #
-#         #  Now test guage relations using the diagonal singular value matrices
-#         #  as the gauge transforms.
-#         #
-#         for n in 1:N
-#             @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
-#         end    
-#         #
-#         #  Do truncate from H0 outputting right ortho Hamiltonian
-#         #
-#         HR=copy(H0)
-#         Ss,ss,HL=truncate!(HR;verbose=verbose1,orth=right,h_mirror=true)
-#         @test typeof(storage(Ss[1])) == (qns ? NDTensors.DiagBlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
-#         DwR=Base.max(get_Dw(HR)...)
-#         @test is_regular_form(HR)
-#         @test isortho(HR,right)
-#         @test check_ortho(HR,right)
-#         for n in 1:N
-#             @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
-#         end   
-#         if verbose
-#             @printf " %4i %4i   %4i   %4i  %4i \n" N NNN Dw0 DwL DwR
-#         end
+        DwL=Base.max(get_Dw(HL)...)
+        @test is_regular_form(HL)
+        @test isortho(HL,left)
+        @test check_ortho(HL,left)
+        #
+        #  Now test guage relations using the diagonal singular value matrices
+        #  as the gauge transforms.
+        #
+        for n in 1:N
+            @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
+        end    
+        #
+        #  Do truncate from H0 outputting right ortho Hamiltonian
+        #
+        HR=copy(H0)
+        Ss,ss,HL=truncate!(HR;verbose=verbose1,orth=right,h_mirror=true)
+        @test typeof(storage(Ss[1])) == (qns ? NDTensors.DiagBlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
+        DwR=Base.max(get_Dw(HR)...)
+        @test is_regular_form(HR)
+        @test isortho(HR,right)
+        @test check_ortho(HR,right)
+        for n in 1:N
+            @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
+        end   
+        if verbose
+            @printf " %4i %4i   %4i   %4i  %4i \n" N NNN Dw0 DwL DwR
+        end
 
-#     end
-# end
+    end
+end
 
 
-# @testset "Try a lattice with alternating S=1/2 and S=1 sites. iMPO. Qns=$qns" for qns in [false,true]
-#     initstate(n) = isodd(n) ? "Dn" : "Up"
-#     ul=lower
-#     if verbose
-#         @printf "               Dw     Dw    Dw   \n"
-#         @printf " Ncell  NNN  uncomp. left  right \n"
-#     end
-#     #
-#     #  This one is tricky to set for QNs=true up due to QN flux constraints.
-#     #  An Ncell=3 with S={1/2,1,1/2} seems to work. 
-#     #
-#     for  NNN in [2,4,6], N in [3] #3 site unit cell fails inside ITensorInfiniteMPS for qns=true.
-#         si = infsiteinds(n->isodd(n) ? "S=1" : "S=1/2",N; initstate, conserve_qns=qns)
-#         H0=make_transIsing_iMPO(si,NNN;ul=ul)
-#         @test is_regular_form(H0)
-#         Dw0=Base.max(get_Dw(H0)...)
-#         #
-#         #  Do truncate outputting left ortho Hamiltonian
-#         #
-#         HL=copy(H0)
-#         Ss,ss,HR=truncate!(HL;verbose=verbose1,orth=left,h_mirror=true)
-#         #@test typeof(storage(Ss[1])) == (qns ? BlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
-#         DwL=Base.max(get_Dw(HL)...)
-#         @test is_regular_form(HL)
-#         @test isortho(HL,left)
-#         @test check_ortho(HL,left)
-#         #
-#         #  Now test guage relations using the diagonal singular value matrices
-#         #  as the gauge transforms.
-#         #
-#         for n in 1:N
-#             @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
-#         end    
-#         #
-#         #  Do truncate from H0 outputting right ortho Hamiltonian
-#         #
-#         HR=copy(H0)
-#         Ss,ss,HL=truncate!(HR;verbose=verbose1,orth=right,h_mirror=true)
-#         #@test typeof(storage(Ss[1])) == (qns ? BlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
-#         DwR=Base.max(get_Dw(HR)...)
-#         @test is_regular_form(HR)
-#         @test isortho(HR,right)
-#         @test check_ortho(HR,right)
-#         for n in 1:N
-#             @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
-#         end   
-#         if verbose
-#             @printf " %4i %4i   %4i   %4i  %4i \n" N NNN Dw0 DwL DwR
-#         end
+@testset "Try a lattice with alternating S=1/2 and S=1 sites. iMPO. Qns=$qns" for qns in [false,true]
+    initstate(n) = isodd(n) ? "Dn" : "Up"
+    ul=lower
+    if verbose
+        @printf "               Dw     Dw    Dw   \n"
+        @printf " Ncell  NNN  uncomp. left  right \n"
+    end
+    #
+    #  This one is tricky to set for QNs=true up due to QN flux constraints.
+    #  An Ncell=3 with S={1/2,1,1/2} seems to work. 
+    #
+    for  NNN in [2,4,6], N in [3] #3 site unit cell fails inside ITensorInfiniteMPS for qns=true.
+        si = infsiteinds(n->isodd(n) ? "S=1" : "S=1/2",N; initstate, conserve_qns=qns)
+        H0=make_transIsing_iMPO(si,NNN;ul=ul)
+        @test is_regular_form(H0)
+        Dw0=Base.max(get_Dw(H0)...)
+        #
+        #  Do truncate outputting left ortho Hamiltonian
+        #
+        HL=copy(H0)
+        Ss,ss,HR=truncate!(HL;verbose=verbose1,orth=left,h_mirror=true)
+        #@test typeof(storage(Ss[1])) == (qns ? BlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
+        DwL=Base.max(get_Dw(HL)...)
+        @test is_regular_form(HL)
+        @test isortho(HL,left)
+        @test check_ortho(HL,left)
+        #
+        #  Now test guage relations using the diagonal singular value matrices
+        #  as the gauge transforms.
+        #
+        for n in 1:N
+            @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
+        end    
+        #
+        #  Do truncate from H0 outputting right ortho Hamiltonian
+        #
+        HR=copy(H0)
+        Ss,ss,HL=truncate!(HR;verbose=verbose1,orth=right,h_mirror=true)
+        #@test typeof(storage(Ss[1])) == (qns ? BlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
+        DwR=Base.max(get_Dw(HR)...)
+        @test is_regular_form(HR)
+        @test isortho(HR,right)
+        @test check_ortho(HR,right)
+        for n in 1:N
+            @test norm(Ss[n-1]*HR[n]-HL[n]*Ss[n]) ≈ 0.0 atol = 1e-14
+        end   
+        if verbose
+            @printf " %4i %4i   %4i   %4i  %4i \n" N NNN Dw0 DwL DwR
+        end
 
-#     end
-# end
+    end
+end
 
-# @testset "Orthogonalize/truncate verify gauge invariace of <ψ|H|ψ>, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
-#     initstate(n) = "↑"
-#     for N in [1], NNN in [2,4] #3 site unit cell fails for qns=true.
-#         svd_cutoff=1e-15 #Same as autoMPO uses.
-#         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
-#         ψ = InfMPS(si, initstate)
-#         for n in 1:N
-#             ψ[n] = randomITensor(inds(ψ[n]))
-#         end
-#         H0=make_transIsing_iMPO(si,NNN;ul=ul)
-#         Hsum0=InfiniteSum{MPO}(H0,NNN)
-#         E0=expect(ψ,Hsum0)
+@testset "Orthogonalize/truncate verify gauge invariace of <ψ|H|ψ>, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
+    initstate(n) = "↑"
+    for N in [1], NNN in [2,4] #3 site unit cell fails for qns=true.
+        svd_cutoff=1e-15 #Same as autoMPO uses.
+        si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
+        ψ = InfMPS(si, initstate)
+        for n in 1:N
+            ψ[n] = randomITensor(inds(ψ[n]))
+        end
+        H0=make_transIsing_iMPO(si,NNN;ul=ul)
+        Hsum0=InfiniteSum{MPO}(H0,NNN)
+        E0=expect(ψ,Hsum0)
 
-#         HL=copy(H0)
-#         orthogonalize!(HL;verbose=verbose1,orth=left)
-#         HsumL=InfiniteSum{MPO}(HL,NNN)
-#         EL=expect(ψ,HsumL)
-#         @test EL ≈ E0 atol = 1e-14
+        HL=copy(H0)
+        orthogonalize!(HL;verbose=verbose1,orth=left)
+        HsumL=InfiniteSum{MPO}(HL,NNN)
+        EL=expect(ψ,HsumL)
+        @test EL ≈ E0 atol = 1e-14
 
-#         HR=copy(HL)
-#         orthogonalize!(HR;verbose=verbose1,orth=right)
-#         HsumR=InfiniteSum{MPO}(HR,NNN)
-#         ER=expect(ψ,HsumR)
-#         @test ER ≈ E0 atol = 1e-14
+        HR=copy(HL)
+        orthogonalize!(HR;verbose=verbose1,orth=right)
+        HsumR=InfiniteSum{MPO}(HR,NNN)
+        ER=expect(ψ,HsumR)
+        @test ER ≈ E0 atol = 1e-14
 
-#         HL=copy(H0)
-#         truncate!(HL;verbose=verbose1,orth=left)
-#         HsumL=InfiniteSum{MPO}(HL,NNN)
-#         EL=expect(ψ,HsumL)
-#         @test EL ≈ E0 atol = 1e-14
+        HL=copy(H0)
+        truncate!(HL;verbose=verbose1,orth=left)
+        HsumL=InfiniteSum{MPO}(HL,NNN)
+        EL=expect(ψ,HsumL)
+        @test EL ≈ E0 atol = 1e-14
 
-#         HR=copy(H0)
-#         truncate!(HR;verbose=verbose1,orth=right)
-#         HsumR=InfiniteSum{MPO}(HR,NNN)
-#         ER=expect(ψ,HsumR)
-#         @test ER ≈ E0 atol = 1e-14
+        HR=copy(H0)
+        truncate!(HR;verbose=verbose1,orth=right)
+        HsumR=InfiniteSum{MPO}(HR,NNN)
+        ER=expect(ψ,HsumR)
+        @test ER ≈ E0 atol = 1e-14
         
-#         H=copy(H0)
-#         truncate!(H;verbose=verbose1)
-#         Hsum=InfiniteSum{MPO}(HR,NNN)
-#         E=expect(ψ,Hsum)
-#         @test E ≈ E0 atol = 1e-14
+        H=copy(H0)
+        truncate!(H;verbose=verbose1)
+        Hsum=InfiniteSum{MPO}(HR,NNN)
+        E=expect(ψ,Hsum)
+        @test E ≈ E0 atol = 1e-14
 
-#         #@show get_Dw(H0) get_Dw(HL) get_Dw(HR)
-#     end
-# end
+        #@show get_Dw(H0) get_Dw(HL) get_Dw(HR)
+    end
+end
 
 end #@testset "Truncate/Compress" 
 nothing
