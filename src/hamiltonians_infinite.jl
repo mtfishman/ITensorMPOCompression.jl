@@ -54,9 +54,69 @@ function make_transIsing_iMPO(sites,NNN::Int64;kwargs...)
     mpo=make_transIsing_MPO(sites,NNN;pbc=true,kwargs...)
     return InfiniteMPO(mpo.data)
 end
-function make_transIsing_AutoiMPO(sites,NNN::Int64;kwargs...)
-  mpo=make_transIsing_AutoMPO(sites,NNN;pbc=true,kwargs...)
-  return InfiniteMPO(mpo.data)
+
+# n is starting site number
+function daisychain_links!(H::MPO,n::Int64)
+  Ncell=length(H)
+  H[1]=replacetags(H[1],"Link,l=$n","Link,c=0,l=$Ncell")
+  H[1]=replacetags(H[1],"Link,l=$(n+1)","Link,c=1,l=1")
+  H[1]=replacetags(H[1],"Site,n=$(n+1)","Site,c=1,n=1")
+  for i in 2:Ncell
+    n+=1
+    H[i]=replacetags(H[i],"Link,l=$n","Link,c=1,l=$(i-1)")
+    H[i]=replacetags(H[i],"Link,l=$(n+1)","Link,c=1,l=$i")
+    H[i]=replacetags(H[i],"Site,n=$(n+1)","Site,c=1,n=$i")
+  end
+  i0=inds(H[1],tags="Link,c=0,l=$Ncell")[1]
+  i0=replacetags(i0,"c=0","c=1")
+  iN=inds(H[Ncell],tags="Link,c=1,l=$Ncell")[1]
+  H[Ncell]=replaceind(H[Ncell],iN,i0)
+end
+
+function make_transIsing_AutoiMPO(isites,NNN::Int64;kwargs...)
+  return make_AutoiMPO(make_transIsing_AutoMPO,isites,NNN;kwargs...)
+end
+
+function make_Heisenberg_AutoiMPO(isites,NNN::Int64;kwargs...)
+  return make_AutoiMPO(make_Heisenberg_AutoMPO,isites,NNN;kwargs...)
+end
+function make_Hubbard_AutoiMPO(isites,NNN::Int64;kwargs...)
+  return make_AutoiMPO(make_Hubbard_AutoMPO,isites,NNN;kwargs...)
+end
+
+function make_AutoiMPO(MakeH::Function,isites,NNN::Int64;kwargs...)
+  #
+  # Make a finte lattice MPO large enough that there are no edge effects for Ncell sites in the center.
+  #
+  Ncell=length(isites) #unit cell size in the inf lattice.
+  #
+  # Choose a finite lattice size that should have Ncell+2 sites
+  # in the middle with no edge effects.
+  #
+  N=2*(NNN+1)+Ncell 
+  #
+  #  Make a finite lattice of sites and corresponding MPO
+  #
+  ts=String(tags(isites[1])[1]) #get the site type.
+  fsites=siteinds(ts,N)
+  fmpo=make_transIsing_AutoMPO(fsites,NNN;pbc=true,kwargs...)
+  #
+  # Check that Dw is constant in the range we intend to use.
+  #
+  Dws=get_Dw(fmpo)
+  for i = NNN:NNN+Ncell+1
+    @assert Dws[i]==Dws[i+1]
+  end
+  #@show get_Dw(fmpo) NNN+1:NNN+1+Ncell
+  #
+  #  Creat and Ncell sized mpo from the middle chunck where Dw is constant.
+  #
+  impo=MPO(Ncell)
+  for i in 1:Ncell
+    impo[i]=fmpo[i+NNN]
+  end
+  daisychain_links!(impo,NNN)
+  return InfiniteMPO(impo.data)
 end
 
 function new_id(i::Index)::Index

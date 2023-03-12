@@ -145,10 +145,12 @@ end
 end 
 
 test_combos=[
-    (make_transIsing_iMPO,lower),
-    (make_transIsing_iMPO,upper),
-    #(make_transIsing_AutoiMPO,lower), need to handle N=1, NNN>1 for this to work
-#    (make_Heisenberg_AutoiMPO,lower)
+    (make_transIsing_iMPO,lower,"S=1/2"),
+    (make_transIsing_iMPO,upper,"S=1/2"),
+    (make_transIsing_AutoiMPO,lower,"S=1/2"),
+    (make_Heisenberg_AutoiMPO,lower,"S=1/2"),
+    (make_Heisenberg_AutoiMPO,lower,"S=1"),
+    (make_Hubbard_AutoiMPO,lower,"Electron")
 ]
 @testset "Orthogonalize iMPO Check gauge relations, H=$(test_combo[1]), ul=$(test_combo[2]), qbs=$qns" for test_combo in test_combos, qns in [false,true]
     initstate(n) = "↑"
@@ -159,10 +161,12 @@ test_combos=[
         @printf " Ncell  NNN  uncomp. left  right  LR\n"
     end
     for N in [1,2,4], NNN in [2,4] #3 site unit cell fails for qns=true.
-        si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
+        si = infsiteinds(test_combo[3], N; initstate, conserve_qns=qns)
 
         H0=makeH(si,NNN;ul=ul)
+        
         @test is_regular_form(H0)
+        #@show H0 
         Dw0=Base.max(get_Dw(H0)...)
 
         HL=copy(H0)
