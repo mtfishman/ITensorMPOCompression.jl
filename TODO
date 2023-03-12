@@ -1,7 +1,6 @@
 Questions:
   -Should we be using findinds or just inds?
   -Delete old branches, after merge?
-  -rr_cutoff -> rr_cutoff or just cutoff like for SVD?
   -Future of Model("model_name") framework.
   -verbose mode? (only see it in ctmrg)
   -Is there use for a moving orthogonality center in MPOs?
@@ -15,22 +14,31 @@ Questions:
 More tests:
 Done: -Test alternating S=1/2 and S=1 sites for MPO.
 Done: -Test alternating S=1/2 and S=1 sites for iMPO.
--Test Fermions/Hubberd.
+Done: -Test Heisenberg model from autoMPO with non-trivial QN space structure on Link indices.
+Done: -Test Fermions/Hubberd.
 -vumps GS example with timing for uncomp./comp.
 -Test with Julia 1.7 and 1.8
 
 Features:
+-MPO truncate Heisenberg AutoMPO
+-MPO truncate ... don't switch to dense for svd(M) ... need to preserve QN structure
+  -This will allow us to get rid of make_qninds and convert_blocksparse
+Done: -Get Heisenberg AutoMPO iMPOs working (Need to handle case where NNN>N)
 -Put some content in Readme.md
 -make truncate, and orthogonalize that work on copies.
+-Upper reg-form from autompo
+Done: -iMPO from AutoMPO
 
 Bugs:
-
+-Fix:   iMPO After left orth sweep, 3 iterations Dw reduced from 1 to 4
+                                                                ^^^
 Improvements requiring changes to other modules:
 -Save regular_form upper/lower/irreg/unknown in the MPO struct so we never have to call
  detect_regular_form.
    This requires a mod to ITensors MPO struct
 
 Improvements:
+-Replace RL with X throughout.
 -assign!() is still wildley inefficient.  We need a way to do
   W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
   at the NDTensors level.
@@ -254,231 +262,3 @@ Umpo = apply(U, Id; cutoff=1e-15)
 That form could make it easier to apply the circuit (or just a gate) to the Hamiltonian MPO to keep it in a form where it can be used with the Parker et al. algorithm.
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-------------------------------------------------------------------------------------------------------------
-
-get_Dw(H) = [5, 8, 8, 8, 8, 8, 8, 8, 5]
-T = Dim 1: (dim=4|id=681|"CMB,Link") <Out>
- 1: QN("Sz",-2) => 1
- 2: QN("Sz",0) => 2
- 3: QN("Sz",2) => 1
-Dim 2: (dim=4|id=112|"CMB,Link") <In>
- 1: QN("Sz",-2) => 1
- 2: QN() => 2
- 3: QN("Sz",2) => 1
-BlockSparse{Float64, Vector{Float64}, 2}
- 4×4
-Block(1, 1)
- [1:1, 1:1]
- 1.0
-
-Block(2, 2)
- [2:3, 2:3]
- 1.0  -0.5
- 1.0   0.5
-
-Block(3, 3)
- [4:4, 4:4]
- -1.0
-nnzblocksT = 3
-nb1_lt_nb2 = false
-qindl = (dim=4|id=681|"CMB,Link") <Out>
- 1: QN("Sz",-2) => 1
- 2: QN("Sz",0) => 2
- 3: QN("Sz",2) => 1
-qindr = (dim=4|id=44|"CMB,Link") <In>
- 1: QN("Sz",-2) => 1
- 2: QN() => 2
- 3: QN("Sz",2) => 1
-T = Dim 1: (dim=16|id=531|"CMB,Link") <Out>
- 1: QN("Sz",-4) => 1
- 2: QN("Sz",-2) => 4
- 3: QN("Sz",0) => 6
- 4: QN("Sz",2) => 4
- 5: QN("Sz",4) => 1
-Dim 2: (dim=7|id=813|"CMB,Link") <In>
- 1: QN("Sz",-2) => 2
- 2: QN() => 3
- 3: QN("Sz",2) => 2
-BlockSparse{Float64, Vector{Float64}, 2}
- 16×7
-Block(2, 1)
- [2:5, 1:2]
- -0.3  -0.7
- -0.9   0.4
-  0.0   0.0
- -0.3  -0.7
-
-Block(3, 2)
- [6:11, 3:5]
- 1.0  -0.5   0.2
- 0.0   0.2   0.5
- 0.0   0.0   0.0
- 0.0   0.0   0.0
- 1.0   0.5  -0.2
- 0.0   0.2   0.5
-
-Block(4, 3)
- [12:15, 6:7]
-  0.3  0.7
- -0.9  0.4
-  0.0  0.0
-  0.3  0.7
-nnzblocksT = 3
-nb1_lt_nb2 = false
-qindl = (dim=16|id=531|"CMB,Link") <Out>
- 1: QN("Sz",-4) => 1
- 2: QN("Sz",-2) => 4
- 3: QN("Sz",0) => 6
- 4: QN("Sz",2) => 4
- 5: QN("Sz",4) => 1
-qindr = (dim=7|id=31|"CMB,Link") <In>
- 1: QN("Sz",-2) => 2
- 2: QN() => 3
- 3: QN("Sz",2) => 2
-T = Dim 1: (dim=28|id=388|"CMB,Link") <Out>
- 1: QN("Sz",-4) => 2
- 2: QN("Sz",-2) => 7
- 3: QN("Sz",0) => 10
- 4: QN("Sz",2) => 7
- 5: QN("Sz",4) => 2
-Dim 2: (dim=7|id=737|"CMB,Link") <In>
- 1: QN("Sz",-2) => 2
- 2: QN() => 3
- 3: QN("Sz",2) => 2
-BlockSparse{Float64, Vector{Float64}, 2}
- 28×7
-Block(2, 1)
- [3:9, 1:2]
-  0.2   0.6
- -0.1  -0.2
- -0.9   0.4
-  0.0   0.0
-  0.0   0.0
-  0.2   0.6
- -0.1  -0.2
-
-Block(3, 2)
- [10:19, 3:5]
- 1.0  -0.5   0.2
- 0.0   0.2   0.4
- 0.0  -0.1  -0.2
- 0.0   0.0   0.0
- 0.0   0.0   0.0
- 0.0   0.0   0.0
- 0.0   0.0   0.0
- 1.0   0.5  -0.2
- 0.0   0.2   0.4
- 0.0  -0.1  -0.2
-
-Block(4, 3)
- [20:26, 6:7]
-  0.2   0.6
- -0.1  -0.2
- -0.9   0.4
-  0.0   0.0
-  0.0   0.0
-  0.2   0.6
- -0.1  -0.2
-nnzblocksT = 3
-nb1_lt_nb2 = false
-qindl = (dim=28|id=388|"CMB,Link") <Out>
- 1: QN("Sz",-4) => 2
- 2: QN("Sz",-2) => 7
- 3: QN("Sz",0) => 10
- 4: QN("Sz",2) => 7
- 5: QN("Sz",4) => 2
-qindr = (dim=7|id=239|"CMB,Link") <In>
- 1: QN("Sz",-2) => 2
- 2: QN() => 3
- 3: QN("Sz",2) => 2
-T = Dim 1: (dim=28|id=415|"CMB,Link") <Out>
- 1: QN("Sz",-4) => 2
- 2: QN("Sz",-2) => 7
- 3: QN("Sz",0) => 10
- 4: QN("Sz",2) => 7
- 5: QN("Sz",4) => 2
-Dim 2: (dim=7|id=123|"CMB,Link") <In>
- 1: QN("Sz",-2) => 2
- 2: QN() => 3
- 3: QN("Sz",2) => 2
-BlockSparse{Float64, Vector{Float64}, 2}
- 28×7
-Block(2, 1)
- [3:9, 1:2]
-  0.2   0.6
- -0.1  -0.2
- -0.9   0.4
-  0.0   0.0
-  0.0   0.0
-  0.2   0.6
- -0.1  -0.2
-
-Block(3, 2)
- [10:19, 3:5]
- 1.0  -0.5   0.2
- 0.0   0.2   0.4
- 0.0  -0.1  -0.2
- 0.0   0.0   0.0
- 0.0   0.0   0.0
- 0.0   0.0   0.0
- 0.0   0.0   0.0
- 1.0   0.5  -0.2
- 0.0   0.2   0.4
- 0.0  -0.1  -0.2
-
-Block(4, 3)
- [20:26, 6:7]
-  0.2   0.6
- -0.1  -0.2
- -0.9   0.4
-  0.0   0.0
-  0.0   0.0
-  0.2   0.6
- -0.1  -0.2
-nnzblocksT = 3
-nb1_lt_nb2 = false
-qindl = (dim=28|id=415|"CMB,Link") <Out>
- 1: QN("Sz",-4) => 2
- 2: QN("Sz",-2) => 7
- 3: QN("Sz",0) => 10
- 4: QN("Sz",2) => 7
- 5: QN("Sz",4) => 2
-qindr = (dim=7|id=438|"CMB,Link") <In>
- 1: QN("Sz",-2) => 2
- 2: QN() => 3
- 3: QN("Sz",2) => 2
-T = Dim 1: (dim=28|id=269|"CMB,Link") <Out>
- 1: QN("Sz",-4) => 2
- 2: QN("Sz",-2) => 7
- 3: QN("Sz",0) => 10
- 4: QN("Sz",2) => 7
- 5: QN("Sz",4) => 2
-Dim 2: (dim=7|id=243|"CMB,Link") <In>
- 1: QN("Sz",-2) => 2
- 2: QN() => 3
- 3: QN("Sz",2) => 2
-BlockSparse{Float64, Vector{Float64}, 2}
- 28×7
-Block(2, 1)
- [3:9, 1:2]
-  0.2   0.6
- -0.1  -0.2
- -0.9   0.4

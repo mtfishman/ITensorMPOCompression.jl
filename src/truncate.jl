@@ -13,8 +13,9 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
     (tsvd,tuv) = lr==left ? ("qx","Link,u") : ("m","Link,v")
 #
 # Block repecting QR/QL/LQ/RQ factorization.  RL=L or R for upper and lower.
-# here we purposely turn off rank reavealing feature (rr_cutoff=0.0) to (mostly) avoid
-# horizontal rectangular RL matricies which are hard to handle accurately.
+# here we purposely turn off rank reavealing feature (rr_cutoff=-1.0) to (mostly) avoid
+# horizontal rectangular RL matricies which are hard to handle accurately.  All rank reduction
+# should have been done in the ortho process anyway.
 #
    
     Q,RL,lq=block_qx(W,forward,ul;rr_cutoff=-1.0,kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
@@ -45,7 +46,8 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
     #     @mpoc_assert nnzblocks(RL)==1
     # end
    
-    M,RL_prime,im,RLnz=getM(dense(RL),ms,eps) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
+    M,RL_prime,im,RLnz=getMq(dense(RL),ms) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
+    Mq,RL_primeq,imq,RLnzq=getMq(RL,ms) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
     @mpoc_assert RLnz==0 #make sure RL_prime does not require any fix ups.
 #  
 #  At last we can svd and compress M using epsSVD as the cutoff.  M should be dense.
@@ -54,10 +56,18 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
     U,s,V,spectrum=svd(M,isvd;kwargs...) # ns sing. values survive compression
     ns=dim(inds(s)[1])
 
+    isvdq=findinds(Mq,tsvd)[1] #decide the left index
+    Uq,sq,Vq,spectrum,iuq,ivq=svd(Mq,isvdq;kwargs...) # ns sing. values survive compression
+    nsq=dim(inds(sq)[1])
+
     #@show diag(array(s))
     Mplus=grow(M,removeqns(lq),im)
     D=dense(RL)-Mplus*RL_prime
-    #@show norm(D)
+
+    Mplusq=grow(Mq,dag(lq),imq)
+    #@show inds(RL) inds(Mplusq) inds(RL_primeq) inds(Mplusq*RL_primeq)
+    Dq=RL-Mplusq*RL_primeq
+    @show norm(Dq)
     # Check accuracy of RL_prime.
     if norm(D)>get(kwargs, :cutoff, 1e-14)
         @printf "High normD(D)=%.1e min(s)=%.1e \n" norm(D) Base.min(diag(array(s))...)
@@ -67,14 +77,24 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
     end
    
     luv=Index(ns+2,"Link,$tuv") #link for expanded U,Us,V,sV matricies.
+    luq=redim(iuq,ns+2,1)
+    lvq=redim(ivq,ns+2,1)
     if lr==left
         RL=grow(s*V,luv,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
         Uplus=grow(U,dag(lq),luv)
         W=Q*Uplus #W[l=n-1,u]
+
+        RLq=grow(sq*Vq,dag(luq),imq)*RL_primeq #RL[l=n,u] dim ns+2 x Dw2
+        Uplusq=grow(Uq,dag(lq),luq)
+        Wq=Q*Uplusq #W[l=n-1,u]
     else # right
         RL=RL_prime*grow(U*s,im,luv) #RL[l=n-1,v] dim Dw1 x ns+2
         Vplus=grow(V,dag(lq),luv) #lq has the dir of Q so want the opposite on Vplus
         W=Vplus*Q #W[l=n-1,v]
+
+        RLq=RL_primeq*grow(Uq*sq,imq,lvq) #RL[l=n-1,v] dim Dw1 x ns+2
+        Vplusq=grow(Vq,dag(lq),dag(lvq)) #lq has the dir of Q so want the opposite on Vplus
+        Wq=Vplusq*Q #W[l=n-1,v]
     end
     # At this point RL is dense, we need to make block-sparse version with one block.
     if hasqns(RLinds)
@@ -82,12 +102,13 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
         RL=convert_blocksparse(RL,iRL...)
     end
 
-    replacetags!(RL,tuv,tags(forward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-    replacetags!(W ,tuv,tags(forward)) #W[l=n-1,l=n]
+    replacetags!(RLq,tuv,tags(forward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+    replacetags!(Wq ,tuv,tags(forward)) #W[l=n-1,l=n]
     # expensive.
     # @mpoc_assert is_regular_form(W,ul,eps)
     # @mpoc_assert check_ortho(W,ms,eps)
-    return W,RL,spectrum,false
+    #@show luq lvq inds(Q) inds(Wq) inds(RLq)
+    return Wq,RLq,spectrum,false
 end
 
 function one_trunc_sweep!(H::MPO,ul::reg_form;kwargs...)

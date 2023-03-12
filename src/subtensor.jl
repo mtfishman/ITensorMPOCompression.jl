@@ -191,7 +191,7 @@ function set_subtensor(T::BlockSparseTensor{ElT,N},A::BlockSparseTensor{ElT,N},r
             if blockT==nothing
                 insertblock!(T,tb)
                 blockT = blockview(T, tb)
-                @show "insert missing block"  tb blockT
+                #@show "insert missing block"  tb blockT
                 #@assert false
                 # index_within_block,tb=blockindex(T,Tuple(it)...)
                 # @show index_within_block tb 
