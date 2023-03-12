@@ -158,9 +158,11 @@ function block_qx(W_::ITensor,forward::Index,ul::reg_form=lower;kwargs...)::Tupl
       RL,Q,iq=lq(V,ind_on_V;positive=true,tags=ts"Link,qx",kwargs...) #block respecting LQ decomposition
       if hasqns(RL)
         p=get_firstcol_perm(RL)
+        #@show dense(RL) p 
         iqsp=NDTensors.permuteblocks(splitblocks(iq),p)
         G=δ_split(dag(iqsp'),iq,p) #gauge transform to permute rows of R into upper tri-form
         RL=noprime(RL*G,tags="Link,qx") #permute rows of R into upper tri-form
+        #@show dense(RL)
         Q=noprime(Q*dag(G),tags="Link,qx") #permute cols of Q accordingly.
       end
     end
@@ -200,10 +202,15 @@ function get_firstcol_perm(R::ITensor)
   first_cols=zeros(Int64,dim(r))
   for ir in eachindval(r)
     for ic in eachindval(c)
+      #@show ir.second ic.second R[ir,ic]
       if abs(R[ir,ic])>0.0 #fortunately the off tri elements should be rigouresly zero, so they are easy to detect.
         first_cols[ir.second]=ic.second
         break
       end
+    end
+    if first_cols[ir.second]==0
+      @warn "Zero row detected r=$(ir.second), please make sure rr_cutoff is set for qr routines."
+      @show first_cols
     end
   end
   p=sortperm(first_cols)
@@ -221,6 +228,9 @@ function get_firstrow_perm(R::ITensor)
         first_rows[ic.second]=ir.second
         break
       end
+    end
+    if first_rows[ic.second]==0
+      @warn "Zero column detected c=$(ic.second), please make sure rr_cutoff is set for qr routines."
     end
   end
   p=sortperm(first_rows)
