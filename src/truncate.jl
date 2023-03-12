@@ -1,5 +1,5 @@
 
-using Printf
+#using Printf
 
 #
 #  Compress one site
@@ -10,12 +10,12 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
     iforward,_=parse_links(W,lr) # W[l=$(n-1)l=$n]=W[r,c]
     # establish some tag strings then depend on lr.
     (tsvd,tuv) = lr==left ? ("qx","Link,u") : ("m","Link,v")
-#
-# Block repecting QR/QL/LQ/RQ factorization.  RL=L or R for upper and lower.
-# here we purposely turn off rank reavealing feature (rr_cutoff=-1.0) to (mostly) avoid
-# horizontal rectangular RL matricies which are hard to handle accurately.  All rank reduction
-# should have been done in the ortho process anyway.
-#
+    #
+    # Block repecting QR/QL/LQ/RQ factorization.  RL=L or R for upper and lower.
+    # here we purposely turn off rank reavealing feature (rr_cutoff=-1.0) to (mostly) avoid
+    # horizontal rectangular RL matricies which are hard to handle accurately.  All rank reduction
+    # should have been done in the ortho process anyway.
+    #
    
     Q,RL,iqx=block_qx(W,iforward,ul;rr_cutoff=-1.0,kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
     # expensive
@@ -34,16 +34,16 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
         return Q,RL,Spectrum([],0),true
     end
     
-#
-#  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
-#  For blocksparse W, at this point we switch to dense for all RL manipulations and RL should
-#  only have one block anyway.
-#
-    M,RL_prime,im,RLnz=getMq(RL,ms.ul) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
+    #
+    #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
+    #  For blocksparse W, at this point we switch to dense for all RL manipulations and RL should
+    #  only have one block anyway.
+    #
+    M,RL_prime,im,RLnz=getM(RL,ms.ul) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
     @mpoc_assert RLnz==0 #make sure RL_prime does not require any fix ups.
-#  
-#  At last we can svd and compress M using epsSVD as the cutoff.  M should be dense.
-#    
+    #  
+    #  At last we can svd and compress M using epsSVD as the cutoff.  M should be dense.
+    #    
     isvd=findinds(M,tsvd)[1] #decide the left index
     U,s,V,spectrum,iu,iv=svd(M,isvd;kwargs...) # ns sing. values survive compression
     ns=dim(inds(s)[1])

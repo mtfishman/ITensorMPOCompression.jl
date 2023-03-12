@@ -1,4 +1,4 @@
-using Printf
+#using Printf
 
 #
 #  create a Vblock IndexRange using the supplied offset.
@@ -134,63 +134,8 @@ end
 #  Conversly for the lower tri L we want grab M from left side.  In short we want as few
 #  zeros as possible in M in order for the SVD decomp and compression to have maximum effect.
 #
-# function getM(RL::ITensor,ms::matrix_state,eps::Float64)::Tuple{ITensor,ITensor,Index,Bool}
-#     ils=filterinds(inds(RL),tags="Link") 
-#     iqx=findinds(ils,"qx")[1] #think of this as the row index
-#     il=noncommonind(ils,iqx) #Get the remaining link index
-#     Dwq,Dwl=dim(iqx),dim(il)
-#     Dwm=Base.min(Dwq,Dwl)
-#     im=Index(Dwm,"Link,m") #new common index between Mplus and RL_prime
-    
-#     shift=0
-#     if ms.ul==lower
-#         shift=Base.max(0,Dwl-Dwq) #for upper rectangular R we want M over at the right
-#     else #upper
-#         shift=Base.max(0,Dwq-Dwl)
-#     end
-   
-#     M=RL[iqx=>2:Dwq-1,il=>2:Dwm-1] #pull out the M sub block
-#     M=replacetags(M,tags(il),tags(im)) #change Link,l=n to Link,m
-#     #
-#     # Now we need RL_prime such that RL=M*RL_prime.
-#     # RL_prime is just the perimeter of RL with 1's on the diagonal
-#     # Well sort of, if RL is rectangular then things get a little more involved.
-#     #
-#     RL=replacetags(RL,tags(iqx),tags(im))  #change Link,qx to Link,m
-#     iqx=replacetags(iqx,tags(iqx),tags(im))
-#     RL_prime=ITensor(0.0,im,il)
-#     #
-#     #  Copy over the perimeter of RL.
-#     #  TODO: Tighten this up based on ms.ul, avoid copying zeros.
-#     #
-#     irm=im=>1:Dwm
-#     irl=il=>1:Dwl
-#     RL_prime[irm,il=>1:1]=RL[iqx=>1:Dwm,il=>1:1] #first col
-#     RL_prime[irm,il=>Dwl:Dwl]=RL[iqx=>1:Dwm,il=>Dwl:Dwl] #last col
-#     RL_prime[im=>1:1,irl]=RL[iqx=>1:1 ,irl] #first row
-#     RL_prime[im=>Dwm:Dwm,irl]=RL[iqx=>Dwq:Dwq,irl] #last row
-    
-#     # Fill in diaginal
-#     for j1 in 1:Dwm #or 1:Dwm
-#         RL_prime[im=>j1,il=>j1+shift]=1.0
-#     end
-#     RL_prime[im=>Dwm,il=>dim(il)]=1.0
 
-#     #
-#     #  Test for non-zero block in RLprime.
-#     #
-#     non_zero=false
-#     if Dwm<=dim(il)-1
-#         #we should only get here if truncate is not bailing our on rectangular RL.
-#         ar=abs.(RL[iqx=>1:Dwm,il=>Dwm:dim(il)-1])
-#         @show RL M ar dim(ar)
-#         non_zero = dim(ar)>0 && maximum(ar)>0.0
-#     end
-
-#     return M,RL_prime,im,non_zero
-# end
-
-function getMq(RL::ITensor,ul::reg_form)::Tuple{ITensor,ITensor,Index,Bool}
+function getM(RL::ITensor,ul::reg_form)::Tuple{ITensor,ITensor,Index,Bool}
     @mpoc_assert order(RL)==2
     mtags=ts"Link,m"
     iqx=inds(RL,tags="Link,qx")[1] #Grab the qx link index
@@ -304,44 +249,3 @@ function grow(A::ITensor,ig1::Index{Int64},ig2::QNIndex)
     @mpoc_assert id(ig1)==id(ig1q) #If the ID changes then subsequent contractions will fail.
     return convert_blocksparse(G,ig1q,ig2) #fabricate a 1-block blocksparse version.
 end
-# function grow(A::ITensor,ig1::QNIndex,ig2::QNIndex)
-#     #@mpoc_assert !hasqns(A)
-#     G=grow(A,ig1,ig2) #grow A into G as dense tensors
-#     return convert_blocksparse(G,ig1,ig2) #fabricate a 1-block blocksparse version.
-# end
-#
-#  Convert a order 2 dense tensor into a single block, block-sparse tensor
-#  using provided QNIndexes.  
-#  TODO: There is probably a better way to do this without any risk of doing A
-#  deep copy.
-#
-# function convert_blocksparse(A::ITensor,is::QNIndex...)
-#     @mpoc_assert order(A)==2 #required for Block(1,1) to be correct.
-#     bst=ITensor(0.0,is)
-#     #@show is inds(A)
-#     bst[is[1]=>1:dim(is[1]),is[2]=>1:dim(is[2])]=A
-#     return bst
-# end
-
-#
-#  One of the sample_inds needs to match one of inds(A).  This provides enough
-#  info to establish QN() space and direction for the inds of A.
-#
-# function make_qninds(A::ITensor,sample_inds::Index...)
-#     @mpoc_assert order(A)==2
-#  #    @mpoc_assert !hasqns(A)
-#     @mpoc_assert hasqns(sample_inds)
-#     ic=commonind(inds(A),sample_inds)
-#     ins =noncommonind(ic,sample_inds)
-#     inA =noncommonind(ic,inds(A))
-#     ics =noncommonind(ins,sample_inds)
-#     @mpoc_assert hasqns(ics)
-#     #can't use space(ins) to get QNs because dim could be different.
-#  #    in=addqns(inA,space(ins)[1:dim(inA)];dir=dir(ins)) #make a QN version of index inA
-#     in=addqns(inA,[QN()=>dim(inA)];dir=dir(ins)) #make a QN version of index inA
-#     iset=IndexSet(in, ics)
-#     if inds(A) != iset
-#         iset = ITensors.permute(iset, inds(A))
-#     end
-#     return iset
-# end

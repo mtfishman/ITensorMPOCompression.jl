@@ -21,7 +21,7 @@ Done: -Test Fermions/Hubberd.
 
 Features:
 -MPO truncate Heisenberg AutoMPO
--MPO truncate ... don't switch to dense for svd(M) ... need to preserve QN structure
+Done: -MPO truncate ... don't switch to dense for svd(M) ... need to preserve QN structure
   -This will allow us to get rid of make_qninds and convert_blocksparse
 Done: -Get Heisenberg AutoMPO iMPOs working (Need to handle case where NNN>N)
 -Put some content in Readme.md
