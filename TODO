@@ -3,7 +3,7 @@ Questions:
   -Delete old branches, after merge?
   -Future of Model("model_name") framework.
   -verbose mode? (only see it in ctmrg)
-  -Is there use for a moving orthogonality center in MPOs?
+  -Is there use for a moving orthogonality center in MPOs? Yes see Matts email March/14/2023
   -Do we need to support multiple truncate sweeps for iMPOs?
   -Should orthognalize!(iMPO) spit out primed Gs?
   -Support RQ/QL/LQ in factorize?
@@ -36,6 +36,7 @@ Improvements requiring changes to other modules:
 -Save regular_form upper/lower/irreg/unknown in the MPO struct so we never have to call
  detect_regular_form.
    This requires a mod to ITensors MPO struct
+-Incomplete block transfer: truncate (make_transIsing_MPO,upper,"S=1/2"),
 
 Improvements:
 -Replace RL with X throughout.
@@ -43,6 +44,7 @@ Improvements:
   W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
   at the NDTensors level.
 -Organize exports and imports.
+-Subtensor check flux of inserted blocks.
 
 
 -better name for pbc? inf open_chain, boundary_conditions
@@ -260,5 +262,3 @@ Id = MPO(OpSum() + ("Id", 1), s)
 Umpo = apply(U, Id; cutoff=1e-15)
 
 That form could make it easier to apply the circuit (or just a gate) to the Hamiltonian MPO to keep it in a form where it can be used with the Parker et al. algorithm.
-
-
