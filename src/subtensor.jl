@@ -170,11 +170,13 @@ end
 
 function set_subtensor(T::BlockSparseTensor{ElT,N},A::BlockSparseTensor{ElT,N},rs::UnitRange{Int64}...) where {ElT,N}
 #    @mpoc_assert nzblocks(T)==nzblocks(A)
-    dbs,shifts=get_offset_block_counts(inds(T),rs...)
-    dbs_ci=CartesianIndex(dbs)
+    # dbs,shifts=get_offset_block_counts(inds(T),rs...)
+    # dbs_ci=CartesianIndex(dbs)
+    insert=false
     #rsa=ntuple(i->rs[i].start-dbs_ci[i]:rs[i].stop-dbs_ci[i],N)
     rsa=ntuple(i->1:dim(inds(A)[i]),N)
     #@show rs dbs_ci rsa 
+    #@show inds(A) inds(T)
     for ab in eachnzblock(A)
         #@show CartesianIndex(dbs) CartesianIndex(ab)
         blockA = blockview(A, ab)
@@ -191,8 +193,9 @@ function set_subtensor(T::BlockSparseTensor{ElT,N},A::BlockSparseTensor{ElT,N},r
             if blockT==nothing
                 insertblock!(T,tb)
                 blockT = blockview(T, tb)
-                #@show "insert missing block"  tb blockT
-                #@assert false
+                #@show "insert missing block" 
+                #@show iA iT ab tb blockA blockT
+                insert=true
                 # index_within_block,tb=blockindex(T,Tuple(it)...)
                 # @show index_within_block tb 
             end
@@ -211,11 +214,15 @@ function set_subtensor(T::BlockSparseTensor{ElT,N},A::BlockSparseTensor{ElT,N},r
                 #@show rsa1 blockA[rsa1...]
                 blockT[rs1...]=blockA[rsa1...] #partial block Dense assignment for each block
                 @error "Incomplete bloc transfer."
-
+                @assert false
                 #@show blockT 
             end
         end
        # @show "-----block-------------"
+    end
+    if insert
+        #@show "blocks inserted"
+        #@assert false
     end
     #@show "---------------------------------"
 end
