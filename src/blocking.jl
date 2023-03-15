@@ -197,6 +197,14 @@ function getM(RL::ITensor,ul::reg_form)::Tuple{ITensor,ITensor,Index,Bool}
     return M,RL_prime,im,non_zero
 end
 
+
+function show_blocks(T::ITensor)
+    for b in nzblocks(T)
+        qns=ntuple(i->space(inds(T)[i])[b[i]],length(inds(T)))
+        @show b,qns
+    end
+end
+
 function my_similar(::DenseTensor{ElT,N},inds...) where {ElT,N}
     return ITensor(inds...)
 end
