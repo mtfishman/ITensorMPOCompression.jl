@@ -100,6 +100,7 @@ end
 #
 function growRL(RL::ITensor,iwl::Index,off::V_offsets)::Tuple{ITensor,Index}
     @mpoc_assert order(RL)==2
+    @checkflux(RL)
     irl,=filterinds(inds(RL),tags=tags(iwl)) #find the link index of RL
     irqx=noncommonind(inds(RL),irl) #find the qx link of RL
     @mpoc_assert dim(iwl)==dim(irl)+1
@@ -118,6 +119,7 @@ function growRL(RL::ITensor,iwl::Index,off::V_offsets)::Tuple{ITensor,Index}
     #@show RL RLplus irqx ipqx iwl range(ipqx,off.o1) range(iwl,off.o2)
     #@show RL RLplus flux(RL) flux(RLplus)
     RLplus[range(ipqx,off.o1),range(iwl,off.o2)]=RL #plop in RL in approtriate sub block.
+    @checkflux(RL) 
     #@show dense(RL) dense(RLplus)
     #@assert false
     return RLplus,dag(ipqx)
@@ -137,6 +139,7 @@ end
 
 function getM(RL::ITensor,ul::reg_form)::Tuple{ITensor,ITensor,Index,Bool}
     @mpoc_assert order(RL)==2
+    @checkflux(RL)
     mtags=ts"Link,m"
     iqx=inds(RL,tags="Link,qx")[1] #Grab the qx link index
     il=noncommonind(RL,iqx) #Grab the remaining link index
@@ -179,7 +182,7 @@ function getM(RL::ITensor,ul::reg_form)::Tuple{ITensor,ITensor,Index,Bool}
         RL_prime[im=>j1,il=>j1+shift]=1.0
     end
     RL_prime[im=>Dwm,il=>dim(il)]=1.0
-
+    @checkflux(RL_prime)
     #
     #  Test for non-zero block in RLprime.
     #
@@ -216,20 +219,17 @@ end
 #                      |1 0 0|
 #  given A, spit out G=|0 A 0| , indices of G are provided.
 #                      |0 0 1|
-#
+# TODO use redim to make the new indices. 
 function grow(A::ITensor,ig1::Index,ig2::Index)
+    @checkflux(A) 
     Dw1,Dw2=dim(ig1),dim(ig2)
-    #@show A
     G=my_similar(A,ig1,ig2)
-    #@show G A
-    #G.=0.0
-    # G=ITensor(Gt,ig1,ig2)
-    # G=ITensor(0.0,ig1,ig2) #would be nice to use delta() but we can't set elements on it.
     G[ig1=>1  ,ig2=>1  ]=1.0;
+    @checkflux(G) 
     G[ig1=>Dw1,ig2=>Dw2]=1.0;
-    #@show G 
+    @checkflux(G) 
     G[ig1=>2:Dw1-1,ig2=>2:Dw2-1]=A
-   
+    @checkflux(G) 
     return G
 end
 
