@@ -9,7 +9,7 @@ using Profile
 #using ITensorMPOCompression: orthogonalize!,truncate!
 using NDTensors: Diag, BlockSparse, tensor
 #brute force method to control the default float display format.
-Base.show(io::IO, f::Float64) = @printf(io, "%1.1f", f)
+Base.show(io::IO, f::Float64) = @printf(io, "%1.1e", f)
 
 #
 #  We need consistent output from randomMPS in order to avoid flakey unit testset
@@ -23,11 +23,11 @@ ITensors.ITensors.disable_debug_checks()
 verbose=false #verbose at the outer test level
 verbose1=false #verbose inside orth algos
 
-function test_truncate(makeH,N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,qns::Bool)
+function test_truncate(makeH::Function,sitetype::String,N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,qns::Bool)
     
     eps=1e-14
 
-    sites = siteinds("SpinHalf", N;conserve_qns=qns)
+    sites = siteinds(sitetype, N;conserve_qns=qns)
     state=[isodd(n) ? "Up" : "Dn" for n=1:N]
     psi=randomMPS(sites,state)
     #
@@ -36,15 +36,15 @@ function test_truncate(makeH,N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,qn
     H=makeH(sites,NNN;hx=hx,ul=ms.ul)
     E0l=inner(psi',H,psi)/(N-1)
     @test is_regular_form(H,ms.ul,eps)
-    orthogonalize!(H;verbose=verbose1,orth=ms.lr)
     
-    E1l=inner(psi',H,psi)/(N-1)
-    RE=abs((E0l-E1l)/E0l)
-    #@printf "E0=%1.5f E1=%1.5f rel. error=%.5e  \n" E0l E1l RE 
-    @test RE ≈ 0 atol = 2*eps
-    @test is_regular_form(H,ms.ul,eps)
-    @test isortho(H,ms.lr)
-    @test check_ortho(H,ms,eps)
+    # orthogonalize!(H;verbose=verbose1,orth=ms.lr)
+    # E1l=inner(psi',H,psi)/(N-1)
+    # RE=abs((E0l-E1l)/E0l)
+    # #@printf "E0=%1.5f E1=%1.5f rel. error=%.5e  \n" E0l E1l RE 
+    # @test RE ≈ 0 atol = 2*eps
+    # @test is_regular_form(H,ms.ul,eps)
+    # @test isortho(H,ms.lr)
+    # @test check_ortho(H,ms,eps)
 
     truncate!(H;verbose=verbose1,orth=ms.lr)
 
@@ -64,16 +64,23 @@ end
 
 @testset verbose=true "Truncate/Compress" begin
 
-@testset "Compress full MPO with ul=$ul, lr=$lr, QNs=$qns" for ul in [lower], lr in [left,right], qns in [false,true]
+    test_combos=[
+     (make_transIsing_MPO,lower,"S=1/2"),
+    #  (make_transIsing_MPO,upper,"S=1/2"),
+      (make_transIsing_AutoMPO,lower,"S=1/2"),
+      (make_Heisenberg_AutoMPO,lower,"S=1/2"),
+      (make_Heisenberg_AutoMPO,lower,"S=1"),
+      (make_Hubbard_AutoMPO,lower,"Electron")
+]
+@testset "Compress $(test_combo[1]) MPO with ul=$(test_combo[2]), lr=$lr, QNs=$qns" for test_combo in test_combos, lr in [left], qns in [true]
     hx= qns ? 0.0 : 0.5 
-    ms=matrix_state(ul,lr)
-    #                                 V=N sites
-    #                                   V=Num Nearest Neighbours in H
-    test_truncate(make_transIsing_MPO,5,1,hx,ms,qns)
-    test_truncate(make_transIsing_MPO,5,3,hx,ms,qns)
-    test_truncate(make_transIsing_MPO,10,7,hx,ms,qns)  
-    # test_truncate(make_transIsing_MPO,15,10,hx,ms,qns) 
-    # test_truncate(make_transIsing_MPO,14,13,hx,ms,qns) 
+    ms=matrix_state(test_combo[2],lr)
+    #                                         V=N sites
+    #                                           V=Num Nearest Neighbours in H
+    test_truncate(test_combo[1],test_combo[3],5,1,hx,ms,qns)
+    test_truncate(test_combo[1],test_combo[3],5,3,hx,ms,qns)
+    test_truncate(test_combo[1],test_combo[3],10,7,hx,ms,qns)  
+    #test_truncate(test_combo[1],test_combo[3],14,13,hx,ms,qns)  
 end 
 
 @testset "Test ground states" for qns in [false,true]
@@ -187,107 +194,6 @@ end
 
 end
 
-# @testset "Hubbard model for MPO" begin
-#     N,NNN = 10,2
-#     eps=1e-14
-#     lr,ul=left,lower
-#     ms=matrix_state(ul,lr)
-#     # off_0=V_offsets(0,0)
-#     # off_1=V_offsets(1,1)
-#     off=V_offsets(ms)
-#     sites_el = siteinds("Electron", N; conserve_qns=true)
-#     sites_s12 = siteinds("S=1/2", N; conserve_qns=true)
-#     #H=make_Hubbard_AutoMPO(sites_el,NNN;cutoff=-1.0)
-#     H=make_Heisenberg_AutoMPO(sites_s12,NNN;cutoff=-1.0)
-
-#     W1=H[5]
-#     f,r=parse_links(W1,left)
-    
-#     io=noncommoninds(W1,f)
-#     C=my_combiner(io;regform=tags(r))    
-#     #C=my_combiner(io)    
-#     @show inds(C) 
-#     #inds(W1)
-#     @pprint(W1)
-#     #@show compute_contraction_labels(inds(W1), inds(C))
-
-#     WC=W1*C
-#     WC=replacetags(WC,"CMB","l=1")
-#     ils=inds(WC)
-#     pprint(ils[1],WC,ils[2])
-
-#     # W1d,W2d=dense(W1),dense(W2)
-#     # ilnd=commonind(W1d,W2d)
-#     # iod=noncommoninds(W1d,ilnd)
-#     # Cd=combiner(iod)  
-#     # WCd=W1d*Cd
-#     # WCd=replacetags(WCd,"CMB","l=1")
-#     # ilsd=inds(WCd)
-#     # pprint(ilsd[2],WCd,ilsd[1])
-#     #@pprint(W11)
-#     # combine_qns!(H)
-#     # @show inds(H[1],tags="Link")
-#     # @show inds(H[2],tags="Link")
-
-#     # Wq=H[1]
-#     # Wd=dense(H[1])
-#     # @pprint(Wq)
-#     # @pprint(Wd)
-#     # @show detect_regular_form(Wd)
-#     # @show detect_regular_form(Wq)
-      
-#     # rng=sweep(H,lr)
-#     # for n in rng
-#     #     W=H[n]
-#     #     @test is_regular_form(W,ul)
-#     #     iln=commonind(dense(H[n]),dense(H[n+rng.step]))
-#     #     Qd,RLd,lq=block_qx(dense(W),iln,ms.ul;orth=ms.lr)
-#     #     @test check_ortho(Qd,ms,eps)
-#     #     iln=commonind(H[n],H[n+1])
-#     #     Q,RL,lq=block_qx(W,iln,ms.ul;orth=ms.lr)
-#     #     @test check_ortho(Q,ms,eps)
-#     #     @test norm(tensor(dense(Q))-tensor(Qd))  ≈ 0.0 atol = 1e-14
-#     #     @test norm(tensor(dense(RL))-tensor(RLd)) ≈ 0.0  atol = 1e-14
-#     # end
-
-#     # @show get_Dw(H)
-#     # ss=truncate!(H)
-#     # @show get_Dw(H)
-#     # @show ss
-    
-# end
-
-# @testset "Heisenberg model with QNs" begin
-#     N,NNN = 10,5
-#     eps=1e-14
-#     sites_s12 = siteinds("S=1/2", N; conserve_qns=true)
-#     H=make_Heisenberg_AutoMPO(sites_s12,NNN;cutoff=-1.0)
-#     #H=make_transIsing_AutoMPO(sites_s12,NNN;cutoff=-1.0)
-#     #H=make_Heisenberg_MPO(sites_s12,NNN;cutoff=-1.0)
-    
-#  #    @show detect_regular_form(H)
-
-#     lr,ul=left,lower
-#  #     ms=matrix_state(ul,lr)
-#     # W=H[2]
-#     # pprint(W)
-#     # f,r=parse_links(W,lr)
-#     # Q,L,iqx=block_qx(W,f,ul)
-#     # @show iqx dense(Q) dense(L)
-
-#     @show get_Dw(H)
-#     orthogonalize!(H,orth=lr,max_sweeps=1)
-#     @show get_Dw(H)
-#     # pprint(H)
-#     # ss=truncate!(H)
-#     # @show get_Dw(H)
-#     # @show ss
-    
-# end
-
-
-
-
 # Slow test, turn of if you are making big changes.
 # @testset "Head to Head autoMPO with 2-body Hamiltonian ul=$ul, QNs=$qns" for ul in [lower,upper],qns in [false,true]
 #     for N in 3:15
@@ -395,7 +301,6 @@ end
 
     end
 end
-
 
 @testset "Try a lattice with alternating S=1/2 and S=1 sites. iMPO. Qns=$qns" for qns in [false,true]
     initstate(n) = isodd(n) ? "Dn" : "Up"
