@@ -17,7 +17,7 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
     # should have been done in the ortho process anyway.
     #
    
-    Q,RL,iqx=block_qx(W,iforward,ul;rr_cutoff=-1.0,kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
+    Q,RL,iqx=block_qx(W,iforward,ul;kwargs...,rr_cutoff=-1.0) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
     # expensive
     # if order(Q)==4
     #     @mpoc_assert check_ortho(Q,ms,eps)
@@ -50,22 +50,26 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
 
     #@show diag(array(s))
 
-    Mplus=grow(M,dag(iqx),im)
-    D=RL-Mplus*RL_prime
-    #@show norm(Dq)
-    # Check accuracy of RL_prime.
-    if norm(D)>get(kwargs, :cutoff, 1e-14)
-        @printf "High normD(D)=%.1e min(s)=%.1e \n" norm(D) Base.min(diag(array(s))...)
-        replacetags!(RL,"Link,qx",tags(iforward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-        replacetags!(Q ,"Link,qx",tags(iforward)) #W[l=n-1,l=n]
-        return Q,RL,spectrum,true
-    end
+    #@show iqx im inds(M) nnzblocks(M)
+    # Mplus=grow(M,dag(iqx),im)
+    # D=RL-Mplus*RL_prime
+    # #@show norm(Dq)
+    # # Check accuracy of RL_prime.
+    # if norm(D)>get(kwargs, :cutoff, 1e-14)
+    #     @printf "High normD(D)=%.1e min(s)=%.1e \n" norm(D) Base.min(diag(array(s))...)
+    #     replacetags!(RL,"Link,qx",tags(iforward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+    #     replacetags!(Q ,"Link,qx",tags(iforward)) #W[l=n-1,l=n]
+    #     return Q,RL,spectrum,true
+    # end
    
     if lr==left
         iup=redim(iu,ns+2,1)
-        RL=grow(s*V,dag(iup),im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
-        Uplus=grow(U,dag(iqx),iup)
+        #@show inds(W) inds(RL) inds(M) inds(RL_prime) isvd inds(U) inds(s) inds(V)
+        RL=grow(s*V,iup,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
+        Uplus=grow(U,dag(iqx),dag(iup))
         W=Q*Uplus #W[l=n-1,u]
+        #@show nnzblocks(RL_prime) nnzblocks(W) nnzblocks(Q) nnzblocks(Uplus)
+        #@show flux(RL_prime) flux(W) flux(Q) flux(Uplus)
     else # right
         ivp=redim(iv,ns+2,1)
         RL=RL_prime*grow(U*s,im,ivp) #RL[l=n-1,v] dim Dw1 x ns+2
@@ -89,25 +93,25 @@ function one_trunc_sweep!(H::MPO,ul::reg_form;kwargs...)
     link_offest = lr==left ? 0 : -1
     rng=sweep(H,lr)
     encountered_bailout=false
+    if verbose
+        previous_Dw=Base.max(get_Dw(H)...)
+    end
+    #@show "----------truncate-----------"
     for n in rng 
         nn=n+rng.step #index to neighbour
         W,RL,s,bail=truncate(H[n],ul;kwargs...,orth=lr)
         encountered_bailout=encountered_bailout||bail
         H[n]=W
-        #@show  bail s
-        #@pprint H[nn]
         H[nn]=RL*H[nn]
-        #@pprint W
-        #@show RL
-        #@pprint H[nn]
         
         @mpoc_assert is_regular_form(H[n],ul)
         @mpoc_assert is_regular_form(H[nn],ul)
         ss[n+link_offest]=s
+       
     end
     H.rlim = rng.stop+rng.step+1
     H.llim = rng.stop+rng.step-1
-
+    
     if verbose
         Dw=Base.max(get_Dw(H)...)
         println("After $lr truncation sweep Dw was reduced from $previous_Dw to $Dw")
@@ -209,6 +213,7 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
             println("truncate detected non-orthogonal MPO, will now orthogonalize")
         end
         orthogonalize!(H,ul;kwargs...,orth=mirror(lr)) #TODO why fail if spec ul here??
+        
         if verbose
             previous_Dw=Base.max(get_Dw(H)...)
         end#
