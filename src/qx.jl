@@ -142,21 +142,29 @@ function block_qx(W_::ITensor,forward::Index,ul::reg_form=lower;kwargs...)::Tupl
   V=getV(W,offset) #extract the V block
   ind_on_V=filterinds(inds(V),tags=tags(ilw))[1] #link to next site 
   inds_on_Q=noncommoninds(inds(V),ind_on_V) #group all other indices for QX factorization
-  #@show get(kwargs,:rr_cutoff,-999.0)
   if ul==lower
     if lr==left
-      #@show inds(V) inds_on_Q
       Q,RL,iq=ql(V,inds_on_Q;positive=true,tags=ts"Link,qx",kwargs...) #block respecting QL decomposition
-      if hasqns(RL)
+      if hasqns(RL) 
+        @checkflux(V)
+        @checkflux(Q)
+        @checkflux(RL)
         p=get_firstrow_perm(RL)
+        #@show dense(RL) p iq
         iqsp=NDTensors.permuteblocks(splitblocks(iq),p)
         G=δ_split(dag(iqsp'),iq,p) #gauge transform to permute rows of R into upper tri-form
         RL=noprime(RL*G,tags="Link,qx") #permute rows of R into upper tri-form
         Q=noprime(Q*dag(G),tags="Link,qx") #permute cols of Q accordingly.
+        @checkflux(Q)
+        @checkflux(RL)
+        #@show dense(RL)
       end
     else #right
       RL,Q,iq=lq(V,ind_on_V;positive=true,tags=ts"Link,qx",kwargs...) #block respecting LQ decomposition
       if hasqns(RL)
+        @checkflux(V)
+        @checkflux(Q)
+        @checkflux(RL)
         p=get_firstcol_perm(RL)
         #@show dense(RL) p 
         iqsp=NDTensors.permuteblocks(splitblocks(iq),p)
@@ -164,6 +172,8 @@ function block_qx(W_::ITensor,forward::Index,ul::reg_form=lower;kwargs...)::Tupl
         RL=noprime(RL*G,tags="Link,qx") #permute rows of R into upper tri-form
         #@show dense(RL)
         Q=noprime(Q*dag(G),tags="Link,qx") #permute cols of Q accordingly.
+        @checkflux(Q)
+        @checkflux(RL)
       end
     end
   else #upper
@@ -183,11 +193,7 @@ function block_qx(W_::ITensor,forward::Index,ul::reg_form=lower;kwargs...)::Tupl
     end
   end
   RLplus,iqx=growRL(RL,ilw,offset) #Now make a full size version of RL
-  #@pprint Q
-  #@pprint W
   W=setV(W,Q,iqx,ms) #Q is the new V, stuff Q into W. This can resize W
-  #@show flux(RLplus) flux(W)
-  #@pprint W
   @mpoc_assert dir(W,iqx)==dir(iqx) #Check and QN directions are consistent
   @mpoc_assert hastags(W,"qx")
   @mpoc_assert hastags(RLplus,"qx")
@@ -233,6 +239,7 @@ function get_firstrow_perm(R::ITensor)
       @warn "Zero column detected c=$(ic.second), please make sure rr_cutoff is set for qr routines."
     end
   end
+  #@show first_rows
   p=sortperm(first_rows)
   return p
 end
