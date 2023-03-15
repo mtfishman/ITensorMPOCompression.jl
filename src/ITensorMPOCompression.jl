@@ -38,6 +38,17 @@ macro mpoc_assert(ex)
     esc(:($Base.@assert $ex))
 end
 
+function mpoc_checkflux(::Union{DenseTensor,DiagTensor})
+   # No-op
+end
+function mpoc_checkflux(T::Union{BlockSparseTensor,DiagBlockSparseTensor})
+    ITensors.checkflux(T)
+end
+
+macro checkflux(T)
+    esc(:(mpoc_checkflux(tensor($T))))
+end
+
 default_eps=1e-14 #for characterization routines, floats abs()<default_eps are considered to be zero.
 
 """
@@ -197,7 +208,7 @@ function redim(i::Index,Dw::Int64,offset::Int64=0)::Index
             #
             @mpoc_assert offset==0 || offset==1 #not ready to handle other cases yet.
             nq=Dw-dim(i)
-            q=QN()=>1
+            q=QN("Sz",0)=>1
             if offset==0
                 # dq=qns[end].second #dim of space for last QN
                 # qns[end]=qns[end].first=>dq+delta
