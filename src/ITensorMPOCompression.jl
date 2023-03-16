@@ -313,6 +313,11 @@ function set_scale!(RL::ITensor,Q::ITensor,off::V_offsets)
     i2= off.o2==0 ? 1 : Dw2
     scale=RL[is[1]=>i1,is[2]=>i2]
     @mpoc_assert abs(scale)>1e-12
+    d,n,space=parse_site(Q)
+    @mpoc_assert scale>0.0
+    if abs(scale^2-d)>2e-15
+        @warn "scale^2 != d, scale^2=$(scale^2), d=$d, abs(scale^2-d)=$(abs(scale^2-d))"
+    end
     RL./=scale
     Q.*=scale
 end
