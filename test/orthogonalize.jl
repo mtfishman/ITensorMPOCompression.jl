@@ -97,15 +97,6 @@ test_combos=[
     @test check_ortho(H,ms.lr) #expensive does V_dagger*V=Id
 end 
 
-test_combos=[
-    (make_transIsing_MPO,lower,"S=1/2"),
-    (make_transIsing_MPO,upper,"S=1/2"),
-    (make_transIsing_AutoMPO,lower,"S=1/2"),
-    (make_Heisenberg_AutoMPO,lower,"S=1/2"),
-    (make_Heisenberg_AutoMPO,lower,"S=1"),
-    (make_Hubbard_AutoMPO,lower,"Electron")
-]
-
 @testset "Bring block sparse $(test_combo[2]) $(test_combo[1]) MPO into $lr canonical form" for test_combo in test_combos, lr in [left,right]
     N=10
     NNN=7
@@ -152,6 +143,7 @@ test_combos=[
     (make_Heisenberg_AutoiMPO,lower,"S=1"),
     (make_Hubbard_AutoiMPO,lower,"Electron")
 ]
+
 @testset "Orthogonalize iMPO Check gauge relations, H=$(test_combo[1]), ul=$(test_combo[2]), qbs=$qns" for test_combo in test_combos, qns in [false,true]
     initstate(n) = "↑"
     ul=test_combo[2]
