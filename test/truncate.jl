@@ -65,14 +65,14 @@ end
 @testset verbose=true "Truncate/Compress" begin
 
     test_combos=[
-     (make_transIsing_MPO,lower,"S=1/2"),
-    #  (make_transIsing_MPO,upper,"S=1/2"),
-      (make_transIsing_AutoMPO,lower,"S=1/2"),
-      (make_Heisenberg_AutoMPO,lower,"S=1/2"),
-      (make_Heisenberg_AutoMPO,lower,"S=1"),
-      (make_Hubbard_AutoMPO,lower,"Electron")
+       (make_transIsing_MPO,lower,"S=1/2"),
+       (make_transIsing_MPO,upper,"S=1/2"),
+       (make_transIsing_AutoMPO,lower,"S=1/2"),
+       (make_Heisenberg_AutoMPO,lower,"S=1/2"),
+       (make_Heisenberg_AutoMPO,lower,"S=1"),
+       (make_Hubbard_AutoMPO,lower,"Electron")
 ]
-@testset "Compress $(test_combo[1]) MPO with ul=$(test_combo[2]), lr=$lr, QNs=$qns" for test_combo in test_combos, lr in [left], qns in [true]
+@testset "Compress $(test_combo[1]) MPO with ul=$(test_combo[2]), lr=$lr, QNs=$qns" for test_combo in test_combos, lr in [left,right], qns in [false,true]
     hx= qns ? 0.0 : 0.5 
     ms=matrix_state(test_combo[2],lr)
     #                                         V=N sites
@@ -193,63 +193,6 @@ end
 
 
 end
-
-# Slow test, turn of if you are making big changes.
-# @testset "Head to Head autoMPO with 2-body Hamiltonian ul=$ul, QNs=$qns" for ul in [lower,upper],qns in [false,true]
-#     for N in 3:15
-#         NNN=N-1#div(N,2)
-#         sites = siteinds("SpinHalf", N;conserve_qns=qns)
-#         Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul) 
-#         Dw_auto=get_Dw(Hauto)
-#         Hr=make_transIsing_MPO(sites,NNN;ul=ul) 
-#         truncate!(Hr;verbose=verbose1) #sweep left to right
-#         delta_Dw=sum(get_Dw(Hr)-Dw_auto)
-#         @test delta_Dw<=0
-#         if verbose && delta_Dw<0 
-#             println("Compression beat AutoMPO by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
-#         end
-#         if verbose && delta_Dw>0
-#             println("AutoMPO beat Compression by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
-#         end
-#     end  
-# end 
-
-# Slow test, turn of if you are making big changes.
-# @testset "Head to Head autoMPO with 3-body Hamiltonian" begin
-#     if verbose
-#         @printf "+-----+---------+--------------------+--------------------+\n"
-#         @printf "|     |autoMPO  |    1 truncation    | 2 truncations      |\n"
-#         @printf "|  N  | dE      |   dE     RE   Dw   |   dE     RE   Dw   |\n"
-#     end
-#     eps=1e-15
-#         for N in [6,10,16,20,24]
-#             sites = siteinds("SpinHalf", N;conserve_qns=false)
-#             Hnot=make_3body_AutoMPO(sites;cutoff=-1.0) #No truncation inside autoMPO
-#             H=make_3body_AutoMPO(sites) #Truncated by autoMPO
-#             #@show get_Dw(Hnot)
-#             Dw_auto = get_Dw(H)
-#             psi=randomMPS(sites)
-#             Enot=inner(psi',Hnot,psi)
-#             E=inner(psi',H,psi)
-#             @test E ≈ Enot atol = sqrt(eps)
-#             truncate!(Hnot;verbose=verbose1,max_sweeps=1)
-#             Dw_1=get_Dw(Hnot)
-#             delta_Dw_1=sum(Dw_auto-Dw_1)
-#             Enott1=inner(psi',Hnot,psi)
-#             @test E ≈ Enott1 atol = sqrt(eps)
-#             RE1=abs(E-Enott1)/sqrt(eps)
-
-#             truncate!(Hnot;verbose=verbose1)
-#             Dw_2=get_Dw(Hnot)
-#             delta_Dw_2=sum(Dw_auto-Dw_2)
-#             Enott2=inner(psi',Hnot,psi)
-#             @test E ≈ Enott2 atol = sqrt(eps)
-#             RE2=abs(E-Enott2)/sqrt(eps)
-#             if verbose
-#                 @printf "| %3i | %1.1e | %1.1e %1.3f %4i | %1.1e %1.3f %4i | \n" N abs(E-Enot) abs(E-Enott1) RE1 delta_Dw_1 abs(E-Enott2) RE2 delta_Dw_2 
-#             end
-#         end
-# end
 
 
 @testset "Truncate/Compress iMPO Check gauge relations, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
@@ -400,6 +343,64 @@ end
 
         #@show get_Dw(H0) get_Dw(HL) get_Dw(HR)
     end
+end
+
+
+# Slow test, turn of if you are making big changes.
+@testset "Head to Head autoMPO with 2-body Hamiltonian ul=$ul, QNs=$qns" for ul in [lower,upper],qns in [false,true]
+    for N in 3:15
+        NNN=N-1#div(N,2)
+        sites = siteinds("SpinHalf", N;conserve_qns=qns)
+        Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul) 
+        Dw_auto=get_Dw(Hauto)
+        Hr=make_transIsing_MPO(sites,NNN;ul=ul) 
+        truncate!(Hr;verbose=verbose1) #sweep left to right
+        delta_Dw=sum(get_Dw(Hr)-Dw_auto)
+        @test delta_Dw<=0
+        if verbose && delta_Dw<0 
+            println("Compression beat AutoMPO by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
+        end
+        if verbose && delta_Dw>0
+            println("AutoMPO beat Compression by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
+        end
+    end  
+end 
+
+# Slow test, turn of if you are making big changes.
+@testset "Head to Head autoMPO with 3-body Hamiltonian" begin
+    if verbose
+        @printf "+-----+---------+--------------------+--------------------+\n"
+        @printf "|     |autoMPO  |    1 truncation    | 2 truncations      |\n"
+        @printf "|  N  | dE      |   dE     RE   Dw   |   dE     RE   Dw   |\n"
+    end
+    eps=1e-15
+        for N in [6,10,16,20,24]
+            sites = siteinds("SpinHalf", N;conserve_qns=false)
+            Hnot=make_3body_AutoMPO(sites;cutoff=-1.0) #No truncation inside autoMPO
+            H=make_3body_AutoMPO(sites) #Truncated by autoMPO
+            #@show get_Dw(Hnot)
+            Dw_auto = get_Dw(H)
+            psi=randomMPS(sites)
+            Enot=inner(psi',Hnot,psi)
+            E=inner(psi',H,psi)
+            @test E ≈ Enot atol = sqrt(eps)
+            truncate!(Hnot;verbose=verbose1,max_sweeps=1)
+            Dw_1=get_Dw(Hnot)
+            delta_Dw_1=sum(Dw_auto-Dw_1)
+            Enott1=inner(psi',Hnot,psi)
+            @test E ≈ Enott1 atol = sqrt(eps)
+            RE1=abs(E-Enott1)/sqrt(eps)
+
+            truncate!(Hnot;verbose=verbose1)
+            Dw_2=get_Dw(Hnot)
+            delta_Dw_2=sum(Dw_auto-Dw_2)
+            Enott2=inner(psi',Hnot,psi)
+            @test E ≈ Enott2 atol = sqrt(eps)
+            RE2=abs(E-Enott2)/sqrt(eps)
+            if verbose
+                @printf "| %3i | %1.1e | %1.1e %1.3f %4i | %1.1e %1.3f %4i | \n" N abs(E-Enot) abs(E-Enott1) RE1 delta_Dw_1 abs(E-Enott2) RE2 delta_Dw_2 
+            end
+        end
 end
 
 end #@testset "Truncate/Compress" 
