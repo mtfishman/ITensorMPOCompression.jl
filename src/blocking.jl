@@ -145,8 +145,14 @@ function getM(RL::ITensor,ul::reg_form)::Tuple{ITensor,ITensor,Index,Bool}
     il=noncommonind(RL,iqx) #Grab the remaining link index
     Dwq,Dwl=dim(iqx),dim(il)
     Dwm=Base.min(Dwq,Dwl)
-    imin=Dwq<Dwl ? iqx : il #Which one is smallest?
-    im=new_id(imin) #new common index between Mplus and RL_prime
+    if ul==lower
+        imin=Dwq<Dwl ? iqx : il #Which one is smallest?
+    else
+        imin=Dwq<=Dwl ? iqx : il #Which one is smallest?
+    end
+
+    #im=new_id(imin) #new common index between Mplus and RL_prime
+    im=redim(imin,dim(imin)) #new common index between M and RL_prime
     im=replacetags(im,tags(imin),mtags)
     shift=0
     if ul==lower
