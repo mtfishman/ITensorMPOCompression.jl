@@ -230,12 +230,26 @@ end
 function my_similar(T::ITensor,inds...)
     return my_similar(tensor(T),inds...)
 end
+
+function warn_space(A::ITensor,ig::Index)
+    ia,=inds(A,tags=tags(ig))
+    @mpoc_assert dim(ia)+2==dim(ig)
+    if hasqns(A)
+        sa,sg=space(ia),space(ig)
+        if sa!=sg[2:nblocks(ig)-1]
+            @warn "Mismatched spaces:"
+            @show sa sg
+        end
+    end
+end
 #                      |1 0 0|
 #  given A, spit out G=|0 A 0| , indices of G are provided.
 #                      |0 0 1|
-# TODO use redim to make the new indices. 
 function grow(A::ITensor,ig1::Index,ig2::Index)
     @checkflux(A) 
+    @mpoc_assert order(A)==2
+    warn_space(A,ig1)
+    warn_space(A,ig2)
     Dw1,Dw2=dim(ig1),dim(ig2)
     G=my_similar(A,ig1,ig2)
     G[ig1=>1  ,ig2=>1  ]=1.0;
