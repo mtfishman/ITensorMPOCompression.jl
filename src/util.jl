@@ -206,4 +206,26 @@ function pprint(H::MPO,eps::Float64=default_eps)
     end
 end
 
-#export pprint,is_unit,slice
+
+get_directions(psi::ITensors.AbstractMPS) = map(n->dir(inds(psi[n],tags="Link,l=$n")[1]),1:length(psi)-1)
+
+function show_directions(psi::ITensors.AbstractMPS)
+    dirs=get_directions(psi)
+    n=1
+    for d in dirs
+        print(" $n ")
+        if d==ITensors.In
+            print("<--")
+        elseif d==ITensors.Out
+            print("-->")
+        elseif d==ITensors.Neither
+            print("???")
+        else
+            @assert(false)
+        end
+        n+=1
+    end
+    print(" $n \n")
+end
+
+

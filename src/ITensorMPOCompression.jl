@@ -30,7 +30,7 @@ export get_Dw,maxlinkdim,min,max
 export bond_spectrums
 
 export orthogonalize!,truncate,truncate! #the punchline
-export @pprint,pprint,@mpoc_assert
+export @pprint,pprint,@mpoc_assert,show_directions
 #  subtebsor related
 export IndexRange, indices, range, ranges, getperm, permute, start
 
