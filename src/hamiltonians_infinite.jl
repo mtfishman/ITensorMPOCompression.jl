@@ -58,15 +58,17 @@ end
 # n is starting site number
 function daisychain_links!(H::MPO,n::Int64)
   Ncell=length(H)
-  H[1]=replacetags(H[1],"Link,l=$n","Link,c=0,l=$Ncell")
   H[1]=replacetags(H[1],"Link,l=$(n+1)","Link,c=1,l=1")
   H[1]=replacetags(H[1],"Site,n=$(n+1)","Site,c=1,n=1")
+  nsave=n
   for i in 2:Ncell
     n+=1
     H[i]=replacetags(H[i],"Link,l=$n","Link,c=1,l=$(i-1)")
     H[i]=replacetags(H[i],"Link,l=$(n+1)","Link,c=1,l=$i")
     H[i]=replacetags(H[i],"Site,n=$(n+1)","Site,c=1,n=$i")
   end
+  #do the left link at the end, other wise Ncell=n+1 causes problems.
+  H[1]=replacetags(H[1],"Link,l=$nsave","Link,c=0,l=$Ncell")
   i0=inds(H[1],tags="Link,c=0,l=$Ncell")[1]
   i0=replacetags(i0,"c=0","c=1")
   iN=inds(H[Ncell],tags="Link,c=1,l=$Ncell")[1]
@@ -93,29 +95,30 @@ function make_AutoiMPO(MakeH::Function,isites,NNN::Int64;kwargs...)
   # Choose a finite lattice size that should have Ncell+2 sites
   # in the middle with no edge effects.
   #
-  N=2*(NNN+1)+Ncell 
+  N=2*(NNN+2)+Ncell
   #
   #  Make a finite lattice of sites and corresponding MPO
   #
   ts=String(tags(isites[1])[1]) #get the site type.
-  fsites=siteinds(ts,N)
+  qns=hasqns(isites[1])
+  fsites=siteinds(ts,N;conserve_qns=qns)
   fmpo=make_transIsing_AutoMPO(fsites,NNN;pbc=true,kwargs...)
   #
   # Check that Dw is constant in the range we intend to use.
   #
   Dws=get_Dw(fmpo)
-  for i = NNN:NNN+Ncell+1
+  for i = NNN+1:NNN+Ncell+2
     @assert Dws[i]==Dws[i+1]
   end
-  #@show get_Dw(fmpo) NNN+1:NNN+1+Ncell
+  #@show get_Dw(fmpo) NNN+2:NNN+2+Ncell
   #
-  #  Creat and Ncell sized mpo from the middle chunck where Dw is constant.
+  #  Creat and Ncell sized mpo from the middle chunk where Dw is constant.
   #
   impo=MPO(Ncell)
   for i in 1:Ncell
-    impo[i]=fmpo[i+NNN]
+    impo[i]=fmpo[i+NNN+1]
   end
-  daisychain_links!(impo,NNN)
+  daisychain_links!(impo,NNN+1)
   return InfiniteMPO(impo.data)
 end
 

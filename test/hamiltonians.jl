@@ -123,6 +123,30 @@ end
    
 end
 
+@testset "Production of iMPOs from AutoMPO, Ncell=$Ncell, NNN=$NNN, qns=$qns" for qns in [false,true], Ncell in [1,2,3,4], NNN in [1,2,3,4,5]
+    initstate(n) = "↑"
+    site_type="S=1/2"
+    si = infsiteinds(site_type, Ncell; initstate, conserve_qns=qns)
+    H=make_transIsing_AutoiMPO(si,NNN;ul=lower)
+    @test length(H)==Ncell
+    Dws=get_Dw(H)
+    @test all(y->y==Dws[1], Dws)
+    @test hastags(H[1],"Link,c=0,l=$Ncell")
+    @test hastags(H[1],"Link,c=1,l=1")
+    @test hastags(H[1],"Site,c=1,n=1")
+    for n in 2:Ncell
+        @test hastags(H[n],"Link,c=1,l=$(n-1)")
+        @test hastags(H[n],"Link,c=1,l=$n")
+        @test hastags(H[n],"Site,c=1,n=$n")
+        il,=inds(H[n-1],tags="Link,c=1,l=$(n-1)")
+        ir,=inds(H[n],tags="Link,c=1,l=$(n-1)")
+        @test id(il)==id(ir)
+    end
+    il,=inds(H[1],tags="Link,c=0,l=$Ncell")
+    ir,=inds(H[Ncell],tags="Link,c=1,l=$Ncell")
+    @test id(il)==id(ir)
+end
+
 end #Hamiltonians testset
 
 nothing
