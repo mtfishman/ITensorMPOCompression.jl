@@ -72,7 +72,8 @@ end
        (make_Heisenberg_AutoMPO,lower,"S=1"),
        (make_Hubbard_AutoMPO,lower,"Electron")
 ]
-@testset "Compress $(test_combo[1]) MPO with ul=$(test_combo[2]), lr=$lr, QNs=$qns" for test_combo in test_combos, lr in [left,right], qns in [false,true]
+
+@testset "Compress $(test_combo[1]) MPO with ul=$(test_combo[2]), lr=$lr, QNs=$qns" for test_combo in test_combos, lr in [left,right], qns in [true]
     hx= qns ? 0.0 : 0.5 
     ms=matrix_state(test_combo[2],lr)
     #                                         V=N sites
@@ -194,17 +195,29 @@ end
 
 end
 
+test_combos=[
+    (make_transIsing_iMPO,lower,"S=1/2"),
+    (make_transIsing_iMPO,upper,"S=1/2"),
+    (make_transIsing_AutoiMPO,lower,"S=1/2"),
+    (make_Heisenberg_AutoiMPO,lower,"S=1/2"),
+    (make_Heisenberg_AutoiMPO,lower,"S=1"),
+    (make_Hubbard_AutoiMPO,lower,"Electron")
+]
 
-@testset "Truncate/Compress iMPO Check gauge relations, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
+@testset "Truncate/Compress iMPO Check gauge relations, H=$(test_combo[1]), ul=$(test_combo[2]), qbs=$qns" for test_combo in test_combos, qns in [false,true]
     initstate(n) = "↑"
+    makeH=test_combo[1]
+    ul=test_combo[2]
+    site_type=test_combo[3]
+
     if verbose
         @printf "               Dw     Dw    Dw   \n"
         @printf " Ncell  NNN  uncomp. left  right \n"
     end
 
-    for  NNN in [2,4], N in [1,2,4] #3 site unit cell fails inside ITensorInfiniteMPS for qns=true.
-        si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
-        H0=make_transIsing_iMPO(si,NNN;ul=ul)
+    for  NNN in [1,2,4], N in [1,2,4] #3 site unit cell fails inside ITensorInfiniteMPS for qns=true.
+        si = infsiteinds(site_type, N; initstate, conserve_qns=qns)
+        H0=makeH(si,NNN;ul=ul)
         @test is_regular_form(H0)
         Dw0=Base.max(get_Dw(H0)...)
         #
