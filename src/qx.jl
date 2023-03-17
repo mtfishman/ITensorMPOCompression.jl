@@ -179,8 +179,36 @@ function block_qx(W_::ITensor,forward::Index,ul::reg_form=lower;kwargs...)::Tupl
   else #upper
     if lr==left
       Q,RL,iq=qr(V,inds_on_Q;positive=true,tags=ts"Link,qx",kwargs...) #block respecting QR decomposition
+      if hasqns(RL)
+        @checkflux(V)
+        @checkflux(Q)
+        @checkflux(RL)
+        p=get_firstcol_perm(RL)
+        #@show dense(RL) p 
+        iqsp=NDTensors.permuteblocks(splitblocks(iq),p)
+        G=δ_split(dag(iqsp'),iq,p) #gauge transform to permute rows of R into upper tri-form
+        RL=noprime(RL*G,tags="Link,qx") #permute rows of R into upper tri-form
+        #@show dense(RL)
+        Q=noprime(Q*dag(G),tags="Link,qx") #permute cols of Q accordingly.
+        @checkflux(Q)
+        @checkflux(RL)
+      end
     else #right
       RL,Q,iq=rq(V,ind_on_V;positive=true,tags=ts"Link,qx",kwargs...) #block respecting RQ decomposition
+      if hasqns(RL) 
+        @checkflux(V)
+        @checkflux(Q)
+        @checkflux(RL)
+        p=get_firstrow_perm(RL)
+        #@show dense(RL) p iq
+        iqsp=NDTensors.permuteblocks(splitblocks(iq),p)
+        G=δ_split(dag(iqsp'),iq,p) #gauge transform to permute rows of R into upper tri-form
+        RL=noprime(RL*G,tags="Link,qx") #permute rows of R into upper tri-form
+        Q=noprime(Q*dag(G),tags="Link,qx") #permute cols of Q accordingly.
+        @checkflux(Q)
+        @checkflux(RL)
+        #@show dense(RL)
+      end
     end
   end
   
