@@ -343,19 +343,6 @@ function ITensors.truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::Ce
             transform(Hm,U,n)
         end
        
-        # if hasqns(Gs[n])
-        #     @show inds(Sp,tags="Link") commonind(Sp,U) commonind(Sp,V)
-        #     ic=commonind(Sp,U)
-        #     replaceind!(Sp,ic,ic')
-        #     replaceind!(U,ic,ic')
-        #     #@show inds(Sp) inds(U)
-        #     iSs=make_qninds(Sp,inds(dag(U))...)
-        #     Sp=convert_blocksparse(Sp,iSs...)
-        #     Sp=noprime(Sp)
-        #     U=noprime(U)
-        #     #@show inds(Sp)   inds(U)
-        # end
-       
         Ss[n]=Sp
         ss[n]=spectrum
     end
