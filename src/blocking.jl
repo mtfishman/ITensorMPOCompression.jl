@@ -236,9 +236,13 @@ function warn_space(A::ITensor,ig::Index)
     @mpoc_assert dim(ia)+2==dim(ig)
     if hasqns(A)
         sa,sg=space(ia),space(ig)
+        if dir(ia)!=dir(ig)
+            sa=-sa
+        end
         if sa!=sg[2:nblocks(ig)-1]
             @warn "Mismatched spaces:"
-            @show sa sg
+            @show sa sg[2:nblocks(ig)-1] dir(ia) dir(ig)
+            #@assert false
         end
     end
 end
