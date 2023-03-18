@@ -36,11 +36,9 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
     
     #
     #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
-    #  For blocksparse W, at this point we switch to dense for all RL manipulations and RL should
-    #  only have one block anyway.
+    #  M will be returned as a Dw-2 X Dw-2 interior matrix.  M_sans in the Parker paper.
     #
-    M,RL_prime,im,RLnz=getM(RL,ms.ul) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
-    @mpoc_assert RLnz==0 #make sure RL_prime does not require any fix ups.
+    M,RL_prime,im=getM(RL,ms.ul) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
     #  
     #  At last we can svd and compress M using epsSVD as the cutoff.  M should be dense.
     #    
@@ -49,27 +47,18 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
     ns=dim(inds(s)[1])
 
     #@show diag(array(s))
-
-    #@show iqx im inds(M) nnzblocks(M)
-    # Mplus=grow(M,dag(iqx),im)
-    # D=RL-Mplus*RL_prime
-    # #@show norm(Dq)
-    # # Check accuracy of RL_prime.
-    # if norm(D)>get(kwargs, :cutoff, 1e-14)
-    #     @printf "High normD(D)=%.1e min(s)=%.1e \n" norm(D) Base.min(diag(array(s))...)
-    #     replacetags!(RL,"Link,qx",tags(iforward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-    #     replacetags!(Q ,"Link,qx",tags(iforward)) #W[l=n-1,l=n]
-    #     return Q,RL,spectrum,true
-    # end
    
+    #
+    #  No recontrsuction RL, and W in the truncated space.
+    #
     if lr==left
         iup=redim(iu,ns+2,1)
-        RL=grow(s*V,iup,dag(im))*RL_prime #RL[l=n,u] dim ns+2 x Dw2
+        RL=grow(s*V,iup,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
         Uplus=grow(U,dag(iqx),dag(iup))
         W=Q*Uplus #W[l=n-1,u]
     else # right
         ivp=redim(iv,ns+2,1)
-        RL=RL_prime*grow(U*s,dag(im),ivp) #RL[l=n-1,v] dim Dw1 x ns+2
+        RL=RL_prime*grow(U*s,im,ivp) #RL[l=n-1,v] dim Dw1 x ns+2
         Vplus=grow(V,dag(iqx),dag(ivp)) #lq has the dir of Q so want the opposite on Vplus
         W=Vplus*Q #W[l=n-1,v]
     end

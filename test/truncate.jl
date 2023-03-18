@@ -356,7 +356,7 @@ end
 end
 
 
-# Slow test, turn of if you are making big changes.
+# Slow test, turn off if you are making big changes.
 # @testset "Head to Head autoMPO with 2-body Hamiltonian ul=$ul, QNs=$qns" for ul in [lower,upper],qns in [false,true]
 #     for N in 3:15
 #         NNN=N-1#div(N,2)
@@ -376,7 +376,7 @@ end
 #     end  
 # end 
 
-# Slow test, turn of if you are making big changes.
+# Slow test, turn off if you are making big changes.
 @testset "Head to Head autoMPO with 3-body Hamiltonian" begin
     if verbose
         @printf "+-----+---------+--------------------+--------------------+\n"
