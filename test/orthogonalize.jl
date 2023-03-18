@@ -5,7 +5,7 @@ using Revise
 using Test
 using Printf
 
-verbose=false #verbose at the outer test level
+verbose=true #verbose at the outer test level
 verbose1=false #verbose inside orth algos
 
  using Printf
@@ -64,25 +64,24 @@ verbose1=false #verbose inside orth algos
 end
 
 test_combos=[
-    (make_transIsing_MPO,lower,"S=1/2"),
-    (make_transIsing_MPO,upper,"S=1/2"),
-    (make_transIsing_AutoMPO,lower,"S=1/2"),
-    (make_Heisenberg_AutoMPO,lower,"S=1/2"),
-    (make_Heisenberg_AutoMPO,lower,"S=1"),
-    (make_Hubbard_AutoMPO,lower,"Electron")
+    (make_transIsing_MPO,"S=1/2"),
+    (make_transIsing_AutoMPO,"S=1/2"),
+    (make_Heisenberg_AutoMPO,"S=1/2"),
+    (make_Heisenberg_AutoMPO,"S=1"),
+    (make_Hubbard_AutoMPO,"Electron")
 ]
 
-@testset "Bring dense $(test_combo[2]) MPO into $lr canonical form" for test_combo in test_combos, lr in [left,right]
+@testset "Bring $(test_combo[1]), $ul reg. form MPO into $lr canonical form, qns=$qns" for test_combo in test_combos, lr in [left,right], ul in [lower,upper], qns=[false,true]
     N=10
     NNN=7
-    eps=1e-14
-    model_kwargs = (ul=test_combo[2], )
-    ms=matrix_state(test_combo[2],lr )
+    eps=2e-14
+    model_kwargs = (ul=ul, cutoff=-1.0) #cutoff=-1.0 causes AutoMPO to do less compression.
+    ms=matrix_state(ul,lr )
     makeH=test_combo[1]
-    sites = siteinds(test_combo[3], N;conserve_qns=false)
-    psi=randomMPS(sites)
+    sites = siteinds(test_combo[2], N;conserve_qns=qns)
+    state=[isodd(n) ? "Up" : "Dn" for n=1:N]
+    psi=randomMPS(sites,state)
     H=makeH(sites,NNN;model_kwargs...) 
-    #@show inds(H[1])
     @test is_regular_form(H   ,ms.ul,eps)
     @test !isortho(H)
     @test !isortho(H,left)    
@@ -97,27 +96,6 @@ test_combos=[
     @test check_ortho(H,ms.lr) #expensive does V_dagger*V=Id
 end 
 
-@testset "Bring block sparse $(test_combo[2]) $(test_combo[1]) MPO into $lr canonical form" for test_combo in test_combos, lr in [left,right]
-    N=10
-    NNN=7
-    eps=1e-14
-    ms=matrix_state(test_combo[2],lr )
-    makeH=test_combo[1]
-    sites = siteinds(test_combo[3], N;conserve_qns=true)
-    state=[isodd(n) ? "Up" : "Dn" for n=1:N]
-    psi=randomMPS(sites,state)
-    H=makeH(sites,NNN;ul=test_combo[2]) 
-    @test is_regular_form(H   ,ms.ul,eps)
-    E0=inner(psi',H,psi)
-    orthogonalize!(H;verbose=verbose1,orth=ms.lr)
-    E1=inner(psi',H,psi)
-    @test E0 ≈ E1 atol = eps
-    @test is_regular_form(H,ms.ul,eps)
-    @test  isortho(H,ms.lr)
-    @test !isortho(H,mirror(ms.lr))    
-    @test check_ortho(H,ms.lr) #expensive does V_dagger*V=Id
-end
- 
 @testset "Compare $ul tri rank reduction with AutoMPO, QNs=$qns" for ul in [lower,upper],qns in [false,true]
     N=14
     sites = siteinds("SpinHalf", N;conserve_qns=qns)
@@ -136,24 +114,22 @@ end
 end 
 
 test_combos=[
-    (make_transIsing_iMPO,lower,"S=1/2"),
-    (make_transIsing_iMPO,upper,"S=1/2"),
-    (make_transIsing_AutoiMPO,lower,"S=1/2"),
-    (make_Heisenberg_AutoiMPO,lower,"S=1/2"),
-    (make_Heisenberg_AutoiMPO,lower,"S=1"),
-    (make_Hubbard_AutoiMPO,lower,"Electron")
+    (make_transIsing_iMPO,"S=1/2"),
+    (make_transIsing_AutoiMPO,"S=1/2"),
+    (make_Heisenberg_AutoiMPO,"S=1/2"),
+    (make_Heisenberg_AutoiMPO,"S=1"),
+    (make_Hubbard_AutoiMPO,"Electron")
 ]
 
-@testset "Orthogonalize iMPO Check gauge relations, H=$(test_combo[1]), ul=$(test_combo[2]), qbs=$qns" for test_combo in test_combos, qns in [false,true]
+@testset "Orthogonalize iMPO Check gauge relations, H=$(test_combo[1]), ul=$ul, qbs=$qns" for test_combo in test_combos, ul in [lower,upper], qns in [false,true]
     initstate(n) = "↑"
-    ul=test_combo[2]
     makeH=test_combo[1]
-    if verbose
+    if verbose1
         @printf "               Dw     Dw    Dw    Dw\n"
         @printf " Ncell  NNN  uncomp. left  right  LR\n"
     end
     for N in [1,2,4], NNN in [2,4] #3 site unit cell fails for qns=true.
-        si = infsiteinds(test_combo[3], N; initstate, conserve_qns=qns)
+        si = infsiteinds(test_combo[2], N; initstate, conserve_qns=qns)
 
         H0=makeH(si,NNN;ul=ul)
         
@@ -193,7 +169,7 @@ test_combos=[
             @assert order(D2)==4
             @test norm(G[n-1]*HR1[n]-HL[n]*G[n]) ≈ 0.0 atol = 1e-14
         end
-        if verbose
+        if verbose1
             @printf " %4i %4i   %4i   %4i  %4i  %4i\n" N NNN Dw0 DwL DwR DwLR
         end
 
