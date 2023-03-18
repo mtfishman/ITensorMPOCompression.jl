@@ -226,20 +226,3 @@ function grow(A::ITensor,ig1::Index,ig2::Index)
     @checkflux(G) 
     return G
 end
-
-function grow(A::ITensor,ig1::QNIndex,ig2::Index{Int64})
-    @mpoc_assert !hasqns(A)
-    @mpoc_assert !hasqns(ig2)
-    G=grow(A,removeqns(ig1),ig2) #grow A into G as dense tensors
-    ig2q=addqns(ig2,[QN()=>dim(ig2)];dir=dir(dag(ig1))) #make a QN version of index ig2
-    @mpoc_assert id(ig2)==id(ig2q) #If the ID changes then subsequent contractions will fail.
-    return convert_blocksparse(G,ig1,ig2q) #fabricate a 1-block blocksparse version.
-end
-function grow(A::ITensor,ig1::Index{Int64},ig2::QNIndex)
-    @mpoc_assert !hasqns(A)
-    @mpoc_assert !hasqns(ig1)
-    G=grow(A,ig1,removeqns(ig2)) #grow A into G as dense tensors
-    ig1q=addqns(ig1,[QN()=>dim(ig1)];dir=dir(dag(ig2))) #make a QN version of index ig1
-    @mpoc_assert id(ig1)==id(ig1q) #If the ID changes then subsequent contractions will fail.
-    return convert_blocksparse(G,ig1q,ig2) #fabricate a 1-block blocksparse version.
-end
