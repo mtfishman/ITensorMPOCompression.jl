@@ -64,15 +64,12 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
    
     if lr==left
         iup=redim(iu,ns+2,1)
-        #@show inds(W) inds(RL) inds(M) inds(RL_prime) isvd inds(U) inds(s) inds(V)
-        RL=grow(s*V,iup,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
+        RL=grow(s*V,iup,dag(im))*RL_prime #RL[l=n,u] dim ns+2 x Dw2
         Uplus=grow(U,dag(iqx),dag(iup))
         W=Q*Uplus #W[l=n-1,u]
-        #@show nnzblocks(RL_prime) nnzblocks(W) nnzblocks(Q) nnzblocks(Uplus)
-        #@show flux(RL_prime) flux(W) flux(Q) flux(Uplus)
     else # right
         ivp=redim(iv,ns+2,1)
-        RL=RL_prime*grow(U*s,im,ivp) #RL[l=n-1,v] dim Dw1 x ns+2
+        RL=RL_prime*grow(U*s,dag(im),ivp) #RL[l=n-1,v] dim Dw1 x ns+2
         Vplus=grow(V,dag(iqx),dag(ivp)) #lq has the dir of Q so want the opposite on Vplus
         W=Vplus*Q #W[l=n-1,v]
     end

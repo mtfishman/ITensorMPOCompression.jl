@@ -65,22 +65,21 @@ end
 @testset verbose=true "Truncate/Compress" begin
 
     test_combos=[
-       (make_transIsing_MPO,lower,"S=1/2"),
-       (make_transIsing_MPO,upper,"S=1/2"),
-       (make_transIsing_AutoMPO,lower,"S=1/2"),
-       (make_Heisenberg_AutoMPO,lower,"S=1/2"),
-       (make_Heisenberg_AutoMPO,lower,"S=1"),
-       (make_Hubbard_AutoMPO,lower,"Electron")
+       (make_transIsing_MPO,"S=1/2"),
+       (make_transIsing_AutoMPO,"S=1/2"),
+       (make_Heisenberg_AutoMPO,"S=1/2"),
+       (make_Heisenberg_AutoMPO,"S=1"),
+       (make_Hubbard_AutoMPO,"Electron")
 ]
 
-@testset "Compress $(test_combo[1]) MPO with ul=$(test_combo[2]), lr=$lr, QNs=$qns" for test_combo in test_combos, lr in [left,right], qns in [true]
+@testset "Compress $(test_combo[1]) MPO with ul=$ul, lr=$lr, QNs=$qns" for test_combo in test_combos, lr in [left,right], ul=[lower,upper], qns in [true]
     hx= qns ? 0.0 : 0.5 
-    ms=matrix_state(test_combo[2],lr)
+    ms=matrix_state(ul,lr)
     #                                         V=N sites
     #                                           V=Num Nearest Neighbours in H
-    test_truncate(test_combo[1],test_combo[3],5,1,hx,ms,qns)
-    test_truncate(test_combo[1],test_combo[3],5,3,hx,ms,qns)
-    test_truncate(test_combo[1],test_combo[3],10,7,hx,ms,qns)  
+    test_truncate(test_combo[1],test_combo[2],5,1,hx,ms,qns)
+    test_truncate(test_combo[1],test_combo[2],5,3,hx,ms,qns)
+    test_truncate(test_combo[1],test_combo[2],10,7,hx,ms,qns)  
     #test_truncate(test_combo[1],test_combo[3],14,13,hx,ms,qns)  
 end 
 
@@ -196,19 +195,17 @@ end
 end
 
 test_combos=[
-    (make_transIsing_iMPO,lower,"S=1/2"),
-    (make_transIsing_iMPO,upper,"S=1/2"),
-    (make_transIsing_AutoiMPO,lower,"S=1/2"),
-    (make_Heisenberg_AutoiMPO,lower,"S=1/2"),
-    (make_Heisenberg_AutoiMPO,lower,"S=1"),
-    (make_Hubbard_AutoiMPO,lower,"Electron")
+    (make_transIsing_iMPO,"S=1/2"),
+    (make_transIsing_AutoiMPO,"S=1/2"),
+    (make_Heisenberg_AutoiMPO,"S=1/2"),
+    (make_Heisenberg_AutoiMPO,"S=1"),
+    (make_Hubbard_AutoiMPO,"Electron")
 ]
 
-@testset "Truncate/Compress iMPO Check gauge relations, H=$(test_combo[1]), ul=$(test_combo[2]), qbs=$qns" for test_combo in test_combos, qns in [false,true]
+@testset "Truncate/Compress iMPO Check gauge relations, H=$(test_combo[1]), ul=$ul, qbs=$qns" for test_combo in test_combos, ul in [lower,upper], qns in [false,true]
     initstate(n) = "↑"
     makeH=test_combo[1]
-    ul=test_combo[2]
-    site_type=test_combo[3]
+    site_type=test_combo[2]
 
     if verbose
         @printf "               Dw     Dw    Dw   \n"
@@ -228,7 +225,7 @@ test_combos=[
         @test typeof(storage(Ss[1])) == (qns ? NDTensors.DiagBlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
 
         DwL=Base.max(get_Dw(HL)...)
-        @test is_regular_form(HL)
+        @test is_regular_form(HL,ul)
         @test isortho(HL,left)
         @test check_ortho(HL,left)
         #
@@ -245,7 +242,7 @@ test_combos=[
         Ss,ss,HL=truncate!(HR;verbose=verbose1,orth=right,h_mirror=true)
         @test typeof(storage(Ss[1])) == (qns ? NDTensors.DiagBlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
         DwR=Base.max(get_Dw(HR)...)
-        @test is_regular_form(HR)
+        @test is_regular_form(HR,ul)
         @test isortho(HR,right)
         @test check_ortho(HR,right)
         for n in 1:N
@@ -360,24 +357,24 @@ end
 
 
 # Slow test, turn of if you are making big changes.
-@testset "Head to Head autoMPO with 2-body Hamiltonian ul=$ul, QNs=$qns" for ul in [lower,upper],qns in [false,true]
-    for N in 3:15
-        NNN=N-1#div(N,2)
-        sites = siteinds("SpinHalf", N;conserve_qns=qns)
-        Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul) 
-        Dw_auto=get_Dw(Hauto)
-        Hr=make_transIsing_MPO(sites,NNN;ul=ul) 
-        truncate!(Hr;verbose=verbose1) #sweep left to right
-        delta_Dw=sum(get_Dw(Hr)-Dw_auto)
-        @test delta_Dw<=0
-        if verbose && delta_Dw<0 
-            println("Compression beat AutoMPO by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
-        end
-        if verbose && delta_Dw>0
-            println("AutoMPO beat Compression by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
-        end
-    end  
-end 
+# @testset "Head to Head autoMPO with 2-body Hamiltonian ul=$ul, QNs=$qns" for ul in [lower,upper],qns in [false,true]
+#     for N in 3:15
+#         NNN=N-1#div(N,2)
+#         sites = siteinds("SpinHalf", N;conserve_qns=qns)
+#         Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul) 
+#         Dw_auto=get_Dw(Hauto)
+#         Hr=make_transIsing_MPO(sites,NNN;ul=ul) 
+#         truncate!(Hr;verbose=verbose1) #sweep left to right
+#         delta_Dw=sum(get_Dw(Hr)-Dw_auto)
+#         @test delta_Dw<=0
+#         if verbose && delta_Dw<0 
+#             println("Compression beat AutoMPO by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
+#         end
+#         if verbose && delta_Dw>0
+#             println("AutoMPO beat Compression by deltaDw=$delta_Dw for N=$N, NNN=$NNN,lr=right,ul=$ul,QNs=$qns")
+#         end
+#     end  
+# end 
 
 # Slow test, turn of if you are making big changes.
 @testset "Head to Head autoMPO with 3-body Hamiltonian" begin

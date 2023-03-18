@@ -141,19 +141,20 @@ function getM(RL::ITensor,ul::reg_form)::Tuple{ITensor,ITensor,Index,Bool}
     @mpoc_assert order(RL)==2
     @checkflux(RL)
     mtags=ts"Link,m"
-    iqx=inds(RL,tags="Link,qx")[1] #Grab the qx link index
+    iqx,=inds(RL,tags="Link,qx") #Grab the qx link index
     il=noncommonind(RL,iqx) #Grab the remaining link index
-    Dwq,Dwl=dim(iqx),dim(il)
-    Dwm=Base.min(Dwq,Dwl)
-    if ul==lower
-        imin=Dwq<Dwl ? iqx : il #Which one is smallest?
-    else
-        imin=Dwq<=Dwl ? iqx : il #Which one is smallest?
-    end
 
+    # Dwq,Dwl=dim(iqx),dim(il)
+    # Dwm=Base.min(Dwq,Dwl)
+    # if ul==lower
+    #     imin=Dwq<Dwl ? iqx : il #Which one is smallest?
+    # else
+    #     imin=Dwq<=Dwl ? iqx : il #Which one is smallest?
+    # end
+    # @show imin
     #im=new_id(imin) #new common index between Mplus and RL_prime
-    im=redim(imin,dim(imin)) #new common index between M and RL_prime
-    im=replacetags(im,tags(imin),mtags)
+    
+    Dwq,Dwl=dim(iqx),dim(il)
     shift=0
     if ul==lower
         shift=Base.max(0,Dwl-Dwq) #for upper rectangular R we want M over at the right
@@ -161,41 +162,42 @@ function getM(RL::ITensor,ul::reg_form)::Tuple{ITensor,ITensor,Index,Bool}
         shift=Base.max(0,Dwq-Dwl)
     end
    
-    M=RL[iqx=>2:Dwq-1,il=>2:Dwm-1] #pull out the M sub block
-    #@show inds(M) inds(RL)
+    M=RL[iqx=>2:Dwq-1,il=>2:Dwq-1] #pull out the M sub block
     M=replacetags(M,tags(il),mtags) #change Link,l=n to Link,m
     #
     # Now we need RL_prime such that RL=M*RL_prime.
     # RL_prime is just the perimeter of RL with 1's on the diagonal
     # Well sort of, if RL is rectangular then things get a little more involved.
     #
+    im=redim(iqx,dim(iqx)) #new common index between M_plus and RL_prime
+    im=replacetags(im,tags(iqx),mtags)
     RL=replacetags(RL,tags(iqx),mtags)  #change Link,qx to Link,m
     iqx=replacetags(iqx,tags(iqx),mtags)
-    RL_prime=ITensor(0.0,dag(im),il)
+    RL_prime=ITensor(0.0,im,il)
     #
     #  Copy over the perimeter of RL.
     #  TODO: Tighten this up based on ms.ul, avoid copying zeros.
     #
-    irm=im=>1:Dwm
+    irq=im=>1:Dwq
     irl=il=>1:Dwl
-    RL_prime[irm,il=>1:1]=RL[iqx=>1:Dwm,il=>1:1] #first col
-    RL_prime[irm,il=>Dwl:Dwl]=RL[iqx=>1:Dwm,il=>Dwl:Dwl] #last col
+    RL_prime[irq,il=>1:1]=RL[iqx=>1:Dwq,il=>1:1] #first col
+    RL_prime[irq,il=>Dwl:Dwl]=RL[iqx=>1:Dwq,il=>Dwl:Dwl] #last col
     RL_prime[im=>1:1,irl]=RL[iqx=>1:1 ,irl] #first row
-    RL_prime[im=>Dwm:Dwm,irl]=RL[iqx=>Dwq:Dwq,irl] #last row
+    RL_prime[im=>Dwq:Dwq,irl]=RL[iqx=>Dwq:Dwq,irl] #last row
     
     # Fill in diaginal
-    for j1 in 1:Dwm #or 1:Dwm
+    for j1 in 1:Dwq #or 1:Dwm
         RL_prime[im=>j1,il=>j1+shift]=1.0
     end
-    RL_prime[im=>Dwm,il=>dim(il)]=1.0
+    RL_prime[im=>Dwq,il=>dim(il)]=1.0
     @checkflux(RL_prime)
     #
     #  Test for non-zero block in RLprime.
     #
     non_zero=false
-    if Dwm<=dim(il)-1
+    if Dwq<=dim(il)-1
         #we should only get here if truncate is not bailing our on rectangular RL.
-        ar=abs.(RL[iqx=>1:Dwm,il=>Dwm:dim(il)-1])
+        ar=abs.(RL[iqx=>1:Dwq,il=>Dwq:dim(il)-1])
         @show RL M ar dim(ar)
         non_zero = dim(ar)>0 && maximum(ar)>0.0
     end
