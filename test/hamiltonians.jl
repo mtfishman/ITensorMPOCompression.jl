@@ -77,7 +77,7 @@ makeHs=[make_transIsing_AutoMPO,make_transIsing_MPO,make_Heisenberg_AutoMPO]
     NNN=2
     
     sites = siteinds("SpinHalf", N;conserve_qns=true)
-    H=makeH(sites,NNN) 
+    H=makeH(sites,NNN;ul=lower) 
     il=filterinds(inds(H[2]),tags="Link")
     for i in 1:2
         for start_offset in 0:2
@@ -123,18 +123,36 @@ end
    
 end
 
-@testset "Production of iMPOs from AutoMPO, Ncell=$Ncell, NNN=$NNN, qns=$qns" for qns in [false,true], Ncell in [1,2,3,4], NNN in [1,2,3,4,5]
-    initstate(n) = "↑"
-    site_type="S=1/2"
-    si = infsiteinds(site_type, Ncell; initstate, conserve_qns=qns)
-    H=make_transIsing_AutoiMPO(si,NNN;ul=lower)
-    @test length(H)==Ncell
-    Dws=get_Dw(H)
-    @test all(y->y==Dws[1], Dws)
+function verify_links(H::MPO)
+    N=length(H)
+    @test order(H[1])==3
+    @test hastags(H[1],"Link,l=1")
+    @test hastags(H[1],"Site,n=1")
+    for n in 2:N-1
+        @test order(H[n])==4        
+        @test hastags(H[n],"Link,l=$(n-1)")
+        @test hastags(H[n],"Link,l=$n")
+        @test hastags(H[n],"Site,n=$n")
+        il,=inds(H[n-1],tags="Link,l=$(n-1)")
+        ir,=inds(H[n],tags="Link,l=$(n-1)")
+        @test id(il)==id(ir)
+    end
+    @test order(H[N])==3
+    @test hastags(H[N],"Link,l=$(N-1)")
+    @test hastags(H[N],"Site,n=$N")
+    il,=inds(H[N-1],tags="Link,l=$(N-1)")
+    ir,=inds(H[N],tags="Link,l=$(N-1)")
+    @test id(il)==id(ir)
+end
+
+function verify_links(H::InfiniteMPO)
+    Ncell=length(H)
+    @test order(H[1])==4
     @test hastags(H[1],"Link,c=0,l=$Ncell")
     @test hastags(H[1],"Link,c=1,l=1")
     @test hastags(H[1],"Site,c=1,n=1")
     for n in 2:Ncell
+        @test order(H[n])==4
         @test hastags(H[n],"Link,c=1,l=$(n-1)")
         @test hastags(H[n],"Link,c=1,l=$n")
         @test hastags(H[n],"Site,c=1,n=$n")
@@ -145,6 +163,50 @@ end
     il,=inds(H[1],tags="Link,c=0,l=$Ncell")
     ir,=inds(H[Ncell],tags="Link,c=1,l=$Ncell")
     @test id(il)==id(ir)
+    @test order(H[Ncell])==4
+end
+
+@testset "Production of iMPOs from AutoMPO, Ncell=$Ncell, NNN=$NNN, qns=$qns" for qns in [false,true], Ncell in [1,2,3,4], NNN in [1,2,3,4,5]
+    initstate(n) = "↑"
+    site_type="S=1/2"
+    si = infsiteinds(site_type, Ncell; initstate, conserve_qns=qns)
+    H=make_transIsing_AutoiMPO(si,NNN;ul=lower)
+    @test length(H)==Ncell
+    Dws=get_Dw(H)
+    @test all(y->y==Dws[1], Dws)
+    verify_links(H)
+end
+
+makeHs=[
+     (make_transIsing_MPO,"S=1/2"),
+     (make_transIsing_AutoMPO,"S=1/2"),
+     (make_Heisenberg_AutoMPO,"S=1/2"),
+     (make_Hubbard_AutoMPO,"Electron"),
+    ]
+
+@testset "Reg for H=$(makeH[1]), ul=$ul, qns=$qns" for makeH in makeHs, qns in [false,true], ul=[lower,upper]
+    N=5
+    sites = siteinds(makeH[2], N;conserve_qns=qns)
+    H=makeH[1](sites,2,ul=ul)
+    @test is_regular_form(H,ul)
+    @test hasqns(H[1])==qns
+    verify_links(H)
+end
+
+makeHs=[
+    (make_transIsing_iMPO,"S=1/2"),
+    (make_transIsing_AutoiMPO,"S=1/2"),
+    (make_Heisenberg_AutoiMPO,"S=1/2"),
+    (make_Hubbard_AutoiMPO,"Electron")
+    ]
+
+@testset "Reg for H=$(makeH[1]), ul=$ul, qns=$qns" for makeH in makeHs, qns in [false,true], ul=[lower,upper], Ncell in 1:5
+    initstate(n) = "↑"
+    sites = infsiteinds(makeH[2], Ncell;initstate,conserve_qns=qns)
+    H=makeH[1](sites,2,ul=ul)
+    @test is_regular_form(H,ul)
+    @test hasqns(H[1])==qns
+    verify_links(H)
 end
 
 end #Hamiltonians testset

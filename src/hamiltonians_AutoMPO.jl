@@ -85,6 +85,7 @@ The MPO is returned in lower regular form.
 
 """
 function make_transIsing_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
+    ul::reg_form=get(kwargs,:ul,lower)
     J::Float64=get(kwargs,:J,1.0)
     hx::Float64=get(kwargs,:hx,0.0)
 
@@ -102,7 +103,11 @@ function make_transIsing_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
             add!(ampo, f    ,"Sz", j, "Sz", j+dj)
         end
     end
-    return MPO(ampo,sites;kwargs...)
+    H=MPO(ampo,sites;kwargs...)
+    if ul==upper
+        to_upper!(H)
+    end 
+    return H 
 end
 make_2body_AutoMPO(sites,NNN::Int64;kwargs...)=make_transIsing_AutoMPO(sites,NNN;kwargs...)
 
@@ -127,6 +132,7 @@ The MPO is returned in lower regular form.
 
 
  function make_Heisenberg_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
+    ul::reg_form=get(kwargs,:ul,lower)
     hz::Float64=get(kwargs,:hz,0.0)
     J::Float64=get(kwargs,:J,1.0)
     N=length(sites)
@@ -143,10 +149,15 @@ The MPO is returned in lower regular form.
             add!(ampo, f*0.5,"S-", j, "S+", j+dj)
         end
     end
-    return MPO(ampo,sites)
+    H=MPO(ampo,sites;kwargs...)
+    if ul==upper
+        to_upper!(H)
+    end 
+    return H 
 end
 
 function make_Hubbard_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
+    ul::reg_form=get(kwargs,:ul,lower)
     U::Float64=get(kwargs,:U,1.0)
     t::Float64=get(kwargs,:t,1.0)
     V::Float64=get(kwargs,:V,0.5)
@@ -166,5 +177,57 @@ function make_Hubbard_AutoMPO(sites,NNN::Int64;kwargs...)::MPO
         os +=  Vj, "Ntot"  , n, "Ntot", n + dn
         end
     end
-    return MPO(os, sites;kwargs...)
+    H=MPO(os,sites;kwargs...)
+    if ul==upper
+        to_upper!(H)
+    end 
+    return H 
+end
+
+
+function reverse(i::QNIndex)
+    return Index(reverse(space(i));dir=dir(i),tags=tags(i),plev=plev(i))
+end
+function reverse(i::Index)
+    return Index(space(i);tags=tags(i),plev=plev(i))
+end
+
+function G_transpose(i::Index,iu::Index)
+    D=dim(i)
+    @mpoc_assert D==dim(iu)
+    G=ITensor(0.0,dag(i),iu)
+    for n in 1:D
+        G[i=>n,iu=>D+1-n]=1.0
+    end
+    return G
+end
+
+# function to_upper(W::ITensor)
+#     l,r=parse_links(W)
+#     lu=reverse(l)
+#     ru=reverse(r)
+#     Gl=G_transpose(l,lu)
+#     Gr=G_transpose(r,ru)
+#     if dim(l)==1
+#         Wt=W*Gr
+#     elseif dim(r)==1
+#         Wt=Gl*W
+#     else
+#         Wt=Gl*W*Gr
+#     end
+#    return Wt
+# end
+
+function to_upper!(H::AbstractMPS)
+    N=length(H)
+    l,r=parse_links(H[1])
+    G=G_transpose(r,reverse(r))
+    H[1]=H[1]*G
+    for n in 2:N-1
+        H[n]=dag(G)*H[n]
+        l,r=parse_links(H[n])
+        G=G_transpose(r,reverse(r))
+        H[n]=H[n]*G
+    end
+    H[N]=dag(G)*H[N]
 end
