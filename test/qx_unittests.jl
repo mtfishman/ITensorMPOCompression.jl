@@ -26,7 +26,7 @@ using Printf
         @test is_regular_form(W,ms.ul)
         iln=commonind(H[n],H[n+rng.step])
 
-        Q,RL,lq=block_qx(W,iln,ms.ul;orth=ms.lr)
+        Q,RL,lq=block_qx(W,iln,ms.ul;orth=ms.lr,rr_cutoff=0.0)
         @test check_ortho(Q,ms,eps)
     end
 end
@@ -36,6 +36,7 @@ end
     NNN=6
     model_kwargs = (hx=0.5, ul=lower)
     eps=2e-15
+    rr_cutoff=1e-15
     sites = siteinds("SpinHalf", N)
     #
     #  use lower tri MPO to get some zero pivots for QL and RQ.
@@ -50,14 +51,14 @@ end
     #
     #  RQ decomp
     #
-    R,Q,iq=rq(W,r;positive=true,rr_cutoff=1e-10)
+    R,Q,iq=rq(W,r;positive=true,rr_cutoff=rr_cutoff)
     @test dim(c)-dim(iq) == 5 #make sure rank reduction worked.
     @test Q * prime(Q,iq) ≈ δ(Float64, iq, iq') atol = eps
     @test W ≈ R*Q atol = eps
     #
     #  QL decomp
     #
-    Q,L,iq=ql(W,Rind;positive=true,rr_cutoff=1e-10)
+    Q,L,iq=ql(W,Rind;positive=true,rr_cutoff=rr_cutoff)
     @test dim(c)-dim(iq) == 5 #make sure rank reduction worked.
     @test Q * prime(Q,iq) ≈ δ(Float64, iq, iq') atol = eps
     @test W ≈ L*Q atol = eps
@@ -77,14 +78,14 @@ end
     #
     #  QR decomp
     #
-    Q,R,iq=qr(W,Rind;positive=true,rr_cutoff=1e-10)
+    Q,R,iq=qr(W,Rind;positive=true,rr_cutoff=rr_cutoff)
     @test dim(c)-dim(iq) == 5 #make sure rank reduction worked.
     @test Q * prime(Q,iq) ≈ δ(Float64, iq, iq') atol = eps
     @test W ≈ R*Q atol = eps   
     #
     #  LQ decomp
     #
-    L,Q,iq=lq(W,r;positive=true,rr_cutoff=1e-10)
+    L,Q,iq=lq(W,r;positive=true,rr_cutoff=rr_cutoff)
     @test dim(c)-dim(iq) == 5 #make sure rank reduction worked.
     @test Q * prime(Q,iq) ≈ δ(Float64, iq, iq') atol = eps
     @test W ≈ L*Q atol = eps
