@@ -236,7 +236,7 @@ function redim(i::Index,Dw::Int64,offset::Int64=0)::Index
                 @mpoc_assert start_offset>0 #sanity check
             end
 
-            for n in reverse(eachindex(qns))
+            for n in Base.reverse(eachindex(qns))
                 dq=qns[n].second
                 d_remain=Base.max(0,dq-end_offset) #How much space to leave
                 qns[n]=qns[n].first=>d_remain #update dim of QN

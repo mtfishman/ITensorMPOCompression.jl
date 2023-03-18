@@ -186,7 +186,7 @@ end
 
 
 function reverse(i::QNIndex)
-    return Index(reverse(space(i));dir=dir(i),tags=tags(i),plev=plev(i))
+    return Index(Base.reverse(space(i));dir=dir(i),tags=tags(i),plev=plev(i))
 end
 function reverse(i::Index)
     return Index(space(i);tags=tags(i),plev=plev(i))
