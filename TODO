@@ -3,7 +3,7 @@ Questions:
   -Delete old branches, after merge?
   -Future of Model("model_name") framework.
   -verbose mode? (only see it in ctmrg)
-  -Is there use for a moving orthogonality center in MPOs? Yes see Matts email March/14/2023
+  Yes -Is there use for a moving orthogonality center in MPOs? Yes see Matts email March/14/2023
   -Do we need to support multiple truncate sweeps for iMPOs?
   -Should orthognalize!(iMPO) spit out primed Gs?
   -Support RQ/QL/LQ in factorize?
@@ -17,16 +17,17 @@ Done: -Test alternating S=1/2 and S=1 sites for iMPO.
 Done: -Test Heisenberg model from autoMPO with non-trivial QN space structure on Link indices.
 Done: -Test Fermions/Hubberd.
 -vumps GS example with timing for uncomp./comp.
+-Try apply gate.
 -Test with Julia 1.7 and 1.8
 
 Features:
--MPO truncate Heisenberg AutoMPO
+Done: -MPO truncate Heisenberg AutoMPO
 Done: -MPO truncate ... don't switch to dense for svd(M) ... need to preserve QN structure
   -This will allow us to get rid of make_qninds and convert_blocksparse
 Done: -Get Heisenberg AutoMPO iMPOs working (Need to handle case where NNN>N)
 -Put some content in Readme.md
 -make truncate, and orthogonalize that work on copies.
--Upper reg-form from autompo
+Done: -Upper reg-form from autompo
 Done: -iMPO from AutoMPO
 
 Bugs:
@@ -36,10 +37,12 @@ Improvements requiring changes to other modules:
 -Save regular_form upper/lower/irreg/unknown in the MPO struct so we never have to call
  detect_regular_form.
    This requires a mod to ITensors MPO struct
--Incomplete block transfer: truncate (make_transIsing_MPO,upper,"S=1/2"),
+Fixed: -Incomplete block transfer: truncate (make_transIsing_MPO,upper,"S=1/2"),
 
 Improvements:
--Replace RL with X throughout.
+-Replace RL with X in bock_qx.
+-refactor gauge fix in Block QX
+-Clean up getM()
 -assign!() is still wildley inefficient.  We need a way to do
   W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
   at the NDTensors level.
@@ -262,3 +265,27 @@ Id = MPO(OpSum() + ("Id", 1), s)
 Umpo = apply(U, Id; cutoff=1e-15)
 
 That form could make it easier to apply the circuit (or just a gate) to the Hamiltonian MPO to keep it in a form where it can be used with the Parker et al. algorithm.
+
+
+#
+  #  tall tensor
+  #
+  A = randomTensor(Float64,(m, n))
+  # make some cols lineary dependent
+   A[:,1] = A[:,2] * 1.1
+   A[:,3] = A[:,2] * 2.1
+  #  A[1,:] = A[1,:] * 1.1
+  #  A[3,:] = A[3,:] * 2.1
+  Q, R = qr(A; rr_cutoff=1e-12)
+  @test dim(Q, 2) == n - 2 #make 2 columns actually got removed.
+  @test dim(R, 1) == n - 2 #make 2 rows actually got removed.
+  @test A ≈ Q * R atol = 1e-12
+  nm = dim(Q, 2)
+  @test array(Q)' * array(Q) ≈ Diagonal(fill(1.0, nm)) atol = 1e-12
+
+  # Q, L = ql(A; rr_cutoff=1e-12)
+  # @test dim(Q, 2) == nertwertwert - 2 #make 2 columns actually got removed.
+  # @test A ≈ Q * L atol = 1e-12
+  # nm = dim(Q, 2)
+  # @test array(Q)' * array(Q) ≈ Diagonal(fill(1.0, nm)) atol = 1e-12
+
