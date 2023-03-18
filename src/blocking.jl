@@ -104,11 +104,7 @@ function growRL(RL::ITensor,iwl::Index,off::V_offsets)::Tuple{ITensor,Index}
     irl,=filterinds(inds(RL),tags=tags(iwl)) #find the link index of RL
     irqx=noncommonind(inds(RL),irl) #find the qx link of RL
     @mpoc_assert dim(iwl)==dim(irl)+1
-    if hasqns(iwl)
-        ipqx=redim(irqx,dim(irqx)+1,off.o1) 
-    else
-        ipqx=redim(irqx,dim(irqx)+1) 
-    end
+    ipqx=redim(irqx,dim(irqx)+1,off.o1) 
     T=eltype(RL)
     RLplus=ITensor(T(0.0),iwl,ipqx)
     RLplus[ipqx=>1,iwl=>1]=1.0 #add 1.0's in the corners
