@@ -199,7 +199,7 @@ end
     
     Create an index with the same tags ans plev, but different dimension(s) and and id 
 """
-function redim(i::Index,Dw::Int64,offset::Int64=0)::Index
+function redim(i::Index,Dw::Int64,offset::Int64=0,qn::Union{QN,Int}=QN())::Index
     if hasqns(i)
         qns=copy(space(i))
         if Dw>dim(i)
@@ -209,7 +209,7 @@ function redim(i::Index,Dw::Int64,offset::Int64=0)::Index
             #
             @mpoc_assert offset==0 || offset==1 #not ready to handle other cases yet.
             nq=Dw-dim(i)
-            q=QN("Sz",0)=>1
+            q=qn=>1
             if offset==0
                 # dq=qns[end].second #dim of space for last QN
                 # qns[end]=qns[end].first=>dq+delta

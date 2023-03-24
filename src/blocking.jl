@@ -1,5 +1,16 @@
 #using Printf
 
+function getspace(i::QNIndex,off::Int64)
+    @mpoc_assert off==0 || off==1
+    nb=nblocks(i)
+    qnb=off==0 ? space(i)[nb] : space(i)[1]
+    #@show off space(i)
+    #@mpoc_assert blockdim(qnb)==1 TODO: get this working.
+    return qn(qnb) 
+end
+function getspace(i::Index,off::Int64)
+    return 1 
+end
 #
 #  create a Vblock IndexRange using the supplied offset.
 #
@@ -7,13 +18,13 @@ range(i::Index,offset::Int64) = i=>1+offset:dim(i)-1+offset
 #
 # functions for getting and setting V blocks required for block respecting QX and SVD
 #
-function getV(W::ITensor,off::V_offsets)::ITensor
+function getV(W::ITensor,off::V_offsets)::Tuple{ITensor, Union{QN,Int}}
     if order(W)==3
         w1=filterinds(inds(W),tags="Link")[1]
-        return W[range(w1,off.o1)]
+        return W[range(w1,off.o1)],getspace(w1,off.o1)
     elseif order(W)==4
         w1,w2=filterinds(inds(W),tags="Link")
-        return W[range(w1,off.o1),range(w2,off.o2)]
+        return W[range(w1,off.o1),range(w2,off.o2)],getspace(w1,off.o1)
     else 
         @show inds(W)
         @error("getV(W::ITensor,off::V_offsets) Case with order(W)=$(order(W)) not supported.")
@@ -98,13 +109,13 @@ end
 #   0   at bottom, Dw1+1    0   at right, Dw2+1
 #   1   at top, 1           1   at left, 1
 #
-function growRL(RL::ITensor,iwl::Index,off::V_offsets)::Tuple{ITensor,Index}
+function growRL(RL::ITensor,iwl::Index,off::V_offsets,qn::Union{QN,Int})::Tuple{ITensor,Index}
     @mpoc_assert order(RL)==2
     @checkflux(RL)
     irl,=filterinds(inds(RL),tags=tags(iwl)) #find the link index of RL
     irqx=noncommonind(inds(RL),irl) #find the qx link of RL
     @mpoc_assert dim(iwl)==dim(irl)+1
-    ipqx=redim(irqx,dim(irqx)+1,off.o1) 
+    ipqx=redim(irqx,dim(irqx)+1,off.o1,qn) 
     T=eltype(RL)
     RLplus=ITensor(T(0.0),iwl,ipqx)
     RLplus[ipqx=>1,iwl=>1]=1.0 #add 1.0's in the corners

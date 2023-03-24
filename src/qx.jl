@@ -92,7 +92,7 @@ function block_qx(W_::ITensor,forward::Index,ul::reg_form=lower;kwargs...)::Tupl
   ms=matrix_state(ul,lr)
   ilw=copy(forward) #get the link to the next site. 
   offset=V_offsets(ms)
-  V=getV(W,offset) #extract the V block
+  V,qn=getV(W,offset) #extract the V block and the QN for excluded row/column
   ind_on_V=filterinds(inds(V),tags=tags(ilw))[1] #link to next site 
   inds_on_Q=noncommoninds(inds(V),ind_on_V) #group all other indices for QX factorization
   if ul==lower
@@ -121,7 +121,7 @@ function block_qx(W_::ITensor,forward::Index,ul::reg_form=lower;kwargs...)::Tupl
       @warn "Loss of precision in block_qx, norm(V-RL*Q)=$err"
     end
   end
-  Xplus,iqx=growRL(X,ilw,offset) #Now make a full size version of X=R/L
+  Xplus,iqx=growRL(X,ilw,offset,qn) #Now make a full size version of X=R/L
   W=setV(W,Q,iqx,ms) #Q is the new V, stuff Q into W. This can resize W
   @mpoc_assert dir(W,iqx)==dir(iqx) #Check and QN directions are consistent
   @mpoc_assert dir(Xplus,iqx)==dir(dag(iqx)) #Check and QN directions are consistent
