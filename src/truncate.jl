@@ -315,10 +315,21 @@ function ITensors.truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::Ce
         _,igr=inds(Gs[n])
         Gs[n]=replaceind(Gs[n],igr,prime(igr))
         iln=linkind(H,n) #Link between Hn amd Hn+1
+        if need_guage_fix(Gs[n])
+            #@show inds(Gs[n]) inds(H[n],tags="Link")
+            @show Gs[n]
+            @pprint(H[n])
+            Gs[n],H[n]=re_gauge(Gs[n],H[n])
+            #@show inds(Gs[n]) inds(H[n],tags="Link")
+            @show Gs[n]
+            @pprint(H[n])
+        end
         if lr==left
             # println("-----------------Left----------------------")
             igl=iln #right link of Hn is the left link of Gn
             U,Sp,V,spectrum=truncate(Gs[n],dag(igl);kwargs...)
+            #@show U*Sp*V Gs[n]
+            #pprint(H[n])
             transform(H,U,n)
             transform(Hm,dag(V),n)
         else
@@ -344,6 +355,39 @@ function transform(H::InfiniteMPO,uv::ITensor,n::Int64)
 end
 function transform(::Nothing,::ITensor,::Int64) end
 
+function need_guage_fix(G_plus::ITensor)
+    lp,rp=inds(G_plus)
+    Dw=dim(lp)
+    @mpoc_assert Dw==dim(rp)
+    G_bottom=slice(G_plus,lp=>Dw)
+    x=G_bottom[rp=>2:Dw-1]
+    return maximum(abs.(x))>1e-15
+end
+
+function re_gauge(G_plus::ITensor,W::ITensor)
+    lp,rp=inds(G_plus)
+    lw,rw=parse_links(W)
+    Dw=dim(lp)
+    @mpoc_assert Dw==dim(rp)
+    G_bottom=slice(G_plus,lp=>Dw)
+    x=G_bottom[rp=>2:Dw-1]
+    G=G_plus[lp=>2:Dw-1,rp=>2:Dw-1]
+    Gm=matrix(G)
+    xv=vector(x)
+    ImG=LinearAlgebra.I-Gm
+    t=ImG\xv #solve [I-G]*t=x for t.
+    G_prime=grow(G,lp,rp)
+    L=dense(delta(lw',lw))
+    Linv=dense(delta(rw,rw'))
+    for n in 1:Dw-2
+        L[lw'=>Dw,lw=>1+n]=t[n]
+        Linv[rw=>Dw,rw'=>1+n]=-t[n]
+    end
+    #@mpoc_assert norm(L*G_plus*Linv-prime(G_prime))<1e-14
+    W_prime=prime(L*W*Linv,-1,tags="Link")
+    return G_prime,W_prime
+
+end
 
 function truncate(G::ITensor,igl::Index;kwargs...)
     @mpoc_assert order(G)==2

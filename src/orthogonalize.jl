@@ -275,9 +275,41 @@ function qx_iterate!(H::InfiniteMPO,ul::reg_form;kwargs...)
         Dw=Base.max(get_Dw(H)...)
         println("   iMPO After $lr orth sweep, $niter iterations Dw reduced from $previous_Dw to $Dw")
     end
+
+    for n in rng
+        if lr==left
+            igl=commonind(Gs[n],H[n])
+            igr=noncommonind(Gs[n],igl)
+        else
+            igr=commonind(Gs[n],H[n+1])
+            igl=noncommonind(Gs[n],igr)
+        end
+        @show lr need_guage_fix(Gs[n],igl,igr,lr,ul)  
+        pprint(igl,Gs[n],igr)
+        pprint(H[n])
+    end
     return Gs
 end
 
+function extract_xblock(G::ITensor,il::Index,ir::Index,lr::orth_type, ul::reg_form)
+    Dw=dim(il)
+    @mpoc_assert Dw==dim(ir)
+    if lr==left
+        irow=ul==lower ? Dw : 1
+        Xrow=slice(G,il=>irow) #slice out the row that contains x
+        x=Xrow[ir=>2:Dw-1]
+    else
+        icol=ul==lower ? 1 : Dw
+        Xcol=slice(G,ir=>icol) #slice out the row that contains x
+        x=Xcol[il=>2:Dw-1]
+    end
+    return x
+end
+
+function need_guage_fix(G::ITensor,il::Index,ir::Index,lr::orth_type, ul::reg_form)
+    x=extract_xblock(G,il,ir,lr,ul)
+    return maximum(abs.(x))>1e-15
+end
 #
 #  Next level down we select a algorithm
 #

@@ -3979,12 +3979,13 @@ noprefix "false"
 \end_inset
 
  is not universal.
- In general you get the form
+ In general you get the form (using lower reg.
+ form)
 \begin_inset Formula 
 \[
-G^{n}=\begin{bmatrix}1 & \mathsf{x^{n}} & 0\\
+G^{n}=\begin{bmatrix}1 & 0 & 0\\
 0 & \mathsf{G^{n}} & 0\\
-0 & 0 & 1
+0 & \mathsf{x^{n}} & 1
 \end{bmatrix}
 \]
 
@@ -3995,6 +3996,117 @@ and we must find a gauge transform to zero out the pesky
 \end_inset
 
  portion.
+\end_layout
+
+\begin_layout Standard
+For any site in the cell, start with 
+\begin_inset Formula 
+\[
+\hat{W}=\begin{bmatrix}\hat{\mathbb{I}} & 0 & 0\\
+\hat{\boldsymbol{b}}_{L} & \hat{\boldsymbol{A}}_{L} & 0\\
+\hat{d}_{L} & \hat{\boldsymbol{c}}_{L} & \hat{\mathbb{I}}
+\end{bmatrix}
+\]
+
+\end_inset
+
+and evaluate
+\begin_inset Formula 
+\[
+W_{0}=\left\langle \hat{\mathbb{I}},\hat{W}\right\rangle =\begin{bmatrix}1 & 0 & 0\\
+\boldsymbol{b_{0}} & A_{0} & 0\\
+d_{o} & \boldsymbol{c_{0}} & 1
+\end{bmatrix}
+\]
+
+\end_inset
+
+and then find a gauge transform 
+\begin_inset Formula $L$
+\end_inset
+
+ that satisfies
+\begin_inset Formula 
+\[
+\hat{W}^{\prime}=L\hat{W}L^{-1},\quad L=\begin{bmatrix}1 & 0 & 0\\
+\boldsymbol{s} & \hat{\mathbb{I}} & 0\\
+0 & \boldsymbol{t} & 1
+\end{bmatrix}
+\]
+
+\end_inset
+
+such that 
+\begin_inset Formula 
+\[
+W_{0}^{\prime}=\left\langle \hat{\mathbb{I}},\hat{W^{\prime}}\right\rangle =\begin{bmatrix}1 & 0 & 0\\
+\boldsymbol{0} & A_{0} & 0\\
+d_{o}^{\prime} & \boldsymbol{0} & 1
+\end{bmatrix}
+\]
+
+\end_inset
+
+The solution is
+\begin_inset Formula 
+\[
+\boldsymbol{s}=\left(A_{o}-\mathbb{I}\right)^{-1}\boldsymbol{b}_{0}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\boldsymbol{t}=\left(A_{o}-\mathbb{I}\right)^{-1}\boldsymbol{c}_{0}
+\]
+
+\end_inset
+
+This should ensure that 
+\begin_inset Formula $G$
+\end_inset
+
+ has the desired block diagonal form
+\begin_inset Formula 
+\[
+G^{n}=\begin{bmatrix}1 & 0 & 0\\
+0 & \mathsf{G^{n}} & 0\\
+0 & \mathsf{0} & 1
+\end{bmatrix}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+G^{\prime}=\begin{bmatrix}1 & 0 & 0\\
+0 & \mathsf{G^{\prime n}} & 0\\
+0 & \mathsf{0} & 1
+\end{bmatrix}=LG^{n}L^{-1}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+=\begin{bmatrix}1 & 0 & 0\\
+\boldsymbol{s} & \hat{\mathbb{I}} & 0\\
+0 & \boldsymbol{t} & 1
+\end{bmatrix}\begin{bmatrix}1 & 0 & 0\\
+0 & \mathsf{G^{n}} & 0\\
+0 & \mathsf{x^{n}} & 1
+\end{bmatrix}
+\]
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Section
