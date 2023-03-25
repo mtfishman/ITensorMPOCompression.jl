@@ -102,7 +102,7 @@ function make_AutoiMPO(MakeH::Function,isites,NNN::Int64;kwargs...)
   ts=String(tags(isites[1])[1]) #get the site type.
   qns=hasqns(isites[1])
   fsites=siteinds(ts,N;conserve_qns=qns)
-  fmpo=make_transIsing_AutoMPO(fsites,NNN;pbc=true,kwargs...)
+  fmpo=MakeH(fsites,NNN;pbc=true,kwargs...)
   #
   # Check that Dw is constant in the range we intend to use.
   #
