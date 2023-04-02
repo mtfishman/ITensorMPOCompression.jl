@@ -36,7 +36,7 @@ eachval(irs::Tuple{Vararg{IndexRange}}) = CartesianIndices(ranges(irs))
 
 eachindval(irs::Tuple{Vararg{IndexRange}}) = (indices(irs).=> Tuple(ns) for ns in eachval(irs))
 
-
+ 
 #--------------------------------------------------------------------------------------
 #
 #  NDTensor level code which distinguishes between Dense and BlockSparse storage
@@ -166,7 +166,6 @@ function fix_ranges(dest_range::NTuple{N,UnitRange{Int64}},src_range::NTuple{N,U
     #@show rs1
     return Tuple(rs1)
 end
-
 
 function set_subtensor(T::BlockSparseTensor{ElT,N},A::BlockSparseTensor{ElT,N},rs::UnitRange{Int64}...) where {ElT,N}
 #    @mpoc_assert nzblocks(T)==nzblocks(A)
@@ -309,7 +308,7 @@ function getperm_tagplev(s1, s2)
     N = length(s1)
     r = Vector{Int}(undef, N)
     return map!(i -> match_tagplev(s1[i], s2...), r, 1:length(s1))
-  end
+end
 #
 #
 #  Permute is1 to be in the order of is2. 
@@ -322,8 +321,10 @@ function permute_tagplev(is1,is2)
         ),
     ) 
     perm=getperm_tagplev(is1,is2)
+    #@show perm is1 is2
     return is1[invperm(perm)]
 end
+
 #  This operation is non trivial because we need to
 #   1) Establish that the non-requested (not in irs) indices are identical (same ID) between T & A
 #   2) Establish that requested (in irs) indices have the same tags and 
@@ -337,7 +338,9 @@ function set_subtensor_ND(T::ITensor, A::ITensor,irs::IndexRange...)
     ireqA=Tuple(noncommoninds(inds(A),inotT)) #Get the requested indices for a
     inotA=Tuple(noncommoninds(inds(A),ireqA))
     if length(ireqT)!=length(ireqA) || inotA!=inotT
+        @show inotA inotT ireqT ireqA inotA!=inotT length(ireqT) length(ireqA)
         @error("subtensor assign, incompatable indices\ndestination inds=$(inds(T)),\n source inds=$(inds(A)).")
+        @assert(false)
     end
     isortT=ireqT...,inotT... #all indices sorted so user specified ones are first.
     p=getperm(inds(T), ntuple(n -> isortT[n], length(isortT))) # find p such that isort[p]==inds(T)
@@ -356,14 +359,13 @@ function set_subtensor_ND(T::ITensor, v::Number,irs::IndexRange...)
     tensor(T)[rsortT...].=v
 end
 
-
 getindex(T::ITensor, irs::Vararg{IndexRange,N}) where {N} = get_subtensor_ND(T,irs...)
 getindex(T::ITensor, irs::Vararg{irPairU,N}) where {N} = get_subtensor_ND(T,indranges(irs)...)
 setindex!(T::ITensor, A::ITensor,irs::Vararg{IndexRange,N}) where {N} = set_subtensor_ND(T,A,irs...)
 setindex!(T::ITensor, A::ITensor,irs::Vararg{irPairU,N}) where {N} = set_subtensor_ND(T,A,indranges(irs)...)
 setindex!(T::ITensor, v::Number,irs::Vararg{IndexRange,N}) where {N} = set_subtensor_ND(T,v,irs...)
 setindex!(T::ITensor, v::Number,irs::Vararg{irPairU,N}) where {N} = set_subtensor_ND(T,v,indranges(irs)...)
-
+#=
 #--------------------------------------------------------------------------------
 #
 #  Some overloads of similar so we can easily create new ITensors from a template.
@@ -395,5 +397,5 @@ end
 function similar(T::ITensor,is::Index...)
     return similar(tensor(T),is...)
 end
-
+ =#
 

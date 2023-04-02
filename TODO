@@ -10,51 +10,61 @@ Questions:
   -InfiniteMPO using llim=b-1,rlim=b+1 for b=orthcenter(H) fails when N=1, because 
    left/right/unorth all become indistinguishable.
   	
-
+  
 More tests:
-Done: -Test alternating S=1/2 and S=1 sites for MPO.
-Done: -Test alternating S=1/2 and S=1 sites for iMPO.
-Done: -Test Heisenberg model from autoMPO with non-trivial QN space structure on Link indices.
-Done: -Test Fermions/Hubberd.
 -vumps GS example with timing for uncomp./comp.
+  vumps works on InfiniteMPOMatrix or InfiniteSum{MPO}, but compression needs InfinitMPO
+  So they are "disconnected" for now.
 -Try apply gate.
+  Reg form gets destroyed as expected.  Doing UvS -->  lq(U), I can see the reg form in L
+  but the bottom right I op is hiding as a liner combination of S ops.
 -Test with Julia 1.7 and 1.8
 
 Features:
-Done: -MPO truncate Heisenberg AutoMPO
-Done: -MPO truncate ... don't switch to dense for svd(M) ... need to preserve QN structure
-  -This will allow us to get rid of make_qninds and convert_blocksparse
-Done: -Get Heisenberg AutoMPO iMPOs working (Need to handle case where NNN>N)
 -Put some content in Readme.md
 -make truncate, and orthogonalize that work on copies.
-Done: -Upper reg-form from autompo
-Done: -iMPO from AutoMPO
 
 Bugs:
 -Fix:   iMPO After left orth sweep, 3 iterations Dw reduced from 1 to 4
-                                                                ^^^
+-2-body Hamiltonian in trancate fail.
+
 Improvements requiring changes to other modules:
 -Save regular_form upper/lower/irreg/unknown in the MPO struct so we never have to call
  detect_regular_form.
    This requires a mod to ITensors MPO struct
-Fixed: -Incomplete block transfer: truncate (make_transIsing_MPO,upper,"S=1/2"),
 
 Improvements:
--Replace RL with X in bock_qx.
--refactor gauge fix in Block QX
--Clean up getM()
 -assign!() is still wildley inefficient.  We need a way to do
   W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
   at the NDTensors level.
 -Organize exports and imports.
 -Subtensor check flux of inserted blocks.
-
-
+-Subtensor cleanup.
 -better name for pbc? inf open_chain, boundary_conditions
 -Consider default rr_cutoff=1e-14?
 -Refactor out all the link fixing and PBC code for MPO making functions.
 -iMPO truncate fails with a trivial 2x2 hamiltonian.
--
+
+-Add support for swapxz flag in trans-ising Hamiltonian
+  -Change Hx flag to just h.
+-Support Ncell>1 in InfinitSum{MPO}(InfiniteMPO)  constructor.
+-Bug report for ITensorInfiniteMPS crash in Hx SzSz model
+  -Try and fix the bug
+-Look at InfinitSum{ITensor}
+-Understand factor of 2*J*Xn*Xn+1 in Model("ising")
+-Make a Model("ising_NNN") for arbitrary NNN interactions.
+-Make a table of Ncell for sites, and length(mpo) nsites(His) so we can figure what the rules are.
+-Search for TODO items and get them in this list.
+-block_qx Instead restoring full tri form, just use the part of the perm than puts I back in the corner.  
+  i.e.   leave the A block scrambled.
+-System for hamitonians make_Hubbard_AutoiMPO => Hubbard_Auto_iMPO
+-Use an infinite=true flag for iMPOs?
+Done: -parse_links ... accept n=1 for link indices.
+-Clean up "where {Elt,N}" code.
+-Get rid of getV1 and setV1.  i.e. make all order(W)==4 by adding dummy indices.
+-Follow Matts kwargs guidelines
+-Eliminate use of tags for finding indices.  Use the network structure instead.  Pass list if indices
+ in function calls.  Use linkinds, commoninds, uniqueinds.
 
 
 Fix Unknown:
@@ -71,6 +81,21 @@ open("/home/janr/prof1.txt", "w") do s
        
 
 Old:
+Fixed: -Incomplete block transfer: truncate (make_transIsing_MPO,upper,"S=1/2"),
+Done: -Replace RL with X in bock_qx.
+Done: -refactor gauge fix in Block QX
+Done: -Clean up getM()
+
+Done: -MPO truncate Heisenberg AutoMPO
+Done: -MPO truncate ... don't switch to dense for svd(M) ... need to preserve QN structure
+Done: -Get Heisenberg AutoMPO iMPOs working (Need to handle case where NNN>N)
+Done: -Upper reg-form from autompo
+Done: -iMPO from AutoMPO
+Done: -Test alternating S=1/2 and S=1 sites for MPO.
+Done: -Test alternating S=1/2 and S=1 sites for iMPO.
+Done: -Test Heisenberg model from autoMPO with non-trivial QN space structure on Link indices.
+Done: -Test Fermions/Hubberd.
+
 Done: -If user doesn;t set rr_cutoff, set to 1e-15
 Done: -Enforce expected type for all get(kwargs) calls
 Done: - use maxlinkdim for maxlinkdim
@@ -265,27 +290,4 @@ Id = MPO(OpSum() + ("Id", 1), s)
 Umpo = apply(U, Id; cutoff=1e-15)
 
 That form could make it easier to apply the circuit (or just a gate) to the Hamiltonian MPO to keep it in a form where it can be used with the Parker et al. algorithm.
-
-
-#
-  #  tall tensor
-  #
-  A = randomTensor(Float64,(m, n))
-  # make some cols lineary dependent
-   A[:,1] = A[:,2] * 1.1
-   A[:,3] = A[:,2] * 2.1
-  #  A[1,:] = A[1,:] * 1.1
-  #  A[3,:] = A[3,:] * 2.1
-  Q, R = qr(A; rr_cutoff=1e-12)
-  @test dim(Q, 2) == n - 2 #make 2 columns actually got removed.
-  @test dim(R, 1) == n - 2 #make 2 rows actually got removed.
-  @test A ≈ Q * R atol = 1e-12
-  nm = dim(Q, 2)
-  @test array(Q)' * array(Q) ≈ Diagonal(fill(1.0, nm)) atol = 1e-12
-
-  # Q, L = ql(A; rr_cutoff=1e-12)
-  # @test dim(Q, 2) == nertwertwert - 2 #make 2 columns actually got removed.
-  # @test A ≈ Q * L atol = 1e-12
-  # nm = dim(Q, 2)
-  # @test array(Q)' * array(Q) ≈ Diagonal(fill(1.0, nm)) atol = 1e-12
 

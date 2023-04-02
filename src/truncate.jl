@@ -357,10 +357,9 @@ function transform(::Nothing,::ITensor,::Int64) end
 
 function need_guage_fix(G_plus::ITensor)
     lp,rp=inds(G_plus)
-    Dw=dim(lp)
-    @mpoc_assert Dw==dim(rp)
-    G_bottom=slice(G_plus,lp=>Dw)
-    x=G_bottom[rp=>2:Dw-1]
+    Dwl,Dwr=dim(lp),dim(rp)
+    G_bottom=slice(G_plus,lp=>Dwl)
+    x=G_bottom[rp=>2:Dwr-1]
     return maximum(abs.(x))>1e-15
 end
 

@@ -88,7 +88,7 @@ function parse_link(il::Index)::Tuple{Int64,Int64}
     nsite=ncell=undef_int #sentinel values
     for t in tags(il)
         ts=String(t)
-        if ts[1:2]=="l="
+        if ts[1:2]=="l=" || ts[1:2]=="n="
             nsite::Int64=tryparse(Int64,ts[3:end])
         end
         if ts[1:2]=="c="

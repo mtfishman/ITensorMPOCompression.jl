@@ -66,10 +66,16 @@ function pprint(W::ITensor,eps::Float64=default_eps)
     pprint(r,W,c,eps)
 end
 
-function pprint(W::ITensor,r::Index,eps::Float64=default_eps)
-    c=noncommoninds(W,r)
+function pprint(W::ITensor,c::Index,eps::Float64=default_eps)
+    r,=noncommoninds(W,c,tags="Link")
     @mpoc_assert length(c)==1
-    pprint(r,W,c[1],eps)
+    pprint(r,W,c,eps)
+end
+
+function pprint(r::Index,W::ITensor,eps::Float64=default_eps)
+    c,=noncommoninds(W,r,tags="Link")
+    @mpoc_assert length(c)==1
+    pprint(r,W,c,eps)
 end
 
 macro pprint(W)
@@ -85,9 +91,9 @@ function Base.show(io::IO, ss::bond_spectrums)
     for n in 1:N
         s=ss[n]
         if length(s.eigs)>0
-            @printf(io,"%4i %4i  %1.5f   %1.2e   %1.5f  %1.2e\n",n,length(s.eigs),max(s),min(s),entropy(s),sqrt(truncerror(s)))
+            @printf(io,"%4i %4i  %1.5f   %1.2e   %1.5f  %1.2e\n",n,length(s.eigs),max(s),min(s),entropy(s),truncerror(s))
         else
-            @printf(io,"%4i %4i  -------   --------   -------  %1.2e\n",n,length(s.eigs),sqrt(truncerror(s)))
+            @printf(io,"%4i %4i  -------   --------   -------  %1.2e\n",n,length(s.eigs),truncerror(s))
         end
     end
 end

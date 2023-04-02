@@ -95,6 +95,8 @@ function block_qx(W_::ITensor,forward::Index,ul::reg_form=lower;kwargs...)::Tupl
   V,qn=getV(W,offset) #extract the V block and the QN for excluded row/column
   ind_on_V=filterinds(inds(V),tags=tags(ilw))[1] #link to next site 
   inds_on_Q=noncommoninds(inds(V),ind_on_V) #group all other indices for QX factorization
+  @checkflux(W)
+  @checkflux(V)
   if ul==lower
     if lr==left
       Q,X,iq=ql(V,inds_on_Q;positive=true,tags=qtags,kwargs...) #block respecting QL decomposition

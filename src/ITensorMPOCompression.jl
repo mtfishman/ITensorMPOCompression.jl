@@ -25,7 +25,7 @@ export make_transIsing_MPO,make_Heisenberg_AutoMPO,make_transIsing_AutoMPO,to_op
 export make_transIsing_iMPO,make_2body_AutoMPO,make_Hubbard_AutoMPO,make_Heisenberg_MPO
 export fast_GS,make_3body_MPO,make_1body_op,make_2body_op,make_3body_op,add_ops,make_3body_AutoMPO,make_2body_sum,make_2body_MPO
 export make_transIsing_AutoiMPO, make_Heisenberg_AutoiMPO,make_Hubbard_AutoiMPO
-export to_upper!
+export to_upper!,make_AutoiMPO
 # MPO and bond spectrum
 export get_Dw,maxlinkdim,min,max
 export bond_spectrums
