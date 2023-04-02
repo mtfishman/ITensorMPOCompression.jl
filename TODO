@@ -10,10 +10,14 @@ Questions:
   -InfiniteMPO using llim=b-1,rlim=b+1 for b=orthcenter(H) fails when N=1, because 
    left/right/unorth all become indistinguishable.
   	
-
+  
 More tests:
 -vumps GS example with timing for uncomp./comp.
+  vumps works on InfiniteMPOMatrix or InfiniteSum{MPO}, but compression needs InfinitMPO
+  So they are "disconnected" for now.
 -Try apply gate.
+  Reg form gets destroyed as expected.  Doing UvS -->  lq(U), I can see the reg form in L
+  but the bottom right I op is hiding as a liner combination of S ops.
 -Test with Julia 1.7 and 1.8
 
 Features:
@@ -55,6 +59,9 @@ Improvements:
   i.e.   leave the A block scrambled.
 -System for hamitonians make_Hubbard_AutoiMPO => Hubbard_Auto_iMPO
 -Use an infinite=true flag for iMPOs?
+Done: -parse_links ... accept n=1 for link indices.
+-Clean up "where {Elt,N}" code.
+-Get rid of getV1 and setV1.  i.e. make all order(W)==4 by adding dummy indices.
 
 
 Fix Unknown:
@@ -280,5 +287,4 @@ Id = MPO(OpSum() + ("Id", 1), s)
 Umpo = apply(U, Id; cutoff=1e-15)
 
 That form could make it easier to apply the circuit (or just a gate) to the Hamiltonian MPO to keep it in a form where it can be used with the Parker et al. algorithm.
-
 
