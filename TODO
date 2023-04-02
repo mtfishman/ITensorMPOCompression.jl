@@ -62,6 +62,9 @@ Improvements:
 Done: -parse_links ... accept n=1 for link indices.
 -Clean up "where {Elt,N}" code.
 -Get rid of getV1 and setV1.  i.e. make all order(W)==4 by adding dummy indices.
+-Follow Matts kwargs guidelines
+-Eliminate use of tags for finding indices.  Use the network structure instead.  Pass list if indices
+ in function calls.  Use linkinds, commoninds, uniqueinds.
 
 
 Fix Unknown:
