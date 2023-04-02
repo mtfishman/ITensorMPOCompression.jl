@@ -3,6 +3,8 @@ using ITensorMPOCompression
 using ITensorInfiniteMPS
 using Revise
 
+Base.show(io::IO, f::Float64) = @printf(io, "%1.5e", f)
+
 #
 # InfiniteMPO has dangling links at the end of the chain.  We contract these on the outside
 #   with l,r terminating vectors, to make a finite lattice MPO.
@@ -38,14 +40,14 @@ end
 
 N = 6
 model = Model"fqhe_2b_pot"()
-model_params = (Vs= [1.0, 0.0, 1.0, 0.0, 0.1], Ly = 6.0, prec = 1e-12)
+model_params = (Vs= [1.0, 0.0, 1.0, 0.0, 0.1], Ly = 6.0, prec = 1e-8)
 function initstate(n)
 	mod1(n, 3) == 1 && return 2
 	return 1
 end
 p = 1
 q = 3
-conserve_momentum = true
+conserve_momentum = false
 
 function ITensors.space(::SiteType"FermionK", pos::Int; p=1, q=1, conserve_momentum=true)
   if !conserve_momentum
@@ -79,24 +81,48 @@ end
 s = infsiteinds("FermionK", N; translator = fermion_momentum_translator, initstate, conserve_momentum, p, q);
 ψ = InfMPS(s, initstate);
 
+# Ms = map(n -> Hm[1][lx - n + 1, ly - n], 1:(lx - 1))
+# @show inds(Ms[1],tags="Link")
+# @show inds(Ms[2],tags="Link")
 
 
-#H = InfiniteMPOMatrix(model, s; model_params...);
-Hs=InfiniteSum{MPO}(model, s; model_params...);
+# Hm = InfiniteMPOMatrix(model, s; model_params...);
+# lx,ly=size(Hm[1])
+# for ix in 1:lx
+#   for iy in 1:ly
+#     M=Hm[1][ix,iy]
+#     if !isempty(M)
+#       @show ix,iy,flux(M)
+#     end
+#   end
+# end
+# ITensors.checkflux(Hm[1][3,2])
+
+# Hi=InfiniteMPO(Hm)
+# @show length(Hi)
+# fx=map(i->flux(Hi[i]),1:length(Hi))
+# @show fx
+
+
+# Hs=InfiniteSum{MPO}(model, s; model_params...);
 Hi=InfiniteMPO(model, s, fermion_momentum_translator; model_params...);
-@show dims(Hs[1][1]) dims(Hi[1])
-#@show  inds(Hi[1])
-#@pprint Hi[1]
+# ITensors.checkflux(Hi[1])
+# @show dims(Hs[1][1]) dims(Hi[1])
+# #@show  inds(Hi[1])
+# #@pprint Hi[1]
 Hid=InfiniteMPO(6)
 for n in 1:6
   Hid[n]=dense(Hi[n])
 end
-#orthogonalize(Hid;rr_cutoff=1e-12,verbose=true,rr_verbose=true)
+# #orthogonalize(Hid;rr_cutoff=1e-12,verbose=true,rr_verbose=true)
 @show get_Dw(Hid)
-Ss,ss=truncate!(Hid;rr_cutoff=1e-14,cutoff=1e-17,verbose=true,rr_verbose=true)
-@show get_Dw(Hid) ss
-#@pprint Hid[1]
-Es=expect(ψ,Hs)
-Ei=expect(ψ,Hi)
-@show Es Ei
+Ss,ss=truncate!(Hid;rr_cutoff=1e-14,cutoff=1e-15,verbose=true,rr_verbose=true)
+@show get_Dw(Hid) ss 
+#display(diag(array(Ss[1])))
+show(stdout, "text/plain", diag(array(Ss[1])))
+# #@pprint Hid[1]
+# Es=expect(ψ,Hs)
+# Ei=expect(ψ,Hi)
+# #Eid=expect(ψd,Hid)
+# @show Es Ei 
 nothing
