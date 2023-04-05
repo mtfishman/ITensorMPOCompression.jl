@@ -86,7 +86,48 @@ function need_guage_fix(Gs::CelledVector{ITensor},Hs::InfiniteMPO,n::Int64,lr::o
     return maximum(abs.(x))>1e-15
 end
 
-#@testset verbose=true "LGL^-1 gauge transform, lr=$lr, ul=$ul" for lr in [left], ul in [lower]
+
+#
+# The hardest part of this gauge transform is keeping all the indices straight.  Step 1 in addressing this
+# is giving them names that make sense.  Here are the names on the gauge relation diagram (m=n-1):
+#
+#   iGml     iHRl      iHRr          iHLl      iGnl     iGnr
+#            iGmr                              iHLr
+#  -----G[m]-----HR[n]-----   ==    -----HL[n]-----G[n]-----  
+#
+#  We can read off the following identities:  iGml=iHLl, iHRr=iGnr,  iHRl=dag(iGmr), iHLr=dag(iGnl)
+#  We need a find_all_links(G,HL,HR,n) function that returns all of these indices, even the redundant ones.
+#  How to return indices?  A giant tuple is possible, but hard for the user to get everying ordered correctly
+#  A predefined struct may be better, and relieves the user creating suitable names.
+#
+
+struct GaugeIndices
+    Gml::Index
+    Gmr::Index
+    Gnl::Index
+    Gnr::Index
+    HLl::Index
+    HLr::Index
+    HRl::Index
+    HRr::Index
+end
+
+function find_all_links(G::CelledVector,HL::InfiniteMPO,HR::InfiniteMPO,n::Int64)::GaugeIndices
+    m=n-1
+    iGmr=commonind(G[m],HR[n])
+    iHLr=commonind(HL[n],G[n])
+    iHRl=dag(iGmr)
+    iGnl=dag(iHLr)
+    iGml=noncommonind(G[m],iGmr)
+    iGnr=noncommonind(G[n],iGnl)
+    iHLl=iGml
+    iHRr=iGnr
+    @assert noncommonind(HL[n],iHLr;tags="Link")==iHLl
+    @assert noncommonind(HR[n],iHRl;tags="Link")==iHRr
+    return GaugeIndices(iGml,iGmr,iGnl,iGnr,iHLl,iHLr,iHRl,iHRr)
+end
+
+#@testset verbose=true "LGL^-1 gauge transform, qns=$qns, lr=$lr, ul=$ul" for qns in [false], lr in [left], ul in [lower]
 @testset verbose=true "LGL^-1 gauge transform, qns=$qns, lr=$lr, ul=$ul" for qns in [false,true], lr in [left,right], ul in [lower,upper]
     
     initstate(n) = "↑"
@@ -117,10 +158,11 @@ end
     
     @test norm(Gs[0]*HR[1]-HL[1]*Gs[1]) ≈ 0.0 atol = eps
     @test need_guage_fix(Gs,HL,1,lr,ul)
-    il,ir=linkinds(Gs,HL,1)
-    Dwl,Dwr=dim(il),dim(ir)
-    Gm=matrix(il,Gs[1],ir)
-    x=extract_xblock(Gs[1],il,ir,lr,ul)
+    ils=find_all_links(Gs,HL,HR,1)
+
+    Dwl,Dwr=dim(ils.Gnl),dim(ils.Gnr)
+    Gm=matrix(ils.Gnl,Gs[1],ils.Gnr)
+    x=extract_xblock(Gs[1],ils.Gnl,ils.Gnr,lr,ul)
     @test norm(x)>eps
     M=Gm[2:Dwl-1,2:Dwr-1]
     t=(LinearAlgebra.I-M)\vector(x) #solve [I-G]*t=x for t.
@@ -135,17 +177,18 @@ end
     L=insert_xblock(1.0*Matrix(LinearAlgebra.I,Dwr,Dwl),t,lr,ul)
     Linv=insert_xblock(1.0*Matrix(LinearAlgebra.I,Dwr,Dwl),-t,lr,ul)
     Gmp=L*Gm*Linv
-    Gp=CelledVector([ITensor(Gmp,il,ir)])
+    Gp=CelledVector([ITensor(Gmp,ils.Gnl,ils.Gnr)])
 
-    iHLr=commonind(HL[1],Gs[1])
-    iHLl=noncommonind(HL[1],iHLr,tags="Link")
-    LT=ITensor(L,iHLl',dag(iHLl)) #fails here with qns
-    LinvT=ITensor(Linv,dag(iHLr),iHLr')
+    LT=ITensor(L,ils.HLl',dag(ils.HLl)) 
+    LinvT=ITensor(Linv,dag(ils.HLr),ils.HLr')
     HLp1=noprime(LT*HL[1]*LinvT,tags="Link")
     HLp=InfiniteMPO([HLp1])
     
     iHRl=commonind(HR[1],Gs[0])
     iHRr=noncommonind(HR[1],iHRl,tags="Link")
+    @assert ils.HRr==iHRr
+    @assert ils.HRl==iHRl
+
     LT=ITensor(L,iHRl',dag(iHRl))
     LinvT=ITensor(Linv,dag(iHRr),iHRr')
     HRp1=noprime(LT*HR[1]*LinvT,tags="Link")
