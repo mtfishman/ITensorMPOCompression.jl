@@ -80,13 +80,14 @@ function NDTensors.matrix(il::Index,T::ITensor,ir::Index)
         return matrix(T1)
 end
 
-#@testset verbose=true "LGL^-1 gauge transform, lr=$lr, ul=$ul" for lr in [left,right], ul in [lower,upper]
-@testset verbose=true "LGL^-1 gauge transform, lr=$lr, ul=$ul" for lr in [left,right], ul in [lower,upper]
-        initstate(n) = "↑"
+#@testset verbose=true "LGL^-1 gauge transform, lr=$lr, ul=$ul" for lr in [left], ul in [lower]
+@testset verbose=true "LGL^-1 gauge transform, qns=$qns, lr=$lr, ul=$ul" for qns in [false,true], lr in [left,right], ul in [lower,upper]
+    
+    initstate(n) = "↑"
     rr_cutoff=1e-14
     eps=1e-14
-    N,NNN=1,1
-    si = infsiteinds("Electron", N; initstate, conserve_qns=true)
+    N,NNN=1,5
+    si = infsiteinds("Electron", N; initstate, conserve_qns=qns)
     H0=make_Hubbard_AutoiMPO(si,NNN;ul=ul)
     # si = infsiteinds("S=1/2", N; initstate, conserve_qns=false)
     # H0=make_Heisenberg_AutoiMPO(si,NNN;ul=ul)
@@ -109,6 +110,11 @@ end
     @test norm(x)>eps
     M=Gm[2:Dwl-1,2:Dwr-1]
     t=(LinearAlgebra.I-M)\vector(x) #solve [I-G]*t=x for t.
+    # for i in 1:length(t)
+    #     if abs(t[i])<eps
+    #         t[i]=0.0
+    #     end
+    # end
     if lr==right 
         t=-t #swaps L Linv
     end
@@ -119,14 +125,14 @@ end
 
     iHLr=commonind(HL[1],Gs[1])
     iHLl=noncommonind(HL[1],iHLr,tags="Link")
-    LT=ITensor(L,iHLl',iHLl) #fails here with qns
-    LinvT=ITensor(Linv,iHLr,iHLr')
+    LT=ITensor(L,iHLl',dag(iHLl)) #fails here with qns
+    LinvT=ITensor(Linv,dag(iHLr),iHLr')
     HLp=noprime(LT*HL[1]*LinvT,tags="Link")
     
     iHRl=commonind(HR[1],Gs[0])
     iHRr=noncommonind(HR[1],iHRl,tags="Link")
-    LT=ITensor(L,iHRl',iHRl)
-    LinvT=ITensor(Linv,iHRr,iHRr')
+    LT=ITensor(L,iHRl',dag(iHRl))
+    LinvT=ITensor(Linv,dag(iHRr),iHRr')
     HRp=noprime(LT*HR[1]*LinvT,tags="Link")
     @test norm(Gp[0]*HRp-HLp*Gp[1]) ≈ 0.0 atol = eps
 end
