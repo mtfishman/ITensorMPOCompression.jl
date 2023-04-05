@@ -80,13 +80,19 @@ function NDTensors.matrix(il::Index,T::ITensor,ir::Index)
         return matrix(T1)
 end
 
+function need_guage_fix(Gs::CelledVector{ITensor},Hs::InfiniteMPO,n::Int64,lr::orth_type, ul::reg_form)
+    igl,igr=linkinds(Gs,Hs,n)
+    x=extract_xblock(Gs[n],igl,igr,lr,ul)
+    return maximum(abs.(x))>1e-15
+end
+
 #@testset verbose=true "LGL^-1 gauge transform, lr=$lr, ul=$ul" for lr in [left], ul in [lower]
 @testset verbose=true "LGL^-1 gauge transform, qns=$qns, lr=$lr, ul=$ul" for qns in [false,true], lr in [left,right], ul in [lower,upper]
     
     initstate(n) = "↑"
     rr_cutoff=1e-14
     eps=1e-14
-    N,NNN=1,5
+    N,NNN=1,1
     si = infsiteinds("Electron", N; initstate, conserve_qns=qns)
     H0=make_Hubbard_AutoiMPO(si,NNN;ul=ul)
     # si = infsiteinds("S=1/2", N; initstate, conserve_qns=false)
@@ -102,7 +108,15 @@ end
         HL=copy(HR)
         Gs=orthogonalize!(HR,ul;orth=lr,rr_cutoff=rr_cutoff,max_sweeps=1)
     end
+    @test is_regular_form(HL)
+    @test isortho(HL,left)
+    @test check_ortho(HL,left) #expensive does V_dagger*V=Id
+    @test is_regular_form(HR)
+    @test isortho(HR,right)
+    @test check_ortho(HR,right) #expensive does V_dagger*V=Id
+    
     @test norm(Gs[0]*HR[1]-HL[1]*Gs[1]) ≈ 0.0 atol = eps
+    @test need_guage_fix(Gs,HL,1,lr,ul)
     il,ir=linkinds(Gs,HL,1)
     Dwl,Dwr=dim(il),dim(ir)
     Gm=matrix(il,Gs[1],ir)
@@ -127,13 +141,32 @@ end
     iHLl=noncommonind(HL[1],iHLr,tags="Link")
     LT=ITensor(L,iHLl',dag(iHLl)) #fails here with qns
     LinvT=ITensor(Linv,dag(iHLr),iHLr')
-    HLp=noprime(LT*HL[1]*LinvT,tags="Link")
+    HLp1=noprime(LT*HL[1]*LinvT,tags="Link")
+    HLp=InfiniteMPO([HLp1])
     
     iHRl=commonind(HR[1],Gs[0])
     iHRr=noncommonind(HR[1],iHRl,tags="Link")
     LT=ITensor(L,iHRl',dag(iHRl))
     LinvT=ITensor(Linv,dag(iHRr),iHRr')
-    HRp=noprime(LT*HR[1]*LinvT,tags="Link")
-    @test norm(Gp[0]*HRp-HLp*Gp[1]) ≈ 0.0 atol = eps
+    HRp1=noprime(LT*HR[1]*LinvT,tags="Link")
+    HRp=InfiniteMPO([HRp1])
+
+    @test is_regular_form(HLp)
+    @test is_regular_form(HRp)
+    if lr==left
+        @test !isortho(HLp,left)
+        @test !check_ortho(HLp,left) #expensive does V_dagger*V=Id
+        @test isortho(HRp,right)
+        @test check_ortho(HRp,right) #expensive does V_dagger*V=Id
+    else
+        @test isortho(HLp,left)
+        @test check_ortho(HLp,left) #expensive does V_dagger*V=Id
+        @test !isortho(HRp,right)
+        @test !check_ortho(HRp,right) #expensive does V_dagger*V=Id
+    end
+
+    @test norm(Gp[0]*HRp[1]-HLp[1]*Gp[1]) ≈ 0.0 atol = eps
+    @test !need_guage_fix(Gp,HLp,1,lr,ul)
+
 end
 nothing
