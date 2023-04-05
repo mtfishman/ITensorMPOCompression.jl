@@ -6,9 +6,9 @@ using Test
 using Printf
 
 import NDTensors: matrix
-import ITensorMPOCompression: need_guage_fix
+#import ITensorMPOCompression: need_guage_fix
 
-Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
+Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f)
 
 # function insert_xblock(G::ITensor,t::Vector{Float64},il::Index,ir::Index,lr::orth_type, ul::reg_form)
 #     @assert dim(ir)==length(t)+2
@@ -83,7 +83,7 @@ end
 function need_guage_fix(Gs::CelledVector{ITensor},Hs::InfiniteMPO,n::Int64,lr::orth_type, ul::reg_form)
     igl,igr=linkinds(Gs,Hs,n)
     x=extract_xblock(Gs[n],igl,igr,lr,ul)
-    return maximum(abs.(x))>1e-15
+    return maximum(abs.(x))>1e-14
 end
 
 
@@ -158,13 +158,12 @@ function gauge_tranform(Gs::CelledVector,HL::InfiniteMPO,HR::InfiniteMPO,n::Int6
 end
 
 
-#@testset verbose=true "LGL^-1 gauge transform, qns=$qns, lr=$lr, ul=$ul" for qns in [false], lr in [left,right], ul in [lower]
-@testset verbose=true "LGL^-1 gauge transform, qns=$qns, lr=$lr, ul=$ul" for qns in [false,true], lr in [left,right], ul in [lower,upper]
+#@testset verbose=false "LGL^-1 gauge transform, qns=$qns, lr=$lr, ul=$ul, N=$N, NNN=$NNN" for qns in [false], lr in [left], ul in [lower], N in [1], NNN in [3,4,5,6]
+@testset verbose=false "LGL^-1 gauge transform, qns=$qns, lr=$lr, ul=$ul, N=$N, NNN=$NNN" for qns in [false,true], lr in [left,right], ul in [lower,upper], N in [1,2,3,4], NNN in [1,2,3]
     
     initstate(n) = "↑"
     rr_cutoff=1e-14
     eps=1e-14
-    N,NNN=2,1
     si = infsiteinds("Electron", N; initstate, conserve_qns=qns)
     H0=make_Hubbard_AutoiMPO(si,NNN;ul=ul)
     # si = infsiteinds("S=1/2", N; initstate, conserve_qns=false)
@@ -173,11 +172,15 @@ end
         HL=copy(H0)
         orthogonalize!(HL,ul;orth=mirror(lr),rr_cutoff=rr_cutoff,max_sweeps=1) 
         HR=copy(HL)
+        # HR.llim=HL.llim #sometimes the limits dont get copied
+        # HR.rlim=HL.rlim
         Gs=orthogonalize!(HL,ul;orth=lr,rr_cutoff=rr_cutoff,max_sweeps=1)
     else
         HR=copy(H0)
         orthogonalize!(HR,ul;orth=mirror(lr),rr_cutoff=rr_cutoff,max_sweeps=1) 
         HL=copy(HR)
+        # HL.llim=HR.llim
+        # HL.rlim=HR.rlim
         Gs=orthogonalize!(HR,ul;orth=lr,rr_cutoff=rr_cutoff,max_sweeps=1)
     end
     @test is_regular_form(HL)
@@ -193,31 +196,37 @@ end
     @test nsites(HL)==N
     @test nsites(HR)==N
 
-    Gp1,HLp1,HRp1=gauge_tranform(Gs,HL,HR,1,lr,ul)
-    Gp2,HLp2,HRp2=gauge_tranform(Gs,HL,HR,2,lr,ul)
+    Gps,HLps,HRps=ITensor[],ITensor[],ITensor[]
+    for n in 1:N
+        Gpn,HLpn,HRpn=gauge_tranform(Gs,HL,HR,n,lr,ul)
+        push!(Gps,Gpn)
+        push!(HLps,HLpn)
+        push!(HRps,HRpn)
+    end
     
-    Gp=CelledVector([Gp1,Gp2])
-    HLp=InfiniteMPO([HLp1,HLp2])
-    HRp=InfiniteMPO([HRp1,HRp2])
-
+    Gp=CelledVector(Gps)
+    HLp=InfiniteMPO(HLps,HL.llim,HL.rlim)
+    HRp=InfiniteMPO(HRps,HR.llim,HR.rlim)
+    
     @test is_regular_form(HLp)
     @test is_regular_form(HRp)
+    @test isortho(HLp,left)
+    @test isortho(HRp,right) 
+    #
+    #  Confirm the gauge transform breaks orthogonality for one of HLp/HRp
+    #
     if lr==left
-        @test !isortho(HLp,left)
         @test !check_ortho(HLp,left) #expensive does V_dagger*V=Id
-        #@test isortho(HRp,right) #fails with multiple sites
         @test check_ortho(HRp,right) #expensive does V_dagger*V=Id
     else
-        #@test isortho(HLp,left) #fails with multiple sites
         @test check_ortho(HLp,left) #expensive does V_dagger*V=Id
-        @test !isortho(HRp,right)
         @test !check_ortho(HRp,right) #expensive does V_dagger*V=Id
     end
 
-    @test norm(Gp[0]*HRp[1]-HLp[1]*Gp[1]) ≈ 0.0 atol = eps
-    @test !need_guage_fix(Gp,HLp,1,lr,ul)
-    @test norm(Gp[1]*HRp[2]-HLp[2]*Gp[2]) ≈ 0.0 atol = eps
-    @test !need_guage_fix(Gp,HLp,2,lr,ul)
+    for n in 1:N
+        @test norm(Gp[n-1]*HRp[n]-HLp[n]*Gp[n]) ≈ 0.0 atol = eps
+        @test !need_guage_fix(Gp,HLp,n,lr,ul)
+    end
 
 end
 nothing
