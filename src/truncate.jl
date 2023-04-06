@@ -429,6 +429,12 @@ function insert_xblock(L::Matrix{Float64},t::Vector{Float64},ms::matrix_state)
     return L
 end
 
+
+function ITensors.linkinds(Gs::CelledVector{ITensor},Hs::InfiniteMPO,n::Int64)
+    igl=commonind(Gs[n],Hs[n])
+    return igl,noncommonind(Gs[n],igl)
+end
+
 #
 #  Is there some other zeros in the x block?
 #

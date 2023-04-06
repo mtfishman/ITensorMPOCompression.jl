@@ -281,16 +281,7 @@ end
 
 
 
-function ITensors.linkinds(Gs::CelledVector{ITensor},Hs::InfiniteMPO,n::Int64)
-    igl=commonind(Gs[n],Hs[n])
-    return igl,noncommonind(Gs[n],igl)
-end
 
-# function need_guage_fix(Gs::CelledVector{ITensor},Hs::InfiniteMPO,n::Int64,lr::orth_type, ul::reg_form)
-#     igl,igr=linkinds(Gs,Hs,n)
-#     x=extract_xblock(Gs[n],igl,igr,lr,ul)
-#     return maximum(abs.(x))>1e-15
-# end
 #
 #  Next level down we select a algorithm
 #
