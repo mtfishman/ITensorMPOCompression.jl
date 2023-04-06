@@ -280,6 +280,7 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
     #
     h_mirror::Bool=get(kwargs, :h_mirror, false) #Calculate and return mirror of H
     lr::orth_type=get(kwargs, :orth, left) #this specifies the final output orth direction.
+    verbose::Bool=get(kwargs, :verbose, false)
     (bl,bu)=detect_regular_form(H)
     if !(bl || bu)
         throw(ErrorException("truncate!(H::MPO), H must be in either lower or upper regular form"))
@@ -292,9 +293,9 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
     can1,can2=isortho(H,lr),isortho(H,mirror(lr))
     if !(can1||can2)
         rr_cutoff=get(kwargs, :cutoff, 1e-15)
-        orthogonalize!(H,ul;orth=mirror(lr),rr_cutoff=rr_cutoff,max_sweeps=1) 
+        orthogonalize!(H,ul;orth=mirror(lr),rr_cutoff=rr_cutoff,max_sweeps=1,verbose=verbose) 
         Hm=h_mirror ? copy(H) : nothing
-        Gs=orthogonalize!(H,ul;orth=lr,rr_cutoff=rr_cutoff,max_sweeps=1) #TODO why fail if spec ul here??
+        Gs=orthogonalize!(H,ul;orth=lr,rr_cutoff=rr_cutoff,max_sweeps=1,verbose=verbose) #TODO why fail if spec ul here??
     else
         # user supplied canonical H but not the Gs so we cannot proceed unless we do one more
         # wasteful sweep
@@ -306,6 +307,7 @@ end
 ITensors.truncate!(H::InfiniteMPO,Gs::CelledVector{ITensor},lr::orth_type,ul::reg_form;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any} = ITensors.truncate!(H,nothing,Gs,lr,ul;kwargs...)
 
 function ITensors.truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::CelledVector{ITensor},lr::orth_type,ul::reg_form;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
+    verbose::Bool=get(kwargs, :verbose, false)
     N=length(H)
     ms=matrix_state(ul,lr)
     ss=bond_spectrums(undef,N)
@@ -314,12 +316,12 @@ function ITensors.truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::Ce
         if lr==left
             if need_guage_fix(Gs,H,n,ms)
                 gauge_tranform!(Gs,H,Hm,ms)
-                # println("Gauge fixing left")
+                verbose && println("Gauge fixing left")
             end
         else
             if need_guage_fix(Gs,Hm,n,ms)
                 gauge_tranform!(Gs,Hm,H,ms)
-                # println("Gauge fixing right")
+                verbose && println("Gauge fixing right")
             end
         end
         #prime the right index of G so that indices can be distinguished.
