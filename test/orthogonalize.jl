@@ -63,72 +63,72 @@ verbose1=false #verbose inside orth algos
 
 end
 
-# test_combos=[
-#     (make_transIsing_MPO,"S=1/2"),
-#     (make_transIsing_AutoMPO,"S=1/2"),
-#     (make_Heisenberg_AutoMPO,"S=1/2"),
-#     (make_Heisenberg_AutoMPO,"S=1"),
-#     (make_Hubbard_AutoMPO,"Electron")
-# ]
+test_combos=[
+    (make_transIsing_MPO,"S=1/2"),
+    (make_transIsing_AutoMPO,"S=1/2"),
+    (make_Heisenberg_AutoMPO,"S=1/2"),
+    (make_Heisenberg_AutoMPO,"S=1"),
+    (make_Hubbard_AutoMPO,"Electron")
+]
 
-# @testset "Bring $(test_combo[1]), $ul reg. form MPO into $lr canonical form, qns=$qns" for test_combo in test_combos, lr in [left,right], ul in [lower,upper], qns=[false,true]
-#     N=10
-#     NNN=7
-#     eps=2e-14
-#     model_kwargs = (ul=ul, cutoff=-1.0) #cutoff=-1.0 causes AutoMPO to do less compression.
-#     ms=matrix_state(ul,lr )
-#     makeH=test_combo[1]
-#     sites = siteinds(test_combo[2], N;conserve_qns=qns)
-#     state=[isodd(n) ? "Up" : "Dn" for n=1:N]
-#     psi=randomMPS(sites,state)
-#     H=makeH(sites,NNN;model_kwargs...) 
-#     @test is_regular_form(H   ,ms.ul,eps)
-#     @test !isortho(H)
-#     @test !isortho(H,left)    
-#     @test !isortho(H,right)    
-#     E0=inner(psi',H,psi)
-#     orthogonalize!(H;verbose=verbose1,orth=ms.lr)
-#     E1=inner(psi',H,psi)
-#     @test E0 ≈ E1 atol = eps
-#     @test is_regular_form(H,ms.ul,eps)
-#     @test  isortho(H,ms.lr)
-#     @test !isortho(H,mirror(ms.lr))
-#     @test check_ortho(H,ms.lr) #expensive does V_dagger*V=Id
-# end 
+@testset "Bring $(test_combo[1]), $ul reg. form MPO into $lr canonical form, qns=$qns" for test_combo in test_combos, lr in [left,right], ul in [lower,upper], qns=[false,true]
+    N=10
+    NNN=7
+    eps=2e-14
+    model_kwargs = (ul=ul, cutoff=-1.0) #cutoff=-1.0 causes AutoMPO to do less compression.
+    ms=matrix_state(ul,lr )
+    makeH=test_combo[1]
+    sites = siteinds(test_combo[2], N;conserve_qns=qns)
+    state=[isodd(n) ? "Up" : "Dn" for n=1:N]
+    psi=randomMPS(sites,state)
+    H=makeH(sites,NNN;model_kwargs...) 
+    @test is_regular_form(H   ,ms.ul,eps)
+    @test !isortho(H)
+    @test !isortho(H,left)    
+    @test !isortho(H,right)    
+    E0=inner(psi',H,psi)
+    orthogonalize!(H;verbose=verbose1,orth=ms.lr)
+    E1=inner(psi',H,psi)
+    @test E0 ≈ E1 atol = eps
+    @test is_regular_form(H,ms.ul,eps)
+    @test  isortho(H,ms.lr)
+    @test !isortho(H,mirror(ms.lr))
+    @test check_ortho(H,ms.lr) #expensive does V_dagger*V=Id
+end 
 
-# @testset "Compare $ul tri rank reduction with AutoMPO, QNs=$qns" for ul in [lower,upper],qns in [false,true]
-#     N=14
-#     sites = siteinds("SpinHalf", N;conserve_qns=qns)
-#     # The default for rr_cutoff is 1e-15 which is too low to get reduction down
-#     # AutoMPO elvels, so we need to use rr_cutoff = 2e-14
-#     for NNN in 3:div(N,2)
-#         Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul) 
-#         Dw_auto=get_Dw(Hauto)
-#         Hr=make_transIsing_MPO(sites,NNN;ul=ul) 
-#         orthogonalize!(Hr;verbose=verbose1,rr_cutoff=2e-14) #sweep left to right
-#         @test get_Dw(Hr)==Dw_auto
-#         Hl=make_transIsing_MPO(sites,NNN;ul=ul) 
-#         orthogonalize!(Hl;verbose=verbose1,rr_cutoff=2e-14) #sweep right to left
-#         @test get_Dw(Hl)==Dw_auto
-#     end  
-# end 
+@testset "Compare $ul tri rank reduction with AutoMPO, QNs=$qns" for ul in [lower,upper],qns in [false,true]
+    N=14
+    sites = siteinds("SpinHalf", N;conserve_qns=qns)
+    # The default for rr_cutoff is 1e-15 which is too low to get reduction down
+    # AutoMPO elvels, so we need to use rr_cutoff = 2e-14
+    for NNN in 3:div(N,2)
+        Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul) 
+        Dw_auto=get_Dw(Hauto)
+        Hr=make_transIsing_MPO(sites,NNN;ul=ul) 
+        orthogonalize!(Hr;verbose=verbose1,rr_cutoff=2e-14) #sweep left to right
+        @test get_Dw(Hr)==Dw_auto
+        Hl=make_transIsing_MPO(sites,NNN;ul=ul) 
+        orthogonalize!(Hl;verbose=verbose1,rr_cutoff=2e-14) #sweep right to left
+        @test get_Dw(Hl)==Dw_auto
+    end  
+end 
 
 test_combos=[
-    # (make_transIsing_iMPO,"S=1/2"),
-    # (make_transIsing_AutoiMPO,"S=1/2"),
-    # (make_Heisenberg_AutoiMPO,"S=1/2"),
-    # (make_Heisenberg_AutoiMPO,"S=1"),
+    (make_transIsing_iMPO,"S=1/2"),
+    (make_transIsing_AutoiMPO,"S=1/2"),
+    (make_Heisenberg_AutoiMPO,"S=1/2"),
+    (make_Heisenberg_AutoiMPO,"S=1"),
     (make_Hubbard_AutoiMPO,"Electron")
 ]
 
-@testset "Orthogonalize iMPO Check gauge relations, H=$(test_combo[1]), ul=$ul, qbs=$qns" for test_combo in test_combos, ul in [lower], qns in [false]
+@testset "Orthogonalize iMPO Check gauge relations, H=$(test_combo[1]), ul=$ul, qbs=$qns" for test_combo in test_combos, ul in [lower,upper], qns in [false,true]
     initstate(n) = "↑"
     makeH=test_combo[1]
     if verbose1
         @printf "               Dw     Dw    Dw    Dw\n"
         @printf " Ncell  NNN  uncomp. left  right  LR\n"
     end
-    for N in [1], NNN in [1] #3 site unit cell fails for qns=true.
+    for N in [1,2,4], NNN in [1,2,4] #3 site unit cell fails for qns=true.
         si = infsiteinds(test_combo[2], N; initstate, conserve_qns=qns)
 
         H0=makeH(si,NNN;ul=ul)

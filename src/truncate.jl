@@ -300,36 +300,40 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
         # wasteful sweep
         @mpoc_assert false #for now.
     end
-    return truncate!(H,Hm,Gs,lr;kwargs...)
+    return truncate!(H,Hm,Gs,lr,ul;kwargs...)
 end
 
-ITensors.truncate!(H::InfiniteMPO,Gs::CelledVector{ITensor},lr::orth_type;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any} = ITensors.truncate!(H,nothing,Gs,lr;kwargs...)
+ITensors.truncate!(H::InfiniteMPO,Gs::CelledVector{ITensor},lr::orth_type,ul::reg_form;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any} = ITensors.truncate!(H,nothing,Gs,lr,ul;kwargs...)
 
-function ITensors.truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::CelledVector{ITensor},lr::orth_type;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
+function ITensors.truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::CelledVector{ITensor},lr::orth_type,ul::reg_form;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
     N=length(H)
+    ms=matrix_state(ul,lr)
     ss=bond_spectrums(undef,N)
     Ss=CelledVector{ITensor}(undef,N)
     for n in 1:N 
+        if lr==left
+            if need_guage_fix(Gs,H,n,ms)
+                gauge_tranform!(Gs,H,Hm,ms)
+                # println("Gauge fixing left")
+            end
+        else
+            if need_guage_fix(Gs,Hm,n,ms)
+                gauge_tranform!(Gs,Hm,H,ms)
+                # println("Gauge fixing right")
+            end
+        end
         #prime the right index of G so that indices can be distinguished.
         #Ideally orthogonalize!() would spit out Gs that are already like this.
-        _,igr=inds(Gs[n])
+        igl=commonind(Gs[n],H[n])
+        igr=noncommonind(Gs[n],igl)
         Gs[n]=replaceind(Gs[n],igr,prime(igr))
         iln=linkind(H,n) #Link between Hn amd Hn+1
-        if need_guage_fix(Gs[n])
-            #@show inds(Gs[n]) inds(H[n],tags="Link")
-            @show Gs[n]
-            @pprint(H[n])
-            Gs[n],H[n]=re_gauge(Gs[n],H[n])
-            #@show inds(Gs[n]) inds(H[n],tags="Link")
-            @show Gs[n]
-            @pprint(H[n])
-        end
+        
         if lr==left
+            @assert igl==iln
             # println("-----------------Left----------------------")
             igl=iln #right link of Hn is the left link of Gn
             U,Sp,V,spectrum=truncate(Gs[n],dag(igl);kwargs...)
-            #@show U*Sp*V Gs[n]
-            #pprint(H[n])
             transform(H,U,n)
             transform(Hm,dag(V),n)
         else
@@ -355,38 +359,6 @@ function transform(H::InfiniteMPO,uv::ITensor,n::Int64)
 end
 function transform(::Nothing,::ITensor,::Int64) end
 
-function need_guage_fix(G_plus::ITensor)
-    lp,rp=inds(G_plus)
-    Dwl,Dwr=dim(lp),dim(rp)
-    G_bottom=slice(G_plus,lp=>Dwl)
-    x=G_bottom[rp=>2:Dwr-1]
-    return maximum(abs.(x))>1e-15
-end
-
-function re_gauge(G_plus::ITensor,W::ITensor)
-    lp,rp=inds(G_plus)
-    lw,rw=parse_links(W)
-    Dw=dim(lp)
-    @mpoc_assert Dw==dim(rp)
-    G_bottom=slice(G_plus,lp=>Dw)
-    x=G_bottom[rp=>2:Dw-1]
-    G=G_plus[lp=>2:Dw-1,rp=>2:Dw-1]
-    Gm=matrix(G)
-    xv=vector(x)
-    ImG=LinearAlgebra.I-Gm
-    t=ImG\xv #solve [I-G]*t=x for t.
-    G_prime=grow(G,lp,rp)
-    L=dense(delta(lw',lw))
-    Linv=dense(delta(rw,rw'))
-    for n in 1:Dw-2
-        L[lw'=>Dw,lw=>1+n]=t[n]
-        Linv[rw=>Dw,rw'=>1+n]=-t[n]
-    end
-    #@mpoc_assert norm(L*G_plus*Linv-prime(G_prime))<1e-14
-    W_prime=prime(L*W*Linv,-1,tags="Link")
-    return G_prime,W_prime
-
-end
 
 function truncate(G::ITensor,igl::Index;kwargs...)
     @mpoc_assert order(G)==2
@@ -414,5 +386,157 @@ function truncate(G::ITensor,igl::Index;kwargs...)
     #@mpoc_assert norm(dense(noprime(G))-dense(Up)*Sp*dense(Vp))<1e-12    #expensive!!!
     return Up,Sp,Vp,spectrum
 end
+
+#
+#  The x block moves around depending on lr && ul.   For left/lower it is here:
+#
+#      1 0 0
+#  G = 0 M 0
+#      0 x 1
+#
+#  See technical notes for the other cases.
+#
+function extract_xblock(G::ITensor,il::Index,ir::Index,ms::matrix_state)
+    if ms.lr==left 
+        irow=ms.ul==lower ? dim(il) : 1
+        Xrow=slice(G,il=>irow) #slice out the row that contains x
+        x=Xrow[ir=>2:dim(ir)-1]
+    else
+        icol=ms.ul==lower ? 1 : dim(ir)
+        Xcol=slice(G,ir=>icol) #slice out the row that contains x
+        x=Xcol[il=>2:dim(il)-1]
+    end
+    return x
+end
+
+function insert_xblock(L::Matrix{Float64},t::Vector{Float64},ms::matrix_state)
+    nr,nc=size(L)
+    if ms.lr==left
+        @assert nc==length(t)+2
+        r = ms.ul==lower ? nr : 1
+        for i in 2:nc-1
+            L[r,i]=t[i-1]
+        end
+    else
+        @assert nr==length(t)+2
+        c=ms.ul==lower ? 1 : nc
+        for i in 2:nr-1
+            L[i,c]=t[i-1]
+        end
+    end
+    return L
+end
+
+#
+#  Is there some other zeros in the x block?
+#
+function need_guage_fix(Gs::CelledVector{ITensor},Hs::InfiniteMPO,n::Int64,ms::matrix_state)
+    igl,igr=linkinds(Gs,Hs,n)
+    x=extract_xblock(Gs[n],igl,igr,ms)
+    return maximum(abs.(x))>1e-14
+end
+
+#
+#  Make sure indices are ordered and then convert to a matrix
+#
+function NDTensors.matrix(il::Index,T::ITensor,ir::Index)
+        T1=ITensors.permute(T,il,ir; allow_alias=true)
+        return matrix(T1)
+end
+
+
+
+#--------------------------------------------------------------------------------------------------
+#
+# The hardest part of this gauge transform is keeping all the indices straight.  Step 1 in addressing this
+# is giving them names that make sense.  Here are the names on the gauge relation diagram (m=n-1):
+#
+#   iGml     iHRl      iHRr          iHLl      iGnl     iGnr
+#            iGmr                              iHLr
+#  -----G[m]-----HR[n]-----   ==    -----HL[n]-----G[n]-----  
+#
+#  We can read off the following identities:  iGml=iHLl, iHRr=iGnr,  iHRl=dag(iGmr), iHLr=dag(iGnl)
+#  We need a find_all_links(G,HL,HR,n) function that returns all of these indices, even the redundant ones.
+#  How to return indices?  A giant tuple is possible, but hard for the user to get everying ordered correctly
+#  A predefined struct may be better, and relieves the user creating suitable names.
+#
+struct GaugeIndices
+    Gml::Index
+    Gmr::Index
+    Gnl::Index
+    Gnr::Index
+    HLl::Index
+    HLr::Index
+    HRl::Index
+    HRr::Index
+end
+
+function find_all_links(G::CelledVector,HL::InfiniteMPO,HR::InfiniteMPO,n::Int64)::GaugeIndices
+    m=n-1
+    iGmr=commonind(G[m],HR[n])
+    iHLr=commonind(HL[n],G[n])
+    iHRl=dag(iGmr)
+    iGnl=dag(iHLr)
+    iGml=noncommonind(G[m],iGmr)
+    iGnr=noncommonind(G[n],iGnl)
+    iHLl=iGml
+    iHRr=iGnr
+    @assert noncommonind(HL[n],iHLr;tags="Link")==iHLl
+    @assert noncommonind(HR[n],iHRl;tags="Link")==iHRr
+    return GaugeIndices(iGml,iGmr,iGnl,iGnr,iHLl,iHLr,iHRl,iHRr)
+end
+
+#
+#  Gauge transform G to zero out the x block.  Return the gauge transforms L,L^-1
+#  so they can be used to transform the MPO tensors.  These are returned as Matrix
+#  objects because they need different indices for transforming the left and right MPOs.
+#
+function gauge_tranform_G(G::ITensor,il::Index,ir::Index,ms::matrix_state)
+    x=extract_xblock(G,il,ir,ms) #return and ITensor
+    Dwl,Dwr=dim(il),dim(ir)
+    #
+    #  Drop to Matrix level.
+    #
+    Gm=matrix(il,G,ir)
+    @assert norm(x)>1e-14
+    M=Gm[2:Dwl-1,2:Dwr-1]
+    t=(LinearAlgebra.I-M)\vector(x) #solve [I-M]*t=x for t.
+    if ms.lr==right 
+        t=-t #swaps L Linv
+    end
+    L=insert_xblock(1.0*Matrix(LinearAlgebra.I,Dwr,Dwl),t,ms)
+    Linv=insert_xblock(1.0*Matrix(LinearAlgebra.I,Dwr,Dwl),-t,ms)
+    Gmp=L*Gm*Linv
+    return ITensor(Gmp,il,ir),L,Linv    
+end
+#
+#  DO the full L*G*L^-1 gauge transform on the gauge tensors and left/right MPO tensors. 
+#
+function gauge_tranform!(Gs::CelledVector,HL::InfiniteMPO,HR::InfiniteMPO,ms::matrix_state)
+    Gps,HLps,HRps=ITensor[],ITensor[],ITensor[]
+    for n in 1:length(Gs)
+        ils=find_all_links(Gs,HL,HR,n)
+        Gp,L,Linv=gauge_tranform_G(Gs[n],ils.Gnl,ils.Gnr,ms)
+
+        LT=ITensor(L,ils.HLl',dag(ils.HLl)) 
+        LinvT=ITensor(Linv,dag(ils.HLr),ils.HLr')
+        HLp=noprime(LT*HL[n]*LinvT,tags="Link")
+
+        LT=ITensor(L,ils.HRl',dag(ils.HRl))
+        LinvT=ITensor(Linv,dag(ils.HRr),ils.HRr')
+        HRp=noprime(LT*HR[n]*LinvT,tags="Link")
+        push!(Gps,Gp)
+        push!(HLps,HLp)
+        push!(HRps,HRp)
+    end
+    for n in 1:length(Gs)
+        Gs[n]=Gps[n]
+        HL[n]=HLps[n]
+        HR[n]=HRps[n]
+    end
+#    return CelledVector(Gps),InfiniteMPO(HLps,HL.llim,HL.rlim),InfiniteMPO(HRps,HR.llim,HR.rlim)
+end
+
+
 
 
