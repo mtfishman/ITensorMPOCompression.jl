@@ -25,8 +25,10 @@ Features:
 -make truncate, and orthogonalize that work on copies.
 
 Bugs:
--Fix:   iMPO After left orth sweep, 3 iterations Dw reduced from 1 to 4
+Done: -Fix:   iMPO After left orth sweep, 3 iterations Dw reduced from 1 to 4
 -2-body Hamiltonian in trancate fail.
+-Truncate iMPO make_transIsing_iMPO NNN=4 has a gauge problem.
+  Maybe just need 2 more orth sweeps (Auto iMPO is fine)
 
 Improvements requiring changes to other modules:
 -Save regular_form upper/lower/irreg/unknown in the MPO struct so we never have to call
@@ -65,6 +67,9 @@ Done: -parse_links ... accept n=1 for link indices.
 -Follow Matts kwargs guidelines
 -Eliminate use of tags for finding indices.  Use the network structure instead.  Pass list if indices
  in function calls.  Use linkinds, commoninds, uniqueinds.
+ -For iMPOs set llim,rlim=-1,1 so that they are interpreted as non-ortho when N=1.
+ -iMPO truncate user HL,HR instead of H,Hm ?
+ -Take out the mirror feature.
 
 
 Fix Unknown:

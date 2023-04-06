@@ -212,9 +212,9 @@ Returns `true` if the MPO is in `lr` orthogonal (canonical) form.  This is a fas
 """
 function isortho(H::AbstractMPS,lr::orth_type)::Bool 
     io=false
-    if length(H)==1
-        io=check_ortho(H,lr) #Expensive!!
-    else
+    # if length(H)==1
+    #     io=check_ortho(H,lr) #Expensive!!
+    # else
         if isortho(H)
             if lr==left
                 io= orthocenter(H)==length(H)
@@ -222,7 +222,7 @@ function isortho(H::AbstractMPS,lr::orth_type)::Bool
                 io=orthocenter(H) == 1
             end
         end
-    end
+    #end
     return  io
 end
 

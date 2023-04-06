@@ -236,11 +236,11 @@ function qx_iterate!(H::InfiniteMPO,ul::reg_form;kwargs...)
     eps=1e-13
     niter=0
     max_iter=40
-    previous_Dw=maxlinkdim(H)
-    # if verbose
-    #     previous_Dw=Base.max(get_Dw(H)...)
-    #     @printf "niter eta\n" 
-    # end
+    
+    if verbose
+        previous_Dw=Base.max(get_Dw(H)...)
+        @printf "niter eta\n" 
+    end
     loop=true
     rng=sweep(H,lr)
     while loop
@@ -263,10 +263,10 @@ function qx_iterate!(H::InfiniteMPO,ul::reg_form;kwargs...)
             H[n]=noprime(H[n],tags="Link")
         end
         niter+=1
+        if verbose
+            @printf "%4i %4i %1.1e\n" niter Base.max(get_Dw(H)...) eta
+        end
         loop=eta>1e-13 && niter<max_iter
-        # if eta<1.0 && verbose
-        #     @printf "%4i %1.1e\n" niter eta
-        # end
     end
     H.rlim = rng.stop+1
     H.llim = rng.stop-1
@@ -275,8 +275,12 @@ function qx_iterate!(H::InfiniteMPO,ul::reg_form;kwargs...)
         Dw=Base.max(get_Dw(H)...)
         println("   iMPO After $lr orth sweep, $niter iterations Dw reduced from $previous_Dw to $Dw")
     end
+    
     return Gs
 end
+
+
+
 
 #
 #  Next level down we select a algorithm

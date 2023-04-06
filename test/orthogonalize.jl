@@ -128,7 +128,7 @@ test_combos=[
         @printf "               Dw     Dw    Dw    Dw\n"
         @printf " Ncell  NNN  uncomp. left  right  LR\n"
     end
-    for N in [1,2,4], NNN in [2,4] #3 site unit cell fails for qns=true.
+    for N in [1,2,4], NNN in [1,2,4] #3 site unit cell fails for qns=true.
         si = infsiteinds(test_combo[2], N; initstate, conserve_qns=qns)
 
         H0=makeH(si,NNN;ul=ul)

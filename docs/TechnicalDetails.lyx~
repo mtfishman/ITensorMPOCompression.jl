@@ -3979,12 +3979,13 @@ noprefix "false"
 \end_inset
 
  is not universal.
- In general you get the form
+ In general you get the form (using lower reg.
+ form)
 \begin_inset Formula 
 \[
-G^{n}=\begin{bmatrix}1 & \mathsf{x^{n}} & 0\\
+G^{n}=\begin{bmatrix}1 & 0 & 0\\
 0 & \mathsf{G^{n}} & 0\\
-0 & 0 & 1
+0 & \mathsf{x^{n}} & 1
 \end{bmatrix}
 \]
 
@@ -3995,6 +3996,89 @@ and we must find a gauge transform to zero out the pesky
 \end_inset
 
  portion.
+\end_layout
+
+\begin_layout Standard
+For any site in the cell, start with 
+\begin_inset Formula 
+\[
+\hat{W}=\begin{bmatrix}\hat{\mathbb{I}} & 0 & 0\\
+\hat{\boldsymbol{b}}_{L} & \hat{\boldsymbol{A}}_{L} & 0\\
+\hat{d}_{L} & \hat{\boldsymbol{c}}_{L} & \hat{\mathbb{I}}
+\end{bmatrix}
+\]
+
+\end_inset
+
+and evaluate
+\begin_inset Formula 
+\[
+W_{0}=\left\langle \hat{\mathbb{I}},\hat{W}\right\rangle =\begin{bmatrix}1 & 0 & 0\\
+\boldsymbol{b_{0}} & A_{0} & 0\\
+d_{o} & \boldsymbol{c_{0}} & 1
+\end{bmatrix}
+\]
+
+\end_inset
+
+and then find a gauge transform 
+\begin_inset Formula $L$
+\end_inset
+
+ that satisfies
+\begin_inset Formula 
+\[
+\hat{W}^{\prime}=L\hat{W}L^{-1},\quad L=\begin{bmatrix}1 & 0 & 0\\
+\boldsymbol{s} & \hat{\mathbb{I}} & 0\\
+0 & \boldsymbol{t} & 1
+\end{bmatrix}
+\]
+
+\end_inset
+
+such that 
+\begin_inset Formula 
+\[
+W_{0}^{\prime}=\left\langle \hat{\mathbb{I}},\hat{W^{\prime}}\right\rangle =\begin{bmatrix}1 & 0 & 0\\
+\boldsymbol{0} & A_{0} & 0\\
+d_{o}^{\prime} & \boldsymbol{0} & 1
+\end{bmatrix}
+\]
+
+\end_inset
+
+The solution is
+\begin_inset Formula 
+\[
+\boldsymbol{s}=\left(A_{o}-\mathbb{I}\right)^{-1}\boldsymbol{b}_{0}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\boldsymbol{t}=\left(A_{o}-\mathbb{I}\right)^{-1}\boldsymbol{c}_{0}
+\]
+
+\end_inset
+
+This should ensure that 
+\begin_inset Formula $G$
+\end_inset
+
+ has the desired block diagonal form
+\begin_inset Formula 
+\[
+G^{n}=\begin{bmatrix}1 & 0 & 0\\
+0 & \mathsf{G^{n}} & 0\\
+0 & \mathsf{0} & 1
+\end{bmatrix}
+\]
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Section
@@ -4207,7 +4291,7 @@ noprefix "false"
 \end_layout
 
 \begin_layout Enumerate
-How does trunction affect the sizw (
+How does truncation affect the size (
 \begin_inset Formula $D_{w})$
 \end_inset
 
@@ -4229,7 +4313,7 @@ status open
 a right sweep on the lattice results in a left orthogonalized MPO, so we
  try specify sweeps as left ortho.
  or right ortho.
- to avoid abiguity
+ to avoid ambiguity
 \end_layout
 
 \end_inset
@@ -5399,7 +5483,7 @@ R2
 
 \begin_layout Plain Layout
 Effects of initial sweep direction on Rank reduction, for lower regular
- form 2-body hamiltonians.
+ form 2-body Hamiltonian's.
  L2 refers to the second (right ortho.) sweep after an initial left ortho.
  sweep.
  
@@ -5679,7 +5763,7 @@ autoMPO
 \begin_inset Text
 
 \begin_layout Plain Layout
-Presum eq.
+Pre-sum eq.
  
 \begin_inset CommandInset ref
 LatexCommand ref
@@ -7931,7 +8015,7 @@ noprefix "false"
 \end_layout
 
 \begin_layout Itemize
-autoMPO consitently generates what appears to be fully optimial MPO sizes
+autoMPO consistently generates what appears to be fully optimal MPO sizes
  for this type of Hamiltonian.
 \end_layout
 
@@ -8004,7 +8088,7 @@ A Brief investigation for
 \end_layout
 
 \begin_layout Standard
-The one site operator struct for the 3 body interaction like 
+The one site operator structure for the 3 body interaction like 
 \begin_inset Formula $K\hat{Z}_{0}\hat{Z}_{n}\hat{Z}_{m}$
 \end_inset
 
@@ -8042,7 +8126,7 @@ noprefix "false"
 \end_inset
 
  inserted into the sub diagonal string of unit operators.
- So the question now becomes: Is there a presummed operator analogus to
+ So the question now becomes: Is there a pre-summed operator analogous to
  eq.
  
 \begin_inset CommandInset ref
@@ -8094,7 +8178,7 @@ noprefix "false"
 
 \end_inset
 
- results in rather large but highly compressable operators.
+ results in rather large but highly compressible operators.
  In the Parker paper
 \begin_inset CommandInset citation
 LatexCommand cite
@@ -8108,7 +8192,7 @@ literal "false"
 \end_inset
 
  site lattice with all possible 3 and 2 body interactions.
- thier starting operator has 
+ their starting operator has 
 \begin_inset Formula $D_{w}\approx1000$
 \end_inset
 
@@ -8187,7 +8271,7 @@ noprefix "false"
 
 \begin_layout Standard
 he main reason to do this is to discover if any of the conclusions from
- the 2-body Hmailtonian tests are changed when looking at a Hamiltonian
+ the 2-body Hamiltonian tests are changed when looking at a Hamiltonian
  with more complicated interactions.
  Notice that there is no 
 \begin_inset Formula $NNN$
@@ -8200,7 +8284,7 @@ he main reason to do this is to discover if any of the conclusions from
 
  are included.
  Or the infinite system we simply take an operator from any site and consider
- that operator to be repeated infinitly in both directions.
+ that operator to be repeated infinitely in both directions.
  In this the previous 
 \begin_inset Formula $N$
 \end_inset
@@ -8209,7 +8293,7 @@ he main reason to do this is to discover if any of the conclusions from
 \begin_inset Formula $NNN$
 \end_inset
 
- paramater for the infinite system.
+ parameter for the infinite system.
 \end_layout
 
 \begin_layout Standard
@@ -9467,7 +9551,7 @@ name "tab:3body-Dw-results"
 \begin_inset Formula $\max\left(D_{w}\right)$
 \end_inset
 
- results for the 3-body Hmailtonian described in ref.
+ results for the 3-body Hamiltonian described in ref.
  
 \begin_inset CommandInset citation
 LatexCommand cite
@@ -9506,15 +9590,15 @@ noprefix "false"
 
 \end_inset
 
- we can see that AutoMPO returns optimially reduced MPOs and require no
- further truncation.
- For the finite hand built MPOs, orthogonalization with rank revailing QR
+ we can see that AutoMPO returns optimally reduced MPOs and require no further
+ truncation.
+ For the finite hand built MPOs, orthogonalization with rank revealing QR
  can do a lot of the work, but truncation is required to get 
 \begin_inset Formula $D_{w}$
 \end_inset
 
  all the way down to the AutoMPO size.
- As the lattize grows we find that multiple truncation sweeps are required
+ As the lattice grows we find that multiple truncation sweeps are required
  to finish the job, which was not the case for the 2-body Hamiltonian.
  This is caused by problem described in 
 \begin_inset CommandInset ref
@@ -9539,9 +9623,9 @@ noprefix "false"
 .
  If we can find a solution for this issue then one truncation sweep should
  be sufficient.
- He infinite MPO tuncation does not have this problem.
+ He infinite MPO truncation does not have this problem.
  For the infinite systems we again find that orthogonalization with rank
- revailing QR is less effective and one truncation is required to get a
+ revealing QR is less effective and one truncation is required to get a
  optimal Hamiltonian.
 \end_layout
 
@@ -9570,16 +9654,16 @@ by 1.
 \begin_inset Formula $\nicefrac{1}{r^{4}}$
 \end_inset
 
-) long range interactions with the SvD 
+) long range interactions with the SVD 
 \begin_inset Formula $cutoff=10^{-15}$
 \end_inset
 
- wich truncates based on 
+ which truncates based on 
 \begin_inset Formula $s^{2}$
 \end_inset
 
 .
- Indeed testing with SvD 
+ Indeed testing with SVD 
 \begin_inset Formula $cutoff=10^{-16}$
 \end_inset
 
@@ -9610,10 +9694,9 @@ First off let us state that rank revealing QR/RQ/QL/LQ decomposition is
 \end_inset
 
  or larger.
- The algo.
- does not try to assess (an expensive process!) the orthogonality of the
- input MPO.
- there is usually no good reaon to make more than one call to orthogonalize,
+ The algorithm does not try to assess (an expensive process!) the orthogonality
+ of the input MPO.
+ there is usually no good reason to make more than one call to orthogonalize,
  but if you do for development purposes, then you need to make sure you
  asking from something sensible on the second call.
 \end_layout
@@ -9648,7 +9731,7 @@ case
 \begin_inset Text
 
 \begin_layout Plain Layout
-KWargs option (default value)
+kwargs option (default value)
 \end_layout
 
 \end_inset
@@ -9804,7 +9887,11 @@ NS or
 
 \begin_layout Plain Layout
 Sweep LRL..
- until Dw stabilizes or 
+ until 
+\begin_inset Formula $D_{w}$
+\end_inset
+
+ stabilizes or 
 \begin_inset Formula $n\_sweep>max\_sweep$
 \end_inset
 
@@ -9880,7 +9967,11 @@ NS or
 
 \begin_layout Plain Layout
 Sweep LRL..
- until Dw stabilizes or 
+ until 
+\begin_inset Formula $D_{w}$
+\end_inset
+
+ stabilizes or 
 \begin_inset Formula $n\_sweep>max\_sweep$
 \end_inset
 
@@ -9903,7 +9994,7 @@ Return requested ortho.
 \begin_inset Text
 
 \begin_layout Plain Layout
-Some extra memeory used to save extra sweep.
+Some extra memory used to save extra sweep.
  (cache option?)
 \end_layout
 
@@ -10160,7 +10251,7 @@ case
 \begin_inset Text
 
 \begin_layout Plain Layout
-KWargs option (default value)
+kwargs option (default value)
 \end_layout
 
 \end_inset
@@ -10533,7 +10624,11 @@ No rank reduction
 \end_layout
 
 \begin_layout Plain Layout
-No Dw convergence.
+No 
+\begin_inset Formula $D_{w}$
+\end_inset
+
+ convergence.
 \end_layout
 
 \end_inset
@@ -10661,7 +10756,7 @@ noprefix "false"
 \begin_inset Formula $\sum D_{w}$
 \end_inset
 
- converges, but this always requires one unessecary final sweep to establish
+ converges, but this always requires one unnecessary final sweep to establish
  convergence.
  Since the vast majority of systems under study are 2-body interaction Hamiltoni
 ans this algorithm would represent a built in waste of time.
