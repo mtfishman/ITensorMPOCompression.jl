@@ -1,5 +1,6 @@
 
 using ITensors
+using ITensorInfiniteMPS
 using ITensorMPOCompression
 using Revise
 using Test
