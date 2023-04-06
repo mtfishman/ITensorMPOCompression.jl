@@ -228,7 +228,7 @@ test_combos=[
         #  Do truncate outputting left ortho Hamiltonian
         #
         HL=copy(H0)
-        Ss,ss,HR=truncate!(HL;verbose=verbose1,orth=left,h_mirror=true)
+        Ss,ss,HR=truncate!(HL;verbose=verbose1,orth=left)
         #@show Ss ss
         @test typeof(storage(Ss[1])) == (qns ? NDTensors.DiagBlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
 
@@ -249,7 +249,7 @@ test_combos=[
         #  Do truncate from H0 outputting right ortho Hamiltonian
         #
         HR=copy(H0)
-        Ss,ss,HL=truncate!(HR;verbose=verbose1,orth=right,h_mirror=true)
+        Ss,ss,HL=truncate!(HR;verbose=verbose1,orth=right)
         @test typeof(storage(Ss[1])) == (qns ? NDTensors.DiagBlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
         DwR=Base.max(get_Dw(HR)...)
         @test is_regular_form(HR,ul)
@@ -287,7 +287,7 @@ end
         #  Do truncate outputting left ortho Hamiltonian
         #
         HL=copy(H0)
-        Ss,ss,HR=truncate!(HL;verbose=verbose1,orth=left,h_mirror=true)
+        Ss,ss,HR=truncate!(HL;verbose=verbose1,orth=left)
         #@test typeof(storage(Ss[1])) == (qns ? BlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
         DwL=Base.max(get_Dw(HL)...)
         @test is_regular_form(HL)
@@ -304,7 +304,7 @@ end
         #  Do truncate from H0 outputting right ortho Hamiltonian
         #
         HR=copy(H0)
-        Ss,ss,HL=truncate!(HR;verbose=verbose1,orth=right,h_mirror=true)
+        Ss,ss,HL=truncate!(HR;verbose=verbose1,orth=right)
         #@test typeof(storage(Ss[1])) == (qns ? BlockSparse{Float64, Vector{Float64}, 2} : Diag{Float64, Vector{Float64}})
         DwR=Base.max(get_Dw(HR)...)
         @test is_regular_form(HR)
@@ -320,54 +320,54 @@ end
     end
 end
 
-# @testset "Orthogonalize/truncate verify gauge invariace of <ψ|H|ψ>, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
-#     initstate(n) = "↑"
-#     for N in [1], NNN in [2,4] #3 site unit cell fails for qns=true.
-#         svd_cutoff=1e-15 #Same as autoMPO uses.
-#         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
-#         ψ = InfMPS(si, initstate)
-#         for n in 1:N
-#             ψ[n] = randomITensor(inds(ψ[n]))
-#         end
-#         H0=make_transIsing_iMPO(si,NNN;ul=ul)
-#         H0.llim=-1
-#         H0.rlim=1
-#         Hsum0=InfiniteSum{MPO}(H0,NNN)
-#         E0=expect(ψ,Hsum0)
+@testset "Orthogonalize/truncate verify gauge invariace of <ψ|H|ψ>, ul=$ul, qbs=$qns" for ul in [lower,upper], qns in [false,true]
+    initstate(n) = "↑"
+    for N in [1], NNN in [2,4] #3 site unit cell fails for qns=true.
+        svd_cutoff=1e-15 #Same as autoMPO uses.
+        si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
+        ψ = InfMPS(si, initstate)
+        for n in 1:N
+            ψ[n] = randomITensor(inds(ψ[n]))
+        end
+        H0=make_transIsing_iMPO(si,NNN;ul=ul)
+        H0.llim=-1
+        H0.rlim=1
+        Hsum0=InfiniteSum{MPO}(H0,NNN)
+        E0=expect(ψ,Hsum0)
 
-#         HL=copy(H0)
-#         orthogonalize!(HL;verbose=verbose1,orth=left)
-#         HsumL=InfiniteSum{MPO}(HL,NNN)
-#         EL=expect(ψ,HsumL)
-#         @test EL ≈ E0 atol = 1e-14
+        HL=copy(H0)
+        orthogonalize!(HL;verbose=verbose1,orth=left)
+        HsumL=InfiniteSum{MPO}(HL,NNN)
+        EL=expect(ψ,HsumL)
+        @test EL ≈ E0 atol = 1e-14
 
-#         HR=copy(HL)
-#         orthogonalize!(HR;verbose=verbose1,orth=right)
-#         HsumR=InfiniteSum{MPO}(HR,NNN)
-#         ER=expect(ψ,HsumR)
-#         @test ER ≈ E0 atol = 1e-14
+        HR=copy(HL)
+        orthogonalize!(HR;verbose=verbose1,orth=right)
+        HsumR=InfiniteSum{MPO}(HR,NNN)
+        ER=expect(ψ,HsumR)
+        @test ER ≈ E0 atol = 1e-14
 
-#         HL=copy(H0)
-#         truncate!(HL;verbose=verbose1,orth=left)
-#         HsumL=InfiniteSum{MPO}(HL,NNN)
-#         EL=expect(ψ,HsumL)
-#         @test EL ≈ E0 atol = 1e-14
+        HL=copy(H0)
+        truncate!(HL;verbose=verbose1,orth=left)
+        HsumL=InfiniteSum{MPO}(HL,NNN)
+        EL=expect(ψ,HsumL)
+        @test EL ≈ E0 atol = 1e-14
 
-#         HR=copy(H0)
-#         truncate!(HR;verbose=verbose1,orth=right)
-#         HsumR=InfiniteSum{MPO}(HR,NNN)
-#         ER=expect(ψ,HsumR)
-#         @test ER ≈ E0 atol = 1e-14
+        HR=copy(H0)
+        truncate!(HR;verbose=verbose1,orth=right)
+        HsumR=InfiniteSum{MPO}(HR,NNN)
+        ER=expect(ψ,HsumR)
+        @test ER ≈ E0 atol = 1e-14
         
-#         H=copy(H0)
-#         truncate!(H;verbose=verbose1)
-#         Hsum=InfiniteSum{MPO}(HR,NNN)
-#         E=expect(ψ,Hsum)
-#         @test E ≈ E0 atol = 1e-14
+        H=copy(H0)
+        truncate!(H;verbose=verbose1)
+        Hsum=InfiniteSum{MPO}(HR,NNN)
+        E=expect(ψ,Hsum)
+        @test E ≈ E0 atol = 1e-14
 
-#         #@show get_Dw(H0) get_Dw(HL) get_Dw(HR)
-#     end
-# end
+        #@show get_Dw(H0) get_Dw(HL) get_Dw(HR)
+    end
+end
 
 
 # Slow test, turn off if you are making big changes.

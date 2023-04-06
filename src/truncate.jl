@@ -278,7 +278,6 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
     #
     # decide left/right and upper/lower
     #
-    h_mirror::Bool=get(kwargs, :h_mirror, false) #Calculate and return mirror of H
     lr::orth_type=get(kwargs, :orth, left) #this specifies the final output orth direction.
     verbose::Bool=get(kwargs, :verbose, false)
     (bl,bu)=detect_regular_form(H)
@@ -294,7 +293,7 @@ function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITenso
     if !(can1||can2)
         rr_cutoff=get(kwargs, :cutoff, 1e-15)
         orthogonalize!(H,ul;orth=mirror(lr),rr_cutoff=rr_cutoff,max_sweeps=1,verbose=verbose) 
-        Hm=h_mirror ? copy(H) : nothing
+        Hm=copy(H)
         Gs=orthogonalize!(H,ul;orth=lr,rr_cutoff=rr_cutoff,max_sweeps=1,verbose=verbose) #TODO why fail if spec ul here??
     else
         # user supplied canonical H but not the Gs so we cannot proceed unless we do one more
@@ -306,7 +305,7 @@ end
 
 ITensors.truncate!(H::InfiniteMPO,Gs::CelledVector{ITensor},lr::orth_type,ul::reg_form;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any} = ITensors.truncate!(H,nothing,Gs,lr,ul;kwargs...)
 
-function ITensors.truncate!(H::InfiniteMPO,Hm::Union{InfiniteMPO,Nothing},Gs::CelledVector{ITensor},lr::orth_type,ul::reg_form;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
+function ITensors.truncate!(H::InfiniteMPO,Hm::InfiniteMPO,Gs::CelledVector{ITensor},lr::orth_type,ul::reg_form;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
     verbose::Bool=get(kwargs, :verbose, false)
     N=length(H)
     ms=matrix_state(ul,lr)
@@ -359,7 +358,6 @@ function transform(H::InfiniteMPO,uv::ITensor,n::Int64)
     @mpoc_assert order(H[n])==4
     @mpoc_assert order(H[n+1])==4
 end
-function transform(::Nothing,::ITensor,::Int64) end
 
 
 function truncate(G::ITensor,igl::Index;kwargs...)
