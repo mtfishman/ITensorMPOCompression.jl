@@ -2218,6 +2218,62 @@ Of course we just sweep backwards using
  decomposition to get a right canonical form.
 \end_layout
 
+\begin_layout Subsubsection
+Triangular independent version
+\end_layout
+
+\begin_layout Standard
+Using the lower/left step as an example.
+\begin_inset Formula 
+\[
+\hat{W}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
+\hat{\boldsymbol{b}} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
+\hat{d} & \hat{\boldsymbol{c}} & \hat{\mathbb{I}}
+\end{bmatrix}
+\]
+
+\end_inset
+
+The gauge transform
+\begin_inset Formula 
+\[
+\hat{W}^{\prime}=L\hat{W}L^{-1}
+\]
+
+\end_inset
+
+with
+\begin_inset Formula 
+\[
+L=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
+\boldsymbol{t} & \mathbb{I} & \boldsymbol{0}\\
+0 & \boldsymbol{0} & 1
+\end{bmatrix},\quad L^{-1}=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
+\boldsymbol{-t} & \mathbb{I} & \boldsymbol{0}\\
+0 & \boldsymbol{0} & 1
+\end{bmatrix},\quad\boldsymbol{t}\left(\mathbb{I}-A_{0}\right)=\left\langle \hat{\mathbb{I}},\hat{\boldsymbol{b}}\right\rangle 
+\]
+
+\end_inset
+
+will ensure that 
+\begin_inset Formula $\hat{W}^{\prime}$
+\end_inset
+
+ has the form
+\begin_inset Formula 
+\[
+\hat{W}^{\prime}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
+\hat{\boldsymbol{b}}^{\prime} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
+\hat{d} & \hat{\boldsymbol{c}}^{\prime} & \hat{\mathbb{I}}
+\end{bmatrix},\quad\left\langle \hat{\mathbb{I}},\hat{\boldsymbol{b}}^{\prime}\right\rangle =0
+\]
+
+\end_inset
+
+
+\end_layout
+
 \begin_layout Subsection
 Finite MPO compression
 \end_layout
@@ -4073,6 +4129,34 @@ This should ensure that
 G^{n}=\begin{bmatrix}1 & 0 & 0\\
 0 & \mathsf{G^{n}} & 0\\
 0 & \mathsf{0} & 1
+\end{bmatrix}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+G^{\prime}=\begin{bmatrix}1 & 0 & 0\\
+0 & \mathsf{G^{\prime n}} & 0\\
+0 & \mathsf{0} & 1
+\end{bmatrix}=LG^{n}L^{-1}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+=\begin{bmatrix}1 & 0 & 0\\
+\boldsymbol{s} & \hat{\mathbb{I}} & 0\\
+0 & \boldsymbol{t} & 1
+\end{bmatrix}\begin{bmatrix}1 & 0 & 0\\
+0 & \mathsf{G^{n}} & 0\\
+0 & \mathsf{x^{n}} & 1
 \end{bmatrix}
 \]
 
