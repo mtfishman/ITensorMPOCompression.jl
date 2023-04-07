@@ -201,7 +201,7 @@ function my_similar(T::ITensor,inds...)
 end
 
 function warn_space(A::ITensor,ig::Index)
-    ia,=inds(A,tags=tags(ig))
+    ia,=inds(A,tags=tags(ig),plev=plev(ig))
     @mpoc_assert dim(ia)+2==dim(ig)
     if hasqns(A)
         sa,sg=space(ia),space(ig)
