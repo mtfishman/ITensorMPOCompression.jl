@@ -24,7 +24,13 @@ function getV(W::ITensor,off::V_offsets)::Tuple{ITensor, Union{QN,Int}}
         return W[range(w1,off.o1)],getspace(w1,off.o1)
     elseif order(W)==4
         w1,w2=filterinds(inds(W),tags="Link")
-        return W[range(w1,off.o1),range(w2,off.o2)],getspace(w1,off.o1)
+        if dim(w1)==1
+            return W[w1=>1:1,range(w2,off.o2)],getspace(w1,off.o1)
+        elseif dim(w2)==1
+            return W[range(w1,off.o1),w2=>1:1],getspace(w1,off.o1)
+        else
+            return W[range(w1,off.o1),range(w2,off.o2)],getspace(w1,off.o1)
+        end
     else 
         @show inds(W)
         @error("getV(W::ITensor,off::V_offsets) Case with order(W)=$(order(W)) not supported.")
