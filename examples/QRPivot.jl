@@ -2,6 +2,9 @@ using ITensors
 using ITensorMPOCompression
 using Test,Printf
 
+import ITensors: tensor
+import ITensorMPOCompression: @checkflux, mpoc_checkflux
+
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
 
 #
@@ -85,6 +88,7 @@ end
 
 
 function ac_qx(W::ITensor,ilf::Index,ilb::Index,ms::matrix_state;kwargs...)::Tuple{ITensor,ITensor,Index}
+    @checkflux(W)
     @assert hasinds(W,ilf)
     @assert hasinds(W,ilb)
     I=slice(W,ilf=>1,ilb=>1)
@@ -93,6 +97,7 @@ function ac_qx(W::ITensor,ilf::Index,ilb::Index,ms::matrix_state;kwargs...)::Tup
     bc=get_bc_block(W,ilf,ilb,ms) #TODO capture removed space
     @assert norm(bc*dag(I))<1e-15
     Abc,ilf1,_=get_Abc_block(W,ilf,ilb,ms)
+    @checkflux(Abc)
     if ms.lr==left
         Qinds=noncommoninds(Abc,ilf1)
         Q,R,iq=qr(Abc,Qinds;positive=true,rr_cutoff=1e-14,tags=tags(ilf))
@@ -100,11 +105,14 @@ function ac_qx(W::ITensor,ilf::Index,ilb::Index,ms::matrix_state;kwargs...)::Tup
         Rinds=ilf1
         R,Q,iq=rq(Abc,Rinds;positive=true,rr_cutoff=1e-14,tags=tags(ilf))
     end
+    @checkflux(Q)
+    @checkflux(R)
     Q*=sqrt(d)
     R/=sqrt(d)
-    Wp,iqp=set_Abc_block(W,Q,ilf,ilb,dag(iq),ms) #TODO inject correct removed space
+    Wp,iqp=set_Abc_block(W,Q,ilf,ilb,iq,ms) #TODO inject correct removed space
     R=prime(R,ilf1)
     #  TODO fix mimatched spaces when H=non auto MPO.  Need QN()=>1,QN()=>Chi,QN()=>1 space in MPO
+    #@show  inds(R) dag(iqp) ilf
     Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ilf'))
     return Wp,Rp,iqp
 end
@@ -121,11 +129,17 @@ function add_dummy_links!(H::MPO)
     return [il0,ils...,ilN]
 end
 
-@testset "Ac/Ab block respecting decomposition, qns=$qns" for qns in [false,true]
+models=[
+    [make_transIsing_AutoMPO,"S=1/2"],
+    [make_Heisenberg_AutoMPO,"S=1/2"],
+    # [make_Hubbard_AutoMPO,"Electron"],
+    ]
+
+@testset "Ac/Ab block respecting decomposition, model=$model, qns=$qns" for model in models, qns in [false,true]
     N=5 #5 sites
     NNN=3 #Include 2nd nearest neighbour interactions
-    sites = siteinds("S=1/2",N,conserve_qns=qns);
-    H=make_transIsing_AutoMPO(sites,NNN);
+    sites = siteinds(model[2],N,conserve_qns=qns);
+    H=model[1](sites,NNN);
     ms=matrix_state(lower,left)
     ils=add_dummy_links!(H)
     ilb=ils[1]
@@ -139,7 +153,8 @@ end
         ilb=dag(iqp)
     end
     @test check_ortho(H,ms)
-    
+    qns && show_directions(H)
+
     ms=matrix_state(lower,right)
     ilb=ils[N+1]
     for n in sweep(H,right)
@@ -152,4 +167,6 @@ end
         ilb=dag(iqp)
     end
     @test check_ortho(H,ms)
-end
+    qns && show_directions(H)
+    end
+nothing
