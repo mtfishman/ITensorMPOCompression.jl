@@ -2246,12 +2246,12 @@ with
 \begin_inset Formula 
 \[
 L=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
-\boldsymbol{t} & \mathbb{I} & \boldsymbol{0}\\
-0 & \boldsymbol{0} & 1
+\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
+0 & \boldsymbol{t} & 1
 \end{bmatrix},\quad L^{-1}=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
-\boldsymbol{-t} & \mathbb{I} & \boldsymbol{0}\\
-0 & \boldsymbol{0} & 1
-\end{bmatrix},\quad\boldsymbol{t}\left(\mathbb{I}-A_{0}\right)=\left\langle \hat{\mathbb{I}},\hat{\boldsymbol{b}}\right\rangle 
+\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
+0 & \boldsymbol{-t} & 1
+\end{bmatrix},\quad\boldsymbol{t}\left(\mathbb{I}-A_{0}\right)=\left\langle \hat{\mathbb{I}},\hat{\boldsymbol{c}}\right\rangle 
 \]
 
 \end_inset
@@ -2265,8 +2265,110 @@ will ensure that
 \[
 \hat{W}^{\prime}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
 \hat{\boldsymbol{b}}^{\prime} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
-\hat{d} & \hat{\boldsymbol{c}}^{\prime} & \hat{\mathbb{I}}
-\end{bmatrix},\quad\left\langle \hat{\mathbb{I}},\hat{\boldsymbol{b}}^{\prime}\right\rangle =0
+\hat{d}^{\prime} & \hat{\boldsymbol{c}}^{\prime} & \hat{\mathbb{I}}
+\end{bmatrix},\quad\left\langle \hat{\mathbb{I}},\hat{\boldsymbol{c}}^{\prime}\right\rangle =0.
+\]
+
+\end_inset
+
+No instead of QL decomposing the whole V-block 
+\begin_inset Formula $V=\begin{bmatrix}\hat{\boldsymbol{A}} & \boldsymbol{0}\\
+\hat{\boldsymbol{c}}^{\prime} & \hat{\mathbb{I}}
+\end{bmatrix}$
+\end_inset
+
+, we only decompose the left columns of 
+\begin_inset Formula $V$
+\end_inset
+
+, and we also do QR instead of QL to make the indpenedence of triagular
+ for explicit.
+\begin_inset Formula 
+\[
+\begin{bmatrix}\hat{\boldsymbol{A}}\\
+\hat{\boldsymbol{c}}^{\prime}
+\end{bmatrix}=\hat{Q}\mathsf{R}=\begin{bmatrix}\hat{\boldsymbol{A}}^{\prime\prime}\\
+\hat{\boldsymbol{c}}^{\prime\prime}
+\end{bmatrix}\mathsf{R}
+\]
+
+\end_inset
+
+where the bottom row of 
+\begin_inset Formula $\hat{Q}$
+\end_inset
+
+ has been isolated as 
+\begin_inset Formula $\hat{\boldsymbol{c}}^{\prime\prime}$
+\end_inset
+
+.
+ We can now write this as a factoring of 
+\begin_inset Formula $V$
+\end_inset
+
+
+\begin_inset Formula 
+\[
+V=\begin{bmatrix}\hat{\boldsymbol{A}} & \boldsymbol{0}\\
+\hat{\boldsymbol{c}}^{\prime} & \hat{\mathbb{I}}
+\end{bmatrix}=V=\begin{bmatrix}\hat{\boldsymbol{A}}^{\prime\prime} & \boldsymbol{0}\\
+\hat{\boldsymbol{c}}^{\prime\prime} & \hat{\mathbb{I}}
+\end{bmatrix}\begin{bmatrix}\mathsf{R} & 0\\
+0 & 1
+\end{bmatrix}.
+\]
+
+\end_inset
+
+Now because 
+\begin_inset Formula 
+\[
+\left\langle \hat{\mathbb{I}},\hat{\boldsymbol{c}}^{\prime}\right\rangle =0=\left\langle \hat{\mathbb{I}},\hat{\boldsymbol{c}}^{\prime\prime}\mathsf{R}\right\rangle 
+\]
+
+\end_inset
+
+and 
+\begin_inset Formula $R\neq0$
+\end_inset
+
+ we can conclude that 
+\begin_inset Formula 
+\[
+\left\langle \hat{\mathbb{I}},\hat{\boldsymbol{c}}^{\prime\prime}\right\rangle =0
+\]
+
+\end_inset
+
+ and
+\begin_inset Formula 
+\[
+\begin{bmatrix}\hat{\boldsymbol{A}}^{\prime\prime} & \boldsymbol{0}\\
+\hat{\boldsymbol{c}}^{\prime\prime} & \hat{\mathbb{I}}
+\end{bmatrix}
+\]
+
+\end_inset
+
+ has orthogonal columns, as desired.
+ The full factorization of 
+\begin_inset Formula $\hat{W}$
+\end_inset
+
+ now looks like
+\begin_inset Formula 
+\[
+\hat{W}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
+\hat{\boldsymbol{b}}^{\prime} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
+\hat{d}^{\prime} & \hat{\boldsymbol{c}}^{\prime} & \hat{\mathbb{I}}
+\end{bmatrix}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
+\hat{\boldsymbol{b}}^{\prime} & \hat{\boldsymbol{A}}^{\prime\prime} & \boldsymbol{0}\\
+\hat{d}^{\prime} & \hat{\boldsymbol{c}}^{\prime\prime} & \hat{\mathbb{I}}
+\end{bmatrix}\begin{bmatrix}1 & 0 & 0\\
+0 & \mathsf{R} & 0\\
+0 & 0 & 1
+\end{bmatrix}
 \]
 
 \end_inset

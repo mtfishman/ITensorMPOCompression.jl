@@ -2333,15 +2333,15 @@ and
 \begin_inset Formula $R\neq0$
 \end_inset
 
- we can conclude that 
+ can we conclude that (?)
 \begin_inset Formula 
 \[
-\left\langle \hat{\mathbb{I}},\hat{\boldsymbol{c}}^{\prime\prime}\right\rangle =0
+\left\langle \hat{\mathbb{I}},\hat{\boldsymbol{c}}^{\prime\prime}\right\rangle =0?
 \]
 
 \end_inset
 
- and
+ If so then 
 \begin_inset Formula 
 \[
 \begin{bmatrix}\hat{\boldsymbol{A}}^{\prime\prime} & \boldsymbol{0}\\
@@ -2373,7 +2373,12 @@ and
 
 \end_inset
 
+The key advantage here is we don't care about the shape of 
+\begin_inset Formula $\mathsf{R}$
+\end_inset
 
+.
+ It can evan be all scrambled from column pivoting.
 \end_layout
 
 \begin_layout Subsection
