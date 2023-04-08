@@ -124,9 +124,11 @@ function add_dummy_links!(H::MPO)
     T=eltype(H[1])
     il0=Index(ts;tags="Link,l=0",dir=dir(dag(ils[1])))
     ilN=Index(ts;tags="Link,l=$N",dir=dir(ils[1]))
-    H[1]*=onehot(T, il0 => 1)
-    H[N]*=onehot(T, ilN => 1)
-    return [il0,ils...,ilN]
+    d0=onehot(T, il0 => 1)
+    dN=onehot(T, ilN => 1)
+    H[1]*=d0
+    H[N]*=dN
+    return [il0,ils...,ilN],d0,dN
 end
 
 models=[
@@ -135,13 +137,17 @@ models=[
     # [make_Hubbard_AutoMPO,"Electron"],
     ]
 
-@testset "Ac/Ab block respecting decomposition, model=$model, qns=$qns" for model in models, qns in [false,true]
+@testset "Ac/Ab block respecting decomposition $(model[1]), qns=$qns" for model in models, qns in [false,true]
+    eps=1e-14
     N=5 #5 sites
     NNN=3 #Include 2nd nearest neighbour interactions
     sites = siteinds(model[2],N,conserve_qns=qns);
     H=model[1](sites,NNN);
+    state=[isodd(n) ? "Up" : "Dn" for n=1:N]
+    psi=randomMPS(sites,state)
+    E0=inner(psi',H,psi)
     ms=matrix_state(lower,left)
-    ils=add_dummy_links!(H)
+    ils,d0,dN=add_dummy_links!(H)
     ilb=ils[1]
     for n in sweep(H,left)
         ilf=linkind(H,n)
@@ -154,7 +160,12 @@ models=[
     end
     @test check_ortho(H,ms)
     qns && show_directions(H)
+    H[1]*=dag(d0)
+    H[N]*=dag(dN)
+    E1=inner(psi',H,psi)
+    @test E0 ≈ E1 atol = eps
 
+    ils,d0,dN=add_dummy_links!(H)
     ms=matrix_state(lower,right)
     ilb=ils[N+1]
     for n in sweep(H,right)
@@ -168,5 +179,9 @@ models=[
     end
     @test check_ortho(H,ms)
     qns && show_directions(H)
+    H[1]*=dag(d0)
+    H[N]*=dag(dN)
+    E2=inner(psi',H,psi)
+    @test E0 ≈ E2 atol = eps
     end
 nothing
