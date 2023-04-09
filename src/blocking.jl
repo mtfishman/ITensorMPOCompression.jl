@@ -106,7 +106,13 @@ function setV(W::ITensor,V::ITensor,iqx::Index,ms::matrix_state)::ITensor
     #@show W[iwqx=>rc:rc,iwl=>1:dim(iwl)]
     W1[iqx=>rc1:rc1,iwl=>1:dim(iwl)]=W[iwqx=>rc:rc,iwl=>1:dim(iwl)] #copy row/col rc/rc1
     #@pprint W1
-    W1[range(iqx,off.o1),range(iwl,off.o2)]=V #Finally we can do the assingment of the V-block.
+    if dim(iqx)==1
+        W1[iqx=>1:1,range(iwl,off.o2)]=V 
+    elseif dim(iwl)==1
+        W1[range(iqx,off.o1),iwl=>1:1]=V
+    else
+        W1[range(iqx,off.o1),range(iwl,off.o2)]=V #Finally we can do the assingment of the V-block.
+    end
     return W1
 end
 
