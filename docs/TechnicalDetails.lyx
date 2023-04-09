@@ -2266,7 +2266,7 @@ will ensure that
 \hat{W}^{\prime}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
 \hat{\boldsymbol{b}}^{\prime} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
 \hat{d}^{\prime} & \hat{\boldsymbol{c}}^{\prime} & \hat{\mathbb{I}}
-\end{bmatrix},\quad\left\langle \hat{\mathbb{I}},\hat{\boldsymbol{c}}^{\prime}\right\rangle =0.
+\end{bmatrix},\quad\boldsymbol{c_{0}}=\left\langle \hat{\mathbb{I}},\hat{\boldsymbol{c}}^{\prime}\right\rangle =0.
 \]
 
 \end_inset
@@ -2359,7 +2359,7 @@ and
  now looks like
 \begin_inset Formula 
 \[
-\hat{W}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
+\hat{W}^{\prime}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
 \hat{\boldsymbol{b}}^{\prime} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
 \hat{d}^{\prime} & \hat{\boldsymbol{c}}^{\prime} & \hat{\mathbb{I}}
 \end{bmatrix}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
@@ -2379,6 +2379,147 @@ The key advantage here is we don't care about the shape of
 
 .
  It can evan be all scrambled from column pivoting.
+\end_layout
+
+\begin_layout Standard
+The gauge transforms used to zero out 
+\series bold
+
+\begin_inset Formula $\boldsymbol{c_{0}}$
+\end_inset
+
+ 
+\series default
+have a daisy chain (interlacing) arrangement
+\begin_inset Formula 
+\[
+\hat{W}^{n\prime}L^{n}=L^{n-1}\hat{W}^{n}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+starting with the row vector
+\begin_inset Formula 
+\[
+\hat{W}^{1}=\begin{bmatrix}\hat{d} & \hat{\boldsymbol{c}} & \hat{\mathbb{I}}\end{bmatrix}
+\]
+
+\end_inset
+
+and defining
+\begin_inset Formula 
+\[
+L^{0}=\begin{bmatrix}1\end{bmatrix}
+\]
+
+\end_inset
+
+we have
+\begin_inset Formula 
+\[
+\hat{W}^{1\prime}L^{1}=L^{0}\hat{W}^{n}=\begin{bmatrix}\hat{d} & \hat{\boldsymbol{c}} & \hat{\mathbb{I}}\end{bmatrix}
+\]
+
+\end_inset
+
+projecting out 
+\begin_inset Formula $\hat{\mathbb{I}}$
+\end_inset
+
+part of this
+\begin_inset Formula 
+\[
+\begin{bmatrix}d_{0}^{\prime} & \boldsymbol{c_{0}^{\prime}} & 1\end{bmatrix}\begin{bmatrix}1 & \boldsymbol{0} & 0\\
+\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
+0 & \boldsymbol{t_{1}} & 1
+\end{bmatrix}=\begin{bmatrix}d_{0} & \boldsymbol{c_{0}} & 1\end{bmatrix}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\begin{bmatrix}d_{0}^{\prime} & \boldsymbol{c_{0}^{\prime}+}\boldsymbol{t_{1}} & 1\end{bmatrix}=\begin{bmatrix}d_{0} & \boldsymbol{c_{0}} & 1\end{bmatrix}
+\]
+
+\end_inset
+
+we see the in order to have 
+\begin_inset Formula $\boldsymbol{c_{0}^{1\prime}}=\boldsymbol{0},$
+\end_inset
+
+the 
+\begin_inset Formula $\boldsymbol{t_{1}}=\boldsymbol{c_{0}^{1}}$
+\end_inset
+
+.
+ For 
+\begin_inset Formula $n=2$
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\hat{W}^{2\prime}L^{2}=L^{1}\hat{W}^{2}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\begin{bmatrix}1 & \boldsymbol{0} & 0\\
+\boldsymbol{b_{0}} & A_{0} & \boldsymbol{0}\\
+d_{0}^{\prime} & \boldsymbol{c_{0}^{\prime}} & 1
+\end{bmatrix}\begin{bmatrix}1 & \boldsymbol{0} & 0\\
+\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
+0 & \boldsymbol{t_{2}} & 1
+\end{bmatrix}=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
+\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
+0 & \boldsymbol{t_{1}} & 1
+\end{bmatrix}\begin{bmatrix}1 & \boldsymbol{0} & 0\\
+\boldsymbol{b_{0}} & A_{0} & \boldsymbol{0}\\
+d_{o} & \boldsymbol{c_{0}} & 1
+\end{bmatrix}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{bmatrix}1 & \boldsymbol{0} & 0\\
+\boldsymbol{b_{0}} & A_{0} & \boldsymbol{0}\\
+d_{0}^{\prime} & \boldsymbol{c_{0}^{\prime}+t_{2}} & 1
+\end{bmatrix}=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
+\boldsymbol{b_{0}} & A_{0} & \boldsymbol{0}\\
+d_{o} & \boldsymbol{t_{1}}A_{0}+\boldsymbol{c_{0}} & 1
+\end{bmatrix}
+\]
+
+\end_inset
+
+Again with 
+\begin_inset Formula $\boldsymbol{c_{0}^{2\prime}}=\boldsymbol{0},$
+\end_inset
+
+we can read off that
+\begin_inset Formula 
+\[
+\boldsymbol{t_{2}}=\boldsymbol{t_{1}}A_{0}^{2}+\boldsymbol{c_{0}^{2}}
+\]
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Subsection
