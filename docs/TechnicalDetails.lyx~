@@ -2219,6 +2219,171 @@ Of course we just sweep backwards using
 \end_layout
 
 \begin_layout Subsubsection
+Gauge transforms
+\end_layout
+
+\begin_layout Standard
+The general gauge transform for a finite lattice looks like
+\begin_inset Formula 
+\begin{equation}
+\hat{W}^{\prime n}L^{n}=L^{n-1}\hat{W}^{n}\label{eq:general gauge}
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\hat{W}^{\prime n}$
+\end_inset
+
+ is the transformed operator.
+ By definition a gauge transform is not supposed affect expectation values
+ of the Hamiltonian.
+ For lower regular form the general form 
+\begin_inset Formula $L$
+\end_inset
+
+ the maintains regular form is
+\begin_inset Formula 
+\[
+L=\begin{bmatrix}1 & 0 & 0\\
+t & \mathsf{L} & 0\\
+r & s & 1
+\end{bmatrix}.
+\]
+
+\end_inset
+
+In particular we are interested in gauge transforms the are able to make
+ the 
+\begin_inset Formula $\hat{\boldsymbol{c}}$
+\end_inset
+
+ block in
+\begin_inset Formula 
+\[
+\hat{W}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
+\hat{\boldsymbol{b}} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
+\hat{d} & \hat{\boldsymbol{c}} & \hat{\mathbb{I}}
+\end{bmatrix}
+\]
+
+\end_inset
+
+orthogonal to 
+\begin_inset Formula $\hat{\mathbb{I}}$
+\end_inset
+
+.
+ For this purpose 
+\begin_inset Formula $L$
+\end_inset
+
+ looks like
+\begin_inset Formula 
+\[
+L=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
+\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
+0 & \boldsymbol{t} & 1
+\end{bmatrix},\quad L^{-1}=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
+\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
+0 & \boldsymbol{-t} & 1
+\end{bmatrix}.
+\]
+
+\end_inset
+
+This form of 
+\begin_inset Formula $L$
+\end_inset
+
+ only affect the 
+\begin_inset Formula $\hat{\boldsymbol{c}}$
+\end_inset
+
+ and 
+\begin_inset Formula $\hat{d}$
+\end_inset
+
+ blocks of 
+\begin_inset Formula $\hat{W}$
+\end_inset
+
+.
+ Doing the matrix algebra in eq.
+ 
+\begin_inset Formula $\ref{eq:general gauge}$
+\end_inset
+
+ we find
+\begin_inset Formula 
+\[
+\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
+\hat{\boldsymbol{b}} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
+\hat{d}^{\prime} & \hat{\boldsymbol{c}}^{\prime} & \hat{\mathbb{I}}
+\end{bmatrix}\begin{bmatrix}1 & \boldsymbol{0} & 0\\
+\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
+0 & \boldsymbol{t}_{n} & 1
+\end{bmatrix}=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
+\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
+0 & \boldsymbol{t}_{n-1} & 1
+\end{bmatrix}\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
+\hat{\boldsymbol{b}} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
+\hat{d} & \hat{\boldsymbol{c}} & \hat{\mathbb{I}}
+\end{bmatrix}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
+\hat{\boldsymbol{b}} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
+\hat{d}^{\prime} & \hat{\boldsymbol{c}}^{\prime}+\boldsymbol{t}_{n}\hat{\mathbb{I}} & \hat{\mathbb{I}}
+\end{bmatrix}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
+\hat{\boldsymbol{b}} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
+\hat{d}+\boldsymbol{t}_{n-1}\hat{\boldsymbol{b}} & \boldsymbol{t}_{n-1}\hat{\boldsymbol{A}}+\hat{\boldsymbol{c}} & \hat{\mathbb{I}}
+\end{bmatrix}
+\]
+
+\end_inset
+
+from which we can read off
+\begin_inset Formula 
+\[
+\hat{d}^{\prime}=\hat{d}+\boldsymbol{t}_{n-1}\hat{\boldsymbol{b}}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\hat{\boldsymbol{c}}^{\prime}=\boldsymbol{t}_{n-1}\hat{\boldsymbol{A}}+\hat{\boldsymbol{c}}-\boldsymbol{t_{n}}\hat{\mathbb{I}}.
+\]
+
+\end_inset
+
+The orthogonality condition is
+\begin_inset Formula 
+\[
+\left\langle \hat{\boldsymbol{c}}^{\prime},\hat{\mathbb{I}}\right\rangle =\frac{tr\left(\hat{\boldsymbol{c}}^{\prime}\hat{\mathbb{I}}\right)}{d}=\boldsymbol{c}_{0}^{\prime}=0=\boldsymbol{t}_{n-1}A_{0}+\boldsymbol{c}_{0}-\boldsymbol{t_{n}}
+\]
+
+\end_inset
+
+which decides
+\begin_inset Formula 
+\[
+\boldsymbol{t_{n}}=\boldsymbol{t}_{n-1}A_{0}+\boldsymbol{c}_{0}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
 Triangular independent version
 \end_layout
 
@@ -2449,12 +2614,17 @@ part of this
 
 \end_inset
 
-we see the in order to have 
-\begin_inset Formula $\boldsymbol{c_{0}^{\prime}}=\boldsymbol{0},$
+we see that in order to have 
+\begin_inset Formula $\boldsymbol{c_{0}^{1\prime}}=\boldsymbol{0},$
 \end_inset
 
-the 
-\begin_inset Formula $\boldsymbol{t_{1}}=\boldsymbol{c_{0}}$
+then 
+\begin_inset Formula $\boldsymbol{t_{1}}=\boldsymbol{c_{0}^{1}}$
+\end_inset
+
+.
+ Also 
+\begin_inset Formula $d_{0}^{\prime}=d_{0}$
 \end_inset
 
 .
@@ -2475,7 +2645,7 @@ the
 \[
 \begin{bmatrix}1 & \boldsymbol{0} & 0\\
 \boldsymbol{b_{0}} & A_{0} & \boldsymbol{0}\\
-d_{o} & \boldsymbol{c_{0}} & 1
+d_{0}^{\prime} & \boldsymbol{c_{0}^{\prime}} & 1
 \end{bmatrix}\begin{bmatrix}1 & \boldsymbol{0} & 0\\
 \boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
 0 & \boldsymbol{t_{2}} & 1
@@ -2491,69 +2661,88 @@ d_{o} & \boldsymbol{c_{0}} & 1
 \end_inset
 
 
+\end_layout
+
+\begin_layout Standard
 \begin_inset Formula 
 \[
-\hat{W}_{0}^{\prime}=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
-\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
-0 & \boldsymbol{t} & 1
-\end{bmatrix}\begin{bmatrix}1 & \boldsymbol{0} & 0\\
+\begin{bmatrix}1 & \boldsymbol{0} & 0\\
 \boldsymbol{b_{0}} & A_{0} & \boldsymbol{0}\\
-d_{o} & \boldsymbol{c_{0}} & 1
-\end{bmatrix}\begin{bmatrix}1 & \boldsymbol{0} & 0\\
-\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
-0 & \boldsymbol{-t} & 1
+d_{0}^{\prime} & \boldsymbol{c_{0}^{\prime}+t_{2}} & 1
+\end{bmatrix}=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
+\boldsymbol{b_{0}} & A_{0} & \boldsymbol{0}\\
+d_{o}+\boldsymbol{t_{1}}\boldsymbol{b_{0}} & \boldsymbol{t_{1}}A_{0}+\boldsymbol{c_{0}} & 1
 \end{bmatrix}
 \]
 
 \end_inset
 
+Again with 
+\begin_inset Formula $\boldsymbol{c_{0}^{2\prime}}=\boldsymbol{0},$
+\end_inset
+
+we can read off that
+\begin_inset Formula 
+\[
+\boldsymbol{t_{2}}=\boldsymbol{t_{1}}A_{0}^{2}+\boldsymbol{c_{0}^{2}}
+\]
+
+\end_inset
+
+In code we don't actually need build and use gauge tranform matricies.
+ We just need to use the corresponding operator relations.
+ For 
+\begin_inset Formula $n=1$
+\end_inset
+
+ is is trivial
+\begin_inset Formula 
+\[
+\hat{W}^{1\prime}=\begin{bmatrix}\hat{d} & \hat{\boldsymbol{\boldsymbol{c}}}-\hat{\mathbb{I}}\boldsymbol{t_{1}} & \hat{\mathbb{I}}\end{bmatrix}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\hat{W}^{2\prime}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
+\hat{\boldsymbol{b}} & \hat{A} & \boldsymbol{0}\\
+\hat{d}+\boldsymbol{t_{1}\hat{b}} & \boldsymbol{\hat{c}}+\boldsymbol{t_{1}}\hat{A}-\hat{\mathbb{I}}\boldsymbol{t_{2}} & \hat{\mathbb{I}}
+\end{bmatrix}
+\]
+
+\end_inset
+
+For the last site we have
+\begin_inset Formula 
+\[
+\hat{W}^{N\prime}L\left(t_{N}\right)=\hat{W}^{N\prime}=L\left(t_{N-1}\right)\hat{W}^{N}
+\]
+
+\end_inset
+
 
 \begin_inset Formula 
 \[
-=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
-\boldsymbol{b_{0}} & A_{0} & \boldsymbol{0}\\
-\boldsymbol{t}\bullet\boldsymbol{b_{0}}+d_{0} & \boldsymbol{t}A_{0}+\boldsymbol{c_{0}} & 1
-\end{bmatrix}\begin{bmatrix}1 & \boldsymbol{0} & 0\\
+\begin{bmatrix}\hat{\mathbb{I}}\\
+\hat{\boldsymbol{b}}^{\prime}\\
+\hat{d}^{\prime}
+\end{bmatrix}=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
 \boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
-0 & \boldsymbol{-t} & 1
+0 & \boldsymbol{t_{9}} & 1
+\end{bmatrix}\begin{bmatrix}\hat{\mathbb{I}}\\
+\hat{\boldsymbol{b}}\\
+\hat{d}
+\end{bmatrix}=\begin{bmatrix}\hat{\mathbb{I}}\\
+\hat{\boldsymbol{b}}\\
+\hat{d}+\boldsymbol{t_{9}}\hat{\boldsymbol{b}}
 \end{bmatrix}
 \]
 
-\end_inset
-
-
-\begin_inset Formula 
-\[
-=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
-\boldsymbol{b_{0}} & A_{0} & \boldsymbol{0}\\
-\boldsymbol{t}\bullet\boldsymbol{b_{0}}+d_{0} & \boldsymbol{t}A_{0}+\boldsymbol{c_{0}}\boldsymbol{-t} & 1
-\end{bmatrix}
-\]
-
-\end_inset
-
-solve
-\begin_inset Formula 
-\[
-\boldsymbol{t}A_{0}+\boldsymbol{c_{0}}\boldsymbol{-t}=\boldsymbol{t}\left(A_{0}-\mathbb{I}\right)+\boldsymbol{c_{0}}=0
-\]
-
-\end_inset
-
-
-\begin_inset Formula 
-\[
-\boldsymbol{t}\left(\mathbb{I}-A_{0}\right)=\boldsymbol{c_{0}}
-\]
-
-\end_inset
-
-for 
-\begin_inset Formula $\boldsymbol{t}$
-\end_inset
-
-, so 
-\begin_inset Formula $ $
 \end_inset
 
 

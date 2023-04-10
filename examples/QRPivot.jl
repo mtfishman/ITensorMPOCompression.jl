@@ -88,25 +88,23 @@ function set_Abc_block(W::ITensor,Abc::ITensor,ilf::Index,ilb::Index,iq::Index,m
 end
 
 
-function ac_qx(W::ITensor,ilf::Index,ilb::Index,ms::matrix_state;kwargs...)::Tuple{ITensor,ITensor,Index}
+function ac_qx(W::ITensor,ilf::Index,ilb::Index,t,ms::matrix_state;kwargs...)
     @checkflux(W)
     @assert hasinds(W,ilf)
     @assert hasinds(W,ilb)
     eps=1e-15
-    I=slice(W,ilf=>1,ilb=>1)
-    is=inds(I)
-    d=dim(is[1])  
-    bc=get_bc_block(W,ilf,ilb,ms) #TODO capture removed space
-    Dwf,Dwb=dim(ilf),dim(ilb)
+    I,d=get_identity(W,ilb,ilf)    
+    # bc=get_bc_block(W,ilf,ilb,ms) #TODO capture removed space
+    # Dwf,Dwb=dim(ilf),dim(ilb)
     # println("W0")
     # pprint(ilb,W*dag(I)/d,ilf)
-    if norm(bc*dag(I))>eps && Dwb>2
+    if !isnothing(t)
+        # @assert norm(bc*dag(I))>eps 
         println("------------LWL transform-----------------")
-        # @show ms ilb ilf
-        Wg=reduce_and_transform(W,ilb,ilf,ms,eps)
+        t=gauge_transform!(W,ilb,ilf,t,ms)
         # println("Wg0")
         # pprint(ilb,Wg*dag(I)/d,ilf)
-        bcz=get_bc_block(Wg,ilf,ilb,ms)
+        bcz=get_bc_block(W,ilf,ilb,ms)
         @assert norm(bcz*dag(I))<eps
     end
     Abc,ilf1,_=get_Abc_block(W,ilf,ilb,ms)
@@ -127,7 +125,7 @@ function ac_qx(W::ITensor,ilf::Index,ilb::Index,ms::matrix_state;kwargs...)::Tup
     #  TODO fix mimatched spaces when H=non auto MPO.  Need QN()=>1,QN()=>Chi,QN()=>1 space in MPO
     #@show  inds(R) dag(iqp) ilf
     Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ilf'))
-    return Wp,Rp,iqp
+    return Wp,Rp,iqp,t
 end
 
 function add_dummy_links!(H::MPO)
@@ -163,6 +161,7 @@ function get_bc_block(W0::Matrix,ms::matrix_state)
 end
 
 function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state)
+    @assert hasinds(W,ir,ic)
     nr,nc=dim(ir),dim(ic)
     @assert nr>1 || nc>1
     𝕀= nr>1 ? slice(W,ir=>1,ic=>1) : slice(W,ir=>1,ic=>nc)
@@ -199,10 +198,18 @@ function gauge_transform!(W::ITensor,ir::Index,ic::Index,tprev::Matrix{Float64},
     end
     d=𝕀*𝕀
     nr,nc=dim(ir),dim(ic)
-    if nr==1 || nc==1
+    𝒄⎖=nothing
+    if nr==1 
         t=𝒄*dag(𝕀)/d #c0
         𝒄⎖=𝒄-𝕀*t
         𝒅⎖=𝒅
+    elseif nc==1
+        il=commonind(𝒃,𝒅,tags="Link")
+        ict=noncommonind(𝒅,il,tags="Link")
+        irt=noncommonind(𝒃,𝒅,tags="Link")
+        tprevT=ITensor(tprev,irt,ict)
+        𝒅⎖=𝒅+tprevT*𝒃
+        t=tprevT
     else
         ict=commonind(𝒃,𝑨,tags="Link")
         irt=commonind(𝒅,𝒄,tags="Link")
@@ -216,15 +223,101 @@ function gauge_transform!(W::ITensor,ir::Index,ic::Index,tprev::Matrix{Float64},
     end
     #@show norm(𝒄⎖*𝕀)
     W[ir=>nr:nr,ic=>1:1]=𝒅⎖
-    if ms.lr==left
-        W[ir=>nr:nr,ic=>2:nc-1]=𝒄⎖
-    else
-        W[ir=>2:nr-1,ic=>1:1]=𝒄⎖    
+    if !isnothing(𝒄⎖)
+        if ms.lr==left 
+            W[ir=>nr:nr,ic=>2:nc-1]=𝒄⎖
+        else
+            W[ir=>2:nr-1,ic=>1:1]=𝒄⎖    
+        end
     end
        
     return matrix(t)
 end
 
+function needs_gauge_fix(W::ITensor,ir::Index,ic::Index,ms::matrix_state,eps::Float64)
+    𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(W,ir,ic,ms)
+    if ms.lr==right
+        𝒃,𝒄=𝒄,𝒃
+    end
+    return norm(𝒄*𝕀)>=eps
+end
+
+function needs_gauge_fix(H::MPO,ils::Vector{Index{T}},ms::matrix_state,eps::Float64) where {T}
+    ngfs=Bool[]
+    for n in sweep(H,ms.lr)
+        push!(ngfs,needs_gauge_fix(H[n],ils[n],ils[n+1],ms,eps))
+    end
+    @show ngfs
+    return all(ngfs)
+end
+
+function calculate_ts(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
+    ts=Vector{Float64}[]
+    ir=ils[1]
+    tprev=zeros(1)
+    push!(ts,tprev)
+    for n in eachindex(H)
+        ic=ils[n+1]
+        𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(H[n],ir,ic,ms)
+        d=𝕀*𝕀
+        nr,nc=dim(ir),dim(ic)
+        if nr==1 
+            c0=𝒄*dag(𝕀)/d
+            t=matrix(c0)[:,1] #c0
+        elseif nc==1
+            t=zeros(1)
+        else
+           ict=commonind(𝒃,𝑨,tags="Link")
+            irt=commonind(𝒅,𝒄,tags="Link")
+            tprevT=ITensor(tprev,irt,ict)
+
+            𝒄₀=𝒄*dag(𝕀)/d
+            𝑨₀=𝑨*dag(𝕀)/d
+            t=matrix(tprevT*𝑨₀+𝒄₀)[1,:]
+        end
+        #@show t
+        push!(ts,t)
+        tprev=t
+        ir=ic
+    end
+    return ts
+end
+
+function calculate_Ls(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
+    Ls=Matrix{Float64}[]
+    Linvs=Matrix{Float64}[]
+    ts=calculate_ts(H,ils,ms)
+    @assert length(ts)==length(ils)
+    for n in eachindex(ils)
+        ic=ils[n]
+        Dwc=dim(ic)
+        if Dwc==1
+            L=1.0*Matrix(LinearAlgebra.I,Dwc,Dwc)
+            Linv=1.0*Matrix(LinearAlgebra.I,Dwc,Dwc)
+        else
+            @assert Dwc==size(ts[n],1)+2
+            L=insert_xblock(1.0*Matrix(LinearAlgebra.I,Dwc,Dwc),ts[n],ms)
+            Linv=insert_xblock(1.0*Matrix(LinearAlgebra.I,Dwc,Dwc),-ts[n],ms)
+        end
+        push!(Ls,L)
+        push!(Linvs,Linv)
+    end
+    return Ls,Linvs
+end
+
+function apply_Ls!(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
+    Ls,Linvs=calculate_Ls(H,ils,ms)
+    ir=ils[1]
+    for n in eachindex(H)
+        ic=ils[n+1]
+        @assert hasinds(H[n],ir,ic)
+        LT=ITensor(Ls[n],ir',ir)
+        LinvT=ITensor(Linvs[n+1],ic,ic')
+        Wp=noprime(LT*H[n]*LinvT,tags="Link")
+        H[n]=Wp
+        ir=ic
+    end
+end
 
 # function back_transform(W::ITensor,ir::Index,ic::Index,t::Vector{Float64},ms::matrix_state)
 #     L=insert_xblock(1.0*Matrix(LinearAlgebra.I,n,n),t,ms)
@@ -246,24 +339,33 @@ models=[
 #     state=[isodd(n) ? "Up" : "Dn" for n=1:N]
 #     psi=randomMPS(sites,state)
 #     E0=inner(psi',H,psi)
-#     ms=matrix_state(lower,left)
+
 #     ils,d0,dN=add_dummy_links!(H)
+
+#     ms=matrix_state(lower,left)
+#     ngf=needs_gauge_fix(H,ils,ms,eps)
+
+#     t=ngf ? Matrix{Float64}(undef,1,1) : nothing
 #     ilb=ils[1]
-#     for n in sweep(H,left)
+#     for n in 1:N-1
 #         @show n
 #         ilf=linkind(H,n)
-#         if dim(ilb)==1
-#             W,R,iqp=block_qx(H[n],ilf,ms.ul;orth=ms.lr)
-#         else
-#             W,R,iqp=ac_qx(H[n],ilf,ilb,ms)
-#         end
+#         W,R,iqp,t=ac_qx(H[n],ilf,ilb,t,ms)
 #         @test norm(H[n]-W*R)<1e-15
 #         @test check_ortho(W,ms)
 #         H[n]=W
 #         H[n+1]=R*H[n+1]
 #         ilb=dag(iqp)
 #     end
-#     @test check_ortho(H,ms)
+#     n=N
+#     ilf=ils[n+1]
+#     W=H[n]
+#     @assert hasinds(W,ilb,ilf)
+#     if ngf 
+#         t=gauge_transform!(W,ilb,ilf,t,ms)
+#     end
+#     H[n]=W
+#     #@test check_ortho(H,ms)
 #     qns && show_directions(H)
 #     H[1]*=dag(d0)
 #     H[N]*=dag(dN)
@@ -290,43 +392,60 @@ models=[
 #     # @test E0 ≈ E2 atol = eps
 # end
 
-@testset "Gauge transform rectangular W" begin
-    eps=1e-14
+# @testset "Gauge transform rectangular W" begin
+#     eps=1e-14
     
-    N=10 #5 sites
-    NNN=5 #Include 2nd nearest neighbour interactions
-    sites = siteinds("Electron",N,conserve_qns=false)
-    H=make_Hubbard_AutoMPO(sites,NNN)
-    ils,d0,dN=add_dummy_links!(H)
+#     N=10 #5 sites
+#     NNN=5 #Include 2nd nearest neighbour interactions
+#     sites = siteinds("Electron",N,conserve_qns=false)
+#     H=make_Hubbard_AutoMPO(sites,NNN)
+#     state=[isodd(n) ? "Up" : "Dn" for n=1:N]
+#     psi=randomMPS(sites,state)
+#     E0=inner(psi',H,psi)
 
-    ms=matrix_state(lower,left)
-    ir=ils[1]
-    t=Matrix{Float64}(undef,1,1)
-    for n in 1:N-1
-        W=copy(H[n])
-        ic =linkind(H,n)
-        I,d=get_identity(W,ir,ic)    
-        t=gauge_transform!(W,ir,ic,t,ms)
-        c=get_bc_block(W,ic,ir,ms)
-        c0=c*dag(I)/d
-        @test norm(c0)<eps
-        ir=ic
-    end
+#     ils,d0,dN=add_dummy_links!(H)
 
-    ms=matrix_state(lower,right)
-    ic=ils[N+1]
-    t=Matrix{Float64}(undef,1,1)
-    for n in N:-1:N-2
-        W=copy(H[n])
-        ir =linkind(H,n-1)
-        I,d=get_identity(W,ir,ic)    
-        t=gauge_transform!(W,ir,ic,t,ms)
-        c=get_bc_block(W,ir,ic,ms)
-        c0=c*dag(I)/d
-        @test norm(c0)<eps
-        ic=ir
-    end
-end
+#     ms=matrix_state(lower,left)
+#     ir=ils[1]
+#     t=Matrix{Float64}(undef,1,1)
+#     for n in 1:1
+#         W=H[n]
+#         ic =linkind(H,n)
+#         I,d=get_identity(W,ir,ic)    
+#         t=gauge_transform!(W,ir,ic,t,ms)
+#         c=get_bc_block(W,ic,ir,ms)
+#         c0=c*dag(I)/d
+#         @test norm(c0)<eps
+#         ir=ic
+#     end
+#     # n=N
+#     # ic=ils[n+1]
+#     # W=H[n]
+#     # @assert hasinds(W,ir,ic)
+#     # # if ngf 
+#     #     t=gauge_transform!(W,ir,ic,t,ms)
+#     # # end
+#     # H[n]=W
+
+#     H[1]*=dag(d0)
+#     H[N]*=dag(dN)
+#     E2=inner(psi',H,psi)
+#     @test E0 ≈ E2 atol = eps
+
+#     # ms=matrix_state(lower,right)
+#     # ic=ils[N+1]
+#     # t=Matrix{Float64}(undef,1,1)
+#     # for n in N:-1:N-2
+#     #     W=copy(H[n])
+#     #     ir =linkind(H,n-1)
+#     #     I,d=get_identity(W,ir,ic)    
+#     #     t=gauge_transform!(W,ir,ic,t,ms)
+#     #     c=get_bc_block(W,ir,ic,ms)
+#     #     c0=c*dag(I)/d
+#     #     @test norm(c0)<eps
+#     #     ic=ir
+#     # end
+# end
 
 # @testset "Extract blocks" begin
 #     eps=1e-15
@@ -370,5 +489,28 @@ end
 #     @test norm(array(𝒄)-array(W[ir=>nr:nr,ic=>2:nc-1]))<eps
 #     @test norm(array(𝑨)-array(W[ir=>2:nr-1,ic=>2:nc-1]))<eps
 # end
+
+@testset "Calculate t's, L's and Linv's" begin
+    N=5 #5 sites
+    NNN=2 #Include 2nd nearest neighbour interactions
+    sites = siteinds("Electron",N,conserve_qns=false)
+    H=make_Hubbard_AutoMPO(sites,NNN)
+    state=[isodd(n) ? "Up" : "Dn" for n=1:N]
+    psi=randomMPS(sites,state)
+    E0=inner(psi',H,psi)
+
+    ils,d0,dN=add_dummy_links!(H)
+    ms=matrix_state(lower,left)
+    apply_Ls!(H,ils,ms)
+    for n in sweep(H,ms.lr)
+        @test !needs_gauge_fix(H[n],ils[n],ils[n+1],ms,1e-15)
+    end
+
+    H[1]*=dag(d0)
+    H[N]*=dag(dN)
+    E2=inner(psi',H,psi)
+    @test E0 ≈ E2 atol = 1e-15
+end
+
 
 nothing
