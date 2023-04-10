@@ -144,69 +144,9 @@ function add_dummy_links!(H::MPO)
     return [il0,ils...,ilN],d0,dN
 end
 
-#
-#  Create lists of non-zero rows and columns.  Then equalize the lists if needed by adding 
-#  zero rows xor zero columns to get equal size lists.
-#
-function reduce_rows_columns(A::Matrix,eps::Float64)
-    nr,nc=size(A)
-    nonzero_cols=map(n-> maximum(abs.(A[:,n]))>eps,1:nc)
-    nonzero_rows=map(n-> maximum(abs.(A[n,:]))>eps,1:nr)
-    pr=findall(i->(i),nonzero_rows) 
-    pc=findall(i->(i),nonzero_cols) 
-    nr,nc=length(pr),length(pc)
-    n=Base.max(nr,nc)
-    if nc>nr #not enough rows, add some of the zero rows        
-        prz=findall(i->(!i),nonzero_rows) #list of zero rows
-        pr=sort(append!(pr,prz[1:n-nr]))
-    elseif  nr>nc #not enough cols, add some of the zero cols
-        pcz=findall(i->(!i),nonzero_cols) #list of zero cols
-        pc=sort(append!(pc,pcz[1:n-nc]))
-    end
-    return pr,pc
-end
-
-function gather(A::ITensor,ir::Index,ic::Index,pr::Vector{Int64},pc::Vector{Int64})::Tuple{ITensor,Index,Index}
-    @assert length(pr)==length(pc)
-    n=length(pr)
-    iothers=noncommoninds(A,ir,ic)
-    ir1,ic1=redim(ir,n),redim(ic,n)
-    A1=ITensor(0.0,ir1,ic1,iothers)
-    for r in 1:n
-        for c in 1:n
-            assign!(A1,slice(A,ir=>pr[r],ic=>pc[c]),ir1=>r,ic1=>c)
-        end
-    end
-    return A1,ir1,ic1
-end
-
-function scatter!(A::ITensor,ir::Index,ic::Index,A1::ITensor,ir1::Index,ic1::Index,pr::Vector{Int64},pc::Vector{Int64})
-    @assert hasinds(A,ir,ic)
-    @assert hasinds(A1,ir1,ic1)
-    n=length(pr)
-    for r in 1:n
-        for c in 1:n
-            assign!(A,slice(A1,ir1=>r,ic1=>c),ir=>pr[r],ic=>pc[c])
-        end
-    end
-end
-
-function scatter(A::Matrix,p::Vector{Int64},n1::Int64)
-    #A1=1.0*Matrix(LinearAlgebra.I,n1,n1)
-    A1=zeros(eltype(A),n1,n1)
-    n=length(p)
-    @assert size(A,1)==n
-    @assert size(A,2)==n
-    for r in 1:n
-        for c in 1:n
-            A1[p[r],p[c]]=A[r,c]
-        end
-    end
-    return A1
-end
-
 function get_identity(W::ITensor,ir::Index,ic::Index)
-    Id=slice(W,ir=>1,ic=>1)
+    
+    Id=dim(ir)>1 ? slice(W,ir=>1,ic=>1) : slice(W,ir=>1,ic=>dim(ic))
     d=dims(Id)[1]
     return Id,d
 end
@@ -221,80 +161,70 @@ function get_bc_block(W0::Matrix,ms::matrix_state)
     end
     return bc0
 end
-function gauge_transform(W::ITensor,ir::Index,ic::Index,ms::matrix_state)
-    @assert dim(ir)==dim(ic)
-    Id,d=get_identity(W,ir,ic)
-    W0=matrix(ir,W*dag(Id)/d,ic)
-    n=dim(ir)
-    A0=W0[2:n-1,2:n-1]
-    c0=get_bc_block(W0,ms)
-    if ms.lr==left
-        t=transpose(LinearAlgebra.I-A0)\c0
+
+function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state)
+    nr,nc=dim(ir),dim(ic)
+    @assert nr>1 || nc>1
+    𝕀= nr>1 ? slice(W,ir=>1,ic=>1) : slice(W,ir=>1,ic=>nc)
+    𝑨= nr>1 && nc>1 ? W[ir=>2:nr-1,ic=>2:nc-1] : nothing
+    𝒃= nr>1 ? W[ir=>2:nr-1,ic=>1:1] : nothing
+    𝒄= nc>1 ? W[ir=>nr:nr,ic=>2:nc-1] : nothing
+    𝒅= nr >1 ? W[ir=>nr:nr,ic=>1:1] : W[ir=>1:1,ic=>nc:nc]
+
+    ird,=inds(𝒅,tags=tags(ir))
+    icd,=inds(𝒅,tags=tags(ic))
+    if !isnothing(𝒄)
+        irc,=inds(𝒄,tags=tags(ir))
+        icc,=inds(𝒄,tags=tags(ic))
+        𝒄=replaceind(𝒄,irc,ird)
+    end
+    if !isnothing(𝒃)
+        irb,=inds(𝒃,tags=tags(ir))
+        icb,=inds(𝒃,tags=tags(ic))
+        𝒃=replaceind(𝒃,icb,icd)
+    end
+    if !isnothing(𝑨)
+        irA,=inds(𝑨,tags=tags(ir))
+        icA,=inds(𝑨,tags=tags(ic))
+        𝑨=replaceinds(𝑨,[irA,icA],[irb,icc])
+    end
+    return 𝕀,𝑨,𝒃,𝒄,𝒅
+end
+
+#  𝕀 𝑨 𝒃 𝒄 𝒅 ⌃ c₀ x0
+function gauge_transform!(W::ITensor,ir::Index,ic::Index,tprev::Matrix{Float64},ms::matrix_state)
+    𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(W,ir,ic,ms)
+    if ms.lr==right
+        𝒃,𝒄=𝒄,𝒃
+    end
+    d=𝕀*𝕀
+    nr,nc=dim(ir),dim(ic)
+    if nr==1 || nc==1
+        t=𝒄*dag(𝕀)/d #c0
+        𝒄⎖=𝒄-𝕀*t
+        𝒅⎖=𝒅
     else
-        t=-(LinearAlgebra.I-A0)\c0
+        ict=commonind(𝒃,𝑨,tags="Link")
+        irt=commonind(𝒅,𝒄,tags="Link")
+        tprevT=ITensor(tprev,irt,ict)
+
+        𝒄₀=𝒄*dag(𝕀)/d
+        𝑨₀=𝑨*dag(𝕀)/d
+        t=tprevT*𝑨₀+𝒄₀
+        𝒄⎖=𝒄+tprevT*𝑨-t*𝕀
+        𝒅⎖=𝒅+tprevT*𝒃
     end
-    L=insert_xblock(1.0*Matrix(LinearAlgebra.I,n,n),t,ms)
-    Linv=insert_xblock(1.0*Matrix(LinearAlgebra.I,n,n),-t,ms)
-
-    LT=ITensor(L,ir',dag(ir)) 
-    LinvT=ITensor(Linv,dag(ic),ic')
-    return noprime(LT*W*LinvT,tags="Link"),L,Linv
-end
-
-function make_projector(p::Vector{Int64},n1::Int64)
-    n=length(p)
-    P=zeros(Float64,n1,n)
-    for c in eachindex(p)
-        P[p[c],c]=1.0
+    #@show norm(𝒄⎖*𝕀)
+    W[ir=>nr:nr,ic=>1:1]=𝒅⎖
+    if ms.lr==left
+        W[ir=>nr:nr,ic=>2:nc-1]=𝒄⎖
+    else
+        W[ir=>2:nr-1,ic=>1:1]=𝒄⎖    
     end
-    return P
+       
+    return matrix(t)
 end
 
-function reduce_and_transform(W::ITensor,ir::Index,ic::Index,ms::matrix_state,eps::Float64)
-    I,d=get_identity(W,ir,ic)
-    W0=matrix(ir,W*dag(I),ic)
-    #display(W0)
-    pr,pc=reduce_rows_columns(W0,eps) #List of rows and columns to keep
-    # Pr=make_projector(pr,dim(ir))
-    # Pc=make_projector(pc,dim(ic))
-    # display(Pr*transpose(Pr))
-    # display(transpose(Pr)*Pr)
-
-    #@show pr pc
-    Wr,irr,icr=gather(W,ir,ic,pr,pc) #Reduced/square W with zeros chopped out
-    # PrT=ITensor(transpose(Pr),irr,ir)
-    # PcT=ITensor(Pc,ic,icr)
-    # Wr1=PrT*W*PcT
-    # @assert norm(Wr-Wr1)<eps
-
-    #pprint(Wr)
-    Wrg,Lr,Linvr=gauge_transform(Wr,irr,icr,ms)  #Perform gauge tranform so c0=<c,I>=0
-
-    # LinvT=ITensor(Linvr,irr',dag(irr)) 
-    # LT=ITensor(Lr,dag(icr),icr')
-    # Wr1=noprime(LinvT*Wrg*LT,tags="Link")
-    # @assert norm(Wr-Wr1)<eps
-    # @assert norm(Linvr*Lr-LinearAlgebra.I)<eps
-    # @assert norm(Lr*Linvr-LinearAlgebra.I)<eps
-
-
-    scatter!(W,ir,ic,Wrg,irr,icr,pr,pc) #insert the tranformed rows and cols back into W
-    #L=scatter(Lr,pr,dim(ir))
-    # L=Pr*Lr*transpose(Pr)
-    # display(L)
-    # display(scatter(Lr,pr,dim(ir)))
-    # Linv=scatter(Linvr,pc,dim(ic))
-    # LT=ITensor(L,ir',dag(ir)) 
-    # LinvT=ITensor(Linv,dag(ic),ic')
-    # Wg1=noprime(LT*W*LinvT,tags="Link")
-    #@pprint(W)
-    #@pprint(Wg1)
-
-    L=scatter(Lr,pc,dim(ic))
-    Linv=scatter(Linvr,pr,dim(ir))
-
-    return W,L,Linv
-end
 
 # function back_transform(W::ITensor,ir::Index,ic::Index,t::Vector{Float64},ms::matrix_state)
 #     L=insert_xblock(1.0*Matrix(LinearAlgebra.I,n,n),t,ms)
@@ -362,37 +292,83 @@ models=[
 
 @testset "Gauge transform rectangular W" begin
     eps=1e-14
-    ms=matrix_state(lower,left)
-    N=5 #5 sites
-    NNN=2 #Include 2nd nearest neighbour interactions
+    
+    N=10 #5 sites
+    NNN=5 #Include 2nd nearest neighbour interactions
     sites = siteinds("Electron",N,conserve_qns=false)
     H=make_Hubbard_AutoMPO(sites,NNN)
-    for n in 2:3
+    ils,d0,dN=add_dummy_links!(H)
+
+    ms=matrix_state(lower,left)
+    ir=ils[1]
+    t=Matrix{Float64}(undef,1,1)
+    for n in 1:N-1
         W=copy(H[n])
-        ir,ic =linkind(H,n-1),linkind(H,n)
-        I,d=get_identity(W,ir,ic)
-        Wg,L,Linv=reduce_and_transform(W,ir,ic,ms,eps)
-        c=get_bc_block(Wg,ic,ir,ms)
+        ic =linkind(H,n)
+        I,d=get_identity(W,ir,ic)    
+        t=gauge_transform!(W,ir,ic,t,ms)
+        c=get_bc_block(W,ic,ir,ms)
         c0=c*dag(I)/d
         @test norm(c0)<eps
-        #pprint(ir,Wg*dag(I)/d,ic)
-        # Now do the back transform
-        # LT=ITensor(L,dag(ic),ic') 
-        # LinvT=ITensor(Linv,ir',dag(ir))
-        # W1=noprime(LinvT*Wg*LT,tags="Link")
-        pprint(Wg-H[n])
-        # @show norm(W-W1)
+        ir=ic
+    end
 
-
-        # ms=matrix_state(lower,right)
-        # W=copy(H[n])
-        # Wg,L,Linv=reduce_and_transform(W,ir,ic,ms,eps)
-        # b=get_bc_block(Wg,ir,ic,ms)
-        # b0=b*dag(I)/d
-        # @test norm(b0)<eps
-        #pprint(ir,Wg*dag(I)/d,ic)
+    ms=matrix_state(lower,right)
+    ic=ils[N+1]
+    t=Matrix{Float64}(undef,1,1)
+    for n in N:-1:N-2
+        W=copy(H[n])
+        ir =linkind(H,n-1)
+        I,d=get_identity(W,ir,ic)    
+        t=gauge_transform!(W,ir,ic,t,ms)
+        c=get_bc_block(W,ir,ic,ms)
+        c0=c*dag(I)/d
+        @test norm(c0)<eps
+        ic=ir
     end
 end
 
+# @testset "Extract blocks" begin
+#     eps=1e-15
+#     N=5 #5 sites
+#     NNN=2 #Include 2nd nearest neighbour interactions
+#     sites = siteinds("Electron",N,conserve_qns=false)
+#     d=dim(inds(sites[1])[1])
+#     H=make_Hubbard_AutoMPO(sites,NNN)
+#     ils,d0,dN=add_dummy_links!(H)
+
+#     ms=matrix_state(lower,left)
+#     ir,ic=ils[1],linkind(H,1)
+#     nr,nc=dim(ir),dim(ic)
+#     W=H[1]
+#     #pprint(W)
+#     𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(W,ir,ic,ms)
+#     @test norm(matrix(𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
+#     @test isnothing(𝑨)    
+#     @test isnothing(𝒃)  
+#     @test norm(array(𝒅)-array(W[ir=>1:1,ic=>nc:nc]))<eps
+#     @test norm(array(𝒄)-array(W[ir=>nr:nr,ic=>2:nc-1]))<eps
+
+#     W=H[N]
+#     ir,ic=linkind(H,N-1),ils[N+1]
+#     nr,nc=dim(ir),dim(ic)
+#     #pprint(W)
+#     𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(W,ir,ic,ms)
+#     @test norm(matrix(𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
+#     @test isnothing(𝑨)    
+#     @test isnothing(𝒄)  
+#     @test norm(array(𝒅)-array(W[ir=>nr:nr,ic=>1:1]))<eps
+#     @test norm(array(𝒃)-array(W[ir=>2:nr-1,ic=>1:1]))<eps
+
+#     W=H[2]
+#     ir,ic=linkind(H,1),linkind(H,2)
+#     nr,nc=dim(ir),dim(ic)
+#     𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(W,ir,ic,ms)
+#     @test norm(matrix(𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
+#     @test norm(array(𝒅)-array(W[ir=>nr:nr,ic=>1:1]))<eps
+#     @test norm(array(𝒃)-array(W[ir=>2:nr-1,ic=>1:1]))<eps
+#     @test norm(array(𝒄)-array(W[ir=>nr:nr,ic=>2:nc-1]))<eps
+#     @test norm(array(𝑨)-array(W[ir=>2:nr-1,ic=>2:nc-1]))<eps
+# end
 
 nothing
