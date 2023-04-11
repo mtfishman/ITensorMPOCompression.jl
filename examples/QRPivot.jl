@@ -8,57 +8,126 @@ import ITensorMPOCompression: @checkflux, mpoc_checkflux, insert_xblock
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
 
 #
-#      1 0 0
-#  W = b A 0, For lr=left, slice out c, for lr=right slice out b.
-#      d c I
+#  Decisions: 1) Use ilf,ilb==forward,backward  or ir,ic=row,column ?
+#             2) extract_blocks gets everything.  Should it defer to get_bc_block for b and c?
+#   may best to define W as
+#               ul=lower         ul=upper
+#                1 0 0           1 b d
+#     lr=left    b A 0           0 A c
+#                d c I           0 0 I
 #
-function get_bc_block(W::ITensor,ilf::Index,ilb::Index,ms::matrix_state)::ITensor
-    @assert hasinds(W,ilb,ilf)
-    Dwf,Dwb=dim(ilf),dim(ilb)
-    @assert ms.ul==lower
-    if ms.lr==left
-        bc_block= W[ilb=>Dwb:Dwb,ilf=>2:Dwf-1]
-    else
-        bc_block= W[ilb=>1:1,ilf=>2:Dwf-1]
-    end
-    return bc_block
+#                1 0 0           1 c d
+#     lr=right   c A 0           0 A b
+#                d b I           0 0 I
+#
+#  Use kwargs in extract_blocks so caller can choose what they need. Default is c only
+#
+mutable struct regform_blocks
+    𝕀::Union{ITensor,Nothing}
+    𝑨::Union{ITensor,Nothing}
+    𝑨𝒄::Union{ITensor,Nothing}
+    𝒃::Union{ITensor,Nothing}
+    𝒄::Union{ITensor,Nothing}
+    𝒅::Union{ITensor,Nothing}
+    irA::Index
+    icA::Index
+    irAc::Index
+    icAc::Index
+    irb::Index
+    icb::Index
+    irc::Index
+    icc::Index
+    ird::Index
+    icd::Index    
+    regform_blocks()=new(nothing,nothing,nothing,nothing,nothing,nothing)
 end
 
-#
-#      1 0 0
-#  W = b A 0, For lr=left, slice out [A], for lr=right slice out [b A].
-#      d c I                         [c]                          
-#
-function get_Abc_block(W::ITensor,ilf::Index,ilb::Index,ms::matrix_state)::Tuple{ITensor,Index,Index}
-    Dwf,Dwb=dim(ilf),dim(ilb)
-    @assert ms.ul==lower
-    if ms.lr==left
-        if Dwb>1
-            Abc_block= W[ilb=>2:Dwb,ilf=>2:Dwf-1]
+d(rfb::regform_blocks)::Float64=scalar(rfb.𝕀*rfb.𝕀)
+c0(rfb::regform_blocks)::ITensor=rfb.𝒄*dag(rfb.𝕀)/d(rfb)
+
+function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=false,c=true,b=false,d=false,A=false,Ac=false,I=true,fix_inds=false)::regform_blocks
+    @assert hasinds(W,ir,ic)
+    @assert tags(ir)!=tags(ic)
+    @assert plev(ir)==0
+    @assert plev(ic)==0
+    
+    if ms.ul==uppercase
+        ir,ic=ic,ir #transpose
+    end
+    nr,nc=dim(ir),dim(ic)
+    @assert nr>1 || nc>1
+    if all #does not include Ac
+        A=b=c=d=I=true
+    end
+    if fix_inds && !d
+        @warn "extract_blocks: fix_inds requires d=true."
+        d=true
+    end
+    A = A && (nr>1 && nc>1)
+    b = b &&  nr>1 
+    c = c &&  nc>1
+
+    rfb=regform_blocks()
+    I && (rfb.𝕀= nr>1 ? slice(W,ir=>1,ic=>1) : slice(W,ir=>1,ic=>nc))
+   
+    if A
+
+        rfb.𝑨= W[ir=>2:nr-1,ic=>2:nc-1]
+        rfb.irA,=inds(rfb.𝑨,tags=tags(ir))
+        rfb.icA,=inds(rfb.𝑨,tags=tags(ic))
+    end
+    if Ac
+        if ms.lr==left
+            if nr>1
+                rfb.𝑨𝒄= W[ir=>2:nr,ic=>2:nc-1]#W[ilb=>2:Dwb,ilf=>2:Dwf-1]
+            else
+                rfb.𝑨𝒄= W[ir=>1:1,ic=>2:nc-1]#W[ilb=>1:1,ilf=>2:Dwf-1]
+            end
         else
-            Abc_block= W[ilb=>1:1,ilf=>2:Dwf-1]
+            if nc>1
+                rfb.𝑨𝒄= W[ir=>2:nr-1,ic=>1:nc-1]#W[ilb=>1:Dwb-1,ilf=>2:Dwf-1]
+            else
+                rfb.𝑨𝒄= W[ir=>2:nr-1,ic=>1:1]#W[ilb=>1:1,ilf=>2:Dwf-1]
+            end
         end
-    else
-        if Dwb>1
-            Abc_block= W[ilb=>1:Dwb-1,ilf=>2:Dwf-1]
-        else
-            Abc_block= W[ilb=>1:1,ilf=>2:Dwf-1]
+        #rfb.𝑨𝒄= ms.lr == left ?  W[ir=>2:nr,ic=>2:nc-1] :  W[ir=>2:nr-1,ic=>1:nc-1]
+        rfb.irAc,=inds(rfb.𝑨𝒄,tags=tags(ir))
+        rfb.icAc,=inds(rfb.𝑨𝒄,tags=tags(ic))
+    end
+    if b
+        rfb.𝒃= W[ir=>2:nr-1,ic=>1:1]
+        rfb.irb,=inds(rfb.𝒃,tags=tags(ir))
+        rfb.icb,=inds(rfb.𝒃,tags=tags(ic))
+    end
+    if c
+        rfb.𝒄= W[ir=>nr:nr,ic=>2:nc-1]
+        rfb.irc,=inds(rfb.𝒄,tags=tags(ir))
+        rfb.icc,=inds(rfb.𝒄,tags=tags(ic))
+    end
+    if d
+        rfb.𝒅= nr >1 ? W[ir=>nr:nr,ic=>1:1] : W[ir=>1:1,ic=>1:1]
+        rfb.ird,=inds(rfb.𝒅,tags=tags(ir))
+        rfb.icd,=inds(rfb.𝒅,tags=tags(ic))
+    end
+
+    if fix_inds
+        if !isnothing(rfb.𝒄)
+            rfb.𝒄=replaceind(rfb.𝒄,rfb.irc,rfb.ird)
+        end
+        if !isnothing(rfb.𝒃)
+            rfb.𝒃=replaceind(rfb.𝒃,rfb.icb,rfb.icd)
+        end
+        if !isnothing(rfb.𝑨)
+            rfb.𝑨=replaceinds(rfb.𝑨,[rfb.irA,rfb.icA],[rfb.irb,rfb.icc])
         end
     end
-    ilf1,=inds(Abc_block,tags=tags(ilf))
-    ilb1,=inds(Abc_block,tags=tags(ilb)) #New indices.
-    return Abc_block,ilf1,ilb1
+    if ms.lr==right
+        rfb.𝒃,rfb.𝒄=rfb.𝒄,rfb.𝒃
+    end
+
+    return rfb
 end
-#
-#      1 0 0                           
-#  W = b A 0, make a new ITensor Wp, 
-#      d c I  
-#                          [1]
-#  for lr=left 1) copy the [b] column from W into Wp, 2) assign Abc into [A]. 3) set bottom corner I
-#                          [d]                                           [c]
-#                          
-#  for lr=right 1) copy the [d c I] row from W into Wp, 2) assign Abc into [b A]. 3) set top corner I
-#  
+
 function set_Abc_block(W::ITensor,Abc::ITensor,ilf::Index,ilb::Index,iq::Index,ms::matrix_state)
     is=noncommoninds(W,ilf,ilb)
     @assert hasinds(W,ilf,ilb)
@@ -87,24 +156,19 @@ function set_Abc_block(W::ITensor,Abc::ITensor,ilf::Index,ilb::Index,iq::Index,m
     return Wp,ilqp
 end
 
-
 function ac_qx(W::ITensor,ilf::Index,ilb::Index,t,ms::matrix_state;kwargs...)
     @checkflux(W)
     @assert hasinds(W,ilf)
     @assert hasinds(W,ilb)
     eps=1e-15
-    I,d=get_identity(W,ilb,ilf)    
-    # bc=get_bc_block(W,ilf,ilb,ms) #TODO capture removed space
-    # Dwf,Dwb=dim(ilf),dim(ilb)
-    # println("W0")
-    # pprint(ilb,W*dag(I)/d,ilf)
     if !isnothing(t)
-        # @assert norm(bc*dag(I))>eps 
         t=gauge_transform!(W,ilb,ilf,t,ms)
-        bcz=get_bc_block(W,ilf,ilb,ms)
-        @assert norm(bcz*dag(I))<eps
+        rfb=extract_blocks(W,ilb,ilf,ms;c=true)
+        @assert norm(c0(rfb))<eps
     end
-    Abc,ilf1,_=get_Abc_block(W,ilf,ilb,ms)
+    rfb=extract_blocks(W,ilb,ilf,ms;Ac=true)
+    Abc,ilf1=rfb.𝑨𝒄,rfb.icAc
+    dh=d(rfb)
     @checkflux(Abc)
     if ms.lr==left
         Qinds=noncommoninds(Abc,ilf1)
@@ -115,8 +179,8 @@ function ac_qx(W::ITensor,ilf::Index,ilb::Index,t,ms::matrix_state;kwargs...)
     end
     @checkflux(Q)
     @checkflux(R)
-    Q*=sqrt(d)
-    R/=sqrt(d)
+    Q*=sqrt(dh)
+    R/=sqrt(dh)
     Wp,iqp=set_Abc_block(W,Q,ilf,ilb,iq,ms) #TODO inject correct removed space
     R=prime(R,ilf1)
     #  TODO fix mimatched spaces when H=non auto MPO.  Need QN()=>1,QN()=>Chi,QN()=>1 space in MPO
@@ -139,65 +203,15 @@ function add_dummy_links!(H::MPO)
     return [il0,ils...,ilN],d0,dN
 end
 
-function get_identity(W::ITensor,ir::Index,ic::Index)
-    
-    Id=dim(ir)>1 ? slice(W,ir=>1,ic=>1) : slice(W,ir=>1,ic=>dim(ic))
-    d=dims(Id)[1]
-    return Id,d
-end
-
-function get_bc_block(W0::Matrix,ms::matrix_state)
-    @assert ms.ul==lower
-    nr,nc=size(W0)
-    if ms.lr==left
-        bc0=W0[nr,2:nc-1]
-    else
-        bc0=W0[2:nr-1,1]
-    end
-    return bc0
-end
-
-function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state)
-    @assert hasinds(W,ir,ic)
-    nr,nc=dim(ir),dim(ic)
-    @assert nr>1 || nc>1
-    𝕀= nr>1 ? slice(W,ir=>1,ic=>1) : slice(W,ir=>1,ic=>nc)
-    𝑨= nr>1 && nc>1 ? W[ir=>2:nr-1,ic=>2:nc-1] : nothing
-    𝒃= nr>1 ? W[ir=>2:nr-1,ic=>1:1] : nothing
-    𝒄= nc>1 ? W[ir=>nr:nr,ic=>2:nc-1] : nothing
-    𝒅= nr >1 ? W[ir=>nr:nr,ic=>1:1] : W[ir=>1:1,ic=>1:1]
-
-    ird,=inds(𝒅,tags=tags(ir))
-    icd,=inds(𝒅,tags=tags(ic))
-    if !isnothing(𝒄)
-        irc,=inds(𝒄,tags=tags(ir))
-        icc,=inds(𝒄,tags=tags(ic))
-        𝒄=replaceind(𝒄,irc,ird)
-    end
-    if !isnothing(𝒃)
-        irb,=inds(𝒃,tags=tags(ir))
-        icb,=inds(𝒃,tags=tags(ic))
-        𝒃=replaceind(𝒃,icb,icd)
-    end
-    if !isnothing(𝑨)
-        irA,=inds(𝑨,tags=tags(ir))
-        icA,=inds(𝑨,tags=tags(ic))
-        𝑨=replaceinds(𝑨,[irA,icA],[irb,icc])
-    end
-    return 𝕀,𝑨,𝒃,𝒄,𝒅
-end
-
 #  𝕀 𝑨 𝒃 𝒄 𝒅 ⌃ c₀ x0
 function gauge_transform!(W::ITensor,ir::Index,ic::Index,tprev::Matrix{Float64},ms::matrix_state)
-    𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(W,ir,ic,ms)
-    if ms.lr==right
-        𝒃,𝒄=𝒄,𝒃
-    end
-    d=𝕀*𝕀
+    Wb=extract_blocks(W,ir,ic,ms;all=true,fix_inds=true)
+    𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅
+    dh=𝕀*𝕀
     nr,nc=dim(ir),dim(ic)
     𝒄⎖=nothing
     if nr==1 
-        t=𝒄*dag(𝕀)/d #c0
+        t=𝒄*dag(𝕀)/dh #c0
         𝒄⎖=𝒄-𝕀*t
         𝒅⎖=𝒅
     elseif nc==1
@@ -212,13 +226,12 @@ function gauge_transform!(W::ITensor,ir::Index,ic::Index,tprev::Matrix{Float64},
         irt=commonind(𝒅,𝒄,tags="Link")
         tprevT=ITensor(tprev,irt,ict)
 
-        𝒄₀=𝒄*dag(𝕀)/d
-        𝑨₀=𝑨*dag(𝕀)/d
+        𝒄₀=𝒄*dag(𝕀)/dh
+        𝑨₀=𝑨*dag(𝕀)/dh
         t=tprevT*𝑨₀+𝒄₀
         𝒄⎖=𝒄+tprevT*𝑨-t*𝕀
         𝒅⎖=𝒅+tprevT*𝒃
     end
-    #@show norm(𝒄⎖*𝕀)
     W[ir=>nr:nr,ic=>1:1]=𝒅⎖
     if !isnothing(𝒄⎖)
         if ms.lr==left 
@@ -231,12 +244,20 @@ function gauge_transform!(W::ITensor,ir::Index,ic::Index,tprev::Matrix{Float64},
     return matrix(t)
 end
 
-function needs_gauge_fix(W::ITensor,ir::Index,ic::Index,ms::matrix_state,eps::Float64)
-    𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(W,ir,ic,ms)
-    if ms.lr==right
-        𝒃,𝒄=𝒄,𝒃
+function gauge_transform!(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
+    t=Matrix{Float64}(undef,1,1)
+    ir=ils[1]
+    for n in eachindex(H)
+        ic=ils[n+1]
+        @assert hasinds(H[n],ir,ic)
+        t=gauge_transform!(H[n],ir,ic,t,ms)
+        ir=ic
     end
-    return norm(𝒄*𝕀)>=eps
+end
+
+function needs_gauge_fix(W::ITensor,ir::Index,ic::Index,ms::matrix_state,eps::Float64)
+    Wb=extract_blocks(W,ir,ic,ms;c=true)
+    return norm(c0(Wb))>=eps
 end
 
 function needs_gauge_fix(H::MPO,ils::Vector{Index{T}},ms::matrix_state,eps::Float64) where {T}
@@ -254,11 +275,12 @@ function calculate_ts(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
     push!(ts,tprev)
     for n in eachindex(H)
         ic=ils[n+1]
-        𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(H[n],ir,ic,ms)
-        d=𝕀*𝕀
+        Wb=extract_blocks(H[n],ir,ic,ms;all=true,fix_inds=true)
+        𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅
+        dh=𝕀*𝕀
         nr,nc=dim(ir),dim(ic)
         if nr==1 
-            c0=𝒄*dag(𝕀)/d
+            c0=𝒄*dag(𝕀)/dh
             t=matrix(c0)[:,1] #c0
         elseif nc==1
             t=zeros(1)
@@ -267,8 +289,8 @@ function calculate_ts(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
             irt=commonind(𝒅,𝒄,tags="Link")
             tprevT=ITensor(tprev,irt,ict)
 
-            𝒄₀=𝒄*dag(𝕀)/d
-            𝑨₀=𝑨*dag(𝕀)/d
+            𝒄₀=𝒄*dag(𝕀)/dh
+            𝑨₀=𝑨*dag(𝕀)/dh
             t=matrix(tprevT*𝑨₀+𝒄₀)[1,:]
         end
         #@show t
@@ -314,7 +336,6 @@ function apply_Ls!(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
         ir=ic
     end
 end
-
 
 models=[
     # [make_transIsing_AutoMPO,"S=1/2"],
@@ -398,28 +419,21 @@ end
     ils,d0,dN=add_dummy_links!(H)
 
     ms=matrix_state(lower,left)
-    Hp=copy(H)
-    apply_Ls!(Hp,ils,ms)
+    H_lwl=copy(H)
+    apply_Ls!(H_lwl,ils,ms)
+    H_g=copy(H)
+    gauge_transform!(H_g,ils,ms)
 
     ir=ils[1]
     t=Matrix{Float64}(undef,1,1)
     for n in 1:N-1
         W=H[n]
         ic =linkind(H,n)
-        I,d=get_identity(W,ir,ic)    
         t=gauge_transform!(W,ir,ic,t,ms)
-        c=get_bc_block(W,ic,ir,ms)
-        c0=c*dag(I)/d
-        @test norm(c0)<eps
-        @test norm(Hp[n]-W)<eps
-        # @show n
-        # diff=Hp[n]-W
-        # @pprint(H[n])
-        # @pprint(Hp[n])
-        # @pprint(W)
-        # @pprint(diff)
-        #@show slice(Hp[n],ir=>1,ic=>1)  slice(H[n],ir=>1,ic=>1)  slice(W,ir=>1,ic=>1) 
-        # @show n norm(Hp[n]-W)
+        rfb=extract_blocks(W,ir,ic,ms;c=true)
+        @assert norm(c0(rfb))<eps
+        @test norm(H_lwl[n]-W)<eps
+        @test norm(H_g[n]-W)<eps
         ir=ic
     end
     n=N
@@ -429,7 +443,8 @@ end
     # if ngf 
         t=gauge_transform!(W,ir,ic,t,ms)
     # end
-    @test norm(Hp[n]-W)<eps
+    @test norm(H_lwl[n]-W)<eps
+    @test norm(H_g[n]-W)<eps
     H[n]=W
 
     H[1]*=dag(d0)
@@ -466,33 +481,38 @@ end
     nr,nc=dim(ir),dim(ic)
     W=H[1]
     #pprint(W)
-    𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(W,ir,ic,ms)
-    @test norm(matrix(𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
-    @test isnothing(𝑨)    
-    @test isnothing(𝒃)  
-    @test norm(array(𝒅)-array(W[ir=>1:1,ic=>1:1]))<eps
-    @test norm(array(𝒄)-array(W[ir=>nr:nr,ic=>2:nc-1]))<eps
-
+    rfb=extract_blocks(W,ir,ic,ms;all=true)
+    @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
+    @test isnothing(rfb.𝑨)    
+    @test isnothing(rfb.𝒃)  
+    @test norm(array(rfb.𝒅)-array(W[ir=>1:1,ic=>1:1]))<eps
+    @test norm(array(rfb.𝒄)-array(W[ir=>nr:nr,ic=>2:nc-1]))<eps
+    
     W=H[N]
     ir,ic=linkind(H,N-1),ils[N+1]
     nr,nc=dim(ir),dim(ic)
     #pprint(W)
-    𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(W,ir,ic,ms)
-    @test norm(matrix(𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
-    @test isnothing(𝑨)    
-    @test isnothing(𝒄)  
-    @test norm(array(𝒅)-array(W[ir=>nr:nr,ic=>1:1]))<eps
-    @test norm(array(𝒃)-array(W[ir=>2:nr-1,ic=>1:1]))<eps
+    rfb=extract_blocks(W,ir,ic,ms;all=true,fix_inds=true)
+    @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
+    @test isnothing(rfb.𝑨)    
+    @test isnothing(rfb.𝒄)  
+    @test norm(array(rfb.𝒅)-array(W[ir=>nr:nr,ic=>1:1]))<eps
+    @test norm(array(rfb.𝒃)-array(W[ir=>2:nr-1,ic=>1:1]))<eps
+    
 
     W=H[2]
     ir,ic=linkind(H,1),linkind(H,2)
     nr,nc=dim(ir),dim(ic)
-    𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(W,ir,ic,ms)
-    @test norm(matrix(𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
-    @test norm(array(𝒅)-array(W[ir=>nr:nr,ic=>1:1]))<eps
-    @test norm(array(𝒃)-array(W[ir=>2:nr-1,ic=>1:1]))<eps
-    @test norm(array(𝒄)-array(W[ir=>nr:nr,ic=>2:nc-1]))<eps
-    @test norm(array(𝑨)-array(W[ir=>2:nr-1,ic=>2:nc-1]))<eps
+    rfb=extract_blocks(W,ir,ic,ms;all=true,fix_inds=true,Ac=true)
+    @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
+    @test norm(array(rfb.𝒅)-array(W[ir=>nr:nr,ic=>1:1]))<eps
+    @test norm(array(rfb.𝒃)-array(W[ir=>2:nr-1,ic=>1:1]))<eps
+    @test norm(array(rfb.𝒄)-array(W[ir=>nr:nr,ic=>2:nc-1]))<eps
+    @test norm(array(rfb.𝑨)-array(W[ir=>2:nr-1,ic=>2:nc-1]))<eps
+    @test norm(array(rfb.𝑨𝒄)-array(W[ir=>2:nr,ic=>2:nc-1]))<eps
+
+    #@show typeof(scalar(rfb.𝕀*rfb.𝕀))
+
 end
 
 @testset "Calculate t's, L's and Linv's" begin
