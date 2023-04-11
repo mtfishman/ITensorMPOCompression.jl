@@ -100,10 +100,7 @@ function ac_qx(W::ITensor,ilf::Index,ilb::Index,t,ms::matrix_state;kwargs...)
     # pprint(ilb,W*dag(I)/d,ilf)
     if !isnothing(t)
         # @assert norm(bc*dag(I))>eps 
-        println("------------LWL transform-----------------")
         t=gauge_transform!(W,ilb,ilf,t,ms)
-        # println("Wg0")
-        # pprint(ilb,Wg*dag(I)/d,ilf)
         bcz=get_bc_block(W,ilf,ilb,ms)
         @assert norm(bcz*dag(I))<eps
     end
@@ -168,7 +165,7 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state)
     𝑨= nr>1 && nc>1 ? W[ir=>2:nr-1,ic=>2:nc-1] : nothing
     𝒃= nr>1 ? W[ir=>2:nr-1,ic=>1:1] : nothing
     𝒄= nc>1 ? W[ir=>nr:nr,ic=>2:nc-1] : nothing
-    𝒅= nr >1 ? W[ir=>nr:nr,ic=>1:1] : W[ir=>1:1,ic=>nc:nc]
+    𝒅= nr >1 ? W[ir=>nr:nr,ic=>1:1] : W[ir=>1:1,ic=>1:1]
 
     ird,=inds(𝒅,tags=tags(ir))
     icd,=inds(𝒅,tags=tags(ic))
@@ -247,7 +244,6 @@ function needs_gauge_fix(H::MPO,ils::Vector{Index{T}},ms::matrix_state,eps::Floa
     for n in sweep(H,ms.lr)
         push!(ngfs,needs_gauge_fix(H[n],ils[n],ils[n+1],ms,eps))
     end
-    @show ngfs
     return all(ngfs)
 end
 
@@ -319,180 +315,189 @@ function apply_Ls!(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
     end
 end
 
-# function back_transform(W::ITensor,ir::Index,ic::Index,t::Vector{Float64},ms::matrix_state)
-#     L=insert_xblock(1.0*Matrix(LinearAlgebra.I,n,n),t,ms)
-#     Linv=insert_xblock(1.0*Matrix(LinearAlgebra.I,n,n),-t,ms)
-# end
+
 models=[
     # [make_transIsing_AutoMPO,"S=1/2"],
     # [make_Heisenberg_AutoMPO,"S=1/2"],
     [make_Hubbard_AutoMPO,"Electron"],
     ]
 
-# @testset "Ac/Ab block respecting decomposition $(model[1]), qns=$qns" for model in models, qns in [false]
-#     eps=1e-14
-#     N=5 #5 sites
-#     NNN=3 #Include 2nd nearest neighbour interactions
-#     sites = siteinds(model[2],N,conserve_qns=qns);
-#     H=model[1](sites,NNN);
-#     @show get_Dw(H)
-#     state=[isodd(n) ? "Up" : "Dn" for n=1:N]
-#     psi=randomMPS(sites,state)
-#     E0=inner(psi',H,psi)
+@testset "Ac/Ab block respecting decomposition $(model[1]), qns=$qns" for model in models, qns in [false]
+    eps=1e-14
+    N=5 #5 sites
+    NNN=3 #Include 2nd nearest neighbour interactions
+    sites = siteinds(model[2],N,conserve_qns=qns);
+    H=model[1](sites,NNN);
+    @show get_Dw(H)
+    state=[isodd(n) ? "Up" : "Dn" for n=1:N]
+    psi=randomMPS(sites,state)
+    E0=inner(psi',H,psi)
 
-#     ils,d0,dN=add_dummy_links!(H)
+    ils,d0,dN=add_dummy_links!(H)
 
-#     ms=matrix_state(lower,left)
-#     ngf=needs_gauge_fix(H,ils,ms,eps)
+    ms=matrix_state(lower,left)
+    ngf=needs_gauge_fix(H,ils,ms,eps)
 
-#     t=ngf ? Matrix{Float64}(undef,1,1) : nothing
-#     ilb=ils[1]
-#     for n in 1:N-1
-#         @show n
-#         ilf=linkind(H,n)
-#         W,R,iqp,t=ac_qx(H[n],ilf,ilb,t,ms)
-#         @test norm(H[n]-W*R)<1e-15
-#         @test check_ortho(W,ms)
-#         H[n]=W
-#         H[n+1]=R*H[n+1]
-#         ilb=dag(iqp)
-#     end
-#     n=N
-#     ilf=ils[n+1]
-#     W=H[n]
-#     @assert hasinds(W,ilb,ilf)
-#     if ngf 
-#         t=gauge_transform!(W,ilb,ilf,t,ms)
-#     end
-#     H[n]=W
-#     #@test check_ortho(H,ms)
-#     qns && show_directions(H)
-#     H[1]*=dag(d0)
-#     H[N]*=dag(dN)
-#     E1=inner(psi',H,psi)
-#     @test E0 ≈ E1 atol = eps
+    t=ngf ? Matrix{Float64}(undef,1,1) : nothing
+    ilb=ils[1]
+    for n in 1:N-1
+        ilf=linkind(H,n)
+        W,R,iqp,t=ac_qx(H[n],ilf,ilb,t,ms)
+        @test norm(H[n]-W*R)<1e-15
+        @test check_ortho(W,ms)
+        H[n]=W
+        H[n+1]=R*H[n+1]
+        ilb=dag(iqp)
+    end
+    n=N
+    ilf=ils[n+1]
+    W=H[n]
+    @assert hasinds(W,ilb,ilf)
+    if ngf 
+        t=gauge_transform!(W,ilb,ilf,t,ms)
+    end
+    H[n]=W
+    #@test check_ortho(H,ms)
+    qns && show_directions(H)
+    H[1]*=dag(d0)
+    H[N]*=dag(dN)
+    E1=inner(psi',H,psi)
+    #@test E0 ≈ E1 atol = eps
 
-#     # ils,d0,dN=add_dummy_links!(H)
-#     # ms=matrix_state(lower,right)
-#     # ilb=ils[N+1]
-#     # for n in sweep(H,right)
-#     #     ilf=dag(linkind(H,n-1))
-#     #     W,R,iqp=ac_qx(H[n],ilf,ilb,ms)
-#     #     @test norm(H[n]-W*R)<1e-15
-#     #     @test check_ortho(W,ms)
-#     #     H[n]=W
-#     #     H[n-1]=R*H[n-1]
-#     #     ilb=dag(iqp)
-#     # end
-#     # @test check_ortho(H,ms)
-#     # qns && show_directions(H)
-#     # H[1]*=dag(d0)
-#     # H[N]*=dag(dN)
-#     # E2=inner(psi',H,psi)
-#     # @test E0 ≈ E2 atol = eps
-# end
+    # ils,d0,dN=add_dummy_links!(H)
+    # ms=matrix_state(lower,right)
+    # ilb=ils[N+1]
+    # for n in sweep(H,right)
+    #     ilf=dag(linkind(H,n-1))
+    #     W,R,iqp=ac_qx(H[n],ilf,ilb,ms)
+    #     @test norm(H[n]-W*R)<1e-15
+    #     @test check_ortho(W,ms)
+    #     H[n]=W
+    #     H[n-1]=R*H[n-1]
+    #     ilb=dag(iqp)
+    # end
+    # @test check_ortho(H,ms)
+    # qns && show_directions(H)
+    # H[1]*=dag(d0)
+    # H[N]*=dag(dN)
+    # E2=inner(psi',H,psi)
+    # @test E0 ≈ E2 atol = eps
+end
 
-# @testset "Gauge transform rectangular W" begin
-#     eps=1e-14
+@testset "Gauge transform rectangular W" begin
+    eps=1e-14
     
-#     N=10 #5 sites
-#     NNN=5 #Include 2nd nearest neighbour interactions
-#     sites = siteinds("Electron",N,conserve_qns=false)
-#     H=make_Hubbard_AutoMPO(sites,NNN)
-#     state=[isodd(n) ? "Up" : "Dn" for n=1:N]
-#     psi=randomMPS(sites,state)
-#     E0=inner(psi',H,psi)
+    N=10 #5 sites
+    NNN=5 #Include 2nd nearest neighbour interactions
+    sites = siteinds("Electron",N,conserve_qns=false)
+    H=make_Hubbard_AutoMPO(sites,NNN)
+    state=[isodd(n) ? "Up" : "Dn" for n=1:N]
+    psi=randomMPS(sites,state)
+    E0=inner(psi',H,psi)
 
-#     ils,d0,dN=add_dummy_links!(H)
+    ils,d0,dN=add_dummy_links!(H)
 
-#     ms=matrix_state(lower,left)
-#     ir=ils[1]
-#     t=Matrix{Float64}(undef,1,1)
-#     for n in 1:1
-#         W=H[n]
-#         ic =linkind(H,n)
-#         I,d=get_identity(W,ir,ic)    
-#         t=gauge_transform!(W,ir,ic,t,ms)
-#         c=get_bc_block(W,ic,ir,ms)
-#         c0=c*dag(I)/d
-#         @test norm(c0)<eps
-#         ir=ic
-#     end
-#     # n=N
-#     # ic=ils[n+1]
-#     # W=H[n]
-#     # @assert hasinds(W,ir,ic)
-#     # # if ngf 
-#     #     t=gauge_transform!(W,ir,ic,t,ms)
-#     # # end
-#     # H[n]=W
+    ms=matrix_state(lower,left)
+    Hp=copy(H)
+    apply_Ls!(Hp,ils,ms)
 
-#     H[1]*=dag(d0)
-#     H[N]*=dag(dN)
-#     E2=inner(psi',H,psi)
-#     @test E0 ≈ E2 atol = eps
+    ir=ils[1]
+    t=Matrix{Float64}(undef,1,1)
+    for n in 1:N-1
+        W=H[n]
+        ic =linkind(H,n)
+        I,d=get_identity(W,ir,ic)    
+        t=gauge_transform!(W,ir,ic,t,ms)
+        c=get_bc_block(W,ic,ir,ms)
+        c0=c*dag(I)/d
+        @test norm(c0)<eps
+        @test norm(Hp[n]-W)<eps
+        # @show n
+        # diff=Hp[n]-W
+        # @pprint(H[n])
+        # @pprint(Hp[n])
+        # @pprint(W)
+        # @pprint(diff)
+        #@show slice(Hp[n],ir=>1,ic=>1)  slice(H[n],ir=>1,ic=>1)  slice(W,ir=>1,ic=>1) 
+        # @show n norm(Hp[n]-W)
+        ir=ic
+    end
+    n=N
+    ic=ils[n+1]
+    W=H[n]
+    @assert hasinds(W,ir,ic)
+    # if ngf 
+        t=gauge_transform!(W,ir,ic,t,ms)
+    # end
+    @test norm(Hp[n]-W)<eps
+    H[n]=W
 
-#     # ms=matrix_state(lower,right)
-#     # ic=ils[N+1]
-#     # t=Matrix{Float64}(undef,1,1)
-#     # for n in N:-1:N-2
-#     #     W=copy(H[n])
-#     #     ir =linkind(H,n-1)
-#     #     I,d=get_identity(W,ir,ic)    
-#     #     t=gauge_transform!(W,ir,ic,t,ms)
-#     #     c=get_bc_block(W,ir,ic,ms)
-#     #     c0=c*dag(I)/d
-#     #     @test norm(c0)<eps
-#     #     ic=ir
-#     # end
-# end
+    H[1]*=dag(d0)
+    H[N]*=dag(dN)
+    E2=inner(psi',H,psi)
+    @test E0 ≈ E2 atol = eps
 
-# @testset "Extract blocks" begin
-#     eps=1e-15
-#     N=5 #5 sites
-#     NNN=2 #Include 2nd nearest neighbour interactions
-#     sites = siteinds("Electron",N,conserve_qns=false)
-#     d=dim(inds(sites[1])[1])
-#     H=make_Hubbard_AutoMPO(sites,NNN)
-#     ils,d0,dN=add_dummy_links!(H)
+    # ms=matrix_state(lower,right)
+    # ic=ils[N+1]
+    # t=Matrix{Float64}(undef,1,1)
+    # for n in N:-1:N-2
+    #     W=copy(H[n])
+    #     ir =linkind(H,n-1)
+    #     I,d=get_identity(W,ir,ic)    
+    #     t=gauge_transform!(W,ir,ic,t,ms)
+    #     c=get_bc_block(W,ir,ic,ms)
+    #     c0=c*dag(I)/d
+    #     @test norm(c0)<eps
+    #     ic=ir
+    # end
+end
 
-#     ms=matrix_state(lower,left)
-#     ir,ic=ils[1],linkind(H,1)
-#     nr,nc=dim(ir),dim(ic)
-#     W=H[1]
-#     #pprint(W)
-#     𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(W,ir,ic,ms)
-#     @test norm(matrix(𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
-#     @test isnothing(𝑨)    
-#     @test isnothing(𝒃)  
-#     @test norm(array(𝒅)-array(W[ir=>1:1,ic=>nc:nc]))<eps
-#     @test norm(array(𝒄)-array(W[ir=>nr:nr,ic=>2:nc-1]))<eps
-
-#     W=H[N]
-#     ir,ic=linkind(H,N-1),ils[N+1]
-#     nr,nc=dim(ir),dim(ic)
-#     #pprint(W)
-#     𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(W,ir,ic,ms)
-#     @test norm(matrix(𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
-#     @test isnothing(𝑨)    
-#     @test isnothing(𝒄)  
-#     @test norm(array(𝒅)-array(W[ir=>nr:nr,ic=>1:1]))<eps
-#     @test norm(array(𝒃)-array(W[ir=>2:nr-1,ic=>1:1]))<eps
-
-#     W=H[2]
-#     ir,ic=linkind(H,1),linkind(H,2)
-#     nr,nc=dim(ir),dim(ic)
-#     𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(W,ir,ic,ms)
-#     @test norm(matrix(𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
-#     @test norm(array(𝒅)-array(W[ir=>nr:nr,ic=>1:1]))<eps
-#     @test norm(array(𝒃)-array(W[ir=>2:nr-1,ic=>1:1]))<eps
-#     @test norm(array(𝒄)-array(W[ir=>nr:nr,ic=>2:nc-1]))<eps
-#     @test norm(array(𝑨)-array(W[ir=>2:nr-1,ic=>2:nc-1]))<eps
-# end
-
-@testset "Calculate t's, L's and Linv's" begin
+@testset "Extract blocks" begin
+    eps=1e-15
     N=5 #5 sites
     NNN=2 #Include 2nd nearest neighbour interactions
+    sites = siteinds("Electron",N,conserve_qns=false)
+    d=dim(inds(sites[1])[1])
+    H=make_Hubbard_AutoMPO(sites,NNN)
+    ils,d0,dN=add_dummy_links!(H)
+
+    ms=matrix_state(lower,left)
+    ir,ic=ils[1],linkind(H,1)
+    nr,nc=dim(ir),dim(ic)
+    W=H[1]
+    #pprint(W)
+    𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(W,ir,ic,ms)
+    @test norm(matrix(𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
+    @test isnothing(𝑨)    
+    @test isnothing(𝒃)  
+    @test norm(array(𝒅)-array(W[ir=>1:1,ic=>1:1]))<eps
+    @test norm(array(𝒄)-array(W[ir=>nr:nr,ic=>2:nc-1]))<eps
+
+    W=H[N]
+    ir,ic=linkind(H,N-1),ils[N+1]
+    nr,nc=dim(ir),dim(ic)
+    #pprint(W)
+    𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(W,ir,ic,ms)
+    @test norm(matrix(𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
+    @test isnothing(𝑨)    
+    @test isnothing(𝒄)  
+    @test norm(array(𝒅)-array(W[ir=>nr:nr,ic=>1:1]))<eps
+    @test norm(array(𝒃)-array(W[ir=>2:nr-1,ic=>1:1]))<eps
+
+    W=H[2]
+    ir,ic=linkind(H,1),linkind(H,2)
+    nr,nc=dim(ir),dim(ic)
+    𝕀,𝑨,𝒃,𝒄,𝒅=extract_blocks(W,ir,ic,ms)
+    @test norm(matrix(𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
+    @test norm(array(𝒅)-array(W[ir=>nr:nr,ic=>1:1]))<eps
+    @test norm(array(𝒃)-array(W[ir=>2:nr-1,ic=>1:1]))<eps
+    @test norm(array(𝒄)-array(W[ir=>nr:nr,ic=>2:nc-1]))<eps
+    @test norm(array(𝑨)-array(W[ir=>2:nr-1,ic=>2:nc-1]))<eps
+end
+
+@testset "Calculate t's, L's and Linv's" begin
+    N=10 #5 sites
+    NNN=5 #Include 2nd nearest neighbour interactions
     sites = siteinds("Electron",N,conserve_qns=false)
     H=make_Hubbard_AutoMPO(sites,NNN)
     state=[isodd(n) ? "Up" : "Dn" for n=1:N]
@@ -505,7 +510,7 @@ models=[
     for n in sweep(H,ms.lr)
         @test !needs_gauge_fix(H[n],ils[n],ils[n+1],ms,1e-15)
     end
-
+   
     H[1]*=dag(d0)
     H[N]*=dag(dN)
     E2=inner(psi',H,psi)
