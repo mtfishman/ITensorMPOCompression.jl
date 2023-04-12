@@ -141,7 +141,7 @@ d(rfb::regform_blocks)::Float64=scalar(rfb.𝕀*rfb.𝕀)
 b0(rfb::regform_blocks)::ITensor=rfb.𝒃*dag(rfb.𝕀)/d(rfb)
 c0(rfb::regform_blocks)::ITensor=rfb.𝒄*dag(rfb.𝕀)/d(rfb)
 
-#  Use recognizably distinct UTF symbols for operators, and op valued vectors and matrices: 𝕀 𝑨 𝒃 𝒄 𝒅 ⌃ c₀ x0
+#  Use recognizably distinct UTF symbols for operators, and op valued vectors and matrices: 𝕀 𝑨 𝒃 𝒄 𝒅 ⌃ c₀ x0 𝑨𝒄
 function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=false,c=true,b=false,d=false,A=false,Ac=false,I=true,fix_inds=false)::regform_blocks
     @assert hasinds(W,ir,ic)
     @assert tags(ir)!=tags(ic)
@@ -231,33 +231,30 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
     return rfb
 end
 
-function set_Abc_block(W::ITensor,Abc::ITensor,ilf::Index,ilb::Index,iq::Index,ms::matrix_state)
-    is=noncommoninds(W,ilf,ilb)
-    @assert hasinds(W,ilf,ilb)
-    @assert hasinds(Abc,iq,is...)
-    Dwb,Dwf,Dwq=dim(ilb),dim(ilf),dim(iq)+2
+function set_𝑨𝒄_block(W::ITensor,𝑨𝒄::ITensor,ilb::Index,ilf::Index,iq::Index,ms::matrix_state)
+    is=noncommoninds(W,ilb,ilf)
+    @assert hasinds(W,ilb,ilf)
+    @assert hasinds(𝑨𝒄,iq,is...)
+    Dwb,Dwf=dim(ilb),dim(ilf)
     # Todo provide the correct QN("??") space here.  Can we pluck it out of ilf?
+    Dwq=dim(iq)+2
     ilqp=redim(iq,Dwq,1) #replaces ilf: 
-    
+    Wp=ITensor(0.0,ilb,ilqp,is)
+    #
+    #  We need to preserve some blocks outside of Ac from the old MPO tensor.
+    #
     if ms.lr==left
-        Wp=ITensor(0.0,ilb,ilqp,is)
-        Wp[ilb=>1:Dwb,ilqp=>1:1]=W[ilb=>1:Dwb,ilf=>1:1] #left column
         Wp[ilb=>Dwb:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>Dwb:Dwb,ilf=>Dwf:Dwf] #bottom right corner
-        if Dwb>1
-            Wp[ilb=>2:Dwb,ilqp=>2:Dwq-1]=Abc
-        else
-            Wp[ilb=>1:1,ilqp=>2:Dwq-1]=Abc
-        end
+        Wp[ilb=>1:Dwb,ilqp=>1:1]=W[ilb=>1:Dwb,ilf=>1:1] #left column
     else
-        Wp=ITensor(0.0,ilqp,ilf,is)
-        Wp[ilqp=>1:1,ilf=>1:1]=W[ilb=>1:1,ilf=>1:1] #Top left corner
-        Wp[ilqp=>Dwq:Dwq,ilf=>1:Dwf]=W[ilb=>Dwb:Dwb,ilf=>1:Dwf] #Bottom row
-        if Dwf>1
-            Wp[ilqp=>2:Dwq-1,ilf=>1:Dwf-1]=Abc
-        else
-            Wp[ilqp=>2:Dwq-1,ilf=>1:1]=Abc
-        end
+        Wp[ilb=>1:1,ilqp=>1:1]=W[ilb=>1:1,ilf=>1:1] #Top left corner
+        Wp[ilb=>1:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>1:Dwb,ilf=>Dwf:Dwf] #Bottom row
     end
+    #
+    #  Fill in the 𝑨𝒄 block
+    #
+    ac_range= Dwb>1 ? (ms.lr==left ? (2:Dwb) : (1:Dwb-1)) : 1:1
+    Wp[ilb=>ac_range,ilqp=>2:Dwq-1]=𝑨𝒄
     return Wp,ilqp
 end
 
@@ -381,34 +378,37 @@ end
 #
 #  block qx and orthogonalization of the vcat(𝑨,𝒄) and hcat(𝒃,𝑨) blocks.
 #
-function ac_qx(W::ITensor,ilf::Index,ilb::Index,ms::matrix_state;kwargs...)
+function ac_qx(W::ITensor,ic::Index,ir::Index,ms::matrix_state;kwargs...)
     @checkflux(W)
-    @assert hasinds(W,ilf)
-    @assert hasinds(W,ilb)
-    rfb=extract_blocks(W,ilb,ilf,ms;Ac=true)
-    Abc=rfb.𝑨𝒄
-    ilf1 = ms.lr==left ? rfb.icAc : rfb.irAc
-    dh=d(rfb)
-    @checkflux(Abc)
+    @assert hasinds(W,ic)
+    @assert hasinds(W,ir)
+    Wb=extract_blocks(W,ir,ic,ms;Ac=true)
+    ilf1 = ms.lr==left ? Wb.icAc : Wb.irAc
+    dh=d(Wb)
+    @checkflux(Wb.𝑨𝒄)
     if ms.lr==left
-        Qinds=noncommoninds(Abc,ilf1)
-        Q,R,iq=qr(Abc,Qinds;positive=true,rr_cutoff=1e-14,tags=tags(ilf))
+        Qinds=noncommoninds(Wb.𝑨𝒄,ilf1)
+        Q,R,iq=qr(Wb.𝑨𝒄,Qinds;positive=true,rr_cutoff=1e-14,tags=tags(ic))
     else
         Rinds=ilf1
-        R,Q,iq=rq(Abc,Rinds;positive=true,rr_cutoff=1e-14,tags=tags(ilb))
+        R,Q,iq=rq(Wb.𝑨𝒄,Rinds;positive=true,rr_cutoff=1e-14,tags=tags(ir))
     end
     @checkflux(Q)
     @checkflux(R)
     Q*=sqrt(dh)
     R/=sqrt(dh)
-    Wp,iqp=set_Abc_block(W,Q,ilf,ilb,iq,ms) #TODO inject correct removed space
+    if ms.lr==left
+        Wp,iqp=set_𝑨𝒄_block(W,Q,ir,ic,iq,ms) #TODO inject correct removed space
+    else
+        Wp,iqp=set_𝑨𝒄_block(W,Q,ic,ir,iq,ms) #TODO inject correct removed space
+    end
     R=prime(R,ilf1)
     #  TODO fix mimatched spaces when H=non auto MPO.  Need QN()=>1,QN()=>Chi,QN()=>1 space in MPO
     #@show  inds(R) dag(iqp) ilf
     if ms.lr==left
-        Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ilf'))
+        Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ic'))
     else
-        Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ilb'))
+        Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ir'))
     end
     return Wp,Rp,iqp
 end
