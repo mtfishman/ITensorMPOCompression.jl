@@ -13,14 +13,14 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
 #
 function calculate_ts(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
     ts=Vector{Float64}[]
-    ir=ils[1]
+    ir=dag(ils[1])
     tprev=zeros(1)
     push!(ts,tprev)
     for n in eachindex(H)
         ic=ils[n+1]
         Wb=extract_blocks(H[n],ir,ic,ms;all=true,fix_inds=true)
         𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅
-        dh=𝕀*𝕀
+        dh=d(Wb)
         nr,nc=dim(ir),dim(ic)
         if nr==1 
             c0=𝒄*dag(𝕀)/dh
@@ -30,7 +30,7 @@ function calculate_ts(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
         else
            ict=commonind(𝒃,𝑨,tags="Link")
             irt=commonind(𝒅,𝒄,tags="Link")
-            tprevT=ITensor(tprev,irt,ict)
+            tprevT=ITensor(tprev,irt,dag(ict))
 
             𝒄₀=𝒄*dag(𝕀)/dh
             𝑨₀=𝑨*dag(𝕀)/dh
@@ -39,7 +39,7 @@ function calculate_ts(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
         #@show t
         push!(ts,t)
         tprev=t
-        ir=ic
+        ir=dag(ic)
     end
     return ts
 end
@@ -68,7 +68,7 @@ end
 
 function apply_Ls!(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
     Ls,Linvs=calculate_Ls(H,ils,ms)
-    ir=ils[1]
+    ir=dag(ils[1])
     for n in eachindex(H)
         ic=ils[n+1]
         @assert hasinds(H[n],ir,ic)
@@ -76,7 +76,7 @@ function apply_Ls!(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
         LinvT=ITensor(Linvs[n+1],ic,ic')
         Wp=noprime(LT*H[n]*LinvT,tags="Link")
         H[n]=Wp
-        ir=ic
+        ir=dag(ic)
     end
 end
 
@@ -89,9 +89,9 @@ function add_dummy_links!(H::MPO)
     ils=map(n->linkind(H,n),1:N-1)
     ts=ITensors.trivial_space(ils[1])
     T=eltype(H[1])
-    il0=Index(ts;tags="Link,l=0",dir=dir(dag(ils[1])))
+    il0=Index(ts;tags="Link,l=0",dir=dir(ils[1]))
     ilN=Index(ts;tags="Link,l=$N",dir=dir(ils[1]))
-    d0=onehot(T, il0 => 1)
+    d0=onehot(T, dag(il0) => 1)
     dN=onehot(T, ilN => 1)
     H[1]*=d0
     H[N]*=dN
@@ -137,7 +137,7 @@ mutable struct regform_blocks
     regform_blocks()=new(nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing)
 end
 
-d(rfb::regform_blocks)::Float64=scalar(rfb.𝕀*rfb.𝕀)
+d(rfb::regform_blocks)::Float64=scalar(rfb.𝕀*dag(rfb.𝕀))
 b0(rfb::regform_blocks)::ITensor=rfb.𝒃*dag(rfb.𝕀)/d(rfb)
 c0(rfb::regform_blocks)::ITensor=rfb.𝒄*dag(rfb.𝕀)/d(rfb)
 A0(rfb::regform_blocks)::ITensor=rfb.𝑨*dag(rfb.𝕀)/d(rfb)
@@ -148,9 +148,8 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
     @assert tags(ir)!=tags(ic)
     @assert plev(ir)==0
     @assert plev(ic)==0
-
-    #@show ir ic c b ms
-    
+    @assert !hasqns(ir) || dir(W,ir)==dir(ir)
+    @assert !hasqns(ic) || dir(W,ic)==dir(ic)
     if ms.ul==uppercase
         ir,ic=ic,ir #transpose
     end
@@ -280,21 +279,25 @@ end
 
 function is_gauge_fixed(H::MPO,ils::Vector{Index{T}},ul::reg_form,eps::Float64;kwargs...)::Bool where {T}
     igf=true
-    ir=ils[1]   
+    ir=dag(ils[1])   
     for n in eachindex(H)
         ic=ils[n+1]
         igf = igf && is_gauge_fixed(H[n],ir,ic,ul,eps;kwargs...)
         if !igf
             break
         end
-        ir=ic
+        ir=dag(ic)
     end
     return igf
 end
 
+#
+# We store the tₙ₋₁ as Matrix (instead of ITensor) becuse the indices change after extract_blocks,
+#  because of the way the current subtensor functions are implemented.
+#
 function gauge_fix!(W::ITensor,ir::Index,ic::Index,tₙ₋₁::Matrix{Float64},ms::matrix_state)
     Wb=extract_blocks(W,ir,ic,ms;all=true,fix_inds=true)
-    𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅
+    𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅 #for readability below.
     nr,nc=dim(ir),dim(ic)
     nb,nf = ms.lr==left ? (nr,nc) : (nc,nr)
     #
@@ -303,7 +306,7 @@ function gauge_fix!(W::ITensor,ir::Index,ic::Index,tₙ₋₁::Matrix{Float64},m
     if nb>1
         ibd = ms.lr==left ? Wb.ird : Wb.icd #backwards facing index on d block
         ibb = ms.lr==left ? Wb.irb : Wb.icb #backwards facing index on b block
-        𝒕ₙ₋₁=ITensor(tₙ₋₁,ibb,ibd)
+        𝒕ₙ₋₁=ITensor(tₙ₋₁,dag(ibb),ibd)
     end
     𝒄⎖=nothing
     #
@@ -330,27 +333,28 @@ function gauge_fix!(W::ITensor,ir::Index,ic::Index,tₙ₋₁::Matrix{Float64},m
             W[ir=>2:nr-1,ic=>1:1]=𝒄⎖    
         end
     end
-       
+    # 𝒕ₙ is always a vector (or 1xN matrix) but we would have to sort the indices in order for
+    # vector(𝒕ₙ) to work.
     return matrix(𝒕ₙ)
 end
 
 function gauge_fix!(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
     N=length(H)
     tₙ=Matrix{Float64}(undef,1,1)
-    ir=ils[1]
+    ir=dag(ils[1])
     for n in 1:N
         ic=ils[n+1]
         @assert hasinds(H[n],ir,ic)
         tₙ=gauge_fix!(H[n],ir,ic,tₙ,matrix_state(ms.ul,left))
-        ir=ic
+        ir=dag(ic)
     end
     #tₙ=Matrix{Float64}(undef,1,1) end of sweep above already returns this.
     ic=ils[N+1]
     for n in N:-1:1
-        ir=ils[n]
+        ir=dag(ils[n])
         @assert hasinds(H[n],ir,ic)
         tₙ=gauge_fix!(H[n],ir,ic,tₙ,matrix_state(ms.ul,right))
-        ic=ir
+        ic=dag(ir)
     end
 end
 
@@ -391,19 +395,20 @@ function ac_orthogonalize!(H::MPO,ils::Vector{Index{T}},ms::matrix_state,eps::Fl
     end
     rng=sweep(H,ms.lr)
     if ms.lr==left
-        ir=ils[1]
+        ir=dag(ils[1])
         for n in rng
             nn=n+rng.step
             ic=ils[n+1]
             H[n],R,iqp=ac_qx(H[n],ir,ic,ms)
             H[nn]=R*H[nn]
-            ils[n+1]=ir=dag(iqp)
+            ils[n+1]=iqp
+            ir=dag(iqp)
         end
     else
         ic=ils[length(H)+1]
         for n in rng
             nn=n+rng.step
-            ir=ils[n]
+            ir=dag(ils[n])
             H[n],R,iqp=ac_qx(H[n],ir,ic,ms)
             H[nn]=R*H[nn]
             ils[n]=ic=dag(iqp)
@@ -423,7 +428,7 @@ models=[
     [make_Hubbard_AutoMPO,"Electron"],
     ]
 
-@testset "Ac/Ab block respecting decomposition $(model[1]), qns=$qns" for model in models, qns in [false]
+@testset "Ac/Ab block respecting decomposition $(model[1]), qns=$qns" for model in models, qns in [false,true]
     eps=1e-14
     N=10 #5 sites
     NNN=7 #Include 2nd nearest neighbour interactions
@@ -470,7 +475,7 @@ models=[
     @test E0 ≈ E2 atol = eps
 end
 
-@testset "Gauge transform rectangular W" begin
+@testset "Gauge transform rectangular W, qns=$qns" for qns in [false,true]
     eps=1e-14
     
     N=5 #5 sites
@@ -495,14 +500,14 @@ end
     #   
     #  Left->Right sweep doing gauge c0==0 transforms
     #
-    ir=ils[1]
+    ir=dag(ils[1])
     t=Matrix{Float64}(undef,1,1)
     for n in 1:N
         ic =ils[n+1]
         t=gauge_fix!(H[n],ir,ic,t,ms)
         @test norm(H_lwl[n]-H[n])<eps
         @test is_gauge_fixed(H[n],ir,ic,ms.ul,eps;b=false)    
-        ir=ic
+        ir=dag(ic)
     end
     @test is_gauge_fixed(H,ils,ms.ul,eps,b=false)
     @test !is_gauge_fixed(H,ils,ms.ul,eps,c=false)
@@ -531,12 +536,12 @@ end
     t=Matrix{Float64}(undef,1,1)
     for n in N:-1:1
         W=H[n]
-        ir =ils[n]
+        ir =dag(ils[n])
         t=gauge_fix!(W,ir,ic,t,ms)
         @test norm(H_g[n]-W)<eps
         @test is_gauge_fixed(H[n],ir,ic,ms.ul,eps;b=false)    
         @test is_gauge_fixed(H[n],ir,ic,ms.ul,eps;c=false)    
-        ic=ir
+        ic=dag(ir)
     end
     @test is_gauge_fixed(H,ils,ms.ul,eps) #Now everything should be fixed
     
@@ -547,17 +552,19 @@ end
     @test E0 ≈ E2 atol = eps
 end
 
-@testset "Extract blocks" begin
+@testset "Extract blocks qns=$qns" for qns in [false,true]
     eps=1e-15
     N=5 #5 sites
     NNN=2 #Include 2nd nearest neighbour interactions
-    sites = siteinds("Electron",N,conserve_qns=false)
+    sites = siteinds("Electron",N,conserve_qns=qns)
     d=dim(inds(sites[1])[1])
     H=make_Hubbard_AutoMPO(sites,NNN)
     ils,d0,dN=add_dummy_links!(H)
+    @test all(il->dir(il)==dir(ils[1]),ils) 
+   
 
     ms=matrix_state(lower,left)
-    ir,ic=ils[1],linkind(H,1)
+    ir,ic=dag(ils[1]),ils[2]
     nr,nc=dim(ir),dim(ic)
     W=H[1]
     #pprint(W)
@@ -569,7 +576,7 @@ end
     @test norm(array(rfb.𝒄)-array(W[ir=>nr:nr,ic=>2:nc-1]))<eps
     
     W=H[N]
-    ir,ic=linkind(H,N-1),ils[N+1]
+    ir,ic=dag(ils[N]),ils[N+1]
     nr,nc=dim(ir),dim(ic)
     #pprint(W)
     rfb=extract_blocks(W,ir,ic,ms;all=true,fix_inds=true)
@@ -581,7 +588,7 @@ end
     
 
     W=H[2]
-    ir,ic=linkind(H,1),linkind(H,2)
+    ir,ic=dag(ils[2]),ils[3]
     nr,nc=dim(ir),dim(ic)
     rfb=extract_blocks(W,ir,ic,ms;all=true,fix_inds=true,Ac=true)
     @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
@@ -595,10 +602,10 @@ end
 
 end
 
-@testset "Calculate t's, L's and Linv's" begin
+@testset "Calculate t's, L's and Linv's, qns=$qns" for qns in [false]
     N=10 #5 sites
     NNN=5 #Include 2nd nearest neighbour interactions
-    sites = siteinds("Electron",N,conserve_qns=false)
+    sites = siteinds("Electron",N,conserve_qns=qns)
     H=make_Hubbard_AutoMPO(sites,NNN)
     state=[isodd(n) ? "Up" : "Dn" for n=1:N]
     psi=randomMPS(sites,state)
