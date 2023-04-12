@@ -60,6 +60,7 @@ function calculate_Ls(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
             L=insert_xblock(1.0*Matrix(LinearAlgebra.I,Dwc,Dwc),ts[n],ms)
             Linv=insert_xblock(1.0*Matrix(LinearAlgebra.I,Dwc,Dwc),-ts[n],ms)
         end
+        #display(L)
         push!(Ls,L)
         push!(Linvs,Linv)
     end
@@ -150,7 +151,7 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
     @assert plev(ic)==0
     @assert !hasqns(ir) || dir(W,ir)==dir(ir)
     @assert !hasqns(ic) || dir(W,ic)==dir(ic)
-    if ms.ul==uppercase
+    if ms.ul==upper
         ir,ic=ic,ir #transpose
     end
     nr,nc=dim(ir),dim(ic)
@@ -162,7 +163,7 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
         @warn "extract_blocks: fix_inds requires d=true."
         d=true
     end
-    if ms.lr==right
+    if ms==matrix_state(lower,right) || ms==matrix_state(upper,left)
         b,c=c,b
     end
 
@@ -172,7 +173,11 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
 
   
     rfb=regform_blocks()
-    I && (rfb.𝕀= nr>1 ? slice(W,ir=>1,ic=>1) : slice(W,ir=>1,ic=>nc))
+    if ms.ul==lower
+        I && (rfb.𝕀= nr>1 ? slice(W,ir=>1,ic=>1) : slice(W,ir=>1,ic=>nc))
+    else
+        I && (rfb.𝕀= nr>1 ? slice(W,ir=>1,ic=>1) : slice(W,ir=>1,ic=>nc))
+    end
    
     if A
         rfb.𝑨= W[ir=>2:nr-1,ic=>2:nc-1]
@@ -180,7 +185,7 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
         rfb.icA,=inds(rfb.𝑨,tags=tags(ic))
     end
     if Ac
-        if ms.lr==left
+        if ms==matrix_state(lower,left) || ms==matrix_state(upper,right)
             if nr>1
                 rfb.𝑨𝒄= W[ir=>2:nr,ic=>2:nc-1]#W[ilb=>2:Dwb,ilf=>2:Dwf-1]
             else
@@ -224,12 +229,11 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
             rfb.𝑨=replaceinds(rfb.𝑨,[rfb.irA,rfb.icA],[rfb.irb,rfb.icc])
         end
     end
-    if ms.lr==right
+    if ms==matrix_state(lower,right) || ms==matrix_state(upper,left)
         rfb.𝒃,rfb.𝒄=rfb.𝒄,rfb.𝒃
         rfb.irb,rfb.irc=rfb.irc,rfb.irb
         rfb.icb,rfb.icc=rfb.icc,rfb.icb
     end
-    #@show c b 
     return rfb
 end
 
@@ -245,17 +249,31 @@ function set_𝑨𝒄_block(W::ITensor,𝑨𝒄::ITensor,ilb::Index,ilf::Index,i
     #
     #  We need to preserve some blocks outside of Ac from the old MPO tensor.
     #
-    if ms.lr==left
-        Wp[ilb=>Dwb:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>Dwb:Dwb,ilf=>Dwf:Dwf] #bottom right corner
-        Wp[ilb=>1:Dwb,ilqp=>1:1]=W[ilb=>1:Dwb,ilf=>1:1] #left column
+    if ms.ul==lower
+        if ms.lr==left
+            Wp[ilb=>Dwb:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>Dwb:Dwb,ilf=>Dwf:Dwf] #bottom right corner
+            Wp[ilb=>1:Dwb,ilqp=>1:1]=W[ilb=>1:Dwb,ilf=>1:1] #left column
+        else
+            Wp[ilb=>1:1,ilqp=>1:1]=W[ilb=>1:1,ilf=>1:1] #Top left corner
+            Wp[ilb=>1:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>1:Dwb,ilf=>Dwf:Dwf] #Bottom row
+        end
     else
-        Wp[ilb=>1:1,ilqp=>1:1]=W[ilb=>1:1,ilf=>1:1] #Top left corner
-        Wp[ilb=>1:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>1:Dwb,ilf=>Dwf:Dwf] #Bottom row
+        if ms.lr==left
+            Wp[ilb=>1:1,ilqp=>1:1]=W[ilb=>1:1,ilf=>1:1] #Top left corner
+            Wp[ilb=>1:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>1:Dwb,ilf=>Dwf:Dwf] #right column
+        else
+            Wp[ilb=>Dwb:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>Dwb:Dwb,ilf=>Dwf:Dwf] # top left corner
+            Wp[ilb=>1:Dwb,ilqp=>1:1]=W[ilb=>1:Dwb,ilf=>1:1] #Top row
+        end
     end
     #
     #  Fill in the 𝑨𝒄 block
     #
-    ac_range= Dwb>1 ? (ms.lr==left ? (2:Dwb) : (1:Dwb-1)) : 1:1
+    if ms.ul==lower
+        ac_range= Dwb>1 ? (ms.lr==left ? (2:Dwb) : (1:Dwb-1)) : 1:1
+    else
+        ac_range= Dwb>1 ? (ms.lr==left ? (1:Dwb-1) : (2:Dwb)) : 1:1
+    end
     Wp[ilb=>ac_range,ilqp=>2:Dwq-1]=𝑨𝒄
     return Wp,ilqp
 end
@@ -292,10 +310,11 @@ function is_gauge_fixed(H::MPO,ils::Vector{Index{T}},ul::reg_form,eps::Float64;k
 end
 
 #
-# We store the tₙ₋₁ as Matrix (instead of ITensor) becuse the indices change after extract_blocks,
+# We store the tₙ₋₁ as Matrix (instead of ITensor) because the indices change after extract_blocks,
 #  because of the way the current subtensor functions are implemented.
 #
 function gauge_fix!(W::ITensor,ir::Index,ic::Index,tₙ₋₁::Matrix{Float64},ms::matrix_state)
+    @assert is_regular_form(W,ms.ul)
     Wb=extract_blocks(W,ir,ic,ms;all=true,fix_inds=true)
     𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅 #for readability below.
     nr,nc=dim(ir),dim(ic)
@@ -304,13 +323,18 @@ function gauge_fix!(W::ITensor,ir::Index,ic::Index,tₙ₋₁::Matrix{Float64},m
     #  Make in ITensor with suitable indices from the tprev vector.
     #
     if nb>1
-        ibd = ms.lr==left ? Wb.ird : Wb.icd #backwards facing index on d block
-        ibb = ms.lr==left ? Wb.irb : Wb.icb #backwards facing index on b block
+        if ms.ul==lower
+            ibd = ms.lr==left ? Wb.ird : Wb.icd #backwards facing index on d block
+            ibb = ms.lr==left ? Wb.irb : Wb.icb #backwards facing index on b block
+        else
+            ibd = ms.lr==left ? Wb.icd : Wb.ird #backwards facing index on d block
+            ibb = ms.lr==left ? Wb.icb : Wb.irb #backwards facing index on b block
+        end
         𝒕ₙ₋₁=ITensor(tₙ₋₁,dag(ibb),ibd)
     end
     𝒄⎖=nothing
     #
-    #  First two black are special handling for row and column vector at the edges of the MPO
+    #  First two if blocks are special handling for row and column vector at the edges of the MPO
     #
     if nb==1 #1xnf at start of sweep.
         𝒕ₙ=c0(Wb) 
@@ -325,14 +349,30 @@ function gauge_fix!(W::ITensor,ir::Index,ic::Index,tₙ₋₁::Matrix{Float64},m
         𝒅⎖=𝒅+𝒕ₙ₋₁*𝒃
     end
     
-    W[ir=>nr:nr,ic=>1:1]=𝒅⎖
+    if ms.ul==lower
+        W[ir=>nr:nr,ic=>1:1]=𝒅⎖
+    else
+        W[ir=>1:1,ic=>nc:nc]=𝒅⎖
+    end
+    @assert is_regular_form(W,ms.ul)
+
     if !isnothing(𝒄⎖)
-        if ms.lr==left 
-            W[ir=>nr:nr,ic=>2:nc-1]=𝒄⎖
+        if ms.ul==lower
+            if ms.lr==left
+                W[ir=>nr:nr,ic=>2:nc-1]=𝒄⎖
+            else
+                W[ir=>2:nr-1,ic=>1:1]=𝒄⎖    
+            end
         else
-            W[ir=>2:nr-1,ic=>1:1]=𝒄⎖    
+            if ms.lr==left
+                W[ir=>1:1,ic=>2:nc-1]=𝒄⎖
+            else
+                W[ir=>2:nr-1,ic=>nc:nc]=𝒄⎖    
+            end
         end
     end
+    @assert is_regular_form(W,ms.ul)
+
     # 𝒕ₙ is always a vector (or 1xN matrix) but we would have to sort the indices in order for
     # vector(𝒕ₙ) to work.
     return matrix(𝒕ₙ)
@@ -346,6 +386,7 @@ function gauge_fix!(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
         ic=ils[n+1]
         @assert hasinds(H[n],ir,ic)
         tₙ=gauge_fix!(H[n],ir,ic,tₙ,matrix_state(ms.ul,left))
+        @assert is_regular_form(H[n],ms.ul)
         ir=dag(ic)
     end
     #tₙ=Matrix{Float64}(undef,1,1) end of sweep above already returns this.
@@ -354,6 +395,7 @@ function gauge_fix!(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
         ir=dag(ils[n])
         @assert hasinds(H[n],ir,ic)
         tₙ=gauge_fix!(H[n],ir,ic,tₙ,matrix_state(ms.ul,right))
+        @assert is_regular_form(H[n],ms.ul)
         ic=dag(ir)
     end
 end
@@ -367,11 +409,15 @@ function ac_qx(W::ITensor,ir::Index,ic::Index,ms::matrix_state;kwargs...)
     @assert hasinds(W,ic)
     @assert hasinds(W,ir)
     Wb=extract_blocks(W,ir,ic,ms;Ac=true)
-    ilf_Ac = ms.lr==left ? Wb.icAc : Wb.irAc
+    if ms.ul==lower
+        ilf_Ac = ms.lr==left ? Wb.icAc : Wb.irAc
+    else
+        ilf_Ac = ms.lr==left ? Wb.irAc : Wb.icAc
+    end
     ilb,ilf =  ms.lr==left ? (ir,ic) : (ic,ir) #Backward and forward indices.
     @checkflux(Wb.𝑨𝒄)
     if ms.lr==left
-        Qinds=noncommoninds(Wb.𝑨𝒄,ilf_Ac)
+        Qinds=noncommoninds(Wb.𝑨𝒄,ilf_Ac) 
         Q,R,iq=qr(Wb.𝑨𝒄,Qinds;positive=true,rr_cutoff=1e-14,tags=tags(ilf))
     else
         Rinds=ilf_Ac
@@ -381,9 +427,11 @@ function ac_qx(W::ITensor,ir::Index,ic::Index,ms::matrix_state;kwargs...)
     @checkflux(R)
     # Re-scale
     dh=d(Wb) #dimension of local Hilbert space.
+    @assert abs(dh-4)<1e-14
     Q*=sqrt(dh)
     R/=sqrt(dh)
     Wp,iqp=set_𝑨𝒄_block(W,Q,ilb,ilf,iq,ms) 
+    @assert is_regular_form(Wp,ms.ul)
     R=prime(R,ilf_Ac) #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
     Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ilf'))
     return Wp,Rp,iqp
@@ -400,7 +448,9 @@ function ac_orthogonalize!(H::MPO,ils::Vector{Index{T}},ms::matrix_state,eps::Fl
             nn=n+rng.step
             ic=ils[n+1]
             H[n],R,iqp=ac_qx(H[n],ir,ic,ms)
+            @assert check_ortho(H[n],ms,1e-14) 
             H[nn]=R*H[nn]
+            @assert is_regular_form(H[nn],ms.ul)
             ils[n+1]=iqp
             ir=dag(iqp)
         end
@@ -411,15 +461,11 @@ function ac_orthogonalize!(H::MPO,ils::Vector{Index{T}},ms::matrix_state,eps::Fl
             ir=dag(ils[n])
             H[n],R,iqp=ac_qx(H[n],ir,ic,ms)
             H[nn]=R*H[nn]
+            @assert is_regular_form(H[nn],ms.ul)
             ils[n]=ic=dag(iqp)
         end
     end
 end
-
-
-
-
-
 
 
 models=[
@@ -428,22 +474,24 @@ models=[
     [make_Hubbard_AutoMPO,"Electron"],
     ]
 
-@testset "Ac/Ab block respecting decomposition $(model[1]), qns=$qns" for model in models, qns in [false,true]
+@testset "Ac/Ab block respecting decomposition $(model[1]), qns=$qns" for model in models, qns in [false,true], ul=[lower,upper]
     eps=1e-14
     N=10 #5 sites
     NNN=7 #Include 2nd nearest neighbour interactions
     sites = siteinds(model[2],N,conserve_qns=qns);
-    H=model[1](sites,NNN);
+    H=model[1](sites,NNN;ul=ul);
     @show get_Dw(H)
+    @assert is_regular_form(H,ul)
     state=[isodd(n) ? "Up" : "Dn" for n=1:N]
     psi=randomMPS(sites,state)
     E0=inner(psi',H,psi)
 
     ils,d0,dN=add_dummy_links!(H)
+    @assert is_regular_form(H,ul)
     #
     #  Left->right sweep
     #
-    ms=matrix_state(lower,left)
+    ms=matrix_state(ul,left)
     @test !is_gauge_fixed(H,ils,ms.ul,eps) #Now everything should be fixed
     ac_orthogonalize!(H,ils,ms,eps)
     @test check_ortho(H,ms)
@@ -460,7 +508,7 @@ models=[
     #  Right->left sweep
     #
     ils,d0,dN=add_dummy_links!(H)
-    ms=matrix_state(lower,right)
+    ms=matrix_state(ul,right)
     @test is_gauge_fixed(H,ils,ms.ul,eps) #Should still be gauge fixed
     ac_orthogonalize!(H,ils,ms,eps)
     @test check_ortho(H,ms)
@@ -475,20 +523,20 @@ models=[
     @test E0 ≈ E2 atol = eps
 end
 
-@testset "Gauge transform rectangular W, qns=$qns" for qns in [false,true]
+@testset "Gauge transform rectangular W, qns=$qns, ul=$ul" for qns in [false,true], ul=[lower,upper]
     eps=1e-14
     
     N=5 #5 sites
     NNN=2 #Include 2nd nearest neighbour interactions
     sites = siteinds("Electron",N,conserve_qns=false)
-    H=make_Hubbard_AutoMPO(sites,NNN)
+    H=make_Hubbard_AutoMPO(sites,NNN;ul=ul)
     state=[isodd(n) ? "Up" : "Dn" for n=1:N]
     psi=randomMPS(sites,state)
     E0=inner(psi',H,psi)
     
     ils,d0,dN=add_dummy_links!(H)
 
-    ms=matrix_state(lower,left)
+    ms=matrix_state(ul,left)
     @test !is_gauge_fixed(H,ils,ms.ul,eps)
 
     H_lwl=deepcopy(H)
@@ -497,9 +545,9 @@ end
     @test is_gauge_fixed(H_lwl,ils,ms.ul,eps,b=false)
     @test !is_gauge_fixed(H_lwl,ils,ms.ul,eps,c=false)
     H_g=deepcopy(H) 
-    #   
-    #  Left->Right sweep doing gauge c0==0 transforms
-    #
+    # #   
+    # #  Left->Right sweep doing gauge c0==0 transforms
+    # #
     ir=dag(ils[1])
     t=Matrix{Float64}(undef,1,1)
     for n in 1:N
@@ -511,9 +559,9 @@ end
     end
     @test is_gauge_fixed(H,ils,ms.ul,eps,b=false)
     @test !is_gauge_fixed(H,ils,ms.ul,eps,c=false)
-    #
-    #  Check that the energy expectation is invariant.
-    #   
+    # #
+    # #  Check that the energy expectation is invariant.
+    # #   
     He=copy(H)
     He[1]*=dag(d0)
     He[N]*=dag(dN)
@@ -531,7 +579,7 @@ end
     #
     #  Sweep right to left abd gauge all the b0's==0 .
     #
-    ms=matrix_state(lower,right)
+    ms=matrix_state(ul,right)
     ic=ils[N+1]
     t=Matrix{Float64}(undef,1,1)
     for n in N:-1:1
@@ -552,53 +600,70 @@ end
     @test E0 ≈ E2 atol = eps
 end
 
-@testset "Extract blocks qns=$qns" for qns in [false,true]
+@testset "Extract blocks qns=$qns, ul=$ul" for qns in [false,true], ul=[lower,upper]
     eps=1e-15
     N=5 #5 sites
     NNN=2 #Include 2nd nearest neighbour interactions
     sites = siteinds("Electron",N,conserve_qns=qns)
     d=dim(inds(sites[1])[1])
-    H=make_Hubbard_AutoMPO(sites,NNN)
+    H=make_Hubbard_AutoMPO(sites,NNN;ul=ul)
     ils,d0,dN=add_dummy_links!(H)
     @test all(il->dir(il)==dir(ils[1]),ils) 
    
 
-    ms=matrix_state(lower,left)
+    ms= ul==lower ? matrix_state(ul,left) : matrix_state(ul,right)
     ir,ic=dag(ils[1]),ils[2]
     nr,nc=dim(ir),dim(ic)
     W=H[1]
     #pprint(W)
     rfb=extract_blocks(W,ir,ic,ms;all=true)
     @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
-    @test isnothing(rfb.𝑨)    
-    @test isnothing(rfb.𝒃)  
-    @test norm(array(rfb.𝒅)-array(W[ir=>1:1,ic=>1:1]))<eps
-    @test norm(array(rfb.𝒄)-array(W[ir=>nr:nr,ic=>2:nc-1]))<eps
-    
+    @test isnothing(rfb.𝑨) 
+    if ul==lower   
+        @test isnothing(rfb.𝒃)
+        norm(array(rfb.𝒅)-array(W[ir=>nr:nr,ic=>1:1]))<eps
+        norm(array(rfb.𝒄)-array(W[ir=>nr:nr,ic=>2:nc-1]))<eps
+    else
+        @test isnothing(rfb.𝒄)
+        norm(array(rfb.𝒅)-array(W[ir=>1:1,ic=>nc:nc]))<eps
+        norm(array(rfb.𝒃)-array(W[ir=>1:1,ic=>2:nc-1]))<eps
+    end
+       
     W=H[N]
     ir,ic=dag(ils[N]),ils[N+1]
     nr,nc=dim(ir),dim(ic)
-    #pprint(W)
     rfb=extract_blocks(W,ir,ic,ms;all=true,fix_inds=true)
     @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
     @test isnothing(rfb.𝑨)    
-    @test isnothing(rfb.𝒄)  
-    @test norm(array(rfb.𝒅)-array(W[ir=>nr:nr,ic=>1:1]))<eps
-    @test norm(array(rfb.𝒃)-array(W[ir=>2:nr-1,ic=>1:1]))<eps
-    
-
+    if ul==lower 
+        @test isnothing(rfb.𝒄) 
+        @test norm(array(rfb.𝒅)-array(W[ir=>nr:nr,ic=>1:1]))<eps
+        @test norm(array(rfb.𝒃)-array(W[ir=>2:nr-1,ic=>1:1]))<eps
+    else
+        @test isnothing(rfb.𝒃) 
+        @test norm(array(rfb.𝒅)-array(W[ir=>1:1,ic=>nc:nc]))<eps
+        @test norm(array(rfb.𝒄)-array(W[ir=>2:nr-1,ic=>nc:nc]))<eps
+    end
+   
     W=H[2]
     ir,ic=dag(ils[2]),ils[3]
     nr,nc=dim(ir),dim(ic)
     rfb=extract_blocks(W,ir,ic,ms;all=true,fix_inds=true,Ac=true)
-    @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
-    @test norm(array(rfb.𝒅)-array(W[ir=>nr:nr,ic=>1:1]))<eps
-    @test norm(array(rfb.𝒃)-array(W[ir=>2:nr-1,ic=>1:1]))<eps
-    @test norm(array(rfb.𝒄)-array(W[ir=>nr:nr,ic=>2:nc-1]))<eps
-    @test norm(array(rfb.𝑨)-array(W[ir=>2:nr-1,ic=>2:nc-1]))<eps
-    @test norm(array(rfb.𝑨𝒄)-array(W[ir=>2:nr,ic=>2:nc-1]))<eps
-
-    #@show typeof(scalar(rfb.𝕀*rfb.𝕀))
+    if ul==lower
+        @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
+        @test norm(array(rfb.𝒅)-array(W[ir=>nr:nr,ic=>1:1]))<eps
+        @test norm(array(rfb.𝒃)-array(W[ir=>2:nr-1,ic=>1:1]))<eps
+        @test norm(array(rfb.𝒄)-array(W[ir=>nr:nr,ic=>2:nc-1]))<eps
+        @test norm(array(rfb.𝑨)-array(W[ir=>2:nr-1,ic=>2:nc-1]))<eps
+        @test norm(array(rfb.𝑨𝒄)-array(W[ir=>2:nr,ic=>2:nc-1]))<eps
+    else
+        @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
+        @test norm(array(rfb.𝒅)-array(W[ir=>1:1,ic=>nc:nc]))<eps
+        @test norm(array(rfb.𝒃)-array(W[ir=>1:1,ic=>2:nc-1]))<eps
+        @test norm(array(rfb.𝒄)-array(W[ir=>2:nr-1,ic=>nc:nc]))<eps
+        @test norm(array(rfb.𝑨)-array(W[ir=>2:nr-1,ic=>2:nc-1]))<eps
+        @test norm(array(rfb.𝑨𝒄)-array(W[ir=>2:nr-1,ic=>2:nc]))<eps
+    end
 
 end
 
