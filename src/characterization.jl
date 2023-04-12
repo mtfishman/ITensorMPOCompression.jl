@@ -163,6 +163,9 @@ function check_ortho(W::ITensor,ms::matrix_state,eps::Float64=default_eps)::Bool
     Id=V*prime(dag(V),forward)/d
     if order(Id)==2
         is_can = norm(dense(Id)-delta(forward,dag(forward')))/sqrt(DwDw)<eps
+        if !is_can
+            @show Id
+        end
     elseif order(Id)==0
         is_can = abs(scalar(Id)-d)<eps
     end
@@ -335,11 +338,20 @@ function detect_regular_form(W::ITensor,eps::Float64=default_eps)::Tuple{Bool,Bo
     Dw1,Dw2=dim(r),dim(c)
     #handle edge row and col vectors
     if Dw1==1 #left edge row vector
-        return is_unit(slice(W,c=>Dw2),eps),is_unit(slice(W,c=>1),eps)
+        if order(W)==3
+            return is_unit(slice(W,c=>Dw2),eps),is_unit(slice(W,c=>1),eps)
+        else
+            return is_unit(slice(W,r=>1,c=>Dw2),eps),is_unit(slice(W,r=>1,c=>1),eps)
+        end
     end
     if Dw2==1 #right edge col vector
-        return is_unit(slice(W,r=>1),eps),is_unit(slice(W,r=>Dw1),eps)
+        if order(W)==3
+            return is_unit(slice(W,r=>1),eps),is_unit(slice(W,r=>Dw1),eps)
+        else
+            return is_unit(slice(W,r=>1,c=>1),eps),is_unit(slice(W,r=>Dw1,c=>1),eps)
+        end
     end
+
     #ul=detect_upper_lower(W) is the a requirement??
     irf=true #is regular form
     # There must be unit matrices in the top left and bottom right corners.
