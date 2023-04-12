@@ -7,6 +7,101 @@ import ITensorMPOCompression: @checkflux, mpoc_checkflux, insert_xblock
 
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
 
+#-------------------------------------------------------------------------------
+#
+#  These functions are the dev. testing only.
+#
+function calculate_ts(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
+    ts=Vector{Float64}[]
+    ir=ils[1]
+    tprev=zeros(1)
+    push!(ts,tprev)
+    for n in eachindex(H)
+        ic=ils[n+1]
+        Wb=extract_blocks(H[n],ir,ic,ms;all=true,fix_inds=true)
+        𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅
+        dh=𝕀*𝕀
+        nr,nc=dim(ir),dim(ic)
+        if nr==1 
+            c0=𝒄*dag(𝕀)/dh
+            t=matrix(c0)[:,1] #c0
+        elseif nc==1
+            t=zeros(1)
+        else
+           ict=commonind(𝒃,𝑨,tags="Link")
+            irt=commonind(𝒅,𝒄,tags="Link")
+            tprevT=ITensor(tprev,irt,ict)
+
+            𝒄₀=𝒄*dag(𝕀)/dh
+            𝑨₀=𝑨*dag(𝕀)/dh
+            t=matrix(tprevT*𝑨₀+𝒄₀)[1,:]
+        end
+        #@show t
+        push!(ts,t)
+        tprev=t
+        ir=ic
+    end
+    return ts
+end
+
+function calculate_Ls(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
+    Ls=Matrix{Float64}[]
+    Linvs=Matrix{Float64}[]
+    ts=calculate_ts(H,ils,ms)
+    @assert length(ts)==length(ils)
+    for n in eachindex(ils)
+        ic=ils[n]
+        Dwc=dim(ic)
+        if Dwc==1
+            L=1.0*Matrix(LinearAlgebra.I,Dwc,Dwc)
+            Linv=1.0*Matrix(LinearAlgebra.I,Dwc,Dwc)
+        else
+            @assert Dwc==size(ts[n],1)+2
+            L=insert_xblock(1.0*Matrix(LinearAlgebra.I,Dwc,Dwc),ts[n],ms)
+            Linv=insert_xblock(1.0*Matrix(LinearAlgebra.I,Dwc,Dwc),-ts[n],ms)
+        end
+        push!(Ls,L)
+        push!(Linvs,Linv)
+    end
+    return Ls,Linvs
+end
+
+function apply_Ls!(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
+    Ls,Linvs=calculate_Ls(H,ils,ms)
+    ir=ils[1]
+    for n in eachindex(H)
+        ic=ils[n+1]
+        @assert hasinds(H[n],ir,ic)
+        LT=ITensor(Ls[n],ir',ir)
+        LinvT=ITensor(Linvs[n+1],ic,ic')
+        Wp=noprime(LT*H[n]*LinvT,tags="Link")
+        H[n]=Wp
+        ir=ic
+    end
+end
+
+#-------------------------------------------------------------------------------
+#
+#  Make all ITensors in H of order 4.  This simplifies the code.
+#
+function add_dummy_links!(H::MPO)
+    N=length(H)
+    ils=map(n->linkind(H,n),1:N-1)
+    ts=ITensors.trivial_space(ils[1])
+    T=eltype(H[1])
+    il0=Index(ts;tags="Link,l=0",dir=dir(dag(ils[1])))
+    ilN=Index(ts;tags="Link,l=$N",dir=dir(ils[1]))
+    d0=onehot(T, il0 => 1)
+    dN=onehot(T, ilN => 1)
+    H[1]*=d0
+    H[N]*=dN
+    return [il0,ils...,ilN],d0,dN
+end
+
+#-------------------------------------------------------------------------------
+#
+#  Blocking functions
+#
 #
 #  Decisions: 1) Use ilf,ilb==forward,backward  or ir,ic=row,column ?
 #             2) extract_blocks gets everything.  Should it defer to get_bc_block for b and c?
@@ -46,7 +141,7 @@ d(rfb::regform_blocks)::Float64=scalar(rfb.𝕀*rfb.𝕀)
 b0(rfb::regform_blocks)::ITensor=rfb.𝒃*dag(rfb.𝕀)/d(rfb)
 c0(rfb::regform_blocks)::ITensor=rfb.𝒄*dag(rfb.𝕀)/d(rfb)
 
-#  𝕀 𝑨 𝒃 𝒄 𝒅 ⌃ c₀ x0
+#  Use recognizably distinct UTF symbols for operators, and op valued vectors and matrices: 𝕀 𝑨 𝒃 𝒄 𝒅 ⌃ c₀ x0
 function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=false,c=true,b=false,d=false,A=false,Ac=false,I=true,fix_inds=false)::regform_blocks
     @assert hasinds(W,ir,ic)
     @assert tags(ir)!=tags(ic)
@@ -166,82 +261,36 @@ function set_Abc_block(W::ITensor,Abc::ITensor,ilf::Index,ilb::Index,iq::Index,m
     return Wp,ilqp
 end
 
-function ac_qx(W::ITensor,ilf::Index,ilb::Index,ms::matrix_state;kwargs...)
-    @checkflux(W)
-    @assert hasinds(W,ilf)
-    @assert hasinds(W,ilb)
-    rfb=extract_blocks(W,ilb,ilf,ms;Ac=true)
-    Abc=rfb.𝑨𝒄
-    ilf1 = ms.lr==left ? rfb.icAc : rfb.irAc
-    dh=d(rfb)
-    @checkflux(Abc)
-    if ms.lr==left
-        Qinds=noncommoninds(Abc,ilf1)
-        Q,R,iq=qr(Abc,Qinds;positive=true,rr_cutoff=1e-14,tags=tags(ilf))
-    else
-        Rinds=ilf1
-        R,Q,iq=rq(Abc,Rinds;positive=true,rr_cutoff=1e-14,tags=tags(ilb))
+#-------------------------------------------------------------------------------
+#
+#  Gauge fixing functions.  In this conext gauge fixing means setting b₀=<𝒃,𝕀> && c₀=<𝒄,𝕀> to zero
+#
+function is_gauge_fixed(W::ITensor,ir::Index{T},ic::Index{T},ul::reg_form,eps::Float64;b=true,c=true)::Bool where {T}
+    igf=true
+    ms=matrix_state(ul,left)
+    Wb=extract_blocks(W,ir,ic,ms;c=true,b=true)
+    if b && dim(ir)>1
+        igf=igf && norm(b0(Wb))<eps
     end
-    @checkflux(Q)
-    @checkflux(R)
-    Q*=sqrt(dh)
-    R/=sqrt(dh)
-    Wp,iqp=set_Abc_block(W,Q,ilf,ilb,iq,ms) #TODO inject correct removed space
-    R=prime(R,ilf1)
-    #  TODO fix mimatched spaces when H=non auto MPO.  Need QN()=>1,QN()=>Chi,QN()=>1 space in MPO
-    #@show  inds(R) dag(iqp) ilf
-    if ms.lr==left
-        Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ilf'))
-    else
-        Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ilb'))
+    if c && dim(ic)>1
+        igf=igf && norm(c0(Wb))<eps
     end
-    return Wp,Rp,iqp
+    return igf
 end
 
-function ac_orthogonalize!(H::MPO,ils::Vector{Index{T}},ms::matrix_state,eps::Float64) where {T}
-    if !is_gauge_fixed(H,ils,ms.ul,eps)
-        gauge_transform!(H,ils,ms)
-    end
-    if ms.lr==left
-        ir=ils[1]
-        for n in sweep(H,ms.lr)
-            ic=ils[n+1]
-            W,R,iqp=ac_qx(H[n],ic,ir,ms)
-            @test norm(H[n]-W*R)<1e-14
-            @test check_ortho(W,ms)
-            H[n]=W
-            H[n+1]=R*H[n+1]
-            ils[n+1]=ir=dag(iqp)
+function is_gauge_fixed(H::MPO,ils::Vector{Index{T}},ul::reg_form,eps::Float64;kwargs...)::Bool where {T}
+    igf=true
+    ir=ils[1]   
+    for n in eachindex(H)
+        ic=ils[n+1]
+        igf = igf && is_gauge_fixed(H[n],ir,ic,ul,eps;kwargs...)
+        if !igf
+            break
         end
-    else
-        N=length(H)
-        ic=ils[N+1]
-        for n in sweep(H,ms.lr)
-            ir=ils[n]
-            W,R,iqp=ac_qx(H[n],ic,ir,ms)
-            @test norm(H[n]-W*R)<1e-14
-            @test check_ortho(W,ms)
-            H[n]=W
-            H[n-1]=R*H[n-1]
-            ils[n]=ic=dag(iqp)
-        end
+        ir=ic
     end
+    return igf
 end
-
-function add_dummy_links!(H::MPO)
-    N=length(H)
-    ils=map(n->linkind(H,n),1:N-1)
-    ts=ITensors.trivial_space(ils[1])
-    T=eltype(H[1])
-    il0=Index(ts;tags="Link,l=0",dir=dir(dag(ils[1])))
-    ilN=Index(ts;tags="Link,l=$N",dir=dir(ils[1]))
-    d0=onehot(T, il0 => 1)
-    dN=onehot(T, ilN => 1)
-    H[1]*=d0
-    H[N]*=dN
-    return [il0,ils...,ilN],d0,dN
-end
-
 
 function gauge_transform!(W::ITensor,ir::Index,ic::Index,tprev::Matrix{Float64},ms::matrix_state)
     Wb=extract_blocks(W,ir,ic,ms;all=true,fix_inds=true)
@@ -328,101 +377,77 @@ function gauge_transform!(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {
     end
 end
 
-function is_gauge_fixed(W::ITensor,ir::Index{T},ic::Index{T},ul::reg_form,eps::Float64;b=true,c=true)::Bool where {T}
-    igf=true
-    ms=matrix_state(ul,left)
-    Wb=extract_blocks(W,ir,ic,ms;c=true,b=true)
-    if b && dim(ir)>1
-        igf=igf && norm(b0(Wb))<eps
+#-------------------------------------------------------------------------------
+#
+#  block qx and orthogonalization of the vcat(𝑨,𝒄) and hcat(𝒃,𝑨) blocks.
+#
+function ac_qx(W::ITensor,ilf::Index,ilb::Index,ms::matrix_state;kwargs...)
+    @checkflux(W)
+    @assert hasinds(W,ilf)
+    @assert hasinds(W,ilb)
+    rfb=extract_blocks(W,ilb,ilf,ms;Ac=true)
+    Abc=rfb.𝑨𝒄
+    ilf1 = ms.lr==left ? rfb.icAc : rfb.irAc
+    dh=d(rfb)
+    @checkflux(Abc)
+    if ms.lr==left
+        Qinds=noncommoninds(Abc,ilf1)
+        Q,R,iq=qr(Abc,Qinds;positive=true,rr_cutoff=1e-14,tags=tags(ilf))
+    else
+        Rinds=ilf1
+        R,Q,iq=rq(Abc,Rinds;positive=true,rr_cutoff=1e-14,tags=tags(ilb))
     end
-    if c && dim(ic)>1
-        igf=igf && norm(c0(Wb))<eps
+    @checkflux(Q)
+    @checkflux(R)
+    Q*=sqrt(dh)
+    R/=sqrt(dh)
+    Wp,iqp=set_Abc_block(W,Q,ilf,ilb,iq,ms) #TODO inject correct removed space
+    R=prime(R,ilf1)
+    #  TODO fix mimatched spaces when H=non auto MPO.  Need QN()=>1,QN()=>Chi,QN()=>1 space in MPO
+    #@show  inds(R) dag(iqp) ilf
+    if ms.lr==left
+        Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ilf'))
+    else
+        Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ilb'))
     end
-    return igf
+    return Wp,Rp,iqp
 end
 
-function is_gauge_fixed(H::MPO,ils::Vector{Index{T}},ul::reg_form,eps::Float64;kwargs...)::Bool where {T}
-    igf=true
-    ir=ils[1]   
-    for n in eachindex(H)
-        ic=ils[n+1]
-        igf = igf && is_gauge_fixed(H[n],ir,ic,ul,eps;kwargs...)
-        if !igf
-            break
+function ac_orthogonalize!(H::MPO,ils::Vector{Index{T}},ms::matrix_state,eps::Float64) where {T}
+    if !is_gauge_fixed(H,ils,ms.ul,eps)
+        gauge_transform!(H,ils,ms)
+    end
+    if ms.lr==left
+        ir=ils[1]
+        for n in sweep(H,ms.lr)
+            ic=ils[n+1]
+            W,R,iqp=ac_qx(H[n],ic,ir,ms)
+            @test norm(H[n]-W*R)<1e-14
+            @test check_ortho(W,ms)
+            H[n]=W
+            H[n+1]=R*H[n+1]
+            ils[n+1]=ir=dag(iqp)
         end
-        ir=ic
-    end
-    return igf
-end
-
-function calculate_ts(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
-    ts=Vector{Float64}[]
-    ir=ils[1]
-    tprev=zeros(1)
-    push!(ts,tprev)
-    for n in eachindex(H)
-        ic=ils[n+1]
-        Wb=extract_blocks(H[n],ir,ic,ms;all=true,fix_inds=true)
-        𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅
-        dh=𝕀*𝕀
-        nr,nc=dim(ir),dim(ic)
-        if nr==1 
-            c0=𝒄*dag(𝕀)/dh
-            t=matrix(c0)[:,1] #c0
-        elseif nc==1
-            t=zeros(1)
-        else
-           ict=commonind(𝒃,𝑨,tags="Link")
-            irt=commonind(𝒅,𝒄,tags="Link")
-            tprevT=ITensor(tprev,irt,ict)
-
-            𝒄₀=𝒄*dag(𝕀)/dh
-            𝑨₀=𝑨*dag(𝕀)/dh
-            t=matrix(tprevT*𝑨₀+𝒄₀)[1,:]
+    else
+        N=length(H)
+        ic=ils[N+1]
+        for n in sweep(H,ms.lr)
+            ir=ils[n]
+            W,R,iqp=ac_qx(H[n],ic,ir,ms)
+            @test norm(H[n]-W*R)<1e-14
+            @test check_ortho(W,ms)
+            H[n]=W
+            H[n-1]=R*H[n-1]
+            ils[n]=ic=dag(iqp)
         end
-        #@show t
-        push!(ts,t)
-        tprev=t
-        ir=ic
     end
-    return ts
 end
 
-function calculate_Ls(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
-    Ls=Matrix{Float64}[]
-    Linvs=Matrix{Float64}[]
-    ts=calculate_ts(H,ils,ms)
-    @assert length(ts)==length(ils)
-    for n in eachindex(ils)
-        ic=ils[n]
-        Dwc=dim(ic)
-        if Dwc==1
-            L=1.0*Matrix(LinearAlgebra.I,Dwc,Dwc)
-            Linv=1.0*Matrix(LinearAlgebra.I,Dwc,Dwc)
-        else
-            @assert Dwc==size(ts[n],1)+2
-            L=insert_xblock(1.0*Matrix(LinearAlgebra.I,Dwc,Dwc),ts[n],ms)
-            Linv=insert_xblock(1.0*Matrix(LinearAlgebra.I,Dwc,Dwc),-ts[n],ms)
-        end
-        push!(Ls,L)
-        push!(Linvs,Linv)
-    end
-    return Ls,Linvs
-end
 
-function apply_Ls!(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
-    Ls,Linvs=calculate_Ls(H,ils,ms)
-    ir=ils[1]
-    for n in eachindex(H)
-        ic=ils[n+1]
-        @assert hasinds(H[n],ir,ic)
-        LT=ITensor(Ls[n],ir',ir)
-        LinvT=ITensor(Linvs[n+1],ic,ic')
-        Wp=noprime(LT*H[n]*LinvT,tags="Link")
-        H[n]=Wp
-        ir=ic
-    end
-end
+
+
+
+
 
 models=[
     # [make_transIsing_AutoMPO,"S=1/2"],
