@@ -378,38 +378,30 @@ end
 #
 #  block qx and orthogonalization of the vcat(𝑨,𝒄) and hcat(𝒃,𝑨) blocks.
 #
-function ac_qx(W::ITensor,ic::Index,ir::Index,ms::matrix_state;kwargs...)
+function ac_qx(W::ITensor,ir::Index,ic::Index,ms::matrix_state;kwargs...)
     @checkflux(W)
     @assert hasinds(W,ic)
     @assert hasinds(W,ir)
     Wb=extract_blocks(W,ir,ic,ms;Ac=true)
-    ilf1 = ms.lr==left ? Wb.icAc : Wb.irAc
-    dh=d(Wb)
+    ilf_Ac = ms.lr==left ? Wb.icAc : Wb.irAc
+    ilb,ilf =  ms.lr==left ? (ir,ic) : (ic,ir) #Backward and forward indices.
     @checkflux(Wb.𝑨𝒄)
     if ms.lr==left
-        Qinds=noncommoninds(Wb.𝑨𝒄,ilf1)
-        Q,R,iq=qr(Wb.𝑨𝒄,Qinds;positive=true,rr_cutoff=1e-14,tags=tags(ic))
+        Qinds=noncommoninds(Wb.𝑨𝒄,ilf_Ac)
+        Q,R,iq=qr(Wb.𝑨𝒄,Qinds;positive=true,rr_cutoff=1e-14,tags=tags(ilf))
     else
-        Rinds=ilf1
-        R,Q,iq=rq(Wb.𝑨𝒄,Rinds;positive=true,rr_cutoff=1e-14,tags=tags(ir))
+        Rinds=ilf_Ac
+        R,Q,iq=rq(Wb.𝑨𝒄,Rinds;positive=true,rr_cutoff=1e-14,tags=tags(ilf))
     end
     @checkflux(Q)
     @checkflux(R)
+    # Re-scale
+    dh=d(Wb) #dimension of local Hilbert space.
     Q*=sqrt(dh)
     R/=sqrt(dh)
-    if ms.lr==left
-        Wp,iqp=set_𝑨𝒄_block(W,Q,ir,ic,iq,ms) #TODO inject correct removed space
-    else
-        Wp,iqp=set_𝑨𝒄_block(W,Q,ic,ir,iq,ms) #TODO inject correct removed space
-    end
-    R=prime(R,ilf1)
-    #  TODO fix mimatched spaces when H=non auto MPO.  Need QN()=>1,QN()=>Chi,QN()=>1 space in MPO
-    #@show  inds(R) dag(iqp) ilf
-    if ms.lr==left
-        Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ic'))
-    else
-        Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ir'))
-    end
+    Wp,iqp=set_𝑨𝒄_block(W,Q,ilb,ilf,iq,ms) 
+    R=prime(R,ilf_Ac) #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
+    Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ilf'))
     return Wp,Rp,iqp
 end
 
@@ -417,27 +409,23 @@ function ac_orthogonalize!(H::MPO,ils::Vector{Index{T}},ms::matrix_state,eps::Fl
     if !is_gauge_fixed(H,ils,ms.ul,eps)
         gauge_transform!(H,ils,ms)
     end
+    rng=sweep(H,ms.lr)
     if ms.lr==left
         ir=ils[1]
-        for n in sweep(H,ms.lr)
+        for n in rng
+            nn=n+rng.step
             ic=ils[n+1]
-            W,R,iqp=ac_qx(H[n],ic,ir,ms)
-            @test norm(H[n]-W*R)<1e-14
-            @test check_ortho(W,ms)
-            H[n]=W
-            H[n+1]=R*H[n+1]
+            H[n],R,iqp=ac_qx(H[n],ir,ic,ms)
+            H[nn]=R*H[nn]
             ils[n+1]=ir=dag(iqp)
         end
     else
-        N=length(H)
-        ic=ils[N+1]
-        for n in sweep(H,ms.lr)
+        ic=ils[length(H)+1]
+        for n in rng
+            nn=n+rng.step
             ir=ils[n]
-            W,R,iqp=ac_qx(H[n],ic,ir,ms)
-            @test norm(H[n]-W*R)<1e-14
-            @test check_ortho(W,ms)
-            H[n]=W
-            H[n-1]=R*H[n-1]
+            H[n],R,iqp=ac_qx(H[n],ir,ic,ms)
+            H[nn]=R*H[nn]
             ils[n]=ic=dag(iqp)
         end
     end
