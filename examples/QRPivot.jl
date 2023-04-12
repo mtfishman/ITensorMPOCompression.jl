@@ -1,6 +1,6 @@
 using ITensors
 using ITensorMPOCompression
-using Test,Printf
+using Test,Printf,Revise
 
 import ITensors: tensor
 import ITensorMPOCompression: @checkflux, mpoc_checkflux, insert_xblock
@@ -124,22 +124,23 @@ mutable struct regform_blocks
     𝒃::Union{ITensor,Nothing}
     𝒄::Union{ITensor,Nothing}
     𝒅::Union{ITensor,Nothing}
-    irA::Index
-    icA::Index
-    irAc::Index
-    icAc::Index
-    irb::Index
-    icb::Index
-    irc::Index
-    icc::Index
-    ird::Index
-    icd::Index    
-    regform_blocks()=new(nothing,nothing,nothing,nothing,nothing,nothing)
+    irA::Union{Index,Nothing}
+    icA::Union{Index,Nothing}
+    irAc::Union{Index,Nothing}
+    icAc::Union{Index,Nothing}
+    irb::Union{Index,Nothing}
+    icb::Union{Index,Nothing}
+    irc::Union{Index,Nothing}
+    icc::Union{Index,Nothing}
+    ird::Union{Index,Nothing}
+    icd::Union{Index,Nothing}    
+    regform_blocks()=new(nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing)
 end
 
 d(rfb::regform_blocks)::Float64=scalar(rfb.𝕀*rfb.𝕀)
 b0(rfb::regform_blocks)::ITensor=rfb.𝒃*dag(rfb.𝕀)/d(rfb)
 c0(rfb::regform_blocks)::ITensor=rfb.𝒄*dag(rfb.𝕀)/d(rfb)
+A0(rfb::regform_blocks)::ITensor=rfb.𝑨*dag(rfb.𝕀)/d(rfb)
 
 #  Use recognizably distinct UTF symbols for operators, and op valued vectors and matrices: 𝕀 𝑨 𝒃 𝒄 𝒅 ⌃ c₀ x0 𝑨𝒄
 function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=false,c=true,b=false,d=false,A=false,Ac=false,I=true,fix_inds=false)::regform_blocks
@@ -226,6 +227,8 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
     end
     if ms.lr==right
         rfb.𝒃,rfb.𝒄=rfb.𝒄,rfb.𝒃
+        rfb.irb,rfb.irc=rfb.irc,rfb.irb
+        rfb.icb,rfb.icc=rfb.icc,rfb.icb
     end
     #@show c b 
     return rfb
@@ -289,59 +292,36 @@ function is_gauge_fixed(H::MPO,ils::Vector{Index{T}},ul::reg_form,eps::Float64;k
     return igf
 end
 
-function gauge_transform!(W::ITensor,ir::Index,ic::Index,tprev::Matrix{Float64},ms::matrix_state)
+function gauge_fix!(W::ITensor,ir::Index,ic::Index,tₙ₋₁::Matrix{Float64},ms::matrix_state)
     Wb=extract_blocks(W,ir,ic,ms;all=true,fix_inds=true)
     𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅
-    dh=𝕀*𝕀
     nr,nc=dim(ir),dim(ic)
-    𝒄⎖=nothing
-    if ms.lr==left
-        if nr==1 
-            t=𝒄*dag(𝕀)/dh #c0
-            𝒄⎖=𝒄-𝕀*t
-            𝒅⎖=𝒅
-        elseif nc==1
-            il=commonind(𝒃,𝒅,tags="Link")
-            ict=noncommonind(𝒅,il,tags="Link")
-            irt=noncommonind(𝒃,𝒅,tags="Link")
-            tprevT=ITensor(tprev,irt,ict)
-            𝒅⎖=𝒅+tprevT*𝒃
-            t=tprevT
-        else
-            ict=commonind(𝒃,𝑨,tags="Link")
-            irt=commonind(𝒅,𝒄,tags="Link")
-            tprevT=ITensor(tprev,irt,ict)
-
-            𝒄₀=𝒄*dag(𝕀)/dh
-            𝑨₀=𝑨*dag(𝕀)/dh
-            t=tprevT*𝑨₀+𝒄₀
-            𝒄⎖=𝒄+tprevT*𝑨-t*𝕀
-            𝒅⎖=𝒅+tprevT*𝒃
-        end
-    else
-        if nc==1 
-            t=𝒄*dag(𝕀)/dh #c0
-            𝒄⎖=𝒄-𝕀*t
-            𝒅⎖=𝒅
-        elseif nr==1
-            il=commonind(𝒃,𝒅,tags="Link")
-            ict=noncommonind(𝒅,il,tags="Link")
-            irt=noncommonind(𝒃,𝒅,tags="Link")
-            tprevT=ITensor(tprev,irt,ict)
-            𝒅⎖=𝒅+tprevT*𝒃
-            t=tprevT
-        else
-            ict=commonind(𝒃,𝑨,tags="Link")
-            irt=commonind(𝒅,𝒄,tags="Link")
-            tprevT=ITensor(tprev,irt,ict)
-
-            𝒄₀=𝒄*dag(𝕀)/dh
-            𝑨₀=𝑨*dag(𝕀)/dh
-            t=tprevT*𝑨₀+𝒄₀
-            𝒄⎖=𝒄+tprevT*𝑨-t*𝕀
-            𝒅⎖=𝒅+tprevT*𝒃
-        end
+    nb,nf = ms.lr==left ? (nr,nc) : (nc,nr)
+    #
+    #  Make in ITensor with suitable indices from the tprev vector.
+    #
+    if nb>1
+        ibd = ms.lr==left ? Wb.ird : Wb.icd #backwards facing index on d block
+        ibb = ms.lr==left ? Wb.irb : Wb.icb #backwards facing index on b block
+        𝒕ₙ₋₁=ITensor(tₙ₋₁,ibb,ibd)
     end
+    𝒄⎖=nothing
+    #
+    #  First two black are special handling for row and column vector at the edges of the MPO
+    #
+    if nb==1 #1xnf at start of sweep.
+        𝒕ₙ=c0(Wb) 
+        𝒄⎖=𝒄-𝕀*𝒕ₙ
+        𝒅⎖=𝒅
+    elseif nf==1 #nbx1 at the end of the sweep
+        𝒅⎖=𝒅+𝒕ₙ₋₁*𝒃
+        𝒕ₙ=ITensor(1.0,Index(1),Index(1)) #Not used, but required for the return statement.
+    else
+        𝒕ₙ=𝒕ₙ₋₁*A0(Wb)+c0(Wb)
+        𝒄⎖=𝒄+𝒕ₙ₋₁*𝑨-𝒕ₙ*𝕀
+        𝒅⎖=𝒅+𝒕ₙ₋₁*𝒃
+    end
+    
     W[ir=>nr:nr,ic=>1:1]=𝒅⎖
     if !isnothing(𝒄⎖)
         if ms.lr==left 
@@ -351,25 +331,25 @@ function gauge_transform!(W::ITensor,ir::Index,ic::Index,tprev::Matrix{Float64},
         end
     end
        
-    return matrix(t)
+    return matrix(𝒕ₙ)
 end
 
-function gauge_transform!(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
+function gauge_fix!(H::MPO,ils::Vector{Index{T}},ms::matrix_state) where {T}
     N=length(H)
-    t=Matrix{Float64}(undef,1,1)
+    tₙ=Matrix{Float64}(undef,1,1)
     ir=ils[1]
     for n in 1:N
         ic=ils[n+1]
         @assert hasinds(H[n],ir,ic)
-        t=gauge_transform!(H[n],ir,ic,t,matrix_state(ms.ul,left))
+        tₙ=gauge_fix!(H[n],ir,ic,tₙ,matrix_state(ms.ul,left))
         ir=ic
     end
-    t=Matrix{Float64}(undef,1,1)
+    #tₙ=Matrix{Float64}(undef,1,1) end of sweep above already returns this.
     ic=ils[N+1]
     for n in N:-1:1
         ir=ils[n]
         @assert hasinds(H[n],ir,ic)
-        t=gauge_transform!(H[n],ir,ic,t,matrix_state(ms.ul,right))
+        tₙ=gauge_fix!(H[n],ir,ic,tₙ,matrix_state(ms.ul,right))
         ic=ir
     end
 end
@@ -407,7 +387,7 @@ end
 
 function ac_orthogonalize!(H::MPO,ils::Vector{Index{T}},ms::matrix_state,eps::Float64) where {T}
     if !is_gauge_fixed(H,ils,ms.ul,eps)
-        gauge_transform!(H,ils,ms)
+        gauge_fix!(H,ils,ms)
     end
     rng=sweep(H,ms.lr)
     if ms.lr==left
@@ -519,7 +499,7 @@ end
     t=Matrix{Float64}(undef,1,1)
     for n in 1:N
         ic =ils[n+1]
-        t=gauge_transform!(H[n],ir,ic,t,ms)
+        t=gauge_fix!(H[n],ir,ic,t,ms)
         @test norm(H_lwl[n]-H[n])<eps
         @test is_gauge_fixed(H[n],ir,ic,ms.ul,eps;b=false)    
         ir=ic
@@ -540,7 +520,7 @@ end
     @test !is_gauge_fixed(H,ils,ms.ul,eps) #b0's not done yet
     @test !is_gauge_fixed(H_g,ils,ms.ul,eps,b=false) #only check the c0s
     @test !is_gauge_fixed(H_g,ils,ms.ul,eps,c=false) #only check the b0s
-    gauge_transform!(H_g,ils,ms)
+    gauge_fix!(H_g,ils,ms)
     @test !is_gauge_fixed(H,ils,ms.ul,eps) #deepcopy ensures we didn't just (inadvertently) gauge fix H as well
     @test is_gauge_fixed(H_g,ils,ms.ul,eps)
     #
@@ -552,7 +532,7 @@ end
     for n in N:-1:1
         W=H[n]
         ir =ils[n]
-        t=gauge_transform!(W,ir,ic,t,ms)
+        t=gauge_fix!(W,ir,ic,t,ms)
         @test norm(H_g[n]-W)<eps
         @test is_gauge_fixed(H[n],ir,ic,ms.ul,eps;b=false)    
         @test is_gauge_fixed(H[n],ir,ic,ms.ul,eps;c=false)    
