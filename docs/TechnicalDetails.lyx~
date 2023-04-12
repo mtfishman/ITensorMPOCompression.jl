@@ -2255,10 +2255,14 @@ r & s & 1
 
 In particular we are interested in gauge transforms the are able to make
  the 
+\begin_inset Formula $\hat{\boldsymbol{b}}$
+\end_inset
+
+ and 
 \begin_inset Formula $\hat{\boldsymbol{c}}$
 \end_inset
 
- block in
+ blocks in
 \begin_inset Formula 
 \[
 \hat{W}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
@@ -2282,10 +2286,10 @@ orthogonal to
 \begin_inset Formula 
 \[
 L=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
-\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
+\boldsymbol{s} & \mathbb{I} & \boldsymbol{0}\\
 0 & \boldsymbol{t} & 1
 \end{bmatrix},\quad L^{-1}=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
-\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
+-\boldsymbol{s} & \mathbb{I} & \boldsymbol{0}\\
 0 & \boldsymbol{-t} & 1
 \end{bmatrix}.
 \]
@@ -2296,7 +2300,11 @@ This form of
 \begin_inset Formula $L$
 \end_inset
 
- only affect the 
+ only affects the 
+\begin_inset Formula $\hat{\boldsymbol{b}}$
+\end_inset
+
+ , 
 \begin_inset Formula $\hat{\boldsymbol{c}}$
 \end_inset
 
@@ -2318,16 +2326,16 @@ This form of
 \begin_inset Formula 
 \[
 \begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
-\hat{\boldsymbol{b}} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
+\hat{\boldsymbol{b}}^{\prime} & \hat{A} & \boldsymbol{0}\\
 \hat{d}^{\prime} & \hat{\boldsymbol{c}}^{\prime} & \hat{\mathbb{I}}
 \end{bmatrix}\begin{bmatrix}1 & \boldsymbol{0} & 0\\
-\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
+\boldsymbol{s}_{n} & \mathbb{I} & \boldsymbol{0}\\
 0 & \boldsymbol{t}_{n} & 1
 \end{bmatrix}=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
-\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
+\boldsymbol{s}_{n-1} & \mathbb{I} & \boldsymbol{0}\\
 0 & \boldsymbol{t}_{n-1} & 1
 \end{bmatrix}\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
-\hat{\boldsymbol{b}} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
+\hat{\boldsymbol{b}} & \hat{A} & \boldsymbol{0}\\
 \hat{d} & \hat{\boldsymbol{c}} & \hat{\mathbb{I}}
 \end{bmatrix}
 \]
@@ -2338,11 +2346,11 @@ This form of
 \begin_inset Formula 
 \[
 \begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
-\hat{\boldsymbol{b}} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
-\hat{d}^{\prime} & \hat{\boldsymbol{c}}^{\prime}+\boldsymbol{t}_{n}\hat{\mathbb{I}} & \hat{\mathbb{I}}
+\hat{\boldsymbol{b}}^{\prime}+\boldsymbol{s}_{n}\hat{A} & \hat{A} & \boldsymbol{0}\\
+\hat{d}^{\prime}+\boldsymbol{s}_{n}\hat{\boldsymbol{c}}^{\prime} & \hat{\boldsymbol{c}}^{\prime}+\boldsymbol{t}_{n}\hat{\mathbb{I}} & \hat{\mathbb{I}}
 \end{bmatrix}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
-\hat{\boldsymbol{b}} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
-\hat{d}+\boldsymbol{t}_{n-1}\hat{\boldsymbol{b}} & \boldsymbol{t}_{n-1}\hat{\boldsymbol{A}}+\hat{\boldsymbol{c}} & \hat{\mathbb{I}}
+\hat{\boldsymbol{b}}+\boldsymbol{s}_{n-1}\hat{\mathbb{I}} & \hat{A} & \boldsymbol{0}\\
+\hat{d}+\boldsymbol{t}_{n-1}\hat{\boldsymbol{b}} & \hat{\boldsymbol{c}}+\boldsymbol{t}_{n-1}\hat{A} & \hat{\mathbb{I}}
 \end{bmatrix}
 \]
 
@@ -2351,7 +2359,7 @@ This form of
 from which we can read off
 \begin_inset Formula 
 \[
-\hat{d}^{\prime}=\hat{d}+\boldsymbol{t}_{n-1}\hat{\boldsymbol{b}}
+\hat{d}^{\prime}=\hat{d}+\boldsymbol{t}_{n-1}\hat{\boldsymbol{b}}-\boldsymbol{s}_{n}\hat{\boldsymbol{c}}^{\prime}
 \]
 
 \end_inset
@@ -2359,28 +2367,76 @@ from which we can read off
 
 \begin_inset Formula 
 \[
-\hat{\boldsymbol{c}}^{\prime}=\boldsymbol{t}_{n-1}\hat{\boldsymbol{A}}+\hat{\boldsymbol{c}}-\boldsymbol{t_{n}}\hat{\mathbb{I}}.
+\hat{\boldsymbol{b}}^{\prime}=\hat{\boldsymbol{b}}+\boldsymbol{s}_{n-1}\hat{\mathbb{I}}-\boldsymbol{s}_{n}\hat{A}
 \]
 
 \end_inset
 
-The orthogonality condition is
+
 \begin_inset Formula 
 \[
-\left\langle \hat{\boldsymbol{c}}^{\prime},\hat{\mathbb{I}}\right\rangle =\frac{tr\left(\hat{\boldsymbol{c}}^{\prime}\hat{\mathbb{I}}\right)}{d}=\boldsymbol{c}_{0}^{\prime}=0=\boldsymbol{t}_{n-1}A_{0}+\boldsymbol{c}_{0}-\boldsymbol{t_{n}}
+\hat{\boldsymbol{c}}^{\prime}=\boldsymbol{t}_{n-1}\hat{A}+\hat{\boldsymbol{c}}-\boldsymbol{t}_{n}\hat{\mathbb{I}}.
 \]
 
 \end_inset
 
-which decides
+The orthogonality conditions are
 \begin_inset Formula 
 \[
-\boldsymbol{t_{n}}=\boldsymbol{t}_{n-1}A_{0}+\boldsymbol{c}_{0}
+\boldsymbol{b}_{0}^{\prime}=\left\langle \hat{\boldsymbol{b}}^{\prime},\hat{\mathbb{I}}\right\rangle =\frac{tr\left(\hat{\boldsymbol{b}}^{\prime}\hat{\mathbb{I}}\right)}{d}=\boldsymbol{b}_{0}+\boldsymbol{s}_{n-1}-\boldsymbol{s}_{n}A_{0}=0
 \]
 
 \end_inset
 
 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\boldsymbol{c}_{0}^{\prime}=\left\langle \hat{\boldsymbol{c}}^{\prime},\hat{\mathbb{I}}\right\rangle =\frac{tr\left(\hat{\boldsymbol{c}}^{\prime}\hat{\mathbb{I}}\right)}{d}=\boldsymbol{c}_{0}-\boldsymbol{t}_{n}+\boldsymbol{t}_{n-1}A_{0}=0.
+\]
+
+\end_inset
+
+We need solve this system for 
+\begin_inset Formula $\boldsymbol{s}_{n}$
+\end_inset
+
+ and 
+\begin_inset Formula $\boldsymbol{t}_{n}$
+\end_inset
+
+:
+\begin_inset Formula 
+\[
+\boldsymbol{s}_{n}=\left(\boldsymbol{b}_{0}+\boldsymbol{s}_{n-1}\right)A_{0}^{-1}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\boldsymbol{t}_{n}=\boldsymbol{c}_{0}+\boldsymbol{t}_{n-1}A_{0}
+\]
+
+\end_inset
+
+There is no guarantee that 
+\begin_inset Formula $A_{0}$
+\end_inset
+
+ is invertable.
+ So a better strategy may to be to sweep left to clearing out the 
+\begin_inset Formula $\boldsymbol{c}_{0}^{\prime}$
+\end_inset
+
+s and sweep back right to left and clear out the 
+\begin_inset Formula $\boldsymbol{b}_{0}^{\prime}$
+\end_inset
+
+s.
 \end_layout
 
 \begin_layout Subsubsection
@@ -2388,55 +2444,22 @@ Triangular independent version
 \end_layout
 
 \begin_layout Standard
-Using the lower/left step as an example.
-\begin_inset Formula 
-\[
-\hat{W}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
-\hat{\boldsymbol{b}} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
-\hat{d} & \hat{\boldsymbol{c}} & \hat{\mathbb{I}}
-\end{bmatrix}
-\]
-
-\end_inset
-
-The gauge transform
-\begin_inset Formula 
-\[
-\hat{W}^{\prime}=L\hat{W}L^{-1}
-\]
-
-\end_inset
-
-with
-\begin_inset Formula 
-\[
-L=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
-\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
-0 & \boldsymbol{t} & 1
-\end{bmatrix},\quad L^{-1}=\begin{bmatrix}1 & \boldsymbol{0} & 0\\
-\boldsymbol{0} & \mathbb{I} & \boldsymbol{0}\\
-0 & \boldsymbol{-t} & 1
-\end{bmatrix},\quad\boldsymbol{t}\left(\mathbb{I}-A_{0}\right)=\left\langle \hat{\mathbb{I}},\hat{\boldsymbol{c}}\right\rangle 
-\]
-
-\end_inset
-
-will ensure that 
+Starting with the tranformed 
 \begin_inset Formula $\hat{W}^{\prime}$
 \end_inset
 
- has the form
+ satisfies the orthongonality condition
 \begin_inset Formula 
 \[
 \hat{W}^{\prime}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
 \hat{\boldsymbol{b}}^{\prime} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
 \hat{d}^{\prime} & \hat{\boldsymbol{c}}^{\prime} & \hat{\mathbb{I}}
-\end{bmatrix},\quad\boldsymbol{c_{0}}=\left\langle \hat{\mathbb{I}},\hat{\boldsymbol{c}}^{\prime}\right\rangle =0.
+\end{bmatrix},\quad\boldsymbol{c_{0}^{\prime}}=\left\langle \hat{\mathbb{I}},\hat{\boldsymbol{c}}^{\prime}\right\rangle =0.
 \]
 
 \end_inset
 
-No instead of QL decomposing the whole V-block 
+Now instead of QL decomposing the whole V-block 
 \begin_inset Formula $V=\begin{bmatrix}\hat{\boldsymbol{A}} & \boldsymbol{0}\\
 \hat{\boldsymbol{c}}^{\prime} & \hat{\mathbb{I}}
 \end{bmatrix}$
@@ -2446,7 +2469,7 @@ No instead of QL decomposing the whole V-block
 \begin_inset Formula $V$
 \end_inset
 
-, and we also do QR instead of QL to make the indpenedence of triagular
+, and we can also do QR instead of QL to make the indpenedence of triagular
  for explicit.
 \begin_inset Formula 
 \[
@@ -2518,14 +2541,14 @@ and
 
  has orthogonal columns, as desired.
  The full factorization of 
-\begin_inset Formula $\hat{W}$
+\begin_inset Formula $\hat{W}^{\prime}$
 \end_inset
 
  now looks like
 \begin_inset Formula 
 \[
 \hat{W}^{\prime}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
-\hat{\boldsymbol{b}}^{\prime} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
+\hat{\boldsymbol{b}} & \hat{\boldsymbol{A}} & \boldsymbol{0}\\
 \hat{d}^{\prime} & \hat{\boldsymbol{c}}^{\prime} & \hat{\mathbb{I}}
 \end{bmatrix}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
 \hat{\boldsymbol{b}}^{\prime} & \hat{\boldsymbol{A}}^{\prime\prime} & \boldsymbol{0}\\
