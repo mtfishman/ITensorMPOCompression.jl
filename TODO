@@ -75,7 +75,7 @@ Ac blocking code:
   Done 2) -add_dummy_links! return irs,ils for left and right links.  Less dag calls.  harmonize ortho/gauge_fix!
     loops.  No more N+1 indexes.  
   Done: 1) -make remove_dummy_links!, remove_dummy_links, has_dummy_links.  name: edge_links?
-  3) -use vector(t) .. make a short function to get the Dw=1 index first.
+  Done: 3) -use vector(t) .. make a short function to get the Dw=1 index first.
   -extract_blocks onlt swap b,c blocks is user requests.  Handle ilb,ilf based on ms
   4) -ac_qx check that dh is near interger.
   -set_𝑨𝒄_block  use space(ilf) to get first and last QN blocks.  Use a simplified redim function
@@ -84,7 +84,7 @@ Ac blocking code:
     same in gauge_fix!(W...)
   -gauge_fix! use a set_c function
   -Fix all noprime(A,tags="Link") calls.
-  -Make a struct MPO_with_links,  has ils, irs, ul
+  -Make a struct MPO_with_links,  has ils, irs, ul, d0,dN
     Same Op_with_links il,ir,ul
     -Ask Matt if he is already doing this?
 

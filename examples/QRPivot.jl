@@ -24,7 +24,7 @@ function calculate_ts(H::MPO,ils::Vector{Index{T}},irs::Vector{Index{T}},ms::mat
         nr,nc=dim(il),dim(ir)
         if nr==1 
             c0=𝒄*dag(𝕀)/dh
-            t=matrix(c0)[:,1] #c0
+            t=vector_o2(c0)
         elseif nc==1
             t=zeros(1)
         else
@@ -34,7 +34,7 @@ function calculate_ts(H::MPO,ils::Vector{Index{T}},irs::Vector{Index{T}},ms::mat
 
             𝒄₀=𝒄*dag(𝕀)/dh
             𝑨₀=𝑨*dag(𝕀)/dh
-            t=matrix(tprevT*𝑨₀+𝒄₀)[1,:]
+            t=vector_o2(tprevT*𝑨₀+𝒄₀)
         end
         #@show t
         push!(ts,t)
@@ -342,10 +342,18 @@ function is_gauge_fixed(H::MPO,ils::Vector{Index{T}},irs::Vector{Index{T}},ul::r
 end
 
 #
+#  Find the first dim==1 index and remove it, then return a Vector.
+#
+function vector_o2(T::ITensor)
+    @assert order(T)==2
+    i1=inds(T)[findfirst(d->d==1,dims(T))]
+    return vector(T*dag(onehot(i1=>1)))
+end
+#
 # We store the tₙ₋₁ as Matrix (instead of ITensor) because the indices change after extract_blocks,
 #  because of the way the current subtensor functions are implemented.
 #
-function gauge_fix!(W::ITensor,ileft::Index,iright::Index,tₙ₋₁::Matrix{Float64},ms::matrix_state)
+function gauge_fix!(W::ITensor,ileft::Index,iright::Index,tₙ₋₁::Vector{Float64},ms::matrix_state)
     @assert is_regular_form(W,ms.ul)
     Wb=extract_blocks(W,ileft,iright,ms;all=true,fix_inds=true)
     𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅 #for readability below.
@@ -405,14 +413,13 @@ function gauge_fix!(W::ITensor,ileft::Index,iright::Index,tₙ₋₁::Matrix{Flo
     end
     @assert is_regular_form(W,ms.ul)
 
-    # 𝒕ₙ is always a vector (or 1xN matrix) but we would have to sort the indices in order for
-    # vector(𝒕ₙ) to work.
-    return matrix(𝒕ₙ)
+    # 𝒕ₙ is always a 1xN tensor so we need to remove that dim==1 index in order for vector(𝒕ₙ) to work.
+    return vector_o2(𝒕ₙ)
 end
 
 function gauge_fix!(H::MPO,ils::Vector{Index{T}},irs::Vector{Index{T}},ms::matrix_state) where {T}
     N=length(H)
-    tₙ=Matrix{Float64}(undef,1,1)
+    tₙ=Vector{Float64}(undef,1)
     il=ils[1]
     for n in 1:N
         ir=irs[n]
@@ -421,7 +428,7 @@ function gauge_fix!(H::MPO,ils::Vector{Index{T}},irs::Vector{Index{T}},ms::matri
         @assert is_regular_form(H[n],ms.ul)
         il=dag(ir)
     end
-    #tₙ=Matrix{Float64}(undef,1,1) end of sweep above already returns this.
+    #tₙ=Vector{Float64}(undef,1) end of sweep above already returns this.
     ir=irs[N]
     for n in N:-1:1
         il=ils[n]
@@ -589,7 +596,7 @@ end
     #  Left->Right sweep doing gauge c0==0 transforms
     #
     il=ils[1]
-    t=Matrix{Float64}(undef,1,1)
+    t=Vector{Float64}(undef,1)
     for n in 1:N
         ir =irs[n]
         t=gauge_fix!(H[n],il,ir,t,ms)
@@ -619,7 +626,7 @@ end
     #
     ms=matrix_state(ul,right)
     ir=irs[N]
-    t=Matrix{Float64}(undef,1,1)
+    t=Vector{Float64}(undef,1)
     for n in N:-1:1
         W=H[n]
         il =ils[n]
