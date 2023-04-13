@@ -78,15 +78,16 @@ Ac blocking code:
   Done: 3) -use vector(t) .. make a short function to get the Dw=1 index first.
   -extract_blocks onlt swap b,c blocks is user requests.  Handle ilb,ilf based on ms
   Done: 4) -ac_qx check that dh is near interger.
-  -set_𝑨𝒄_block  use space(ilf) to get first and last QN blocks.  Use a simplified redim function
-    grow(il,R,ir)  should do the same thing.
-  -set_𝑨𝒄_block  lower-left==upper-right for preserving corners and one row/col
-    same in gauge_fix!(W...)
-  -gauge_fix! use a set_c function
-  -Fix all noprime(A,tags="Link") calls.
+  7) -set_𝑨𝒄_block  use space(ilf) to get first and last QN blocks.  Use a simplified redim function
+  8)   grow(il,R,ir)  should do the same thing.
+  Done: 5) -set_𝑨𝒄_block  lower-left==upper-right for preserving corners and one row/col
+  6)  same in gauge_fix!(W...)
+  9) -gauge_fix! use a set_c function
+  10) -Fix all noprime(A,tags="Link") calls.
   -Make a struct MPO_with_links,  has ils, irs, ul, d0,dN
     Same Op_with_links il,ir,ul
     -Ask Matt if he is already doing this?
+    -Do QR pivot PR first.
 
   -format
   -Test with pivoting

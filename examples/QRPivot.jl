@@ -195,8 +195,8 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
         @warn "extract_blocks: fix_inds requires d=true."
         d=true
     end
-    if ms==matrix_state(lower,right) || ms==matrix_state(upper,left)
-        b,c=c,b
+    if !llur(ms) #not lower-left or upper-right
+        b,c=c,b #swap flags
     end
 
     A = A && (nr>1 && nc>1)
@@ -205,11 +205,7 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
 
   
     rfb=regform_blocks()
-    if ms.ul==lower
-        I && (rfb.𝕀= nr>1 ? slice(W,ir=>1,ic=>1) : slice(W,ir=>1,ic=>nc))
-    else
-        I && (rfb.𝕀= nr>1 ? slice(W,ir=>1,ic=>1) : slice(W,ir=>1,ic=>nc))
-    end
+    I && (rfb.𝕀= nr>1 ? slice(W,ir=>1,ic=>1) : slice(W,ir=>1,ic=>nc))
    
     if A
         rfb.𝑨= W[ir=>2:nr-1,ic=>2:nc-1]
@@ -217,20 +213,11 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
         rfb.icA,=inds(rfb.𝑨,tags=tags(ic))
     end
     if Ac
-        if ms==matrix_state(lower,left) || ms==matrix_state(upper,right)
-            if nr>1
-                rfb.𝑨𝒄= W[ir=>2:nr,ic=>2:nc-1]#W[ilb=>2:Dwb,ilf=>2:Dwf-1]
-            else
-                rfb.𝑨𝒄= W[ir=>1:1,ic=>2:nc-1]#W[ilb=>1:1,ilf=>2:Dwf-1]
-            end
+        if llur(ms)
+            rfb.𝑨𝒄= nr>1 ? W[ir=>2:nr,ic=>2:nc-1] : W[ir=>1:1,ic=>2:nc-1]
         else
-            if nc>1
-                rfb.𝑨𝒄= W[ir=>2:nr-1,ic=>1:nc-1]#W[ilb=>1:Dwb-1,ilf=>2:Dwf-1]
-            else
-                rfb.𝑨𝒄= W[ir=>2:nr-1,ic=>1:1]#W[ilb=>1:1,ilf=>2:Dwf-1]
-            end
+            rfb.𝑨𝒄= nc>1 ? W[ir=>2:nr-1,ic=>1:nc-1]  : W[ir=>2:nr-1,ic=>1:1]
         end
-        #rfb.𝑨𝒄= ms.lr == left ?  W[ir=>2:nr,ic=>2:nc-1] :  W[ir=>2:nr-1,ic=>1:nc-1]
         rfb.irAc,=inds(rfb.𝑨𝒄,tags=tags(ir))
         rfb.icAc,=inds(rfb.𝑨𝒄,tags=tags(ic))
     end
@@ -261,7 +248,7 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
             rfb.𝑨=replaceinds(rfb.𝑨,[rfb.irA,rfb.icA],[rfb.irb,rfb.icc])
         end
     end
-    if ms==matrix_state(lower,right) || ms==matrix_state(upper,left)
+    if !llur(ms) #not lower-left or upper-right
         rfb.𝒃,rfb.𝒄=rfb.𝒄,rfb.𝒃
         rfb.irb,rfb.irc=rfb.irc,rfb.irb
         rfb.icb,rfb.icc=rfb.icc,rfb.icb
@@ -281,30 +268,17 @@ function set_𝑨𝒄_block(W::ITensor,𝑨𝒄::ITensor,ilb::Index,ilf::Index,i
     #
     #  We need to preserve some blocks outside of Ac from the old MPO tensor.
     #
-    if ms.ul==lower
-        if ms.lr==left
-            Wp[ilb=>Dwb:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>Dwb:Dwb,ilf=>Dwf:Dwf] #bottom right corner
-            Wp[ilb=>1:Dwb,ilqp=>1:1]=W[ilb=>1:Dwb,ilf=>1:1] #left column
-        else
-            Wp[ilb=>1:1,ilqp=>1:1]=W[ilb=>1:1,ilf=>1:1] #Top left corner
-            Wp[ilb=>1:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>1:Dwb,ilf=>Dwf:Dwf] #Bottom row
-        end
+    if llur(ms)
+        ac_range=2:Dwb 
+        Wp[ilb=>Dwb:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>Dwb:Dwb,ilf=>Dwf:Dwf] #bottom-right corner
+        Wp[ilb=>1:Dwb,ilqp=>1:1]=W[ilb=>1:Dwb,ilf=>1:1] #left column or #Top row
     else
-        if ms.lr==left
-            Wp[ilb=>1:1,ilqp=>1:1]=W[ilb=>1:1,ilf=>1:1] #Top left corner
-            Wp[ilb=>1:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>1:Dwb,ilf=>Dwf:Dwf] #right column
-        else
-            Wp[ilb=>Dwb:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>Dwb:Dwb,ilf=>Dwf:Dwf] # top left corner
-            Wp[ilb=>1:Dwb,ilqp=>1:1]=W[ilb=>1:Dwb,ilf=>1:1] #Top row
-        end
+        ac_range=1:Dwb-1
+        Wp[ilb=>1:1,ilqp=>1:1]=W[ilb=>1:1,ilf=>1:1] #Top left corner
+        Wp[ilb=>1:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>1:Dwb,ilf=>Dwf:Dwf] #Bottom row or right column
     end
-    #
-    #  Fill in the 𝑨𝒄 block
-    #
-    if ms.ul==lower
-        ac_range= Dwb>1 ? (ms.lr==left ? (2:Dwb) : (1:Dwb-1)) : 1:1
-    else
-        ac_range= Dwb>1 ? (ms.lr==left ? (1:Dwb-1) : (2:Dwb)) : 1:1
+    if Dwb==1
+        ac_range=1:1
     end
     Wp[ilb=>ac_range,ilqp=>2:Dwq-1]=𝑨𝒄
     return Wp,ilqp
@@ -360,27 +334,21 @@ function gauge_fix!(W::ITensor,ileft::Index,iright::Index,tₙ₋₁::Vector{Flo
     nr,nc=dim(ileft),dim(iright)
     nb,nf = ms.lr==left ? (nr,nc) : (nc,nr)
     #
-    #  Make in ITensor with suitable indices from the tprev vector.
+    #  Make in ITensor with suitable indices from the 𝒕ₙ₋₁ vector.
     #
     if nb>1
-        if ms.ul==lower
-            ibd = ms.lr==left ? Wb.ird : Wb.icd #backwards facing index on d block
-            ibb = ms.lr==left ? Wb.irb : Wb.icb #backwards facing index on b block
-        else
-            ibd = ms.lr==left ? Wb.icd : Wb.ird #backwards facing index on d block
-            ibb = ms.lr==left ? Wb.icb : Wb.irb #backwards facing index on b block
-        end
+        ibd,ibb = llur(ms) ?  (Wb.ird, Wb.irb) : (Wb.icd, Wb.icb)
         𝒕ₙ₋₁=ITensor(tₙ₋₁,dag(ibb),ibd)
     end
     𝒄⎖=nothing
     #
     #  First two if blocks are special handling for row and column vector at the edges of the MPO
     #
-    if nb==1 #1xnf at start of sweep.
+    if nb==1 #col/row at start of sweep.
         𝒕ₙ=c0(Wb) 
         𝒄⎖=𝒄-𝕀*𝒕ₙ
         𝒅⎖=𝒅
-    elseif nf==1 #nbx1 at the end of the sweep
+    elseif nf==1 ##col/row at the end of the sweep
         𝒅⎖=𝒅+𝒕ₙ₋₁*𝒃
         𝒕ₙ=ITensor(1.0,Index(1),Index(1)) #Not used, but required for the return statement.
     else
@@ -439,6 +407,8 @@ function gauge_fix!(H::MPO,ils::Vector{Index{T}},irs::Vector{Index{T}},ms::matri
     end
 end
 
+# lower left or upper right
+llur(ms::matrix_state)=ms.lr==left&&ms.ul==lower || ms.lr==right&&ms.ul==upper
 #-------------------------------------------------------------------------------
 #
 #  block qx and orthogonalization of the vcat(𝑨,𝒄) and hcat(𝒃,𝑨) blocks.
@@ -448,11 +418,7 @@ function ac_qx(W::ITensor,ir::Index,ic::Index,ms::matrix_state;kwargs...)
     @assert hasinds(W,ic)
     @assert hasinds(W,ir)
     Wb=extract_blocks(W,ir,ic,ms;Ac=true)
-    if ms.ul==lower
-        ilf_Ac = ms.lr==left ? Wb.icAc : Wb.irAc
-    else
-        ilf_Ac = ms.lr==left ? Wb.irAc : Wb.icAc
-    end
+    ilf_Ac = llur(ms) ?  Wb.icAc : Wb.irAc
     ilb,ilf =  ms.lr==left ? (ir,ic) : (ic,ir) #Backward and forward indices.
     @checkflux(Wb.𝑨𝒄)
     if ms.lr==left
