@@ -57,7 +57,8 @@ end
 function make_Ising_index(Dw::Int64,tags::String,use_qn::Bool,dir)
     if (use_qn)
         if tags[1:4]=="Link"
-            ind=Index(QN("Sz",0)=>Dw;dir=dir,tags=tags)
+            qns=fill(QN("Sz",0)=>1,Dw)
+            ind=Index(qns;dir=dir,tags=tags)
         else
             @mpoc_assert tags[1:4]=="Site"
             ind=Index(QN("Sz",1)=>Dw;dir=dir,tags=tags)
