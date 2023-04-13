@@ -72,7 +72,7 @@ Done: -parse_links ... accept n=1 for link indices.
  Done: -Take out the h_mirror feature.
 -Go over all the Problems in VScode.  Are they real?
 Ac blocking code:
-  2) -add_dummy_links! return irs,ils for left and right links.  Less dag calls.  harmonize ortho/gauge_fix!
+  Done 2) -add_dummy_links! return irs,ils for left and right links.  Less dag calls.  harmonize ortho/gauge_fix!
     loops.  No more N+1 indexes.  
   Done: 1) -make remove_dummy_links!, remove_dummy_links, has_dummy_links.  name: edge_links?
   3) -use vector(t) .. make a short function to get the Dw=1 index first.
@@ -83,6 +83,12 @@ Ac blocking code:
   -set_𝑨𝒄_block  lower-left==upper-right for preserving corners and one row/col
     same in gauge_fix!(W...)
   -gauge_fix! use a set_c function
+  -Fix all noprime(A,tags="Link") calls.
+  -Make a struct MPO_with_links,  has ils, irs, ul
+    Same Op_with_links il,ir,ul
+    -Ask Matt if he is already doing this?
+
+  -format
   -Test with pivoting
   -Move code into compression module.
 
