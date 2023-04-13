@@ -77,7 +77,7 @@ Ac blocking code:
   Done: 1) -make remove_dummy_links!, remove_dummy_links, has_dummy_links.  name: edge_links?
   Done: 3) -use vector(t) .. make a short function to get the Dw=1 index first.
   -extract_blocks onlt swap b,c blocks is user requests.  Handle ilb,ilf based on ms
-  4) -ac_qx check that dh is near interger.
+  Done: 4) -ac_qx check that dh is near interger.
   -set_𝑨𝒄_block  use space(ilf) to get first and last QN blocks.  Use a simplified redim function
     grow(il,R,ir)  should do the same thing.
   -set_𝑨𝒄_block  lower-left==upper-right for preserving corners and one row/col

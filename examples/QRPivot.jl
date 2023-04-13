@@ -5,7 +5,7 @@ using Test,Printf,Revise
 import ITensors: tensor
 import ITensorMPOCompression: @checkflux, mpoc_checkflux, insert_xblock
 
-Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
+Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f)
 
 #-------------------------------------------------------------------------------
 #
@@ -466,6 +466,7 @@ function ac_qx(W::ITensor,ir::Index,ic::Index,ms::matrix_state;kwargs...)
     @checkflux(R)
     # Re-scale
     dh=d(Wb) #dimension of local Hilbert space.
+    @assert abs(dh-round(dh))==0.0
     Q*=sqrt(dh)
     R/=sqrt(dh)
     Wp,iqp=set_𝑨𝒄_block(W,Q,ilb,ilf,iq,ms) 
