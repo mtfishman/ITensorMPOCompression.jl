@@ -57,8 +57,8 @@ Improvements:
 -Make a Model("ising_NNN") for arbitrary NNN interactions.
 -Make a table of Ncell for sites, and length(mpo) nsites(His) so we can figure what the rules are.
 -Search for TODO items and get them in this list.
--block_qx Instead restoring full tri form, just use the part of the perm than puts I back in the corner.  
-  i.e.   leave the A block scrambled.
+Don't need: -block_qx Instead restoring full tri form, just use the part of the perm than puts I back in the corner.  
+    i.e.   leave the A block scrambled.
 -System for hamitonians make_Hubbard_AutoiMPO => Hubbard_Auto_iMPO
 -Use an infinite=true flag for iMPOs?
 Done: -parse_links ... accept n=1 for link indices.
@@ -66,12 +66,25 @@ Done: -parse_links ... accept n=1 for link indices.
 -Get rid of getV1 and setV1.  i.e. make all order(W)==4 by adding dummy indices.
 -Follow Matts kwargs guidelines
 -Eliminate use of tags for finding indices.  Use the network structure instead.  Pass list if indices
- in function calls.  Use linkinds, commoninds, uniqueinds.
- -For iMPOs set llim,rlim=-1,1 so that they are interpreted as non-ortho when N=1.
- -iMPO truncate user HL,HR instead of H,Hm ?
+  in function calls.  Use linkinds, commoninds, uniqueinds.
+-For iMPOs set llim,rlim=-1,1 so that they are interpreted as non-ortho when N=1.
+-iMPO truncate user HL,HR instead of H,Hm ?
  Done: -Take out the h_mirror feature.
- -Go over all the Problems in VScode.  Are they real?
-
+-Go over all the Problems in VScode.  Are they real?
+Ac blocking code:
+  2) -add_dummy_links! return irs,ils for left and right links.  Less dag calls.  harmonize ortho/gauge_fix!
+    loops.  No more N+1 indexes.  
+  Done: 1) -make remove_dummy_links!, remove_dummy_links, has_dummy_links.  name: edge_links?
+  3) -use vector(t) .. make a short function to get the Dw=1 index first.
+  -extract_blocks onlt swap b,c blocks is user requests.  Handle ilb,ilf based on ms
+  4) -ac_qx check that dh is near interger.
+  -set_𝑨𝒄_block  use space(ilf) to get first and last QN blocks.  Use a simplified redim function
+    grow(il,R,ir)  should do the same thing.
+  -set_𝑨𝒄_block  lower-left==upper-right for preserving corners and one row/col
+    same in gauge_fix!(W...)
+  -gauge_fix! use a set_c function
+  -Test with pivoting
+  -Move code into compression module.
 
 Fix Unknown:
 -For RL_prime problems, try factor R+ = R'*M (instread of M*R) then R' will be square.
