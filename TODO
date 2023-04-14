@@ -81,9 +81,14 @@ Ac blocking code:
   7) -set_𝑨𝒄_block  use space(ilf) to get first and last QN blocks.  Use a simplified redim function
   8)   grow(il,R,ir)  should do the same thing.
   Done: 5) -set_𝑨𝒄_block  lower-left==upper-right for preserving corners and one row/col
-  6)  same in gauge_fix!(W...)
-  9) -gauge_fix! use a set_c function
+  Done: 6)  same in gauge_fix!(W...)
+  Done: 9) -gauge_fix! use a set_c function
   10) -Fix all noprime(A,tags="Link") calls.
+  11) -Refactor set_𝑨𝒄_block into
+        a) newQ() which makes Wp, preserves columns and Is
+        b) call set_𝑨𝒄_block or set_𝑨b_block
+        c) set_𝑨𝒄_block calls set_𝒄_block is nr==1
+        d) set_𝑨b_block calls set_b_block is nr==1
   -Make a struct MPO_with_links,  has ils, irs, ul, d0,dN
     Same Op_with_links il,ir,ul
     -Ask Matt if he is already doing this?

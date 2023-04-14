@@ -169,6 +169,12 @@ b0(rfb::regform_blocks)::ITensor=rfb.𝒃*dag(rfb.𝕀)/d(rfb)
 c0(rfb::regform_blocks)::ITensor=rfb.𝒄*dag(rfb.𝕀)/d(rfb)
 A0(rfb::regform_blocks)::ITensor=rfb.𝑨*dag(rfb.𝕀)/d(rfb)
 
+#
+#  Transpose inds for upper, no-op for lower
+#
+function swap_ul(ileft::Index,iright::Index,ul::reg_form)
+    return ul==lower ? (ileft,iright,dim(ileft),dim(iright)) :  (iright,ileft,dim(iright),dim(ileft))
+end
 #  Use recognizably distinct UTF symbols for operators, and op valued vectors and matrices: 𝕀 𝑨 𝒃 𝒄 𝒅 ⌃ c₀ x0 𝑨𝒄
 function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=false,c=true,b=false,d=false,A=false,Ac=false,I=true,fix_inds=false)::regform_blocks
     @assert hasinds(W,ir,ic)
@@ -256,6 +262,9 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
     return rfb
 end
 
+# lower left or upper right
+llur(ms::matrix_state)=ms.lr==left&&ms.ul==lower || ms.lr==right&&ms.ul==upper
+
 function set_𝑨𝒄_block(W::ITensor,𝑨𝒄::ITensor,ilb::Index,ilf::Index,iq::Index,ms::matrix_state)
     is=noncommoninds(W,ilb,ilf)
     @assert hasinds(W,ilb,ilf)
@@ -282,6 +291,19 @@ function set_𝑨𝒄_block(W::ITensor,𝑨𝒄::ITensor,ilb::Index,ilf::Index,i
     end
     Wp[ilb=>ac_range,ilqp=>2:Dwq-1]=𝑨𝒄
     return Wp,ilqp
+end
+function set_𝒃_block!(W::ITensor,𝒃::ITensor,ileft::Index,iright::Index,ul::reg_form)
+    i1,i2,n1,n2=swap_ul(ileft,iright,ul)
+    W[i1=>2:n1-1,i2=>1:1]=𝒃
+end
+
+function set_𝒄_block!(W::ITensor,𝒄::ITensor,ileft::Index,iright::Index,ul::reg_form)
+    i1,i2,n1,n2=swap_ul(ileft,iright,ul)
+    W[i1=>n1:n1,i2=>2:n2-1]=𝒄
+end
+function set_𝒅_block!(W::ITensor,𝒅::ITensor,ileft::Index,iright::Index,ul::reg_form)
+    i1,i2,n1,n2=swap_ul(ileft,iright,ul)
+    W[i1=>n1:n1,i2=>1:1]=𝒅
 end
 
 #-------------------------------------------------------------------------------
@@ -357,26 +379,14 @@ function gauge_fix!(W::ITensor,ileft::Index,iright::Index,tₙ₋₁::Vector{Flo
         𝒅⎖=𝒅+𝒕ₙ₋₁*𝒃
     end
     
-    if ms.ul==lower
-        W[ileft=>nr:nr,iright=>1:1]=𝒅⎖
-    else
-        W[ileft=>1:1,iright=>nc:nc]=𝒅⎖
-    end
+    set_𝒅_block!(W,𝒅⎖,ileft,iright,ms.ul)
     @assert is_regular_form(W,ms.ul)
 
     if !isnothing(𝒄⎖)
-        if ms.ul==lower
-            if ms.lr==left
-                W[ileft=>nr:nr,iright=>2:nc-1]=𝒄⎖
-            else
-                W[ileft=>2:nr-1,iright=>1:1]=𝒄⎖    
-            end
+        if llur(ms)
+            set_𝒄_block!(W,𝒄⎖,ileft,iright,ms.ul)
         else
-            if ms.lr==left
-                W[ileft=>1:1,iright=>2:nc-1]=𝒄⎖
-            else
-                W[ileft=>2:nr-1,iright=>nc:nc]=𝒄⎖    
-            end
+            set_𝒃_block!(W,𝒄⎖,ileft,iright,ms.ul)
         end
     end
     @assert is_regular_form(W,ms.ul)
@@ -407,8 +417,6 @@ function gauge_fix!(H::MPO,ils::Vector{Index{T}},irs::Vector{Index{T}},ms::matri
     end
 end
 
-# lower left or upper right
-llur(ms::matrix_state)=ms.lr==left&&ms.ul==lower || ms.lr==right&&ms.ul==upper
 #-------------------------------------------------------------------------------
 #
 #  block qx and orthogonalization of the vcat(𝑨,𝒄) and hcat(𝒃,𝑨) blocks.
@@ -423,10 +431,10 @@ function ac_qx(W::ITensor,ir::Index,ic::Index,ms::matrix_state;kwargs...)
     @checkflux(Wb.𝑨𝒄)
     if ms.lr==left
         Qinds=noncommoninds(Wb.𝑨𝒄,ilf_Ac) 
-        Q,R,iq=qr(Wb.𝑨𝒄,Qinds;positive=true,rr_cutoff=1e-14,tags=tags(ilf))
+        Q,R,iq=qr(Wb.𝑨𝒄,Qinds;positive=true,cutoff=1e-14,tags=tags(ilf))
     else
         Rinds=ilf_Ac
-        R,Q,iq=rq(Wb.𝑨𝒄,Rinds;positive=true,rr_cutoff=1e-14,tags=tags(ilf))
+        R,Q,iq=lq(Wb.𝑨𝒄,Rinds;positive=true,cutoff=1e-14,tags=tags(ilf))
     end
     @checkflux(Q)
     @checkflux(R)
@@ -474,228 +482,232 @@ function ac_orthogonalize!(H::MPO,ils::Vector{Index{T}},irs::Vector{Index{T}},ms
 end
 
 
-models=[
-    [make_transIsing_MPO,"S=1/2",true],
-    [make_transIsing_AutoMPO,"S=1/2",true],
-    [make_Heisenberg_AutoMPO,"S=1/2",true],
-    [make_Heisenberg_AutoMPO,"S=1",true],
-    [make_Hubbard_AutoMPO,"Electron",false],
-    ]
+verbose=false
 
-@testset "Ac/Ab block respecting decomposition $(model[1]), qns=$qns" for model in models, qns in [false,true], ul=[lower,upper]
-    eps=1e-14
-    N=5 #5 sites
-    NNN=2 #Include 2nd nearest neighbour interactions
-    sites = siteinds(model[2],N,conserve_qns=qns);
-    H=model[1](sites,NNN;ul=ul);
-    pre_fixed=model[3] #Hamiltonian starts gauge fixed
-    # @show get_Dw(H)
-    @assert is_regular_form(H,ul)
-    state=[isodd(n) ? "Up" : "Dn" for n=1:N]
-    psi=randomMPS(sites,state)
-    E0=inner(psi',H,psi)
+@testset "Ac/Ab block respecting decomposition tests" begin
+    models=[
+        [make_transIsing_MPO,"S=1/2",true],
+        [make_transIsing_AutoMPO,"S=1/2",true],
+        [make_Heisenberg_AutoMPO,"S=1/2",true],
+        [make_Heisenberg_AutoMPO,"S=1",true],
+        [make_Hubbard_AutoMPO,"Electron",false],
+        ]
 
-    ils,irs,d0,dN=add_edge_links!(H)
-    @test all(il->dir(il)==dir(ils[1]),ils) 
-    @test all(ir->dir(ir)==dir(irs[1]),irs) 
-    @assert is_regular_form(H,ul)
-    #
-    #  Left->right sweep
-    #
-    ms=matrix_state(ul,left)
-    @test pre_fixed == is_gauge_fixed(H,ils,irs,ms.ul,eps) 
-    qns && show_directions(H)
-    ac_orthogonalize!(H,ils,irs,mirror(ms),eps)
-    qns && show_directions(H)
-    ac_orthogonalize!(H,ils,irs,ms,eps)
-    @test check_ortho(H,ms)
-    @test is_gauge_fixed(H,ils,irs,ms.ul,eps) #Now everything should be fixed
-    qns && show_directions(H)
+    @testset "Ac/Ab block respecting decomposition $(model[1]), qns=$qns" for model in models, qns in [false,true], ul=[lower,upper]
+        eps=1e-14
+        N=5 #5 sites
+        NNN=2 #Include 2nd nearest neighbour interactions
+        sites = siteinds(model[2],N,conserve_qns=qns);
+        H=model[1](sites,NNN;ul=ul);
+        pre_fixed=model[3] #Hamiltonian starts gauge fixed
+        # @show get_Dw(H)
+        @assert is_regular_form(H,ul)
+        state=[isodd(n) ? "Up" : "Dn" for n=1:N]
+        psi=randomMPS(sites,state)
+        E0=inner(psi',H,psi)
+
+        ils,irs,d0,dN=add_edge_links!(H)
+        @test all(il->dir(il)==dir(ils[1]),ils) 
+        @test all(ir->dir(ir)==dir(irs[1]),irs) 
+        @assert is_regular_form(H,ul)
+        #
+        #  Left->right sweep
+        #
+        ms=matrix_state(ul,left)
+        @test pre_fixed == is_gauge_fixed(H,ils,irs,ms.ul,eps) 
+        verbose && qns && show_directions(H)
+        ac_orthogonalize!(H,ils,irs,mirror(ms),eps)
+        verbose && qns && show_directions(H)
+        ac_orthogonalize!(H,ils,irs,ms,eps)
+        @test check_ortho(H,ms)
+        @test is_gauge_fixed(H,ils,irs,ms.ul,eps) #Now everything should be fixed
+        verbose && qns && show_directions(H)
+        
+        #  Expectation value check.
+        #
+        remove_edge_links!(H,d0,dN)
+        E1=inner(psi',H,psi)
+        @test E0 ≈ E1 atol = eps
+        #
+        #  Right->left sweep
+        #
+        ils,irs,d0,dN=add_edge_links!(H)
+        ms=matrix_state(ul,right)
+        @test is_gauge_fixed(H,ils,irs,ms.ul,eps) #Should still be gauge fixed
+        ac_orthogonalize!(H,ils,irs,ms,eps)
+        @test check_ortho(H,ms)
+        @test is_gauge_fixed(H,ils,irs,ms.ul,eps) #Should still be gauge fixed
+        verbose && qns && show_directions(H)
+        # #
+        # #  Expectation value check.
+        # #
+        remove_edge_links!(H,d0,dN)
+        E2=inner(psi',H,psi)
+        @test E0 ≈ E2 atol = eps
+    end
+
+    @testset "Gauge transform rectangular W, qns=$qns, ul=$ul" for model in models, qns in [false], ul=[lower,upper]
+        eps=1e-14
+        
+        N=5 #5 sites
+        NNN=2 #Include 2nd nearest neighbour interactions
+        sites = siteinds(model[2],N,conserve_qns=qns)
+        H=model[1](sites,NNN;ul=ul)
+        pre_fixed=model[3] #Hamiltonian starts gauge fixed
+        state=[isodd(n) ? "Up" : "Dn" for n=1:N]
+        psi=randomMPS(sites,state)
+        E0=inner(psi',H,psi)
+        
+        ils,irs,d0,dN=add_edge_links!(H)
+
+
+        ms=matrix_state(ul,left)
+        @test pre_fixed==is_gauge_fixed(H,ils,irs,ms.ul,eps)
+
+        H_lwl=deepcopy(H)
+        @test pre_fixed==is_gauge_fixed(H_lwl,ils,irs,ms.ul,eps)
+        apply_Ls!(H_lwl,ils,irs,ms)
+        @test is_gauge_fixed(H_lwl,ils,irs,ms.ul,eps,b=false)
+        @test pre_fixed==is_gauge_fixed(H_lwl,ils,irs,ms.ul,eps,c=false)
+        H_g=deepcopy(H) 
+        #   
+        #  Left->Right sweep doing gauge c0==0 transforms
+        #
+        il=ils[1]
+        t=Vector{Float64}(undef,1)
+        for n in 1:N
+            ir =irs[n]
+            t=gauge_fix!(H[n],il,ir,t,ms)
+            @test norm(H_lwl[n]-H[n])<eps
+            @test is_gauge_fixed(H[n],il,ir,ms.ul,eps;b=false)    
+            il=dag(ir)
+        end
+        @test is_gauge_fixed(H,ils,irs,ms.ul,eps,b=false)
+        @test pre_fixed==is_gauge_fixed(H,ils,irs,ms.ul,eps,c=false)
+        #
+        #  Check that the energy expectation is invariant.
+        #   
+        He=remove_edge_links(H,d0,dN)
+        E1=inner(psi',He,psi)
+        @test E0 ≈ E1 atol = eps
+        # #
+        # # Do a full gauge transform on Hg   
+        # #
+        @test pre_fixed==is_gauge_fixed(H,ils,irs,ms.ul,eps) #b0's not done yet
+        @test pre_fixed==is_gauge_fixed(H_g,ils,irs,ms.ul,eps,b=false) #only check the c0s
+        @test pre_fixed==is_gauge_fixed(H_g,ils,irs,ms.ul,eps,c=false) #only check the b0s
+        gauge_fix!(H_g,ils,irs,ms)
+        @test pre_fixed==is_gauge_fixed(H,ils,irs,ms.ul,eps) #deepcopy ensures we didn't just (inadvertently) gauge fix H as well
+        @test is_gauge_fixed(H_g,ils,irs,ms.ul,eps)
+        #
+        #  Sweep right to left abd gauge all the b0's==0 .
+        #
+        ms=matrix_state(ul,right)
+        ir=irs[N]
+        t=Vector{Float64}(undef,1)
+        for n in N:-1:1
+            W=H[n]
+            il =ils[n]
+            t=gauge_fix!(W,il,ir,t,ms)
+            @test norm(H_g[n]-W)<eps
+            @test is_gauge_fixed(H[n],il,ir,ms.ul,eps;b=false)    
+            @test is_gauge_fixed(H[n],il,ir,ms.ul,eps;c=false)    
+            ir=dag(il)
+        end
+        @test is_gauge_fixed(H,ils,irs,ms.ul,eps) #Now everything should be fixed
     
-    #  Expectation value check.
-    #
-    remove_edge_links!(H,d0,dN)
-    E1=inner(psi',H,psi)
-    @test E0 ≈ E1 atol = eps
-    #
-    #  Right->left sweep
-    #
-    ils,irs,d0,dN=add_edge_links!(H)
-    ms=matrix_state(ul,right)
-    @test is_gauge_fixed(H,ils,irs,ms.ul,eps) #Should still be gauge fixed
-    ac_orthogonalize!(H,ils,irs,ms,eps)
-    @test check_ortho(H,ms)
-    @test is_gauge_fixed(H,ils,irs,ms.ul,eps) #Should still be gauge fixed
-    qns && show_directions(H)
-    # #
-    # #  Expectation value check.
-    # #
-    remove_edge_links!(H,d0,dN)
-    E2=inner(psi',H,psi)
-    @test E0 ≈ E2 atol = eps
-end
+        remove_edge_links!(H,d0,dN)
+        E2=inner(psi',H,psi)
+        @test E0 ≈ E2 atol = eps
+    end
 
-@testset "Gauge transform rectangular W, qns=$qns, ul=$ul" for model in models, qns in [false], ul=[lower,upper]
-    eps=1e-14
+    @testset "Extract blocks qns=$qns, ul=$ul" for qns in [false,true], ul=[lower,upper]
+        eps=1e-15
+        N=5 #5 sites
+        NNN=2 #Include 2nd nearest neighbour interactions
+        sites = siteinds("Electron",N,conserve_qns=qns)
+        d=dim(inds(sites[1])[1])
+        H=make_Hubbard_AutoMPO(sites,NNN;ul=ul)
+        ils,irs,d0,dN=add_edge_links!(H)
+        @test all(il->dir(il)==dir(ils[1]),ils) 
+        @test all(ir->dir(ir)==dir(irs[1]),irs) 
     
-    N=5 #5 sites
-    NNN=2 #Include 2nd nearest neighbour interactions
-    sites = siteinds(model[2],N,conserve_qns=qns)
-    H=model[1](sites,NNN;ul=ul)
-    pre_fixed=model[3] #Hamiltonian starts gauge fixed
-    state=[isodd(n) ? "Up" : "Dn" for n=1:N]
-    psi=randomMPS(sites,state)
-    E0=inner(psi',H,psi)
-    
-    ils,irs,d0,dN=add_edge_links!(H)
 
-
-    ms=matrix_state(ul,left)
-    @test pre_fixed==is_gauge_fixed(H,ils,irs,ms.ul,eps)
-
-    H_lwl=deepcopy(H)
-    @test pre_fixed==is_gauge_fixed(H_lwl,ils,irs,ms.ul,eps)
-    apply_Ls!(H_lwl,ils,irs,ms)
-    @test is_gauge_fixed(H_lwl,ils,irs,ms.ul,eps,b=false)
-    @test pre_fixed==is_gauge_fixed(H_lwl,ils,irs,ms.ul,eps,c=false)
-    H_g=deepcopy(H) 
-    #   
-    #  Left->Right sweep doing gauge c0==0 transforms
-    #
-    il=ils[1]
-    t=Vector{Float64}(undef,1)
-    for n in 1:N
-        ir =irs[n]
-        t=gauge_fix!(H[n],il,ir,t,ms)
-        @test norm(H_lwl[n]-H[n])<eps
-        @test is_gauge_fixed(H[n],il,ir,ms.ul,eps;b=false)    
-        il=dag(ir)
-    end
-    @test is_gauge_fixed(H,ils,irs,ms.ul,eps,b=false)
-    @test pre_fixed==is_gauge_fixed(H,ils,irs,ms.ul,eps,c=false)
-    #
-    #  Check that the energy expectation is invariant.
-    #   
-    He=remove_edge_links(H,d0,dN)
-    E1=inner(psi',He,psi)
-    @test E0 ≈ E1 atol = eps
-    # #
-    # # Do a full gauge transform on Hg   
-    # #
-    @test pre_fixed==is_gauge_fixed(H,ils,irs,ms.ul,eps) #b0's not done yet
-    @test pre_fixed==is_gauge_fixed(H_g,ils,irs,ms.ul,eps,b=false) #only check the c0s
-    @test pre_fixed==is_gauge_fixed(H_g,ils,irs,ms.ul,eps,c=false) #only check the b0s
-    gauge_fix!(H_g,ils,irs,ms)
-    @test pre_fixed==is_gauge_fixed(H,ils,irs,ms.ul,eps) #deepcopy ensures we didn't just (inadvertently) gauge fix H as well
-    @test is_gauge_fixed(H_g,ils,irs,ms.ul,eps)
-    #
-    #  Sweep right to left abd gauge all the b0's==0 .
-    #
-    ms=matrix_state(ul,right)
-    ir=irs[N]
-    t=Vector{Float64}(undef,1)
-    for n in N:-1:1
-        W=H[n]
-        il =ils[n]
-        t=gauge_fix!(W,il,ir,t,ms)
-        @test norm(H_g[n]-W)<eps
-        @test is_gauge_fixed(H[n],il,ir,ms.ul,eps;b=false)    
-        @test is_gauge_fixed(H[n],il,ir,ms.ul,eps;c=false)    
-        ir=dag(il)
-    end
-    @test is_gauge_fixed(H,ils,irs,ms.ul,eps) #Now everything should be fixed
- 
-    remove_edge_links!(H,d0,dN)
-    E2=inner(psi',H,psi)
-    @test E0 ≈ E2 atol = eps
-end
-
-@testset "Extract blocks qns=$qns, ul=$ul" for qns in [false,true], ul=[lower,upper]
-    eps=1e-15
-    N=5 #5 sites
-    NNN=2 #Include 2nd nearest neighbour interactions
-    sites = siteinds("Electron",N,conserve_qns=qns)
-    d=dim(inds(sites[1])[1])
-    H=make_Hubbard_AutoMPO(sites,NNN;ul=ul)
-    ils,irs,d0,dN=add_edge_links!(H)
-    @test all(il->dir(il)==dir(ils[1]),ils) 
-    @test all(ir->dir(ir)==dir(irs[1]),irs) 
-   
-
-    ms= ul==lower ? matrix_state(ul,left) : matrix_state(ul,right)
-    il,ir =ils[1],irs[1]
-    nr,nc=dim(il),dim(ir)
-    W=H[1]
-    #pprint(W)
-    rfb=extract_blocks(W,il,ir,ms;all=true)
-    @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
-    @test isnothing(rfb.𝑨) 
-    if ul==lower   
-        @test isnothing(rfb.𝒃)
-        norm(array(rfb.𝒅)-array(W[il=>nr:nr,ir=>1:1]))<eps
-        norm(array(rfb.𝒄)-array(W[il=>nr:nr,ir=>2:nc-1]))<eps
-    else
-        @test isnothing(rfb.𝒄)
-        norm(array(rfb.𝒅)-array(W[il=>1:1,ir=>nc:nc]))<eps
-        norm(array(rfb.𝒃)-array(W[il=>1:1,ir=>2:nc-1]))<eps
-    end
-       
-    W=H[N]
-    il,ir =ils[N],irs[N]
-    nr,nc=dim(il),dim(ir)
-    rfb=extract_blocks(W,il,ir,ms;all=true,fix_inds=true)
-    @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
-    @test isnothing(rfb.𝑨)    
-    if ul==lower 
-        @test isnothing(rfb.𝒄) 
-        @test norm(array(rfb.𝒅)-array(W[il=>nr:nr,ir=>1:1]))<eps
-        @test norm(array(rfb.𝒃)-array(W[il=>2:nr-1,ir=>1:1]))<eps
-    else
-        @test isnothing(rfb.𝒃) 
-        @test norm(array(rfb.𝒅)-array(W[il=>1:1,ir=>nc:nc]))<eps
-        @test norm(array(rfb.𝒄)-array(W[il=>2:nr-1,ir=>nc:nc]))<eps
-    end
-   
-    W=H[2]
-    il,ir =ils[2],irs[2]
-    nr,nc=dim(il),dim(ir)
-    rfb=extract_blocks(W,il,ir,ms;all=true,fix_inds=true,Ac=true)
-    if ul==lower
+        ms= ul==lower ? matrix_state(ul,left) : matrix_state(ul,right)
+        il,ir =ils[1],irs[1]
+        nr,nc=dim(il),dim(ir)
+        W=H[1]
+        #pprint(W)
+        rfb=extract_blocks(W,il,ir,ms;all=true)
         @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
-        @test norm(array(rfb.𝒅)-array(W[il=>nr:nr,ir=>1:1]))<eps
-        @test norm(array(rfb.𝒃)-array(W[il=>2:nr-1,ir=>1:1]))<eps
-        @test norm(array(rfb.𝒄)-array(W[il=>nr:nr,ir=>2:nc-1]))<eps
-        @test norm(array(rfb.𝑨)-array(W[il=>2:nr-1,ir=>2:nc-1]))<eps
-        @test norm(array(rfb.𝑨𝒄)-array(W[il=>2:nr,ir=>2:nc-1]))<eps
-    else
+        @test isnothing(rfb.𝑨) 
+        if ul==lower   
+            @test isnothing(rfb.𝒃)
+            norm(array(rfb.𝒅)-array(W[il=>nr:nr,ir=>1:1]))<eps
+            norm(array(rfb.𝒄)-array(W[il=>nr:nr,ir=>2:nc-1]))<eps
+        else
+            @test isnothing(rfb.𝒄)
+            norm(array(rfb.𝒅)-array(W[il=>1:1,ir=>nc:nc]))<eps
+            norm(array(rfb.𝒃)-array(W[il=>1:1,ir=>2:nc-1]))<eps
+        end
+        
+        W=H[N]
+        il,ir =ils[N],irs[N]
+        nr,nc=dim(il),dim(ir)
+        rfb=extract_blocks(W,il,ir,ms;all=true,fix_inds=true)
         @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
-        @test norm(array(rfb.𝒅)-array(W[il=>1:1,ir=>nc:nc]))<eps
-        @test norm(array(rfb.𝒃)-array(W[il=>1:1,ir=>2:nc-1]))<eps
-        @test norm(array(rfb.𝒄)-array(W[il=>2:nr-1,ir=>nc:nc]))<eps
-        @test norm(array(rfb.𝑨)-array(W[il=>2:nr-1,ir=>2:nc-1]))<eps
-        @test norm(array(rfb.𝑨𝒄)-array(W[il=>2:nr-1,ir=>2:nc]))<eps
+        @test isnothing(rfb.𝑨)    
+        if ul==lower 
+            @test isnothing(rfb.𝒄) 
+            @test norm(array(rfb.𝒅)-array(W[il=>nr:nr,ir=>1:1]))<eps
+            @test norm(array(rfb.𝒃)-array(W[il=>2:nr-1,ir=>1:1]))<eps
+        else
+            @test isnothing(rfb.𝒃) 
+            @test norm(array(rfb.𝒅)-array(W[il=>1:1,ir=>nc:nc]))<eps
+            @test norm(array(rfb.𝒄)-array(W[il=>2:nr-1,ir=>nc:nc]))<eps
+        end
+    
+        W=H[2]
+        il,ir =ils[2],irs[2]
+        nr,nc=dim(il),dim(ir)
+        rfb=extract_blocks(W,il,ir,ms;all=true,fix_inds=true,Ac=true)
+        if ul==lower
+            @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
+            @test norm(array(rfb.𝒅)-array(W[il=>nr:nr,ir=>1:1]))<eps
+            @test norm(array(rfb.𝒃)-array(W[il=>2:nr-1,ir=>1:1]))<eps
+            @test norm(array(rfb.𝒄)-array(W[il=>nr:nr,ir=>2:nc-1]))<eps
+            @test norm(array(rfb.𝑨)-array(W[il=>2:nr-1,ir=>2:nc-1]))<eps
+            @test norm(array(rfb.𝑨𝒄)-array(W[il=>2:nr,ir=>2:nc-1]))<eps
+        else
+            @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
+            @test norm(array(rfb.𝒅)-array(W[il=>1:1,ir=>nc:nc]))<eps
+            @test norm(array(rfb.𝒃)-array(W[il=>1:1,ir=>2:nc-1]))<eps
+            @test norm(array(rfb.𝒄)-array(W[il=>2:nr-1,ir=>nc:nc]))<eps
+            @test norm(array(rfb.𝑨)-array(W[il=>2:nr-1,ir=>2:nc-1]))<eps
+            @test norm(array(rfb.𝑨𝒄)-array(W[il=>2:nr-1,ir=>2:nc]))<eps
+        end
+
+    end
+
+    @testset "Calculate t's, L's and Linv's, qns=$qns" for qns in [false]
+        N=10 #5 sites
+        NNN=5 #Include 2nd nearest neighbour interactions
+        sites = siteinds("Electron",N,conserve_qns=qns)
+        H=make_Hubbard_AutoMPO(sites,NNN)
+        state=[isodd(n) ? "Up" : "Dn" for n=1:N]
+        psi=randomMPS(sites,state)
+        E0=inner(psi',H,psi)
+
+        ils,irs,d0,dN=add_edge_links!(H)
+        ms=matrix_state(lower,left)
+        apply_Ls!(H,ils,irs,ms) #only gets the c0's, not the b0's
+        @test is_gauge_fixed(H,ils,irs,ms.ul,1e-15;b=false) 
+    
+        remove_edge_links!(H,d0,dN)
+        E2=inner(psi',H,psi)
+        @test E0 ≈ E2 atol = 1e-15
     end
 
 end
-
-@testset "Calculate t's, L's and Linv's, qns=$qns" for qns in [false]
-    N=10 #5 sites
-    NNN=5 #Include 2nd nearest neighbour interactions
-    sites = siteinds("Electron",N,conserve_qns=qns)
-    H=make_Hubbard_AutoMPO(sites,NNN)
-    state=[isodd(n) ? "Up" : "Dn" for n=1:N]
-    psi=randomMPS(sites,state)
-    E0=inner(psi',H,psi)
-
-    ils,irs,d0,dN=add_edge_links!(H)
-    ms=matrix_state(lower,left)
-    apply_Ls!(H,ils,irs,ms) #only gets the c0's, not the b0's
-    @test is_gauge_fixed(H,ils,irs,ms.ul,1e-15;b=false) 
-   
-    remove_edge_links!(H,d0,dN)
-    E2=inner(psi',H,psi)
-    @test E0 ≈ E2 atol = 1e-15
-end
-
 
 nothing
