@@ -76,14 +76,14 @@ Ac blocking code:
     loops.  No more N+1 indexes.  
   Done: 1) -make remove_dummy_links!, remove_dummy_links, has_dummy_links.  name: edge_links?
   Done: 3) -use vector(t) .. make a short function to get the Dw=1 index first.
-  -extract_blocks onlt swap b,c blocks is user requests.  Handle ilb,ilf based on ms
+  -extract_blocks onlt swap b,c blocks if user requests.  Handle ilb,ilf based on ms
   Done: 4) -ac_qx check that dh is near interger.
   Done: 7) -set_𝑨𝒄_block  use space(ilf) to get first and last QN blocks.  Use a simplified redim function
   Done: 8)   grow(il,R,ir)  should do the same thing.
   Done: 5) -set_𝑨𝒄_block  lower-left==upper-right for preserving corners and one row/col
   Done: 6)  same in gauge_fix!(W...)
   Done: 9) -gauge_fix! use a set_c function
-  10) -Fix all noprime(A,tags="Link") calls.
+  Done: 10) -Fix all noprime(A,tags="Link") calls.
   11) -Refactor set_𝑨𝒄_block into
         a) newQ() which makes Wp, preserves columns and Is
         b) call set_𝑨𝒄_block or set_𝑨b_block

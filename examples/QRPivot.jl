@@ -28,8 +28,9 @@ function calculate_ts(H::MPO,ils::Vector{Index{T}},irs::Vector{Index{T}},ms::mat
         elseif nc==1
             t=zeros(1)
         else
-           ict=commonind(𝒃,𝑨,tags="Link")
-            irt=commonind(𝒅,𝒄,tags="Link")
+            @assert hasinds(Wb.𝑨,Wb.irA,Wb.icA)
+            ict=commonind(𝒃,(Wb.irA,Wb.icA))
+            irt=commonind(𝒅,(Wb.irc,Wb.icc))
             tprevT=ITensor(tprev,irt,dag(ict))
 
             𝒄₀=𝒄*dag(𝕀)/dh
@@ -75,10 +76,10 @@ function apply_Ls!(H::MPO,ils::Vector{Index{T}},irs::Vector{Index{T}},ms::matrix
     for n in eachindex(H)
         ir=irs[n]
         @assert hasinds(H[n],il,ir)
+        is=noncommoninds(H[n],il,ir)
         LT=ITensor(Ls[n],il',il)
         LinvT=ITensor(Linvs[n+1],ir,ir')
-        Wp=noprime(LT*H[n]*LinvT,tags="Link")
-        H[n]=Wp
+        H[n]=noprime(LT*H[n]*LinvT,(ir',il')) #we have to be careful not unprime the site index.
         il=dag(ir)
     end
 end
@@ -246,18 +247,24 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
     if fix_inds
         if !isnothing(rfb.𝒄)
             rfb.𝒄=replaceind(rfb.𝒄,rfb.irc,rfb.ird)
+            rfb.irc=rfb.ird
         end
         if !isnothing(rfb.𝒃)
             rfb.𝒃=replaceind(rfb.𝒃,rfb.icb,rfb.icd)
+            rfb.icb=rfb.icd
         end
         if !isnothing(rfb.𝑨)
             rfb.𝑨=replaceinds(rfb.𝑨,[rfb.irA,rfb.icA],[rfb.irb,rfb.icc])
+            rfb.irA,rfb.icA=rfb.irb,rfb.icc
         end
     end
     if !llur(ms) #not lower-left or upper-right
         rfb.𝒃,rfb.𝒄=rfb.𝒄,rfb.𝒃
         rfb.irb,rfb.irc=rfb.irc,rfb.irb
         rfb.icb,rfb.icc=rfb.icc,rfb.icb
+    end
+    if !isnothing(rfb.𝑨)
+        @assert hasinds(rfb.𝑨,rfb.irA,rfb.icA)
     end
     return rfb
 end
