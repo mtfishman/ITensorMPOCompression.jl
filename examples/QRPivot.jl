@@ -265,14 +265,25 @@ end
 # lower left or upper right
 llur(ms::matrix_state)=ms.lr==left&&ms.ul==lower || ms.lr==right&&ms.ul==upper
 
+function redim1(iq::ITensors.QNIndex,pad1::Int64,pad2::Int64,qns::ITensors.QNBlocks)
+    @assert pad1==blockdim(qns[1]) #Splitting blocks not supported
+    @assert pad2==blockdim(qns[end]) #Splitting blocks not supported
+    qnsp=[qns[1],space(iq)...,qns[end]] #creat the new space
+    return Index(qnsp,tags=tags(iq),plev=plev(iq),dir=dir(iq)) #create new index.
+end
+
+function redim1(iq::Index,pad1::Int64,pad2::Int64,Dw::Int64)
+    @assert dim(iq)+pad1+pad2<=Dw #Splitting blocks not supported
+    return Index(dim(iq)+pad1+pad2,tags=tags(iq),plev=plev(iq),dir=dir(iq)) #create new index.
+end
+
 function set_𝑨𝒄_block(W::ITensor,𝑨𝒄::ITensor,ilb::Index,ilf::Index,iq::Index,ms::matrix_state)
     is=noncommoninds(W,ilb,ilf)
     @assert hasinds(W,ilb,ilf)
     @assert hasinds(𝑨𝒄,iq,is...)
     Dwb,Dwf=dim(ilb),dim(ilf)
-    # Todo provide the correct QN("??") space here.  Can we pluck it out of ilf?
-    Dwq=dim(iq)+2
-    ilqp=redim(iq,Dwq,1) #replaces ilf: 
+    ilqp=redim1(iq,1,1,space(ilf))  #pad with 1 at the start and 1 and the end.
+    Dwq=dim(ilqp)
     Wp=ITensor(0.0,ilb,ilqp,is)
     #
     #  We need to preserve some blocks outside of Ac from the old MPO tensor.
@@ -292,6 +303,7 @@ function set_𝑨𝒄_block(W::ITensor,𝑨𝒄::ITensor,ilb::Index,ilf::Index,i
     Wp[ilb=>ac_range,ilqp=>2:Dwq-1]=𝑨𝒄
     return Wp,ilqp
 end
+
 function set_𝒃_block!(W::ITensor,𝒃::ITensor,ileft::Index,iright::Index,ul::reg_form)
     i1,i2,n1,n2=swap_ul(ileft,iright,ul)
     W[i1=>2:n1-1,i2=>1:1]=𝒃
@@ -417,6 +429,17 @@ function gauge_fix!(H::MPO,ils::Vector{Index{T}},irs::Vector{Index{T}},ms::matri
     end
 end
 
+
+function equal_edge_blocks(i1::ITensors.QNIndex,i2::ITensors.QNIndex)::Bool
+    qns1,qns2=space(i1),space(i2)
+    qn11,qn1n=qns1[1],qns1[nblocks(qns1)]
+    qn21,qn2n=qns2[1],qns2[nblocks(qns2)]
+    return ITensors.have_same_qns(qn(qn11),qn(qn21)) && ITensors.have_same_qns(qn(qn1n),qn(qn2n))
+end
+
+function equal_edge_blocks(::Index,::Index)::Bool
+     return true
+end
 #-------------------------------------------------------------------------------
 #
 #  block qx and orthogonalization of the vcat(𝑨,𝒄) and hcat(𝒃,𝑨) blocks.
@@ -444,6 +467,7 @@ function ac_qx(W::ITensor,ir::Index,ic::Index,ms::matrix_state;kwargs...)
     Q*=sqrt(dh)
     R/=sqrt(dh)
     Wp,iqp=set_𝑨𝒄_block(W,Q,ilb,ilf,iq,ms) 
+    @assert equal_edge_blocks(ilf,iqp)
     @assert is_regular_form(Wp,ms.ul)
     R=prime(R,ilf_Ac) #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
     Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ilf'))
@@ -510,6 +534,8 @@ verbose=false
         @test all(il->dir(il)==dir(ils[1]),ils) 
         @test all(ir->dir(ir)==dir(irs[1]),irs) 
         @assert is_regular_form(H,ul)
+        # @show space(ils[2])[1] space(ils[2])[nblocks(ils[2])] 
+        #@show space(ils[N]) space(irs[N])
         #
         #  Left->right sweep
         #
