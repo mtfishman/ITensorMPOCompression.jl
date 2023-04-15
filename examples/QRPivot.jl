@@ -464,8 +464,8 @@ function redim1(iq::Index,pad1::Int64,pad2::Int64,Dw::Int64)
 end
 
 
-function insert_Q(::ITensor,Wb::regform_blocks,𝐐::ITensor,ir::Index,ic::Index,iq::Index,ms::matrix_state)
-    ilb,ilf =  ms.lr==left ? (ir,ic) : (ic,ir) #Backward and forward indices.
+function insert_Q(::ITensor,Wb::regform_blocks,𝐐::ITensor,ileft::Index,ic::Index,iq::Index,ms::matrix_state)
+    ilb,ilf =  ms.lr==left ? (ileft,ic) : (ic,ileft) #Backward and forward indices.
     @assert !isnothing(Wb.𝑨𝒄)
     is=noncommoninds(Wb.𝑨𝒄,Wb.irAc,Wb.icAc)
     @assert hasinds(𝐐,iq,is...)
@@ -482,13 +482,13 @@ function insert_Q(::ITensor,Wb::regform_blocks,𝐐::ITensor,ir::Index,ic::Index
     return Wp,iqp
 end
 
-function ac_qx(W::ITensor,ir::Index,ic::Index,ms::matrix_state;kwargs...)
+function ac_qx(W::ITensor,ileft::Index,iright::Index,ms::matrix_state;kwargs...)
     @checkflux(W)
-    @assert hasinds(W,ic)
-    @assert hasinds(W,ir)
-    Wb=extract_blocks(W,ir,ic,ms;Ac=true,all=true)
+    @assert hasinds(W,iright)
+    @assert hasinds(W,ileft)
+    Wb=extract_blocks(W,ileft,iright,ms;Ac=true,all=true)
     ilf_Ac = llur(ms) ?  Wb.icAc : Wb.irAc
-    ilf =  ms.lr==left ? ic : ir #Backward and forward indices.
+    ilf =  ms.lr==left ? iright : ileft #Backward and forward indices.
     @checkflux(Wb.𝑨𝒄)
     if ms.lr==left
         Qinds=noncommoninds(Wb.𝑨𝒄,ilf_Ac) 
@@ -505,7 +505,7 @@ function ac_qx(W::ITensor,ir::Index,ic::Index,ms::matrix_state;kwargs...)
     Q*=sqrt(dh)
     R/=sqrt(dh)
 
-    Wp,iqp=insert_Q(W,Wb,Q,ir,ic,iq,ms) 
+    Wp,iqp=insert_Q(W,Wb,Q,ileft,iright,iq,ms) 
     @assert equal_edge_blocks(ilf,iqp)
     @assert is_regular_form(Wp,ms.ul)
     R=prime(R,ilf_Ac) #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
