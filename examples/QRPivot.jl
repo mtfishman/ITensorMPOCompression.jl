@@ -285,20 +285,33 @@ function redim1(iq::Index,pad1::Int64,pad2::Int64,Dw::Int64)
 end
 
 
-
 function set_𝒃_block!(W::ITensor,𝒃::ITensor,ileft::Index,iright::Index,ul::reg_form)
     @assert hasinds(W,ileft,iright)
     i1,i2,n1,n2=swap_ul(ileft,iright,ul)
-    @show i1 i2 n1,n2
     W[i1=>2:n1-1,i2=>1:1]=𝒃
 end
 
 function set_𝒄_block!(W::ITensor,𝒄::ITensor,ileft::Index,iright::Index,ul::reg_form)
     @assert hasinds(W,ileft,iright)
     i1,i2,n1,n2=swap_ul(ileft,iright,ul)
-#    @show i1 i2 n1,n2
     W[i1=>n1:n1,i2=>2:n2-1]=𝒄
 end
+function set_𝒃𝒄_block!(W::ITensor,𝒃𝒄::ITensor,ileft::Index,iright::Index,ms::matrix_state)
+    if llur(ms)
+        set_𝒃_block!(W,𝒃𝒄,ileft,iright,ms.ul)
+    else
+        set_𝒄_block!(W,𝒃𝒄,ileft,iright,ms.ul)
+    end
+end
+
+# noop versions for when b/c are empty.  Happens in edge ops of H.
+function set_𝒃𝒄_block!(::ITensor,::Nothing,::Index,::Index,::matrix_state)
+end
+function set_𝒃_block!(::ITensor,::Nothing,::Index,::Index,::reg_form)
+end
+function set_𝒄_block!(::ITensor,::Nothing,::Index,::Index,::reg_form)
+end
+
 function set_𝒅_block!(W::ITensor,𝒅::ITensor,ileft::Index,iright::Index,ul::reg_form)
     @assert hasinds(W,ileft,iright)
     i1,i2,n1,n2=swap_ul(ileft,iright,ul)
@@ -308,12 +321,8 @@ end
 function set_𝕀_block!(W::ITensor,𝕀::ITensor,ileft::Index,iright::Index,ul::reg_form)
     @assert hasinds(W,ileft,iright)
     i1,i2,n1,n2=swap_ul(ileft,iright,ul)
-    if n1>1
-        assign!(W,𝕀,i1=>1,i2=>1)
-    end
-    if n2>1
-        assign!(W,𝕀,i1=>n1,i2=>n2)
-    end
+    n1>1 && assign!(W,𝕀,i1=>1,i2=>1)
+    n2>1 && assign!(W,𝕀,i1=>n1,i2=>n2)
 end
 
 function set_𝑨𝒄_block(W::ITensor,𝑨𝒄::ITensor,ileft::Index,iright::Index,ms::matrix_state)
@@ -453,83 +462,22 @@ end
 #
 #  block qx and orthogonalization of the vcat(𝑨,𝒄) and hcat(𝒃,𝑨) blocks.
 #
-function insert_Q(W::ITensor,Wb::regform_blocks,𝑨𝒄::ITensor,ir::Index,ic::Index,ilb::Index,ilf::Index,iq::Index,ms::matrix_state)
-    is=noncommoninds(W,ilb,ilf)
-    @assert hasinds(W,ilb,ilf)
+function insert_Q(::ITensor,Wb::regform_blocks,𝑨𝒄::ITensor,ir::Index,ic::Index,iq::Index,ms::matrix_state)
+    ilb,ilf =  ms.lr==left ? (ir,ic) : (ic,ir) #Backward and forward indices.
+    @assert !isnothing(Wb.𝑨𝒄)
+    is=noncommoninds(Wb.𝑨𝒄,Wb.irAc,Wb.icAc)
     @assert hasinds(𝑨𝒄,iq,is...)
-    Dwb,Dwf=dim(ilb),dim(ilf)
-    ilqp=redim1(iq,1,1,space(ilf))  #pad with 1 at the start and 1 and the end.
-    Dwq=dim(ilqp)
-    Wp=ITensor(0.0,ilb,ilqp,is)
-    Wp1=ITensor(0.0,ilb,ilqp,is)
     #
-    #  We need to preserve some blocks outside of Ac from the old MPO tensor.
+    #  Build new index and MPO Tensor
     #
-    if llur(ms)
-        ac_range=2:Dwb 
-        Wp[ilb=>Dwb:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>Dwb:Dwb,ilf=>Dwf:Dwf] #bottom-right corner
-        Wp[ilb=>1:Dwb,ilqp=>1:1]=W[ilb=>1:Dwb,ilf=>1:1] #left column or #Top row
-         #@show norm(W[ilb=>2:Dwb-1,ilf=>Dwf:Dwf]-Wb.𝒄)
-        #@show inds(Wb.𝒃,tags="Link")
-        
-       
-    else
-        ac_range=1:Dwb-1
-        Wp[ilb=>1:1,ilqp=>1:1]=W[ilb=>1:1,ilf=>1:1] #Top left corner
-        Wp[ilb=>1:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>1:Dwb,ilf=>Dwf:Dwf] #Bottom row or right column
-        
-    end
-
-    if ms.ul==lower 
-        if ms.lr==left
-            if dim(ir)>2
-                set_𝒃_block!(Wp1,Wb.𝒃,ir,ilqp,ms.ul)
-            end
-            set_𝒅_block!(Wp1,Wb.𝒅,ir,ilqp,ms.ul)
-            set_𝕀_block!(Wp1,Wb.𝕀,ir,ilqp,ms.ul)
-        else #right
-            if dim(ic)>2
-                set_𝒄_block!(Wp1,Wb.𝒃,ilqp,ic,ms.ul)
-            end
-            set_𝒅_block!(Wp1,Wb.𝒅,ilqp,ic,ms.ul)
-            set_𝕀_block!(Wp1,Wb.𝕀,ilqp,ic,ms.ul)
-        end
-    else #upper
-        if ms.lr==left
-            if dim(ir)>2
-                set_𝒄_block!(Wp1,Wb.𝒃,ir,ilqp,ms.ul)
-            end
-            set_𝒅_block!(Wp1,Wb.𝒅,ir,ilqp,ms.ul)
-            set_𝕀_block!(Wp1,Wb.𝕀,ir,ilqp,ms.ul)
-        else  #upper right
-            if dim(ic)>2
-                set_𝒃_block!(Wp1,Wb.𝒃,ilqp,ic,ms.ul)
-            end
-            set_𝒅_block!(Wp1,Wb.𝒅,ilqp,ic,ms.ul)
-            set_𝕀_block!(Wp1,Wb.𝕀,ilqp,ic,ms.ul)
-        end
-    end
-    
-
-    #Wp1=deepcopy(Wp)
-    if Dwb==1
-        ac_range=1:1
-    end
-    Wp[ilb=>ac_range,ilqp=>2:Dwq-1]=𝑨𝒄
-
-    if ms.lr==left
-        set_𝑨𝒄_block(Wp1,𝑨𝒄,ir,ilqp,ms)
-    else
-        set_𝑨𝒄_block(Wp1,𝑨𝒄,ilqp,ic,ms)
-    end
-    
-    if norm(Wp-Wp1)>1e-10
-        pprint(Wp-Wp1)
-    end
-    # @show Wp1 Wp
-
-    @assert norm(Wp-Wp1)<1e-15
-    return Wp1,ilqp
+    iqp=redim1(iq,1,1,space(ilf))  #pad with 1 at the start and 1 and the end: iqp =(1,iq,1).
+    Wp=ITensor(0.0,ilb,iqp,is)
+    ileft,iright =  ms.lr==left ? (ilb,iqp) :  (iqp,ilb)
+    set_𝒃𝒄_block!(Wp,Wb.𝒃,ileft,iright,ms) #preserve b or c block from old W
+    set_𝒅_block!(Wp,Wb.𝒅,ileft,iright,ms.ul) #preserve d block from old W
+    set_𝕀_block!(Wp,Wb.𝕀,ileft,iright,ms.ul) #init I blocks from old W
+    set_𝑨𝒄_block(Wp,𝑨𝒄,ileft,iright,ms) #Insert new Qs form QR decomp
+    return Wp,iqp
 end
 
 function ac_qx(W::ITensor,ir::Index,ic::Index,ms::matrix_state;kwargs...)
@@ -538,7 +486,7 @@ function ac_qx(W::ITensor,ir::Index,ic::Index,ms::matrix_state;kwargs...)
     @assert hasinds(W,ir)
     Wb=extract_blocks(W,ir,ic,ms;Ac=true,all=true)
     ilf_Ac = llur(ms) ?  Wb.icAc : Wb.irAc
-    ilb,ilf =  ms.lr==left ? (ir,ic) : (ic,ir) #Backward and forward indices.
+    ilf =  ms.lr==left ? ic : ir #Backward and forward indices.
     @checkflux(Wb.𝑨𝒄)
     if ms.lr==left
         Qinds=noncommoninds(Wb.𝑨𝒄,ilf_Ac) 
@@ -555,7 +503,7 @@ function ac_qx(W::ITensor,ir::Index,ic::Index,ms::matrix_state;kwargs...)
     Q*=sqrt(dh)
     R/=sqrt(dh)
 
-    Wp,iqp=insert_Q(W,Wb,Q,ir,ic,ilb,ilf,iq,ms) 
+    Wp,iqp=insert_Q(W,Wb,Q,ir,ic,iq,ms) 
     @assert equal_edge_blocks(ilf,iqp)
     @assert is_regular_form(Wp,ms.ul)
     R=prime(R,ilf_Ac) #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
@@ -583,7 +531,6 @@ function ac_orthogonalize!(H::MPO,ils::Vector{Index{T}},irs::Vector{Index{T}},ms
     else
         ir=irs[length(H)]
         for n in rng
-            @show n
             nn=n+rng.step
             il=ils[n]
             H[n],R,iqp=ac_qx(H[n],il,ir,ms)
@@ -607,7 +554,7 @@ verbose=false
         [make_Hubbard_AutoMPO,"Electron",false],
         ]
 
-    @testset "Ac/Ab block respecting decomposition $(model[1]), qns=$qns" for model in models, qns in [false,true], ul=[upper]
+    @testset "Ac/Ab block respecting decomposition $(model[1]), qns=$qns" for model in models, qns in [false,true], ul=[lower,upper]
         eps=1e-14
         N=5 #5 sites
         NNN=2 #Include 2nd nearest neighbour interactions

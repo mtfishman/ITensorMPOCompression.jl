@@ -42,6 +42,7 @@ Improvements:
 -Organize exports and imports.
 -Subtensor check flux of inserted blocks.
 -Subtensor cleanup.
+-subtensor  support W[il,ir]=op ?
 -better name for pbc? inf open_chain, boundary_conditions
 -Consider default rr_cutoff=1e-14?
 -Refactor out all the link fixing and PBC code for MPO making functions.
@@ -84,11 +85,11 @@ Ac blocking code:
   Done: 6)  same in gauge_fix!(W...)
   Done: 9) -gauge_fix! use a set_c function
   Done: 10) -Fix all noprime(A,tags="Link") calls.
-  11) -Refactor set_𝑨𝒄_block into
-        a) newQ() which makes Wp, preserves columns and Is
-        b) call set_𝑨𝒄_block or set_𝑨b_block
-        c) set_𝑨𝒄_block calls set_𝒄_block is nr==1
-        d) set_𝑨b_block calls set_b_block is nr==1
+  Done: 11) -Refactor set_𝑨𝒄_block into
+        Done: a) newQ() which makes Wp, preserves columns and Is
+        Done:b) call set_𝑨𝒄_block or set_𝑨b_block
+        Done:c) set_𝑨𝒄_block calls set_𝒄_block is nr==1
+        Done:d) set_𝑨b_block calls set_b_block is nr==1
   -Make a struct MPO_with_links,  has ils, irs, ul, d0,dN
     Same Op_with_links il,ir,ul
     -Ask Matt if he is already doing this?
