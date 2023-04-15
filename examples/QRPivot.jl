@@ -284,32 +284,7 @@ function redim1(iq::Index,pad1::Int64,pad2::Int64,Dw::Int64)
     return Index(dim(iq)+pad1+pad2,tags=tags(iq),plev=plev(iq),dir=dir(iq)) #create new index.
 end
 
-function set_𝑨𝒄_block(W::ITensor,𝑨𝒄::ITensor,ilb::Index,ilf::Index,iq::Index,ms::matrix_state)
-    is=noncommoninds(W,ilb,ilf)
-    @assert hasinds(W,ilb,ilf)
-    @assert hasinds(𝑨𝒄,iq,is...)
-    Dwb,Dwf=dim(ilb),dim(ilf)
-    ilqp=redim1(iq,1,1,space(ilf))  #pad with 1 at the start and 1 and the end.
-    Dwq=dim(ilqp)
-    Wp=ITensor(0.0,ilb,ilqp,is)
-    #
-    #  We need to preserve some blocks outside of Ac from the old MPO tensor.
-    #
-    if llur(ms)
-        ac_range=2:Dwb 
-        Wp[ilb=>Dwb:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>Dwb:Dwb,ilf=>Dwf:Dwf] #bottom-right corner
-        Wp[ilb=>1:Dwb,ilqp=>1:1]=W[ilb=>1:Dwb,ilf=>1:1] #left column or #Top row
-    else
-        ac_range=1:Dwb-1
-        Wp[ilb=>1:1,ilqp=>1:1]=W[ilb=>1:1,ilf=>1:1] #Top left corner
-        Wp[ilb=>1:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>1:Dwb,ilf=>Dwf:Dwf] #Bottom row or right column
-    end
-    if Dwb==1
-        ac_range=1:1
-    end
-    Wp[ilb=>ac_range,ilqp=>2:Dwq-1]=𝑨𝒄
-    return Wp,ilqp
-end
+
 
 function set_𝒃_block!(W::ITensor,𝒃::ITensor,ileft::Index,iright::Index,ul::reg_form)
     i1,i2,n1,n2=swap_ul(ileft,iright,ul)
@@ -325,6 +300,17 @@ function set_𝒅_block!(W::ITensor,𝒅::ITensor,ileft::Index,iright::Index,ul:
     W[i1=>n1:n1,i2=>1:1]=𝒅
 end
 
+function set_𝑨𝒄_block(W::ITensor,𝑨𝒄::ITensor,ileft::Index,iright::Index,ms::matrix_state)
+    @assert hasinds(W,ileft,iright)
+    i1,i2,n1,n2=swap_ul(ileft,iright,ms.ul)
+    if llur(ms) #lower left/upper right
+        min1=Base.min(n1,2)
+        W[i1=>min1:n1,i2=>2:n2-1]=𝑨𝒄
+    else #lower right/upper left
+        max2=Base.max(n2-1,1)
+        W[i1=>2:n1-1,i2=>1:max2]=𝑨𝒄
+    end
+end
 #-------------------------------------------------------------------------------
 #
 #  Gauge fixing functions.  In this conext gauge fixing means setting b₀=<𝒃,𝕀> && c₀=<𝒄,𝕀> to zero
@@ -451,6 +437,45 @@ end
 #
 #  block qx and orthogonalization of the vcat(𝑨,𝒄) and hcat(𝒃,𝑨) blocks.
 #
+function insert_Q(W::ITensor,𝑨𝒄::ITensor,ir::Index,ic::Index,ilb::Index,ilf::Index,iq::Index,ms::matrix_state)
+    is=noncommoninds(W,ilb,ilf)
+    @assert hasinds(W,ilb,ilf)
+    @assert hasinds(𝑨𝒄,iq,is...)
+    Dwb,Dwf=dim(ilb),dim(ilf)
+    ilqp=redim1(iq,1,1,space(ilf))  #pad with 1 at the start and 1 and the end.
+    Dwq=dim(ilqp)
+    Wp=ITensor(0.0,ilb,ilqp,is)
+    #
+    #  We need to preserve some blocks outside of Ac from the old MPO tensor.
+    #
+    if llur(ms)
+        ac_range=2:Dwb 
+        Wp[ilb=>Dwb:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>Dwb:Dwb,ilf=>Dwf:Dwf] #bottom-right corner
+        Wp[ilb=>1:Dwb,ilqp=>1:1]=W[ilb=>1:Dwb,ilf=>1:1] #left column or #Top row
+    else
+        ac_range=1:Dwb-1
+        Wp[ilb=>1:1,ilqp=>1:1]=W[ilb=>1:1,ilf=>1:1] #Top left corner
+        Wp[ilb=>1:Dwb,ilqp=>Dwq:Dwq]=W[ilb=>1:Dwb,ilf=>Dwf:Dwf] #Bottom row or right column
+    end
+    Wp1=deepcopy(Wp)
+    if Dwb==1
+        ac_range=1:1
+    end
+    Wp[ilb=>ac_range,ilqp=>2:Dwq-1]=𝑨𝒄
+
+    if ms.lr==left
+        set_𝑨𝒄_block(Wp1,𝑨𝒄,ir,ilqp,ms)
+    else
+        set_𝑨𝒄_block(Wp1,𝑨𝒄,ilqp,ic,ms)
+    end
+    @assert norm(Wp-Wp1)<1e-15
+    # if norm(Wp-Wp1)>1e-10
+    #     pprint(Wp-Wp1)
+    # end
+
+    return Wp1,ilqp
+end
+
 function ac_qx(W::ITensor,ir::Index,ic::Index,ms::matrix_state;kwargs...)
     @checkflux(W)
     @assert hasinds(W,ic)
@@ -473,7 +498,7 @@ function ac_qx(W::ITensor,ir::Index,ic::Index,ms::matrix_state;kwargs...)
     @assert abs(dh-round(dh))==0.0
     Q*=sqrt(dh)
     R/=sqrt(dh)
-    Wp,iqp=set_𝑨𝒄_block(W,Q,ilb,ilf,iq,ms) 
+    Wp,iqp=insert_Q(W,Q,ir,ic,ilb,ilf,iq,ms) 
     @assert equal_edge_blocks(ilf,iqp)
     @assert is_regular_form(Wp,ms.ul)
     R=prime(R,ilf_Ac) #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
