@@ -145,9 +145,8 @@ function reg_form_MPO(H::MPO,eps::Float64=1e-14)
         @pprint(H[1])
     end
     ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
-    Hel=deepcopy(H)
-    ils,irs,d0,dN=add_edge_links!(Hel)
-    return reg_form_MPO(Hel,ils,irs,d0,dN,ul)
+    ils,irs,d0,dN=add_edge_links!(H)
+    return reg_form_MPO(H,ils,irs,d0,dN,ul)
 end
 
 function ITensors.MPO(Hrf::reg_form_MPO)::MPO
@@ -745,21 +744,19 @@ verbose=false
 @testset "Ac/Ab block respecting decomposition tests" begin
     models=[
         [make_transIsing_MPO,"S=1/2",true],
-         [make_transIsing_AutoMPO,"S=1/2",true],
+        [make_transIsing_AutoMPO,"S=1/2",true],
         [make_Heisenberg_AutoMPO,"S=1/2",true],
         [make_Heisenberg_AutoMPO,"S=1",true],
         [make_Hubbard_AutoMPO,"Electron",false],
         ]
 
     @testset "Ac/Ab block respecting decomposition $(model[1]), qns=$qns, ul=$ul" for model in models, qns in [false,true], ul=[lower,upper]
-        if model[1]==make_Hubbard_AutoMPO && qns==true && ul==lower
-            continue #subtensor bug
-        end
         eps=1e-14
-        N=5 #5 sites
-        NNN=2 #Include 2nd nearest neighbour interactions
+        N=10 #5 sites
+        NNN=5 #Include 2nd nearest neighbour interactions
         sites = siteinds(model[2],N,conserve_qns=qns);
         H=model[1](sites,NNN;ul=ul);
+        Hrf=reg_form_MPO(model[1](sites,NNN;ul=ul))
         pre_fixed=model[3] #Hamiltonian starts gauge fixed
         # @show get_Dw(H)
         @assert is_regular_form(H,ul)
@@ -767,7 +764,6 @@ verbose=false
         psi=randomMPS(sites,state)
         E0=inner(psi',H,psi)
 
-        Hrf=reg_form_MPO(H)
         ils,irs,d0,dN=add_edge_links!(H)
         @test all(il->dir(il)==dir(ils[1]),ils) 
         @test all(ir->dir(ir)==dir(irs[1]),irs) 
@@ -808,8 +804,6 @@ verbose=false
         #
         #  Right->left sweep
         #
-        # ils,irs,d0,dN=add_edge_links!(H)
-        #Hrf=reg_form_MPO(H)
         ms=matrix_state(ul,right)
         @test is_gauge_fixed(Hrf,eps) #Should still be gauge fixed
         ac_orthogonalize!(Hrf,right,eps)
@@ -831,12 +825,13 @@ verbose=false
         NNN=2 #Include 2nd nearest neighbour interactions
         sites = siteinds(model[2],N,conserve_qns=qns)
         H=model[1](sites,NNN;ul=ul)
+        Hrf=reg_form_MPO(model[1](sites,NNN;ul=ul))
         pre_fixed=model[3] #Hamiltonian starts gauge fixed
         state=[isodd(n) ? "Up" : "Dn" for n=1:N]
         psi=randomMPS(sites,state)
         E0=inner(psi',H,psi)
         
-        Hrf=reg_form_MPO(H)
+        
         ils,irs,d0,dN=add_edge_links!(H)
 
         lr=left

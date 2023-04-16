@@ -323,3 +323,6 @@ Umpo = apply(U, Id; cutoff=1e-15)
 
 That form could make it easier to apply the circuit (or just a gate) to the Hamiltonian MPO to keep it in a form where it can be used with the Parker et al. algorithm.
 
+rs = (2:4, 2:4, 1:2, 1:2)
+bs = Block{4}[Block(3, 2, 1, 1), Block(3, 2, 2, 2), Block(2, 2, 1, 1), Block(2, 2, 2, 2), Block(3, 3, 1, 1), Block(3, 3, 2, 2)]
+bs = Block{4}[Block(2, 1, 1, 1), Block(2, 1, 2, 2), Block(1, 1, 1, 1), Block(1, 1, 2, 2), Block(2, 2, 1, 1), Block(2, 2, 2, 2)]
