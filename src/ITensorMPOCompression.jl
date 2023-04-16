@@ -4,7 +4,7 @@ using ITensors
 using ITensors.NDTensors
 using ITensorInfiniteMPS
 
-import ITensors: QNIndex, addqns, rq, AbstractMPS, isortho, orthocenter
+import ITensors: QNIndex, addqns, rq, AbstractMPS, isortho, orthocenter, Indices, linkind
 import ITensors.BlockSparseTensor,ITensors.DenseTensor,ITensors.DiagTensor,ITensors.tensor
 
 import ITensorInfiniteMPS: AbstractInfiniteMPS
@@ -34,6 +34,11 @@ export orthogonalize!,truncate,truncate! #the punchline
 export @pprint,pprint,@mpoc_assert,show_directions
 #  subtebsor related
 export IndexRange, indices, range, ranges, getperm, permute, start
+#
+#  New ac_qx
+#
+export reg_form_MPO, extract_blocks
+
 
 macro mpoc_assert(ex)
     esc(:($Base.@assert $ex))
@@ -324,6 +329,7 @@ function set_scale!(RL::ITensor,Q::ITensor,off::V_offsets)
 end
 
 include("subtensor.jl")
+include("reg_form.jl")
 include("util.jl")
 include("hamiltonians.jl")
 include("hamiltonians_AutoMPO.jl")

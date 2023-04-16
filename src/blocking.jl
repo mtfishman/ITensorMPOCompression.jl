@@ -116,6 +116,220 @@ function setV(W::ITensor,V::ITensor,iqx::Index,ms::matrix_state)::ITensor
     return W1
 end
 
+#-------------------------------------------------------------------------------
+#
+#  Blocking functions
+#
+#
+#  Decisions: 1) Use ilf,ilb==forward,backward  or ir,ic=row,column ?
+#             2) extract_blocks gets everything.  Should it defer to get_bc_block for b and c?
+#   may best to define W as
+#               ul=lower         ul=upper
+#                1 0 0           1 b d
+#     lr=left    b A 0           0 A c
+#                d c I           0 0 I
+#
+#                1 0 0           1 c d
+#     lr=right   c A 0           0 A b
+#                d b I           0 0 I
+#
+#  Use kwargs in extract_blocks so caller can choose what they need. Default is c only
+#
+mutable struct regform_blocks
+    𝕀::Union{ITensor,Nothing}
+    𝑨::Union{ITensor,Nothing}
+    𝑨𝒄::Union{ITensor,Nothing}
+    𝒃::Union{ITensor,Nothing}
+    𝒄::Union{ITensor,Nothing}
+    𝒅::Union{ITensor,Nothing}
+    irA::Union{Index,Nothing}
+    icA::Union{Index,Nothing}
+    irAc::Union{Index,Nothing}
+    icAc::Union{Index,Nothing}
+    irb::Union{Index,Nothing}
+    icb::Union{Index,Nothing}
+    irc::Union{Index,Nothing}
+    icc::Union{Index,Nothing}
+    ird::Union{Index,Nothing}
+    icd::Union{Index,Nothing}    
+    regform_blocks()=new(nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing)
+end
+
+d(rfb::regform_blocks)::Float64=scalar(rfb.𝕀*dag(rfb.𝕀))
+b0(rfb::regform_blocks)::ITensor=rfb.𝒃*dag(rfb.𝕀)/d(rfb)
+c0(rfb::regform_blocks)::ITensor=rfb.𝒄*dag(rfb.𝕀)/d(rfb)
+A0(rfb::regform_blocks)::ITensor=rfb.𝑨*dag(rfb.𝕀)/d(rfb)
+
+#
+#  Transpose inds for upper, no-op for lower
+#
+function swap_ul(ileft::Index,iright::Index,ul::reg_form)
+    return ul==lower ? (ileft,iright,dim(ileft),dim(iright)) :  (iright,ileft,dim(iright),dim(ileft))
+end
+# lower left or upper right
+llur(ul::reg_form,lr::orth_type)= lr==left && ul==lower || lr==right&&ul==upper
+llur(W::reg_form_Op,lr::orth_type)=llur(W.ul,lr)
+llur(ms::matrix_state)=llur(ms.ul,ms.lr)
+
+#  Use recognizably distinct UTF symbols for operators, and op valued vectors and matrices: 𝕀 𝑨 𝒃 𝒄 𝒅 ⌃ c₀ 𝑨𝒄
+# symbols from here: https://www.compart.com/en/unicode/block/U+1D400
+#extract_blocks(W::reg_form_Op,lr::orth_type;kwargs...)=extract_blocks(W.W,W.ileft,W.iright,matrix_state(W.ul,lr);kwargs...)
+
+function extract_blocks(Wrf::reg_form_Op,lr::orth_type;all=false,c=true,b=false,d=false,A=false,Ac=false,I=true,fix_inds=false,swap_bc=true)::regform_blocks
+    @assert hasinds(Wrf.W,Wrf.ileft,Wrf.iright)
+    @assert tags(Wrf.ileft)!=tags(Wrf.iright)
+    @assert plev(Wrf.ileft)==0
+    @assert plev(Wrf.iright)==0
+    @assert !hasqns(Wrf.ileft) || dir(Wrf.W,Wrf.ileft)==dir(Wrf.ileft)
+    @assert !hasqns(Wrf.iright) || dir(Wrf.W,Wrf.iright)==dir(Wrf.iright)
+    # if dir(Wrf.W,ic)!=dir(ic)
+    #     ic=dag(ic)
+    # end
+    # if dir(W,ir)!=dir(ir)
+    #     ir=dag(ir)
+    # end
+    # @assert !hasqns(ir) || dir(W,ir)==dir(ir)
+    # @assert !hasqns(ic) || dir(W,ic)==dir(ic)
+    W=Wrf.W
+    ir,ic=Wrf.ileft,Wrf.iright
+    if Wrf.ul==upper
+        ir,ic=ic,ir #transpose
+    end
+    nr,nc=dim(ir),dim(ic)
+    @assert nr>1 || nc>1
+    if all #does not include Ac
+        A=b=c=d=I=true
+    end
+    if fix_inds && !d
+        @warn "extract_blocks: fix_inds requires d=true."
+        d=true
+    end
+    if !llur(Wrf,lr) && swap_bc #not lower-left or upper-right
+        b,c=c,b #swap flags
+    end
+
+    A = A && (nr>1 && nc>1)
+    b = b &&  nr>1 
+    c = c &&  nc>1
+
+  
+    Wb=regform_blocks()
+    I && (Wb.𝕀= nr>1 ? slice(W,ir=>1,ic=>1) : slice(W,ir=>1,ic=>nc))
+   
+    if A
+        Wb.𝑨= W[ir=>2:nr-1,ic=>2:nc-1]
+        Wb.irA,=inds(Wb.𝑨,tags=tags(ir))
+        Wb.icA,=inds(Wb.𝑨,tags=tags(ic))
+    end
+    if Ac
+        if llur(Wrf,lr)
+            Wb.𝑨𝒄= nr>1 ? W[ir=>2:nr,ic=>2:nc-1] : W[ir=>1:1,ic=>2:nc-1]
+        else
+            Wb.𝑨𝒄= nc>1 ? W[ir=>2:nr-1,ic=>1:nc-1]  : W[ir=>2:nr-1,ic=>1:1]
+        end
+        Wb.irAc,=inds(Wb.𝑨𝒄,tags=tags(ir))
+        Wb.icAc,=inds(Wb.𝑨𝒄,tags=tags(ic))
+    end
+    if b
+        Wb.𝒃= W[ir=>2:nr-1,ic=>1:1]
+        Wb.irb,=inds(Wb.𝒃,tags=tags(ir))
+        Wb.icb,=inds(Wb.𝒃,tags=tags(ic))
+    end
+    if c
+        Wb.𝒄= W[ir=>nr:nr,ic=>2:nc-1]
+        Wb.irc,=inds(Wb.𝒄,tags=tags(ir))
+        Wb.icc,=inds(Wb.𝒄,tags=tags(ic))
+    end
+    if d
+        Wb.𝒅= nr >1 ? W[ir=>nr:nr,ic=>1:1] : W[ir=>1:1,ic=>1:1]
+        Wb.ird,=inds(Wb.𝒅,tags=tags(ir))
+        Wb.icd,=inds(Wb.𝒅,tags=tags(ic))
+    end
+
+    if fix_inds
+        if !isnothing(Wb.𝒄)
+            Wb.𝒄=replaceind(Wb.𝒄,Wb.irc,Wb.ird)
+            Wb.irc=Wb.ird
+        end
+        if !isnothing(Wb.𝒃)
+            Wb.𝒃=replaceind(Wb.𝒃,Wb.icb,Wb.icd)
+            Wb.icb=Wb.icd
+        end
+        if !isnothing(Wb.𝑨)
+            Wb.𝑨=replaceinds(Wb.𝑨,[Wb.irA,Wb.icA],[Wb.irb,Wb.icc])
+            Wb.irA,Wb.icA=Wb.irb,Wb.icc
+        end
+    end
+    if !llur(Wrf,lr) && swap_bc #not lower-left or upper-right
+        Wb.𝒃,Wb.𝒄=Wb.𝒄,Wb.𝒃
+        Wb.irb,Wb.irc=Wb.irc,Wb.irb
+        Wb.icb,Wb.icc=Wb.icc,Wb.icb
+    end
+    if !isnothing(Wb.𝑨)
+        @assert hasinds(Wb.𝑨,Wb.irA,Wb.icA)
+    end
+    return Wb
+end
+
+
+
+function set_𝒃_block!(W::ITensor,𝒃::ITensor,ileft::Index,iright::Index,ul::reg_form)
+    @assert hasinds(W,ileft,iright)
+    i1,i2,n1,n2=swap_ul(ileft,iright,ul)
+    W[i1=>2:n1-1,i2=>1:1]=𝒃
+end
+
+function set_𝒄_block!(W::ITensor,𝒄::ITensor,ileft::Index,iright::Index,ul::reg_form)
+    @assert hasinds(W,ileft,iright)
+    i1,i2,n1,n2=swap_ul(ileft,iright,ul)
+    W[i1=>n1:n1,i2=>2:n2-1]=𝒄
+end
+function set_𝒃𝒄_block!(W::ITensor,𝒃𝒄::ITensor,ileft::Index,iright::Index,ms::matrix_state)
+    if llur(ms)
+        set_𝒃_block!(W,𝒃𝒄,ileft,iright,ms.ul)
+    else
+        set_𝒄_block!(W,𝒃𝒄,ileft,iright,ms.ul)
+    end
+end
+
+# noop versions for when b/c are empty.  Happens in edge ops of H.
+function set_𝒃𝒄_block!(::ITensor,::Nothing,::Index,::Index,::matrix_state)
+end
+function set_𝒃_block!(::ITensor,::Nothing,::Index,::Index,::reg_form)
+end
+function set_𝒄_block!(::ITensor,::Nothing,::Index,::Index,::reg_form)
+end
+
+function set_𝒅_block!(W::ITensor,𝒅::ITensor,ileft::Index,iright::Index,ul::reg_form)
+    @assert hasinds(W,ileft,iright)
+    i1,i2,n1,n2=swap_ul(ileft,iright,ul)
+    W[i1=>n1:n1,i2=>1:1]=𝒅
+end
+
+function set_𝕀_block!(W::ITensor,𝕀::ITensor,ileft::Index,iright::Index,ul::reg_form)
+    @assert hasinds(W,ileft,iright)
+    i1,i2,n1,n2=swap_ul(ileft,iright,ul)
+    n1>1 && assign!(W,𝕀,i1=>1,i2=>1)
+    n2>1 && assign!(W,𝕀,i1=>n1,i2=>n2)
+end
+
+function set_𝑨𝒄_block(W::ITensor,𝑨𝒄::ITensor,ileft::Index,iright::Index,ms::matrix_state)
+    @assert hasinds(W,ileft,iright)
+    i1,i2,n1,n2=swap_ul(ileft,iright,ms.ul)
+    if llur(ms) #lower left/upper right
+        min1=Base.min(n1,2)
+        W[i1=>min1:n1,i2=>2:n2-1]=𝑨𝒄
+    else #lower right/upper left
+        max2=Base.max(n2-1,1)
+        W[i1=>2:n1-1,i2=>1:max2]=𝑨𝒄
+    end
+end
+
+
+
+
+
+
 #
 #  o1   add row to RL       o2  add column to RL
 #   0   at bottom, Dw1+1    0   at right, Dw2+1
