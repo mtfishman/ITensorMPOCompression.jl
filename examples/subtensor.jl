@@ -76,11 +76,19 @@ end
 
 end
 
-@testset "subtensor with block sparse storage" begin
-    N,NNN=10,3
-    sites = siteinds("SpinHalf", N;conserve_qns=true)
-    H=make_transIsing_MPO(sites,NNN)
-    W=H[5] 
+models=[
+    [make_transIsing_MPO,"S=1/2",true],
+     [make_transIsing_AutoMPO,"S=1/2",true],
+    [make_Heisenberg_AutoMPO,"S=1/2",true],
+    [make_Heisenberg_AutoMPO,"S=1",true],
+    [make_Hubbard_AutoMPO,"Electron",false],
+    ]
+
+@testset "subtensor with block sparse storage$(model[1]), qns=$qns, ul=$ul" for model in models, qns in [true], ul=[lower,upper] 
+    N,NNN=5,2
+    sites = siteinds(model[2], N;conserve_qns=qns)
+    H=model[1](sites,NNN)
+    W=H[3] 
 
     il=inds(W,tags="Link")
     Dw=dim(il[1])
@@ -118,4 +126,5 @@ end
     V=W1[i1,i2]
     V1=get_subtensor_I(W1,i1,i2)
     @test  norm(tensor(dense(V))-tensor(dense(V1)))==0.0
- end
+end
+nothing

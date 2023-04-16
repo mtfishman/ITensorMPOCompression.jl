@@ -111,22 +111,60 @@ end
 function get_subtensor(T::BlockSparseTensor{ElT,N},new_inds,rs::UnitRange{Int64}...) where {ElT,N}
     Ds = Vector{DenseTensor{ElT,N}}()
     bs = Vector{Block{N}}()
+    #@show rs
     dbs,=get_offset_block_counts(inds(T),rs...)
-    for (jj, b) in enumerate(eachnzblock(T))
-        #TODO use index_within_block,tb=blockindex(T,Tuple(iT)...)
-        blockT = blockview(T, b)
-        if in_range(blockstart(T,b),blockend(T,b),rs...)# && !isnothing(blockT)
-            rs1=fix_ranges(blockstart(T,b),blockend(T,b),rs...)
-            #@show "In of range" b dims(blockT) rs rs1 NDTensors.blockstart(T,b)
+    for tb in eachnzblock(T)
+        blockT = blockview(T, tb)
+        
+        if in_range(blockstart(T,tb),blockend(T,tb),rs...) #&& !isnothing(blockT)
+            # @show "inrange"
+            # @show tb blockT blockstart(T,tb) blockend(T,tb) 
+            iT=blockstart(T,tb)
+            #iT=ntuple(i->iT[i]+rs[i].start-1,N)
+            #iA=ntuple(i->iA[i]+dbs_ci[i],N)
+           
+            index_within_block,tb1=blockindex(T,Tuple(iT)...)
+            #@show index_within_block tb1
+            dT=[blockend(T,tb)...]-[index_within_block...]+fill(1,N)
+            rs1=ntuple(i->index_within_block[i]:index_within_block[i]+dT[i]-iT[i],N)
+            if isnothing(blockT)
+                @show iT dT rs1 blockT T
+            end
             push!(Ds,blockT[rs1...])
-            bc=CartesianIndex(b)-CartesianIndex(dbs)
-            b=bc #Decrement block numbers by the number of skipped blocks.
-            push!(bs,b)
+            bc=CartesianIndex(tb)-CartesianIndex(dbs)
+            push!(bs,bc)
         end
     end
+  
+    
+    # Ds = Vector{DenseTensor{ElT,N}}()
+    # bs = Vector{Block{N}}()
+    # dbs,=get_offset_block_counts(inds(T),rs...)
+    # for (jj, b) in enumerate(eachnzblock(T))
+    #     #TODO use index_within_block,tb=blockindex(T,Tuple(iT)...)
+    #     blockT = blockview(T, b)
+    #     if in_range(blockstart(T,b),blockend(T,b),rs...)# && !isnothing(blockT)
+    #         println("----------------------------------")
+    #         rs1=fix_ranges(blockstart(T,b),blockend(T,b),rs...)
+    #         #@show "In of range" b dims(blockT) rs rs1 NDTensors.blockstart(T,b)
+    #         push!(Ds,blockT[rs1...])
+    #         index_within_block,tb1=blockindex(T,Tuple(blockstart(T,b))...)
+    #         bc=CartesianIndex(b)-CartesianIndex(dbs)
+    #         db=CartesianIndex(blockend(T,b))-CartesianIndex(blockstart(T,b))
+    #         b2=CartesianIndex(tb1)-db
+    #         if bc!=b2
+    #             @show CartesianIndex(b) CartesianIndex(dbs) db bc b2 index_within_block tb1 blockstart(T,b) blockend(T,b)
+    #         end
+    #         #bc=CartesianIndex(b)-b2
+
+    #         b=bc #Decrement block numbers by the number of skipped blocks.
+    #         push!(bs,b)
+    #     end
+    # end
     if length(Ds)==0
         return BlockSparseTensor(new_inds)
     end
+    #@show bs
     #
     #  JR: All attempts at building the new indices here at the NDTensors level failed.
     #  The only thing I could make work was to pass the new indices down from the ITensors
