@@ -109,10 +109,14 @@ function is_regular_form(H::reg_form_MPO,eps::Float64=default_eps)::Bool
     return true
 end
 
+function check_ortho(Wrf::reg_form_Op,lr::orth_type,eps::Float64=default_eps)::Bool
+    ms=matrix_state(Wrf.ul,lr)
+    return check_ortho(Wrf.W,ms,eps) 
+end
+
 function check_ortho(H::reg_form_MPO,lr::orth_type,eps::Float64=default_eps)::Bool
-    ms=matrix_state(H.ul,lr)
-    for n in sweep(H,ms.lr) #skip the edge row/col opertors
-        !check_ortho(H[n].W,ms,eps) && return false
+    for n in sweep(H,lr) #skip the edge row/col opertors
+        !check_ortho(H[n],lr,eps) && return false
     end
     return true
 end

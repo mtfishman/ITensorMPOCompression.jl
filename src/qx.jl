@@ -199,3 +199,88 @@ function G_perm(i1::Index, i2::Index,perm::Vector)
   end
   return d
 end
+
+
+
+
+
+
+
+
+
+
+
+function equal_edge_blocks(i1::ITensors.QNIndex,i2::ITensors.QNIndex)::Bool
+  qns1,qns2=space(i1),space(i2)
+  qn11,qn1n=qns1[1],qns1[nblocks(qns1)]
+  qn21,qn2n=qns2[1],qns2[nblocks(qns2)]
+  return ITensors.have_same_qns(qn(qn11),qn(qn21)) && ITensors.have_same_qns(qn(qn1n),qn(qn2n))
+end
+
+function equal_edge_blocks(::Index,::Index)::Bool
+   return true
+end
+
+function redim1(iq::ITensors.QNIndex,pad1::Int64,pad2::Int64,qns::ITensors.QNBlocks)
+  @assert pad1==blockdim(qns[1]) #Splitting blocks not supported
+  @assert pad2==blockdim(qns[end]) #Splitting blocks not supported
+  qnsp=[qns[1],space(iq)...,qns[end]] #creat the new space
+  return Index(qnsp,tags=tags(iq),plev=plev(iq),dir=dir(iq)) #create new index.
+end
+
+function redim1(iq::Index,pad1::Int64,pad2::Int64,Dw::Int64)
+  @assert dim(iq)+pad1+pad2<=Dw #Splitting blocks not supported
+  return Index(dim(iq)+pad1+pad2,tags=tags(iq),plev=plev(iq),dir=dir(iq)) #create new index.
+end
+
+
+function insert_Q(Wb::regform_blocks,𝐐::ITensor,ileft::Index,ic::Index,iq::Index,ms::matrix_state)
+  ilb,ilf =  ms.lr==left ? (ileft,ic) : (ic,ileft) #Backward and forward indices.
+  @assert !isnothing(Wb.𝑨𝒄)
+  is=noncommoninds(Wb.𝑨𝒄,Wb.irAc,Wb.icAc)
+  @assert hasinds(𝐐,iq,is...)
+#    @assert dir(ileft)==dir(dag(ic))
+
+  #
+  #  Build new index and MPO Tensor
+  #
+  iqp=redim1(iq,1,1,space(ilf))  #pad with 1 at the start and 1 and the end: iqp =(1,iq,1).
+  Wp=ITensor(0.0,ilb,iqp,is)
+  ileft,iright =  ms.lr==left ? (ilb,iqp) :  (iqp,ilb)
+  set_𝒃𝒄_block!(Wp,Wb.𝒃,ileft,iright,ms) #preserve b or c block from old W
+  set_𝒅_block!(Wp,Wb.𝒅,ileft,iright,ms.ul) #preserve d block from old W
+  set_𝕀_block!(Wp,Wb.𝕀,ileft,iright,ms.ul) #init I blocks from old W
+  set_𝑨𝒄_block(Wp,𝐐,ileft,iright,ms) #Insert new Qs form QR decomp
+  return Wp,iqp
+end
+
+function ac_qx(W::reg_form_Op,lr::orth_type;kwargs...)
+  @checkflux(W.W)
+  #@assert dir(W.ileft)==dir(dag(W.iright))
+  Wb=extract_blocks(W,lr;Ac=true,all=true)
+  ilf_Ac = llur(matrix_state(W.ul,lr)) ?  Wb.icAc : Wb.irAc
+  ilb,ilf =  lr==left ? (W.ileft,W.iright) : (W.iright,W.ileft) #Backward and forward indices.
+  @checkflux(Wb.𝑨𝒄)
+  if lr==left
+      Qinds=noncommoninds(Wb.𝑨𝒄,ilf_Ac) 
+      Q,R,iq=qr(Wb.𝑨𝒄,Qinds;positive=true,cutoff=1e-14,tags=tags(ilf))
+  else
+      Rinds=ilf_Ac
+      R,Q,iq=lq(Wb.𝑨𝒄,Rinds;positive=true,cutoff=1e-14,tags=tags(ilf))
+  end
+  @checkflux(Q)
+  @checkflux(R)
+  # Re-scale
+  dh=d(Wb) #dimension of local Hilbert space.
+  @assert abs(dh-round(dh))==0.0
+  Q*=sqrt(dh)
+  R/=sqrt(dh)
+
+  Wp,iqp=insert_Q(Wb,Q,W.ileft,W.iright,iq,matrix_state(W.ul,lr)) 
+  Wprf=lr==left ? reg_form_Op(Wp,ilb,iqp,W.ul) : reg_form_Op(Wp,iqp,ilb,W.ul)
+  @assert equal_edge_blocks(ilf,iqp)
+  @assert is_regular_form(Wprf)
+  R=prime(R,ilf_Ac) #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
+  Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ilf'))
+  return Wprf,Rp,iqp
+end

@@ -9,7 +9,16 @@ using Printf
 #Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
 #println("-----------Start--------------")
 
-@testset "Block respecting QX decomposition" for ul in [lower,upper], lr in [left,right]
+models=[
+    [make_transIsing_MPO,"S=1/2",true],
+    # [make_transIsing_AutoMPO,"S=1/2",true],
+    # [make_Heisenberg_AutoMPO,"S=1/2",true],
+    # [make_Heisenberg_AutoMPO,"S=1",true],
+    # [make_Hubbard_AutoMPO,"Electron",false],
+]
+
+
+@testset "V Block respecting QX decomposition" for (ul,lr) in [(lower,right),(upper,left)]
     N=6
     NNN=4
     model_kwargs = (hx=0.5, ul=ul )
@@ -26,8 +35,28 @@ using Printf
         @test is_regular_form(W,ms.ul)
         iln=commonind(H[n],H[n+rng.step])
 
-        Q,RL,lq=block_qx(W,iln,ms.ul;orth=ms.lr,rr_cutoff=0.0)
+        Q,RL,lq=block_qx(W,iln,ms.ul;orth=ms.lr,cutoff=0.0)
         @test check_ortho(Q,ms,eps)
+    end
+end
+
+@testset "Ac Block respecting QX decomposition $(model[1]), qns=$qns, ul=$ul, lr=$lr" for model in models, qns in [false,true], ul in [lower,upper], lr in [right,left]
+    N=6
+    NNN=4
+    model_kwargs = (hx=0.5, ul=ul )
+    eps=1e-15
+    sites = siteinds(model[2], N)
+    ms=matrix_state(ul,lr)
+    #
+    #  test lower triangular MPO 
+    #
+    H=reg_form_MPO(model[1](sites,NNN))
+    rng=sweep(H,lr)
+    for n in rng
+        W=H[n]
+        @test is_regular_form(W)
+        W1,X,lq=ac_qx(W,lr;cutoff=1e-14)
+        @test check_ortho(W1,lr,eps)
     end
 end
     
@@ -48,20 +77,7 @@ end
     Lind=noncommoninds(inds(W),c)
     Rind=noncommoninds(inds(W),r)
     @assert dim(c)==dim(r)
-    #
-    #  RQ decomp
-    #
-    R,Q,iq=rq(W,r;positive=true,rr_cutoff=rr_cutoff)
-    @test dim(c)-dim(iq) == 5 #make sure rank reduction worked.
-    @test Q * prime(Q,iq) ≈ δ(Float64, iq, iq') atol = eps
-    @test W ≈ R*Q atol = eps
-    #
-    #  QL decomp
-    #
-    Q,L,iq=ql(W,Rind;positive=true,rr_cutoff=rr_cutoff)
-    @test dim(c)-dim(iq) == 5 #make sure rank reduction worked.
-    @test Q * prime(Q,iq) ≈ δ(Float64, iq, iq') atol = eps
-    @test W ≈ L*Q atol = eps
+   
     
     #
     #  use upper tri MPO to get some zero pivots for LQ and QR.
@@ -78,18 +94,20 @@ end
     #
     #  QR decomp
     #
-    Q,R,iq=qr(W,Rind;positive=true,rr_cutoff=rr_cutoff)
+    Q,R,iq=qr(W,Rind;positive=true,cutoff=rr_cutoff)
     @test dim(c)-dim(iq) == 5 #make sure rank reduction worked.
     @test Q * prime(Q,iq) ≈ δ(Float64, iq, iq') atol = eps
     @test W ≈ R*Q atol = eps   
     #
     #  LQ decomp
     #
-    L,Q,iq=lq(W,r;positive=true,rr_cutoff=rr_cutoff)
+    L,Q,iq=lq(W,r;positive=true,cutoff=rr_cutoff)
     @test dim(c)-dim(iq) == 5 #make sure rank reduction worked.
     @test Q * prime(Q,iq) ≈ δ(Float64, iq, iq') atol = eps
     @test W ≈ L*Q atol = eps
     
 end
+
+
 
 nothing

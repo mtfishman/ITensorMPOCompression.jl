@@ -37,7 +37,7 @@ export IndexRange, indices, range, ranges, getperm, permute, start
 #
 #  New ac_qx
 #
-export reg_form_MPO, extract_blocks, is_gauge_fixed, gauge_fix!
+export reg_form_MPO, extract_blocks, is_gauge_fixed, gauge_fix!, ac_qx
 
 
 macro mpoc_assert(ex)
