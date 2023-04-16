@@ -189,6 +189,41 @@ function ITensors.orthogonalize!(H::MPO;kwargs...)
     return orthogonalize!(H,ul;kwargs...)
 end
 
+
+#-----------------------------------------------------------------
+#
+#   Ac block respecting orthogonalization.
+#
+function ac_orthogonalize!(H::reg_form_MPO,lr::orth_type;eps::Float64=1e-14,kwargs...) 
+    if !is_gauge_fixed(H,eps)
+        gauge_fix!(H)
+    end
+    rng=sweep(H,lr)
+    if lr==left
+        for n in rng
+            nn=n+rng.step
+            H[n],R,iqp=ac_qx(H[n],lr)
+            @assert H[n].iright==iqp
+
+            H[nn].W=R*H[nn].W
+            H[nn].ileft=dag(iqp)
+            @assert is_regular_form(H[nn])
+        end
+    else
+        for n in rng
+            nn=n+rng.step
+            H[n],R,iqp=ac_qx(H[n],lr)
+            @assert H[n].ileft==iqp
+            @assert dir(H[n].ileft)==dir(iqp)
+
+            H[nn].W=R*H[nn].W
+            H[nn].iright=dag(iqp)
+            @assert is_regular_form(H[nn])
+        end
+    end
+end
+
+#
 #--------------------------------------------------------------------------------------------
 #
 #  Functions for bringing an iMPO into left or right canonical form
@@ -289,7 +324,7 @@ function ITensors.orthogonalize!(H::InfiniteMPO,ul::reg_form;kwargs...)
     return qx_iterate!(H,ul;kwargs...)
 end
 
-#
+
 #  Outer routine simply established upper or lower regular forms
 #
 @doc """

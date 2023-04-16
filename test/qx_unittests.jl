@@ -11,10 +11,10 @@ using Printf
 
 models=[
     [make_transIsing_MPO,"S=1/2",true],
-    # [make_transIsing_AutoMPO,"S=1/2",true],
-    # [make_Heisenberg_AutoMPO,"S=1/2",true],
-    # [make_Heisenberg_AutoMPO,"S=1",true],
-    # [make_Hubbard_AutoMPO,"Electron",false],
+    [make_transIsing_AutoMPO,"S=1/2",true],
+    [make_Heisenberg_AutoMPO,"S=1/2",true],
+    [make_Heisenberg_AutoMPO,"S=1",true],
+    [make_Hubbard_AutoMPO,"Electron",false],
 ]
 
 
@@ -46,6 +46,7 @@ end
     model_kwargs = (hx=0.5, ul=ul )
     eps=1e-15
     sites = siteinds(model[2], N)
+    pre_fixed=model[3] #Hamiltonian starts gauge fixed
     ms=matrix_state(ul,lr)
     #
     #  test lower triangular MPO 
@@ -56,7 +57,7 @@ end
         W=H[n]
         @test is_regular_form(W)
         W1,X,lq=ac_qx(W,lr;cutoff=1e-14)
-        @test check_ortho(W1,lr,eps)
+        @test pre_fixed==check_ortho(W1,lr,eps)
     end
 end
     
