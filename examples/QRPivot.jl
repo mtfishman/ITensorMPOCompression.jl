@@ -2,8 +2,8 @@ using ITensors
 using ITensorMPOCompression
 using Test,Printf,Revise
 
-import ITensors: tensor, Indices
-import ITensorMPOCompression: @checkflux, mpoc_checkflux, insert_xblock
+import ITensors: tensor, Indices, AbstractMPS
+import ITensorMPOCompression: @checkflux, mpoc_checkflux, insert_xblock, default_eps
 
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f)
 
@@ -126,15 +126,40 @@ function has_edge_links(H::MPO)::Bool
     return order(H[1])==4
 end
 
-mutable struct reg_form_MPO
-    H::MPO
-    ils::Indices
-    irs::Indices
+mutable struct reg_form_Op
+    W::ITensor
+    ileft::Index
+    iright::Index
+    ul::reg_form
+    function reg_form_Op(W::ITensor,ileft::Index,iright::Index,ul::reg_form) 
+        @assert hasinds(W,ileft,iright)
+        @assert is_regular_form(W,ul)
+        return new(W,ileft,iright,ul)
+    end
+end
+
+mutable struct reg_form_MPO <: AbstractMPS
+    data::Vector{reg_form_Op}
+    llim::Int
+    rlim::Int
     d0::ITensor
     dN::ITensor
     ul::reg_form
-    reg_form_MPO(H::MPO,ils::Indices,irs::Indices,d0::ITensor,dN::ITensor,ul::reg_form)=new(H,ils,irs,d0,dN,ul)
+    function reg_form_MPO(H::MPO,ils::Indices,irs::Indices,d0::ITensor,dN::ITensor,ul::reg_form)
+        N=length(H)
+        @assert length(ils)==N
+        @assert length(irs)==N
+        data=Vector{reg_form_Op}(undef,N)
+        for n in eachindex(H)
+            data[n]=reg_form_Op(H[n],ils[n],irs[n],ul)
+        end
+        return new(data,H.llim,H.rlim,d0,dN,ul)
+    end
+    function reg_form_MPO(Ws::Vector{reg_form_Op},llim::Int64,rlim::Int64,d0::ITensor,dN::ITensor,ul::reg_form)
+        return new(Ws,llim,rlim,d0,dN,ul)
+    end
 end
+
 
 function reg_form_MPO(H::MPO,eps::Float64=1e-14)
     (bl,bu)=detect_regular_form(H,eps)
@@ -150,38 +175,46 @@ function reg_form_MPO(H::MPO,eps::Float64=1e-14)
 end
 
 function ITensors.MPO(Hrf::reg_form_MPO)::MPO
-    H=copy(Hrf.H)
-    N=length(H)
+    N=length(Hrf)
+    H=MPO(Ws(Hrf))
     H[1]*=dag(Hrf.d0)
     H[N]*=dag(Hrf.dN)
     return H
 end
 
-mutable struct reg_form_Op
-    W::ITensor
-    ileft::Index
-    iright::Index
-    ul::reg_form
-    function reg_form_Op(W::ITensor,ileft::Index,iright::Index,ul::reg_form) 
-        @assert hasinds(W,ileft,iright)
-        @assert is_regular_form(W,ul)
-        return new(W,ileft,iright,ul)
+data(H::reg_form_MPO)=H.data
+
+function Ws(H::reg_form_MPO)
+    return map(n-> H[n].W,1:length(H))
+end
+
+Base.length(H::reg_form_MPO) = length(H.data)
+Base.reverse(H::reg_form_MPO) = reg_form_MPO(reverse(H.data),H.llim,H.rlim,H.d0,H.dN,H.ul)
+Base.iterate(H::reg_form_MPO, args...) = iterate(H.data, args...)
+Base.getindex(H::reg_form_MPO, args...) = getindex(H.data, args...)
+Base.setindex!(H::reg_form_MPO, args...) = setindex!(H.data, args...)
+
+function ITensorMPOCompression.check_ortho(H::reg_form_MPO,lr::orth_type,eps::Float64=default_eps)::Bool
+    ms=matrix_state(H.ul,lr)
+    for n in sweep(H,ms.lr) #skip the edge row/col opertors
+        !check_ortho(H[n].W,ms,eps) && return false
     end
+    return true
 end
 
-function Base.getindex(H::reg_form_MPO,n::Int64) 
-    return reg_form_Op(H.H[n],H.ils[n],H.irs[n],H.ul)
-end
+# function Base.getindex(H::reg_form_MPO,n::Int64) 
+#     return getindex(data(H),n)
+# end
 
-Base.length(H::reg_form_MPO)=length(H.H)
-function Base.iterate(H::reg_form_MPO, state::Int=1)
-    (state > length(H)) && return nothing
-    return (H[state], state + 1)
-end
+# Base.length(H::reg_form_MPO)=length(H.data)
+# function Base.iterate(H::reg_form_MPO, state::Int=1)
+#     (state > length(H)) && return nothing
+#     return (H[state], state + 1)
+# end
 
-function Base.reverse(H::reg_form_MPO)
-    return map(n->H[n],length(H):-1:1)
-end
+# function Base.reverse(H::reg_form_MPO)
+#     return map(n->H[n],length(H):-1:1)
+# end
 
 
 
@@ -717,25 +750,25 @@ function ac_orthogonalize!(H::reg_form_MPO,lr::orth_type,eps::Float64)
     if !is_gauge_fixed(H,eps)
         gauge_fix!(H)
     end
-    rng=sweep(H.H,lr)
+    rng=sweep(H,lr)
     if lr==left
         for n in rng
             nn=n+rng.step
-            H.H[n],R,iqp=ac_qx(H[n],lr)
-            H.H[nn]=R*H.H[nn]
-            @assert is_regular_form(H.H[nn],H.ul)
-            H.irs[n]=dag(iqp)
-            H.ils[n+1]=dag(iqp)
+            H[n].W,R,iqp=ac_qx(H[n],lr)
+            H[nn].W=R*H[nn].W
+            @assert is_regular_form(H[nn].W,H.ul)
+            H[n].iright=iqp
+            H[n+1].ileft=dag(iqp)
         end
     else
         for n in rng
             nn=n+rng.step
-            H.H[n],R,iqp=ac_qx(H[n],lr)
-            H.H[nn]=R*H.H[nn]
-            @assert is_regular_form(H.H[nn],H.ul)
-            H.irs[n-1]=dag(iqp)
-            H.ils[n]=iqp
-            @assert dir(H.ils[n])==dir(iqp)
+            H[n].W,R,iqp=ac_qx(H[n],lr)
+            H[nn].W=R*H[nn].W
+            @assert is_regular_form(H[nn].W,H.ul)
+            H[n-1].iright=dag(iqp)
+            H[n].ileft=iqp
+            @assert dir(H[n].ileft)==dir(iqp)
         end
     end
 end
@@ -775,22 +808,22 @@ verbose=false
         ms=matrix_state(ul,lr)
         @test pre_fixed == is_gauge_fixed(H,ils,irs,ms.ul,eps) 
         @test pre_fixed == is_gauge_fixed(Hrf,eps) 
-        verbose && qns && show_directions(H)
-        verbose && qns && show_directions(Hrf.H)
+        # verbose && qns && show_directions(H)
+        # verbose && qns && show_directions(Hrf.H)
         ac_orthogonalize!(H,ils,irs,mirror(ms),eps)
         ac_orthogonalize!(Hrf,mirror(lr),eps)
-        @test check_ortho(Hrf.H,mirror(ms))
+        @test check_ortho(Hrf,mirror(lr))
         @test is_gauge_fixed(Hrf,eps) #Now everything should be fixed
         
         
-        verbose && qns && show_directions(H)
-        verbose && qns && show_directions(Hrf.H)
+        # verbose && qns && show_directions(H)
+        # verbose && qns && show_directions(Hrf.H)
         ac_orthogonalize!(H,ils,irs,ms,eps)
         ac_orthogonalize!(Hrf,lr,eps)
         
-        verbose && qns && show_directions(H)
-        verbose && qns && show_directions(Hrf.H)
-        @test check_ortho(Hrf.H,ms)
+        # verbose && qns && show_directions(H)
+        # verbose && qns && show_directions(Hrf.H)
+        @test check_ortho(Hrf,lr)
         @test is_gauge_fixed(Hrf,eps) #Now everything should be fixed
         #
         #  Expectation value check.
@@ -807,7 +840,7 @@ verbose=false
         ms=matrix_state(ul,right)
         @test is_gauge_fixed(Hrf,eps) #Should still be gauge fixed
         ac_orthogonalize!(Hrf,right,eps)
-        @test check_ortho(Hrf.H,ms)
+        @test check_ortho(Hrf,right)
         @test is_gauge_fixed(Hrf,eps) #Should still be gauge fixed
         verbose && qns && show_directions(H)
         #
