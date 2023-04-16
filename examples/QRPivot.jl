@@ -3,7 +3,7 @@ using ITensorMPOCompression
 using Test,Printf,Revise
 
 import ITensors: tensor, Indices, AbstractMPS
-import ITensorMPOCompression: @checkflux, mpoc_checkflux, insert_xblock, default_eps
+import ITensorMPOCompression: @checkflux, mpoc_checkflux, insert_xblock, default_eps, is_regular_form
 
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f)
 
@@ -193,6 +193,18 @@ Base.reverse(H::reg_form_MPO) = reg_form_MPO(reverse(H.data),H.llim,H.rlim,H.d0,
 Base.iterate(H::reg_form_MPO, args...) = iterate(H.data, args...)
 Base.getindex(H::reg_form_MPO, args...) = getindex(H.data, args...)
 Base.setindex!(H::reg_form_MPO, args...) = setindex!(H.data, args...)
+
+function is_regular_form(W::reg_form_Op,eps::Float64=default_eps)::Bool
+    i = W.ul==lower ? 1 : 2
+    return detect_regular_form(W.W,eps)[i]
+end
+
+function is_regular_form(H::reg_form_MPO,eps::Float64=default_eps)::Bool
+    for W in H
+        !is_regular_form(W) && return false
+    end
+    return true
+end
 
 function ITensorMPOCompression.check_ortho(H::reg_form_MPO,lr::orth_type,eps::Float64=default_eps)::Bool
     ms=matrix_state(H.ul,lr)
@@ -526,7 +538,7 @@ function gauge_fix!(W::ITensor,ileft::Index,iright::Index,tₙ₋₁::Vector{Flo
 end
 
 function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
-    @assert is_regular_form(W.W,W.ul)
+    @assert is_regular_form(W)
     Wb=extract_blocks(W,lr;all=true,fix_inds=true)
     𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅 #for readability below.
     nr,nc=dim(W.ileft),dim(W.iright)
@@ -556,7 +568,7 @@ function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
     end
     
     set_𝒅_block!(W.W,𝒅⎖,W.ileft,W.iright,W.ul)
-    @assert is_regular_form(W.W,W.ul)
+    @assert is_regular_form(W)
 
     if !isnothing(𝒄⎖)
         if llur(matrix_state(W.ul,lr))
@@ -565,7 +577,7 @@ function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
             set_𝒃_block!(W.W,𝒄⎖,W.ileft,W.iright,W.ul)
         end
     end
-    @assert is_regular_form(W.W,W.ul)
+    @assert is_regular_form(W)
 
     # 𝒕ₙ is always a 1xN tensor so we need to remove that dim==1 index in order for vector(𝒕ₙ) to work.
     return vector_o2(𝒕ₙ)
@@ -597,12 +609,12 @@ function gauge_fix!(H::reg_form_MPO) where {T}
     tₙ=Vector{Float64}(undef,1)
     for W in H
         tₙ=gauge_fix!(W,tₙ,left)
-        @assert is_regular_form(W.W,W.ul)
+        @assert is_regular_form(W)
     end
     #tₙ=Vector{Float64}(undef,1) end of sweep above already returns this.
     for W in reverse(H)
         tₙ=gauge_fix!(W,tₙ,right)
-        @assert is_regular_form(W.W,W.ul)
+        @assert is_regular_form(W)
     end
 end
 
@@ -689,7 +701,7 @@ function ac_qx(W::reg_form_Op,lr::orth_type;kwargs...)
     #@assert dir(W.ileft)==dir(dag(W.iright))
     Wb=extract_blocks(W,lr;Ac=true,all=true)
     ilf_Ac = llur(matrix_state(W.ul,lr)) ?  Wb.icAc : Wb.irAc
-    ilf =  lr==left ? W.iright : W.ileft #Backward and forward indices.
+    ilb,ilf =  lr==left ? (W.ileft,W.iright) : (W.iright,W.ileft) #Backward and forward indices.
     @checkflux(Wb.𝑨𝒄)
     if lr==left
         Qinds=noncommoninds(Wb.𝑨𝒄,ilf_Ac) 
@@ -707,11 +719,12 @@ function ac_qx(W::reg_form_Op,lr::orth_type;kwargs...)
     R/=sqrt(dh)
 
     Wp,iqp=insert_Q(Wb,Q,W.ileft,W.iright,iq,matrix_state(W.ul,lr)) 
+    Wprf=lr==left ? reg_form_Op(Wp,ilb,iqp,W.ul) : reg_form_Op(Wp,iqp,ilb,W.ul)
     @assert equal_edge_blocks(ilf,iqp)
-    @assert is_regular_form(Wp,W.ul)
+    @assert is_regular_form(Wprf)
     R=prime(R,ilf_Ac) #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
     Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ilf'))
-    return Wp,Rp,iqp
+    return Wprf,Rp,iqp
 end
 
 function ac_orthogonalize!(H::MPO,ils::Vector{Index{T}},irs::Vector{Index{T}},ms::matrix_state,eps::Float64) where {T}
@@ -754,21 +767,23 @@ function ac_orthogonalize!(H::reg_form_MPO,lr::orth_type,eps::Float64)
     if lr==left
         for n in rng
             nn=n+rng.step
-            H[n].W,R,iqp=ac_qx(H[n],lr)
+            H[n],R,iqp=ac_qx(H[n],lr)
+            @assert H[n].iright==iqp
+
             H[nn].W=R*H[nn].W
-            @assert is_regular_form(H[nn].W,H.ul)
-            H[n].iright=iqp
-            H[n+1].ileft=dag(iqp)
+            H[nn].ileft=dag(iqp)
+            @assert is_regular_form(H[nn])
         end
     else
         for n in rng
             nn=n+rng.step
-            H[n].W,R,iqp=ac_qx(H[n],lr)
-            H[nn].W=R*H[nn].W
-            @assert is_regular_form(H[nn].W,H.ul)
-            H[n-1].iright=dag(iqp)
-            H[n].ileft=iqp
+            H[n],R,iqp=ac_qx(H[n],lr)
+            @assert H[n].ileft==iqp
             @assert dir(H[n].ileft)==dir(iqp)
+
+            H[nn].W=R*H[nn].W
+            H[nn].iright=dag(iqp)
+            @assert is_regular_form(H[nn])
         end
     end
 end
@@ -800,7 +815,8 @@ verbose=false
         ils,irs,d0,dN=add_edge_links!(H)
         @test all(il->dir(il)==dir(ils[1]),ils) 
         @test all(ir->dir(ir)==dir(irs[1]),irs) 
-        @assert is_regular_form(H,ul)
+        @test is_regular_form(H,ul)
+        @test is_regular_form(Hrf)
         #
         #  Left->right sweep
         #
@@ -812,6 +828,7 @@ verbose=false
         # verbose && qns && show_directions(Hrf.H)
         ac_orthogonalize!(H,ils,irs,mirror(ms),eps)
         ac_orthogonalize!(Hrf,mirror(lr),eps)
+        @test is_regular_form(Hrf)
         @test check_ortho(Hrf,mirror(lr))
         @test is_gauge_fixed(Hrf,eps) #Now everything should be fixed
         
@@ -823,6 +840,7 @@ verbose=false
         
         # verbose && qns && show_directions(H)
         # verbose && qns && show_directions(Hrf.H)
+        @test is_regular_form(Hrf)
         @test check_ortho(Hrf,lr)
         @test is_gauge_fixed(Hrf,eps) #Now everything should be fixed
         #
@@ -838,8 +856,10 @@ verbose=false
         #  Right->left sweep
         #
         ms=matrix_state(ul,right)
+        @test is_regular_form(Hrf)
         @test is_gauge_fixed(Hrf,eps) #Should still be gauge fixed
         ac_orthogonalize!(Hrf,right,eps)
+        @test is_regular_form(Hrf)
         @test check_ortho(Hrf,right)
         @test is_gauge_fixed(Hrf,eps) #Should still be gauge fixed
         verbose && qns && show_directions(H)
