@@ -5,7 +5,7 @@ using Revise
 using Test
 using Printf
 
-verbose=true #verbose at the outer test level
+verbose=false #verbose at the outer test level
 verbose1=false #verbose inside orth algos
 
  using Printf
@@ -110,6 +110,20 @@ models=[
     # #
     E2=inner(psi',MPO(Hrf),psi)
     @test E0 ≈ E2 atol = eps
+end
+
+function ITensorMPOCompression.get_Dw(H::reg_form_MPO)
+    return get_Dw(MPO(H))
+end
+
+@testset "Compare Dws for Ac orthogonalized hand built MPO, vs Auto MPO, NNN=$NNN, ul=$ul, qns=$qns" for NNN in [1,5,8,12], ul in [lower,upper], qns in [false,true]
+    N=2*NNN+4 
+    sites = siteinds("S=1/2",N,conserve_qns=qns);
+    Hhand=reg_form_MPO(make_transIsing_MPO(sites,NNN;ul=ul))
+    Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul)
+    ac_orthogonalize!(Hhand,right)
+    ac_orthogonalize!(Hhand,left)
+    @test get_Dw(Hhand)==get_Dw(Hauto)
 end
 
 

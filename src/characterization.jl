@@ -164,7 +164,7 @@ function check_ortho(W::ITensor,ms::matrix_state,eps::Float64=default_eps)::Bool
     if order(Id)==2
         is_can = norm(dense(Id)-delta(forward,dag(forward')))/sqrt(DwDw)<eps
         if !is_can
-            @show Id
+            #@show Id
         end
     elseif order(Id)==0
         is_can = abs(scalar(Id)-d)<eps

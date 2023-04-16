@@ -223,6 +223,12 @@ function ac_orthogonalize!(H::reg_form_MPO,lr::orth_type;eps::Float64=1e-14,kwar
     end
 end
 
+function ac_orthogonalize!(H::MPO,lr::orth_type;kwargs...) 
+    Hrf=reg_form_MPO(H)
+    ac_orthogonalize!(Hrf,lr;kwargs)
+    return MPO(Hrf)
+end
+
 #
 #--------------------------------------------------------------------------------------------
 #
