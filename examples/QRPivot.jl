@@ -214,22 +214,6 @@ function ITensorMPOCompression.check_ortho(H::reg_form_MPO,lr::orth_type,eps::Fl
     return true
 end
 
-# function Base.getindex(H::reg_form_MPO,n::Int64) 
-#     return getindex(data(H),n)
-# end
-
-# Base.length(H::reg_form_MPO)=length(H.data)
-# function Base.iterate(H::reg_form_MPO, state::Int=1)
-#     (state > length(H)) && return nothing
-#     return (H[state], state + 1)
-# end
-
-# function Base.reverse(H::reg_form_MPO)
-#     return map(n->H[n],length(H):-1:1)
-# end
-
-
-
 #-------------------------------------------------------------------------------
 #
 #  Blocking functions
@@ -284,7 +268,7 @@ end
 # symbols from here: https://www.compart.com/en/unicode/block/U+1D400
 extract_blocks(W::reg_form_Op,lr::orth_type;kwargs...)=extract_blocks(W.W,W.ileft,W.iright,matrix_state(W.ul,lr);kwargs...)
 
-function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=false,c=true,b=false,d=false,A=false,Ac=false,I=true,fix_inds=false)::regform_blocks
+function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=false,c=true,b=false,d=false,A=false,Ac=false,I=true,fix_inds=false,swap_bc=true)::regform_blocks
     @assert hasinds(W,ir,ic)
     @assert tags(ir)!=tags(ic)
     @assert plev(ir)==0
@@ -309,7 +293,7 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
         @warn "extract_blocks: fix_inds requires d=true."
         d=true
     end
-    if !llur(ms) #not lower-left or upper-right
+    if !llur(ms) && swap_bc #not lower-left or upper-right
         b,c=c,b #swap flags
     end
 
@@ -365,7 +349,7 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
             rfb.irA,rfb.icA=rfb.irb,rfb.icc
         end
     end
-    if !llur(ms) #not lower-left or upper-right
+    if !llur(ms) && swap_bc #not lower-left or upper-right
         rfb.𝒃,rfb.𝒄=rfb.𝒄,rfb.𝒃
         rfb.irb,rfb.irc=rfb.irc,rfb.irb
         rfb.icb,rfb.icc=rfb.icc,rfb.icb
@@ -439,10 +423,10 @@ function is_gauge_fixed(W::ITensor,il::Index{T},ir::Index{T},ul::reg_form,eps::F
     igf=true
     ms=matrix_state(ul,left)
     Wb=extract_blocks(W,il,ir,ms;c=true,b=true)
-    if b && dim(il)>1
+    if b && !isnothing(Wb.𝒃) 
         igf=igf && norm(b0(Wb))<eps
     end
-    if c && dim(ir)>1
+    if c && !isnothing(Wb.𝒄)
         igf=igf && norm(c0(Wb))<eps
     end
     return igf

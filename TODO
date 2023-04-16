@@ -90,13 +90,13 @@ Ac blocking code:
         Done:b) call set_𝑨𝒄_block or set_𝑨b_block
         Done:c) set_𝑨𝒄_block calls set_𝒄_block is nr==1
         Done:d) set_𝑨b_block calls set_b_block is nr==1
-  -Make a struct MPO_with_links,  has ils, irs, ul, d0,dN
-    Same Op_with_links il,ir,ul
+  Done: -Make a struct MPO_with_links,  has ils, irs, ul, d0,dN
+  Done:   Same Op_with_links il,ir,ul
     -Ask Matt if he is already doing this?
-    -Do QR pivot PR first.
+  Done:   -Do QR pivot PR first.
 
   -format
-  -Test with pivoting
+  Deon: -Test with pivoting
   -Move code into compression module.
 
 Fix Unknown:
@@ -323,6 +323,3 @@ Umpo = apply(U, Id; cutoff=1e-15)
 
 That form could make it easier to apply the circuit (or just a gate) to the Hamiltonian MPO to keep it in a form where it can be used with the Parker et al. algorithm.
 
-rs = (2:4, 2:4, 1:2, 1:2)
-bs = Block{4}[Block(3, 2, 1, 1), Block(3, 2, 2, 2), Block(2, 2, 1, 1), Block(2, 2, 2, 2), Block(3, 3, 1, 1), Block(3, 3, 2, 2)]
-bs = Block{4}[Block(2, 1, 1, 1), Block(2, 1, 2, 2), Block(1, 1, 1, 1), Block(1, 1, 2, 2), Block(2, 2, 1, 1), Block(2, 2, 2, 2)]
