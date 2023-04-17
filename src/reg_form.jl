@@ -10,7 +10,11 @@ mutable struct reg_form_Op
         @assert hasinds(W,ileft,iright)
         return new(W,ileft,iright,ul)
     end
+    function reg_form_Op(W::ITensor,ul::reg_form) 
+        return new(W,Index(1),Index(1),ul)
+    end
 end
+
 
 function Base.getindex(Wrf::reg_form_Op,rleft::UnitRange,rright::UnitRange)
     return Wrf.W[Wrf.ileft=>rleft,Wrf.iright=>rright]
@@ -31,6 +35,10 @@ function check(Wrf::reg_form_Op)
     end
 end
 
+#-----------------------------------------------------------------------
+#
+#  Finite lattice with open BCs
+#
 mutable struct reg_form_MPO <: AbstractMPS
     data::Vector{reg_form_Op}
     llim::Int
@@ -128,4 +136,62 @@ function check_ortho(H::reg_form_MPO,lr::orth_type,eps::Float64=default_eps)::Bo
         !check_ortho(H[n],lr,eps) && return false
     end
     return true
+end
+
+ITensors.inds(Wrf::reg_form_Op)=inds(Wrf.W)
+function ITensors.setinds(Wrf::reg_form_Op,is)::reg_form_Op
+    ITensors.setinds(Wrf.W,is)
+    Wrf.ileft,Wrf.iright=parse_links(Wrf.W,left)
+    return Wrf
+end
+#-----------------------------------------------------------------------
+#
+#  Infinite lattice with unit cell
+#
+function ITensorInfiniteMPS.translatecell(translator::Function, Wrf::reg_form_Op, n::Integer)
+    return ITensors.setinds(Wrf, ITensorInfiniteMPS.translatecell(translator, inds(Wrf), n))
+end
+  
+
+mutable struct reg_form_iMPO <: AbstractInfiniteMPS
+    data::Vector{reg_form_Op}
+    llim::Int
+    rlim::Int
+    reverse::Bool
+    ul::reg_form
+    function reg_form_iMPO(H::InfiniteMPO,ul::reg_form)
+        N=length(H)
+        data=CelledVector{reg_form_Op}(undef,N)
+        for n in eachindex(H)
+            data[n]=reg_form_Op(H[n],ul)
+        end
+        return new(data,H.llim,H.rlim,false,ul)
+    end
+    function reg_form_iMPO(Ws::Vector{reg_form_Op},llim::Int64,rlim::Int64,ul::reg_form)
+        return new(Ws,llim,rlim,false,ul)
+    end
+end
+
+data(H::reg_form_iMPO)=H.data
+
+function Ws(H::reg_form_iMPO)
+    return map(n-> H[n].W,1:length(H))
+end
+
+Base.length(H::reg_form_iMPO) = length(H.data)
+Base.reverse(H::reg_form_iMPO) = reg_form_iMPO(Base.reverse(H.data),H.llim,H.rlim,H.reverse,H.ul)
+Base.iterate(H::reg_form_iMPO, args...) = iterate(H.data, args...)
+Base.getindex(H::reg_form_iMPO, n::Integer) = getindex(H.data,n)
+Base.setindex!(H::reg_form_iMPO, n::Integer) = setindex!(H.data, n)
+
+function reg_form_iMPO(H::InfiniteMPO,eps::Float64=1e-14)
+    (bl,bu)=detect_regular_form(H,eps)
+    if !(bl || bu)
+        throw(ErrorException("MPO++(H::MPO), H must be in either lower or upper regular form"))
+    end
+    if (bl && bu)
+        #@pprint(H[1])
+    end
+    ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
+    return reg_form_iMPO(H,ul)
 end

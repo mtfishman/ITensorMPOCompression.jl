@@ -7,7 +7,7 @@ using ITensorInfiniteMPS
 import ITensors: QNIndex, addqns, rq, AbstractMPS, isortho, orthocenter, Indices, linkind
 import ITensors.BlockSparseTensor,ITensors.DenseTensor,ITensors.DiagTensor,ITensors.tensor
 
-import ITensorInfiniteMPS: AbstractInfiniteMPS
+import ITensorInfiniteMPS: AbstractInfiniteMPS, translatecell
 import Base: similar, reverse
 
 export block_qx #qx related
@@ -38,6 +38,7 @@ export IndexRange, indices, range, ranges, getperm, permute, start
 #  New ac_qx
 #
 export reg_form_MPO, extract_blocks, is_gauge_fixed, gauge_fix!, ac_qx, ac_orthogonalize!
+export reg_form_iMPO
 
 
 macro mpoc_assert(ex)
@@ -330,6 +331,7 @@ end
 
 include("subtensor.jl")
 include("reg_form.jl")
+include("blocking.jl")
 include("util.jl")
 include("gauge_fix.jl") 
 include("hamiltonians.jl")
@@ -337,7 +339,6 @@ include("hamiltonians_AutoMPO.jl")
 include("hamiltonians_infinite.jl")
 include("qx.jl")
 include("characterization.jl") 
-include("blocking.jl")
 include("orthogonalize.jl")
 include("truncate.jl")
 
