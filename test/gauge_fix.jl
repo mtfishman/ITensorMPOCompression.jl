@@ -2,7 +2,7 @@ using ITensors
 using ITensorMPOCompression
 using ITensorInfiniteMPS
 using Test
-using Revise,Printf
+using Revise,Printf,SparseArrays
 Base.show(io::IO, f::Float64) = @printf(io, "%1.1e", f) #dumb way to control float output
 
 models=[
@@ -50,7 +50,7 @@ import ITensorMPOCompression: check, extract_blocks, A0, b0, c0, vector_o2, reg_
 
 @testset "Gauge fix infinite $(model[1]), qns=$qns, ul=$ul" for model in models, qns in [false], ul=[lower]
     initstate(n) = "↑"
-    N,NNN=9,4
+    N,NNN=4,4
     si = infsiteinds(model[2], N; initstate, conserve_qns=qns)
     H0=model[1](si,NNN;ul=ul)
     Hrf=reg_form_iMPO(H0)
@@ -81,33 +81,38 @@ import ITensorMPOCompression: check, extract_blocks, A0, b0, c0, vector_o2, reg_
         ir+=size(A_0,1)
         ic+=size(A_0,2)
     end
-    @show norm(b0s) norm(c0s) norm.(A0s)
-
 
     @assert nr==nc
     n=nr
     N=length(A0s)
-    Ms,Mt=zeros(n,n),zeros(n,n)
+    Ms,Mt=spzeros(n,n),spzeros(n,n)
     ib,ib=1,1
     for n in eachindex(A0s)
         nr,nc=size(A0s[n])
         ir,ic=irb[n],icb[n]
-        Ms[irb[n]:irb[n]+nr-1,icb[n]:icb[n]+nc-1]=A0s[n]
-        Mt[irb[n]:irb[n]+nr-1,icb[n]:icb[n]+nc-1]=Matrix(LinearAlgebra.I,nr,nc)
+        #
+        #  These system will generally not bee so big that sparse improves performance significantly.
+        #
+        sparseA0=sparse(A0s[n])
+        droptol!(sparseA0,1e-15)
+        Ms[irb[n]:irb[n]+nr-1,icb[n]:icb[n]+nc-1]=sparseA0
+        Mt[irb[n]:irb[n]+nr-1,icb[n]:icb[n]+nc-1]=sparse(LinearAlgebra.I,nr,nc)
         if n==1
-            Ms[irb[n]:irb[n]+nr-1,icb[N]:icb[N]+nc-1]=-Matrix(LinearAlgebra.I,nr,nc)
-            Mt[irb[n]:irb[n]+nr-1,icb[N]:icb[N]+nc-1]=-A0s[n]
+            Ms[irb[n]:irb[n]+nr-1,icb[N]:icb[N]+nc-1]=-sparse(LinearAlgebra.I,nr,nc)
+            Mt[irb[n]:irb[n]+nr-1,icb[N]:icb[N]+nc-1]=-sparseA0
         else
-            Ms[irb[n]:irb[n]+nr-1,icb[n-1]:icb[n]-1]=-Matrix(LinearAlgebra.I,nr,nc)
-            Mt[irb[n]:irb[n]+nr-1,icb[n-1]:icb[n]-1]=-A0s[n]
+            Ms[irb[n]:irb[n]+nr-1,icb[n-1]:icb[n]-1]=-sparse(LinearAlgebra.I,nr,nc)
+            Mt[irb[n]:irb[n]+nr-1,icb[n-1]:icb[n]-1]=-sparseA0
         end
     end
+    @show length(Ms.nzval)/(n*n)
+    @show length(Mt.nzval)/(n*n)
     s=Ms\b0s
     t=transpose(transpose(Mt)\c0s)
-    # display(s)
+    # # display(s)
     # display(t)
-    @show norm(Ms*s-b0s)
-    @show norm(transpose(t*Mt)-c0s)
+    @test norm(Ms*s-b0s)<1e-15
+    @test norm(transpose(t*Mt)-c0s)<1e-15
 end
 
 nothing
