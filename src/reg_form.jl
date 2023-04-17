@@ -163,13 +163,14 @@ mutable struct reg_form_iMPO <: AbstractInfiniteMPS
         N=length(H)
         data=CelledVector{reg_form_Op}(undef,N)
         for n in eachindex(H)
-            data[n]=reg_form_Op(H[n],ul)
+            il,ir=parse_links(H[n])
+            data[n]=reg_form_Op(H[n],il,ir,ul)
         end
         return new(data,H.llim,H.rlim,false,ul)
     end
-    function reg_form_iMPO(Ws::Vector{reg_form_Op},llim::Int64,rlim::Int64,ul::reg_form)
-        return new(Ws,llim,rlim,false,ul)
-    end
+    # function reg_form_iMPO(Ws::Vector{reg_form_Op},llim::Int64,rlim::Int64,ul::reg_form)
+    #     return new(Ws,llim,rlim,false,ul)
+    # end
 end
 
 data(H::reg_form_iMPO)=H.data

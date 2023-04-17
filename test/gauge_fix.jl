@@ -3,7 +3,7 @@ using ITensorMPOCompression
 using ITensorInfiniteMPS
 using Test
 using Revise,Printf
-Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
+Base.show(io::IO, f::Float64) = @printf(io, "%1.1e", f) #dumb way to control float output
 
 models=[
     [make_transIsing_MPO,"S=1/2",true],
@@ -45,16 +45,69 @@ models=[
     # (make_Heisenberg_AutoiMPO,"S=1"),
     (make_Hubbard_AutoiMPO,"Electron")
 ]
+
+import ITensorMPOCompression: check, extract_blocks, A0, b0, c0, vector_o2, reg_form_Op
+
 @testset "Gauge fix infinite $(model[1]), qns=$qns, ul=$ul" for model in models, qns in [false], ul=[lower]
     initstate(n) = "↑"
-    N,NNN=4,2
+    N,NNN=9,4
     si = infsiteinds(model[2], N; initstate, conserve_qns=qns)
     H0=model[1](si,NNN;ul=ul)
     Hrf=reg_form_iMPO(H0)
-    for W in Hrf
-        ITensorMPOCompression.check(W)
-    end
+    for n in eachindex(Hrf)
+        il,ir=parse_links(Hrf[n].W)
+        Hrf[n].ileft=il
+        Hrf[n].iright=ir
+    end 
 
+    lr=left
+    A0s=Vector{Matrix}()
+    b0s=Vector{Float64}()
+    c0s=Vector{Float64}()
+    nr,nc=0,0
+    irb,icb=Vector{Int64}(),Vector{Int64}()
+    ir,ic=1,1
+    for W in Hrf
+        check(W)
+        Wb=extract_blocks(W,lr;all=true)
+        A_0=matrix(Wb.irA,A0(Wb),Wb.icA)
+        push!(A0s,A_0)
+        append!(b0s,vector_o2(b0(Wb)))
+        append!(c0s,vector_o2(c0(Wb)))
+        push!(irb,ir)
+        push!(icb,ic)
+        nr+=size(A_0,1)
+        nc+=size(A_0,2)
+        ir+=size(A_0,1)
+        ic+=size(A_0,2)
+    end
+    @show norm(b0s) norm(c0s) norm.(A0s)
+
+
+    @assert nr==nc
+    n=nr
+    N=length(A0s)
+    Ms,Mt=zeros(n,n),zeros(n,n)
+    ib,ib=1,1
+    for n in eachindex(A0s)
+        nr,nc=size(A0s[n])
+        ir,ic=irb[n],icb[n]
+        Ms[irb[n]:irb[n]+nr-1,icb[n]:icb[n]+nc-1]=A0s[n]
+        Mt[irb[n]:irb[n]+nr-1,icb[n]:icb[n]+nc-1]=Matrix(LinearAlgebra.I,nr,nc)
+        if n==1
+            Ms[irb[n]:irb[n]+nr-1,icb[N]:icb[N]+nc-1]=-Matrix(LinearAlgebra.I,nr,nc)
+            Mt[irb[n]:irb[n]+nr-1,icb[N]:icb[N]+nc-1]=-A0s[n]
+        else
+            Ms[irb[n]:irb[n]+nr-1,icb[n-1]:icb[n]-1]=-Matrix(LinearAlgebra.I,nr,nc)
+            Mt[irb[n]:irb[n]+nr-1,icb[n-1]:icb[n]-1]=-A0s[n]
+        end
+    end
+    s=Ms\b0s
+    t=transpose(transpose(Mt)\c0s)
+    # display(s)
+    # display(t)
+    @show norm(Ms*s-b0s)
+    @show norm(transpose(t*Mt)-c0s)
 end
 
 nothing
