@@ -166,6 +166,9 @@ A0(rfb::regform_blocks)::ITensor=rfb.𝑨*dag(rfb.𝕀)/d(rfb)
 function swap_ul(ileft::Index,iright::Index,ul::reg_form)
     return ul==lower ? (ileft,iright,dim(ileft),dim(iright)) :  (iright,ileft,dim(iright),dim(ileft))
 end
+function swap_ul(Wrf::reg_form_Op)
+    return Wrf.ul==lower ? (Wrf.ileft,Wrf.iright,dim(Wrf.ileft),dim(Wrf.iright)) :  (Wrf.iright,Wrf.ileft,dim(Wrf.iright),dim(Wrf.ileft))
+end
 # lower left or upper right
 llur(ul::reg_form,lr::orth_type)= lr==left && ul==lower || lr==right&&ul==upper
 llur(W::reg_form_Op,lr::orth_type)=llur(W.ul,lr)
@@ -179,14 +182,6 @@ function extract_blocks(Wrf::reg_form_Op,lr::orth_type;all=false,c=true,b=false,
     check(Wrf)
     @assert plev(Wrf.ileft)==0
     @assert plev(Wrf.iright)==0
-    # if dir(Wrf.W,ic)!=dir(ic)
-    #     ic=dag(ic)
-    # end
-    # if dir(W,ir)!=dir(ir)
-    #     ir=dag(ir)
-    # end
-    # @assert !hasqns(ir) || dir(W,ir)==dir(ir)
-    # @assert !hasqns(ic) || dir(W,ic)==dir(ic)
     W=Wrf.W
     ir,ic=Wrf.ileft,Wrf.iright
     if Wrf.ul==upper
@@ -269,63 +264,54 @@ function extract_blocks(Wrf::reg_form_Op,lr::orth_type;all=false,c=true,b=false,
 end
 
 
-
-function set_𝒃_block!(W::ITensor,𝒃::ITensor,ileft::Index,iright::Index,ul::reg_form)
-    @assert hasinds(W,ileft,iright)
-    i1,i2,n1,n2=swap_ul(ileft,iright,ul)
-    W[i1=>2:n1-1,i2=>1:1]=𝒃
+function set_𝒃_block!(Wrf::reg_form_Op,𝒃::ITensor)
+    check(Wrf)
+    i1,i2,n1,n2=swap_ul(Wrf)
+    Wrf.W[i1=>2:n1-1,i2=>1:1]=𝒃
 end
 
-function set_𝒄_block!(W::ITensor,𝒄::ITensor,ileft::Index,iright::Index,ul::reg_form)
-    @assert hasinds(W,ileft,iright)
-    i1,i2,n1,n2=swap_ul(ileft,iright,ul)
-    W[i1=>n1:n1,i2=>2:n2-1]=𝒄
+function set_𝒄_block!(Wrf::reg_form_Op,𝒄::ITensor)
+    check(Wrf)
+    i1,i2,n1,n2=swap_ul(Wrf)
+    Wrf.W[i1=>n1:n1,i2=>2:n2-1]=𝒄
 end
-function set_𝒃𝒄_block!(W::ITensor,𝒃𝒄::ITensor,ileft::Index,iright::Index,ms::matrix_state)
-    if llur(ms)
-        set_𝒃_block!(W,𝒃𝒄,ileft,iright,ms.ul)
+
+function set_𝒃𝒄_block!(Wrf::reg_form_Op,𝒃𝒄::ITensor,lr::orth_type)
+    if llur(Wrf,lr)
+        set_𝒃_block!(Wrf,𝒃𝒄)
     else
-        set_𝒄_block!(W,𝒃𝒄,ileft,iright,ms.ul)
+        set_𝒄_block!(Wrf,𝒃𝒄)
     end
 end
 
 # noop versions for when b/c are empty.  Happens in edge ops of H.
-function set_𝒃𝒄_block!(::ITensor,::Nothing,::Index,::Index,::matrix_state)
-end
-function set_𝒃_block!(::ITensor,::Nothing,::Index,::Index,::reg_form)
-end
-function set_𝒄_block!(::ITensor,::Nothing,::Index,::Index,::reg_form)
+function set_𝒃𝒄_block!(::reg_form_Op,::Nothing,::orth_type)
 end
 
-function set_𝒅_block!(W::ITensor,𝒅::ITensor,ileft::Index,iright::Index,ul::reg_form)
-    @assert hasinds(W,ileft,iright)
-    i1,i2,n1,n2=swap_ul(ileft,iright,ul)
-    W[i1=>n1:n1,i2=>1:1]=𝒅
+function set_𝒅_block!(Wrf::reg_form_Op,𝒅::ITensor)
+    check(Wrf)
+    i1,i2,n1,n2=swap_ul(Wrf)
+    Wrf.W[i1=>n1:n1,i2=>1:1]=𝒅
 end
 
-function set_𝕀_block!(W::ITensor,𝕀::ITensor,ileft::Index,iright::Index,ul::reg_form)
-    @assert hasinds(W,ileft,iright)
-    i1,i2,n1,n2=swap_ul(ileft,iright,ul)
-    n1>1 && assign!(W,𝕀,i1=>1,i2=>1)
-    n2>1 && assign!(W,𝕀,i1=>n1,i2=>n2)
+function set_𝕀_block!(Wrf::reg_form_Op,𝕀::ITensor)
+    check(Wrf)
+    i1,i2,n1,n2=swap_ul(Wrf)
+    n1>1 && assign!(Wrf.W,𝕀,i1=>1,i2=>1)
+    n2>1 && assign!(Wrf.W,𝕀,i1=>n1,i2=>n2)
 end
 
-function set_𝑨𝒄_block(W::ITensor,𝑨𝒄::ITensor,ileft::Index,iright::Index,ms::matrix_state)
-    @assert hasinds(W,ileft,iright)
-    i1,i2,n1,n2=swap_ul(ileft,iright,ms.ul)
-    if llur(ms) #lower left/upper right
+function set_𝑨𝒄_block(Wrf::reg_form_Op,𝑨𝒄::ITensor,lr::orth_type)
+    check(Wrf)
+    i1,i2,n1,n2=swap_ul(Wrf)
+    if llur(Wrf,lr) #lower left/upper right
         min1=Base.min(n1,2)
-        W[i1=>min1:n1,i2=>2:n2-1]=𝑨𝒄
+        Wrf.W[i1=>min1:n1,i2=>2:n2-1]=𝑨𝒄
     else #lower right/upper left
         max2=Base.max(n2-1,1)
-        W[i1=>2:n1-1,i2=>1:max2]=𝑨𝒄
+        Wrf.W[i1=>2:n1-1,i2=>1:max2]=𝑨𝒄
     end
 end
-
-
-
-
-
 
 #
 #  o1   add row to RL       o2  add column to RL

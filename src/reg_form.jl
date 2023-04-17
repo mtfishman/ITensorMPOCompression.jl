@@ -8,7 +8,6 @@ mutable struct reg_form_Op
     ul::reg_form
     function reg_form_Op(W::ITensor,ileft::Index,iright::Index,ul::reg_form) 
         @assert hasinds(W,ileft,iright)
-        @assert is_regular_form(W,ul)
         return new(W,ileft,iright,ul)
     end
 end
@@ -30,7 +29,6 @@ function check(Wrf::reg_form_Op)
         @mpoc_assert dir(Wrf.W,Wrf.ileft)==dir(Wrf.ileft)
         @mpoc_assert dir(Wrf.W,Wrf.iright)==dir(Wrf.iright)
     end
-    @mpoc_assert is_regular_form(Wrf.W,Wrf.ul)
 end
 
 mutable struct reg_form_MPO <: AbstractMPS

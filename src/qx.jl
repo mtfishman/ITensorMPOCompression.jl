@@ -247,11 +247,12 @@ function insert_Q(Wb::regform_blocks,𝐐::ITensor,ileft::Index,ic::Index,iq::In
   iqp=redim1(iq,1,1,space(ilf))  #pad with 1 at the start and 1 and the end: iqp =(1,iq,1).
   Wp=ITensor(0.0,ilb,iqp,is)
   ileft,iright =  ms.lr==left ? (ilb,iqp) :  (iqp,ilb)
-  set_𝒃𝒄_block!(Wp,Wb.𝒃,ileft,iright,ms) #preserve b or c block from old W
-  set_𝒅_block!(Wp,Wb.𝒅,ileft,iright,ms.ul) #preserve d block from old W
-  set_𝕀_block!(Wp,Wb.𝕀,ileft,iright,ms.ul) #init I blocks from old W
-  set_𝑨𝒄_block(Wp,𝐐,ileft,iright,ms) #Insert new Qs form QR decomp
-  return Wp,iqp
+  Wrfp=reg_form_Op(Wp,ileft,iright,ms.ul)
+  set_𝒃𝒄_block!(Wrfp,Wb.𝒃,ms.lr) #preserve b or c block from old W
+  set_𝒅_block!(Wrfp,Wb.𝒅) #preserve d block from old W
+  set_𝕀_block!(Wrfp,Wb.𝕀) #init I blocks from old W
+  set_𝑨𝒄_block(Wrfp,𝐐,ms.lr) #Insert new Qs form QR decomp
+  return Wrfp.W,iqp
 end
 
 function ac_qx(W::reg_form_Op,lr::orth_type;kwargs...)

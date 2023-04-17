@@ -57,14 +57,14 @@ function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
         𝒅⎖=𝒅+𝒕ₙ₋₁*𝒃
     end
     
-    set_𝒅_block!(W.W,𝒅⎖,W.ileft,W.iright,W.ul)
+    set_𝒅_block!(W,𝒅⎖)
     @assert is_regular_form(W)
 
     if !isnothing(𝒄⎖)
         if llur(matrix_state(W.ul,lr))
-            set_𝒄_block!(W.W,𝒄⎖,W.ileft,W.iright,W.ul)
+            set_𝒄_block!(W,𝒄⎖)
         else
-            set_𝒃_block!(W.W,𝒄⎖,W.ileft,W.iright,W.ul)
+            set_𝒃_block!(W,𝒄⎖)
         end
     end
     @assert is_regular_form(W)
