@@ -72,6 +72,7 @@ function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spec
     return W,RL,spectrum,false
 end
 
+
 function one_trunc_sweep!(H::MPO,ul::reg_form;kwargs...)
     lr::orth_type=get(kwargs, :orth, left)
     verbose::Bool=get(kwargs, :verbose, false)
@@ -219,6 +220,132 @@ function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
         nsweeps+=1
     end
     return ss 
+end
+
+
+
+
+function truncate(Wrf::reg_form_Op,lr::orth_type;kwargs...)::Tuple{reg_form_Op,ITensor,Spectrum,Bool}
+    ms=matrix_state(Wrf.ul,lr)
+    iforward,_=parse_links(Wrf.W,lr) # W[l=$(n-1)l=$n]=W[r,c]
+    # establish some tag strings then depend on lr.
+    (tsvd,tuv) = lr==left ? ("qx","Link,u") : ("m","Link,v")
+    #
+    # Block repecting QR/QL/LQ/RQ factorization.  RL=L or R for upper and lower.
+    # here we purposely turn off rank reavealing feature (rr_cutoff=-1.0) to (mostly) avoid
+    # horizontal rectangular RL matricies which are hard to handle accurately.  All rank reduction
+    # should have been done in the ortho process anyway.
+    #
+    # @show inds(Wrf.W,tags="Link") Wrf.ileft Wrf.iright
+    check(Wrf)
+    Q,RL,iqx=ac_qx(Wrf,lr;kwargs...) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
+    RL=prime(RL,iqx)
+    RL=replacetags(RL,tags(iqx),"Link,qx";plev=1)
+    RL=noprime(RL)
+    Q.W=prime(Q.W,iqx)
+    Q.W=replacetags(Q.W,tags(iqx),"Link,qx";plev=1)
+    Q.W=noprime(Q.W,tags="Link")
+    
+    iqx=replacetags(iqx,tags(iqx),"Link,qx")
+    #@show "truncate" iqx
+    # expensive
+    # if order(Q)==4
+    #     @mpoc_assert check_ortho(Q,ms,eps)
+    #     @mpoc_assert is_regular_form(Q,ul,eps)
+    # end
+    c=noncommonind(RL,iqx) #if size changed the old c is not lnger valid
+    #
+    #  If the RL is rectangular in wrong way, then factoring out M is very difficult.
+    #  For now we just bail out.
+    #
+    if dim(c)>dim(iqx) || dim(c)<3
+        replacetags!(RL,"Link,qx",tags(iforward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+        replacetags!(Q ,"Link,qx",tags(iforward)) #W[l=n-1,l=n]
+        return Q,RL,Spectrum([],0),true
+    end
+    
+    #
+    #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
+    #  M will be returned as a Dw-2 X Dw-2 interior matrix.  M_sans in the Parker paper.
+    #
+    M,RL_prime,im=getM(RL,iqx,Wrf.ul) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
+    #  
+    #  At last we can svd and compress M using epsSVD as the cutoff.  M should be dense.
+    #    
+    isvd=findinds(M,tsvd)[1] #decide the left index
+    U,s,V,spectrum,iu,iv=svd(M,isvd;kwargs...) # ns sing. values survive compression
+    ns=dim(inds(s)[1])
+
+    #@show diag(array(s))
+   
+    #
+    #  No recontrsuction RL, and W in the truncated space.
+    #
+    if lr==left
+        iup=redim(iu,ns+2,1)
+        RL=grow(s*V,iup,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
+        Uplus=grow(U,dag(iqx),dag(iup))
+        Wrf.W=Q.W*Uplus #W[l=n-1,u]
+        Wrf.iright=settags(dag(iup),tags(iforward))
+    else # right
+        ivp=redim(iv,ns+2,1)
+        RL=RL_prime*grow(U*s,im,ivp) #RL[l=n-1,v] dim Dw1 x ns+2
+        Vplus=grow(V,dag(iqx),dag(ivp)) #lq has the dir of Q so want the opposite on Vplus
+        Wrf.W=Vplus*Q.W #W[l=n-1,v]
+        Wrf.ileft=settags(dag(ivp),tags(iforward))
+    end
+
+    replacetags!(RL,tuv,tags(iforward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+    replacetags!(Wrf.W ,tuv,tags(iforward)) #W[l=n-1,l=n]
+    check(Wrf)
+    # expensive.
+    # @mpoc_assert is_regular_form(W,ul,eps)
+    # @mpoc_assert check_ortho(W,ms,eps)
+    #@show luq lvq inds(Q) inds(Wq) inds(RLq)
+    return Wrf,RL,spectrum,false
+end
+
+function ITensors.truncate!(H::reg_form_MPO,lr::orth_type;eps=1e-14,kwargs...)::bond_spectrums
+    if !isortho(H)
+        ac_orthogonalize!(H,lr;eps=eps,kwargs...)
+        ac_orthogonalize!(H,mirror(lr);eps=eps,kwargs...)
+    end
+    if !is_gauge_fixed(H,eps)
+        gauge_fix!(H)
+    end
+    ss=bond_spectrums(undef,length(H)-1)
+    link_offest = lr==left ? 0 : -1
+    rng=sweep(H,lr)
+    
+    if lr==left
+        for n in rng
+            nn=n+rng.step
+            #@show inds(H[n].W,tags="Link") H[n].ileft H[n].iright
+            check(H[n])
+            W,R,s,bail=truncate(H[n],lr;kwargs...)
+            H[n]=W
+            H[nn].ileft=noncommonind(R,H[nn].W)
+            H[nn].W=R*H[nn].W
+            check(H[n])
+            check(H[nn])
+            ss[n+link_offest]=s
+        end
+    else
+        for n in rng
+            nn=n+rng.step
+            check(H[n])
+            W,R,s,bail=truncate(H[n],lr;kwargs...)
+            H[n]=W
+            H[nn].iright=noncommonind(R,H[nn].W)
+            H[nn].W=R*H[nn].W
+            check(H[n])
+            check(H[nn])
+            ss[n+link_offest]=s
+        end
+    end
+    H.rlim = rng.stop+rng.step+1
+    H.llim = rng.stop+rng.step-1
+    return ss
 end
 
 @doc """

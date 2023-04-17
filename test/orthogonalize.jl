@@ -92,6 +92,7 @@ models=[
     ac_orthogonalize!(Hrf,left)
     @test is_regular_form(Hrf)
     @test check_ortho(Hrf,left)
+     @test isortho(Hrf,left)
     NNN<7 && @test is_gauge_fixed(Hrf,eps) #Now everything should be fixed, unless NNN is big
     #
     #  Expectation value check.
@@ -104,6 +105,7 @@ models=[
     ac_orthogonalize!(Hrf,right)
     @test is_regular_form(Hrf)
     @test check_ortho(Hrf,right)
+    @test isortho(Hrf,right)
     @test is_gauge_fixed(Hrf,eps) #Should still be gauge fixed
     #
     # #  Expectation value check.

@@ -176,12 +176,9 @@ llur(ms::matrix_state)=llur(ms.ul,ms.lr)
 #extract_blocks(W::reg_form_Op,lr::orth_type;kwargs...)=extract_blocks(W.W,W.ileft,W.iright,matrix_state(W.ul,lr);kwargs...)
 
 function extract_blocks(Wrf::reg_form_Op,lr::orth_type;all=false,c=true,b=false,d=false,A=false,Ac=false,I=true,fix_inds=false,swap_bc=true)::regform_blocks
-    @assert hasinds(Wrf.W,Wrf.ileft,Wrf.iright)
-    @assert tags(Wrf.ileft)!=tags(Wrf.iright)
+    check(Wrf)
     @assert plev(Wrf.ileft)==0
     @assert plev(Wrf.iright)==0
-    @assert !hasqns(Wrf.ileft) || dir(Wrf.W,Wrf.ileft)==dir(Wrf.ileft)
-    @assert !hasqns(Wrf.iright) || dir(Wrf.W,Wrf.iright)==dir(Wrf.iright)
     # if dir(Wrf.W,ic)!=dir(ic)
     #     ic=dag(ic)
     # end
@@ -359,7 +356,7 @@ end
 #  right matrix multiplication in the code.  THis simplified code requires the RL is square.
 #
 
-function getM(RL::ITensor,ul::reg_form)::Tuple{ITensor,ITensor,Index}
+function getM(RL::ITensor,iqx1::Index,ul::reg_form)::Tuple{ITensor,ITensor,Index}
     @mpoc_assert order(RL)==2
     @checkflux(RL)
     mtags=ts"Link,m"
@@ -376,6 +373,9 @@ function getM(RL::ITensor,ul::reg_form)::Tuple{ITensor,ITensor,Index}
     RL=replacetags(RL,tags(iqx),mtags)  #change Link,qx to Link,m
     iqx=replacetags(iqx,tags(iqx),mtags)
     im=redim(iqx,Dw) #new common index between M_plus and RL_prime
+    if dir(im)!=dir(iqx1)
+        im=dag(im)
+    end
     RL_prime=ITensor(0.0,im,il)
     #
     #  Copy over the perimeter of RL.
@@ -388,7 +388,8 @@ function getM(RL::ITensor,ul::reg_form)::Tuple{ITensor,ITensor,Index}
         RL_prime[im=>1:Dw,il=>1:1]=RL[iqx=>1:Dw,il=>1:1] #first col
     end
     
-    # Fill in interior diaginal
+    # Fill in interior diagonal
+    #@show inds(RL_prime) im il iqx
     for j1 in 2:Dw-1 #
         RL_prime[im=>j1,il=>j1]=1.0
     end

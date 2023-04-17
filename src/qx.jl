@@ -256,6 +256,7 @@ end
 
 function ac_qx(W::reg_form_Op,lr::orth_type;kwargs...)
   @checkflux(W.W)
+  @assert hasinds(W.W, W.ileft, W.iright)
   #@assert dir(W.ileft)==dir(dag(W.iright))
   Wb=extract_blocks(W,lr;Ac=true,all=true)
   ilf_Ac = llur(matrix_state(W.ul,lr)) ?  Wb.icAc : Wb.irAc

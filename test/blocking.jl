@@ -16,7 +16,7 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control flo
 
     Wrf=H[1]
     nr,nc=dim(Wrf.ileft),dim(Wrf.iright)
-    pprint(Wrf.W)
+    #pprint(Wrf.W)
     Wb=extract_blocks(Wrf,lr;all=true)
     @test norm(matrix(Wb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
     @test isnothing(Wb.𝑨) 

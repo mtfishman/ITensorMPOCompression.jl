@@ -10,7 +10,7 @@ using Revise
         "qx_unittests.jl",
         "hamiltonians.jl",
         "orthogonalize.jl",
-#        "truncate.jl"
+        "truncate.jl"
         ]
         print("$filename: ")
         @time include(filename)

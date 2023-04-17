@@ -62,7 +62,6 @@ Don't need: -block_qx Instead restoring full tri form, just use the part of the 
     i.e.   leave the A block scrambled.
 -System for hamitonians make_Hubbard_AutoiMPO => Hubbard_Auto_iMPO
 -Use an infinite=true flag for iMPOs?
-Done: -parse_links ... accept n=1 for link indices.
 -Clean up "where {Elt,N}" code.
 -Get rid of getV1 and setV1.  i.e. make all order(W)==4 by adding dummy indices.
 -Follow Matts kwargs guidelines
@@ -70,8 +69,29 @@ Done: -parse_links ... accept n=1 for link indices.
   in function calls.  Use linkinds, commoninds, uniqueinds.
 -For iMPOs set llim,rlim=-1,1 so that they are interpreted as non-ortho when N=1.
 -iMPO truncate user HL,HR instead of H,Hm ?
- Done: -Take out the h_mirror feature.
 -Go over all the Problems in VScode.  Are they real?
+-format
+-Move code into compression module.
+Ac blocking code:
+-no method matching order(::ITensorMPOCompression.reg_form_Op)
+
+Fix Unknown:
+-For RL_prime problems, try factor R+ = R'*M (instread of M*R) then R' will be square.
+  THis will only work if R' is orthogonal R_dagger'*R' = Id
+
+julia --sysimage /home/janr/.julia/sysimages/sys_itensors.so
+
+open("/home/janr/prof1.txt", "w") do s
+           Profile.print(IOContext(s, :displaysize => (24, 500)),format=:flat)
+       end
+
+
+       
+
+Old:
+Done: -parse_links ... accept n=1 for link indices.
+ Done: -Take out the h_mirror feature.
+Done: -Test with pivoting
 Ac blocking code:
   Done 2) -add_dummy_links! return irs,ils for left and right links.  Less dag calls.  harmonize ortho/gauge_fix!
     loops.  No more N+1 indexes.  
@@ -94,25 +114,6 @@ Ac blocking code:
   Done:   Same Op_with_links il,ir,ul
     -Ask Matt if he is already doing this?
   Done:   -Do QR pivot PR first.
-
-  -format
-  Deon: -Test with pivoting
-  -Move code into compression module.
-
-Fix Unknown:
--For RL_prime problems, try factor R+ = R'*M (instread of M*R) then R' will be square.
-  THis will only work if R' is orthogonal R_dagger'*R' = Id
-
-julia --sysimage /home/janr/.julia/sysimages/sys_itensors.so
-
-open("/home/janr/prof1.txt", "w") do s
-           Profile.print(IOContext(s, :displaysize => (24, 500)),format=:flat)
-       end
-
-
-       
-
-Old:
 Fixed: -Incomplete block transfer: truncate (make_transIsing_MPO,upper,"S=1/2"),
 Done: -Replace RL with X in bock_qx.
 Done: -refactor gauge fix in Block QX

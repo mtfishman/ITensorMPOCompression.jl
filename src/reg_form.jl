@@ -22,6 +22,17 @@ function is_regular_form(W::reg_form_Op,eps::Float64=default_eps)::Bool
     return detect_regular_form(W.W,eps)[i]
 end
 
+function check(Wrf::reg_form_Op)
+    @mpoc_assert tags(Wrf.ileft)!=tags(Wrf.iright)
+    @mpoc_assert hasinds(Wrf.W,Wrf.ileft)
+    @mpoc_assert hasinds(Wrf.W,Wrf.iright)
+    if hasqns(Wrf.W) 
+        @mpoc_assert dir(Wrf.W,Wrf.ileft)==dir(Wrf.ileft)
+        @mpoc_assert dir(Wrf.W,Wrf.iright)==dir(Wrf.iright)
+    end
+    @mpoc_assert is_regular_form(Wrf.W,Wrf.ul)
+end
+
 mutable struct reg_form_MPO <: AbstractMPS
     data::Vector{reg_form_Op}
     llim::Int

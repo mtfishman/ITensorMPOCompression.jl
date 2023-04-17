@@ -221,6 +221,8 @@ function ac_orthogonalize!(H::reg_form_MPO,lr::orth_type;eps::Float64=1e-14,kwar
             @assert is_regular_form(H[nn])
         end
     end
+    H.rlim = rng.stop+rng.step+1
+    H.llim = rng.stop+rng.step-1
 end
 
 function ac_orthogonalize!(H::MPO,lr::orth_type;kwargs...) 
