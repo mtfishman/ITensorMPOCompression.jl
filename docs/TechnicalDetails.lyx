@@ -125,7 +125,7 @@ literal "false"
 
  that naive compression of Hamiltonian MPOs results in numerical instabilities.
  What happens is that the largest two of the singular values resulting from
- the SVD factorization of an MPO matrix tend to grow rapidly with lattice
+ the SVD factorization of an MPO matrix, tend to grow rapidly with lattice
  size.
  Indeed they diverge in the thermodynamic limit.
  The root cause of the problem can be traced to the combination of intensive
@@ -188,7 +188,7 @@ The indexing methodology used in the
 ITensor
 \family default
  libraries (C++ and Julia) relieves the user from worrying about index order
- and as a result even factor ordering for matrix multiplication.
+ and as a result even the ordering for matrix multiplication.
  For example accessing a tensor element
 \family roman
 \series medium
@@ -304,7 +304,7 @@ ITensor
  strategy of simply getting something working with a large array of unit
  tests.
  After that we can start refactoring to simplify the code while constantly
- checking the unit test to make sure nothing gets broken in the process.
+ checking the unit tests to make sure nothing gets broken in the process.
  The same argument applies to run time optimization.
 \end_layout
 
@@ -673,14 +673,12 @@ where
 \end_inset
 
 .
- Parker et.
- al.
- do not explicitly state that 
+ 
 \begin_inset Formula $\hat{\boldsymbol{A}}$
 \end_inset
 
- must be triangular.
- Hand generated Hamiltonian MPOs are always either upper or lower triangular,
+ does not need to be triangular.
+ Hand generated Hamiltonian MPOs are generally either upper or lower triangular,
  but as we shall see SVD compression will not guarantee preservation of
  the triangular form, but it will preserve regular form.
 \end_layout
@@ -740,8 +738,7 @@ where
 
 \end_inset
 
-After compression is finished, the normal open boundary condition structure
- can be restored by contracting 
+The works directly with 
 \begin_inset Formula $\boldsymbol{𝑙}\hat{W}^{1}$
 \end_inset
 
@@ -749,38 +746,7 @@ After compression is finished, the normal open boundary condition structure
 \begin_inset Formula $\hat{W}^{N}\boldsymbol{𝑟}$
 \end_inset
 
-.
- 
-\end_layout
-
-\begin_layout Subsection
-Other conventions
-\end_layout
-
-\begin_layout Standard
-The paper consistently refers to 
-\begin_inset Formula $QR$
-\end_inset
-
- decomposition.
- But for generality we will also need 
-\begin_inset Formula $RQ$
-\end_inset
-
-, 
-\begin_inset Formula $QL$
-\end_inset
-
- and 
-\begin_inset Formula $LQ$
-\end_inset
-
- decompositions.
- We will refer to all of these as 
-\begin_inset Formula $QX$
-\end_inset
-
- decomposition.
+ which are column and row vectors.
 \end_layout
 
 \begin_layout Section
@@ -793,7 +759,7 @@ Before compression we must bring the MPO into canonical form.
 \end_layout
 
 \begin_layout Subsection
-Finite lattice canonical form
+V-block canonical form
 \end_layout
 
 \begin_layout Standard
@@ -805,7 +771,7 @@ Similarly to the MPS canonical form, this can be done by a modified
 \end_layout
 
 \begin_layout Subsubsection
-Block Respecting 
+V-block Respecting 
 \begin_inset Formula $QR$
 \end_inset
 
@@ -907,11 +873,11 @@ By the definition of how
 \begin_inset Formula $Q^{\dagger}Q=I$
 \end_inset
 
-, and it also happens to be upper triangular (as long as 
+, and it also happens to be triangular (as long as 
 \begin_inset Formula $\hat{\boldsymbol{A}}$
 \end_inset
 
- was upper triangular) with the same form as 
+ was triangular) with the same form as 
 \begin_inset Formula $\hat{V}$
 \end_inset
 
@@ -993,7 +959,7 @@ There are a number of details not mentioned above that the code must also
 
 \begin_layout Itemize
 There is gauge freedom between 
-\begin_inset Formula $Q$
+\begin_inset Formula $\hat{Q}$
 \end_inset
 
  and 
@@ -1013,31 +979,14 @@ ITensor
 
 \begin_layout Itemize
 In addition we also want the gauge with 
-\begin_inset Formula $1.0$
+\begin_inset Formula $\hat{Q}^{\dagger}\hat{Q}=dI$
 \end_inset
 
- in the top left corner of 
-\begin_inset Formula $R$
-\end_inset
-
-.
- By default the 
-\family typewriter
-lapack
-\family default
- routines return 
-\begin_inset Formula $R$
-\end_inset
-
- with a 
-\begin_inset Formula $\sqrt{d}$
-\end_inset
-
- in corner (
+ where 
 \begin_inset Formula $d$
 \end_inset
 
- is the dimension of the local Hilbert space).
+ is the dimension of the local Hilbert space.
  So 
 \begin_inset Formula $Q$
 \end_inset
@@ -1047,19 +996,7 @@ lapack
 \end_inset
 
  must be re-scaled accordingly.
- As a result 
-\begin_inset Formula $Q$
-\end_inset
-
- no longer satisfies 
-\begin_inset Formula $Q^{\dagger}Q=I$
-\end_inset
-
-, instead after gauge fixing we end up with 
-\begin_inset Formula $Q^{\dagger}Q=dI$
-\end_inset
-
-
+ 
 \end_layout
 
 \begin_layout Itemize
@@ -1094,18 +1031,14 @@ Float64
 \family typewriter
 lapack 
 \family default
-so we must add this feature to the 
-\begin_inset Formula $QX$
-\end_inset
-
- routines in 
+so we must add code the remove rows
 \family typewriter
-ITensor.
+.
  
 \end_layout
 
 \begin_layout Standard
-That is a summary block respecting 
+That is a summary V-block respecting 
 \begin_inset Formula $QR$
 \end_inset
 
@@ -1228,7 +1161,7 @@ noprefix "false"
 
 \end_inset
 
- where the operator orthogonaly condition is defined as (watch the cancelling
+ where the operator orthogonality condition is defined as (watch the canceling
  daggers!)
 \begin_inset Formula 
 \begin{equation}
@@ -1368,7 +1301,7 @@ status open
 \begin_inset Text
 
 \begin_layout Plain Layout
-V-Blocks
+V-blocks
 \end_layout
 
 \end_inset
@@ -2218,6 +2151,38 @@ Of course we just sweep backwards using
  decomposition to get a right canonical form.
 \end_layout
 
+\begin_layout Subsection
+Ac-block respecting canonical form
+\end_layout
+
+\begin_layout Standard
+An alternative to the V-block methods described above has been proposed
+ by Loı̈c Herviou 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "LH-notes"
+literal "false"
+
+\end_inset
+
+.
+ The idea is focus only the 
+\begin_inset Formula $\hat{\boldsymbol{A}}$
+\end_inset
+
+ and 
+\begin_inset Formula $\hat{\boldsymbol{c}}$
+\end_inset
+
+ block of the regular form.
+ This has a number of advantages that will be enumerated below, with a trade-off
+ in the form of slightly increased complexity in the algorithm.
+ In particular we first gauge transform the MPO prior to performing Ac-block
+ respecting orthogonalization step.
+ It turns out that we will need to do this gauge fix for compression of
+ iMPOs anyway, so the trade-off becomes inconsequential.
+\end_layout
+
 \begin_layout Subsubsection
 Gauge transforms
 \end_layout
@@ -2238,11 +2203,11 @@ where
  is the transformed operator.
  By definition a gauge transform is not supposed affect expectation values
  of the Hamiltonian.
- For lower regular form the general form 
+ For lower regular form the general form of 
 \begin_inset Formula $L$
 \end_inset
 
- the maintains regular form is
+ that maintains regular form is
 \begin_inset Formula 
 \[
 L=\begin{bmatrix}1 & 0 & 0\\
@@ -2300,7 +2265,7 @@ This form of
 \begin_inset Formula $L$
 \end_inset
 
- only affects the 
+ affects the 
 \begin_inset Formula $\hat{\boldsymbol{b}}$
 \end_inset
 
@@ -2316,7 +2281,11 @@ This form of
 \begin_inset Formula $\hat{W}$
 \end_inset
 
-.
+, but not the 
+\begin_inset Formula $\hat{\boldsymbol{A}}$
+\end_inset
+
+ block.
  Doing the matrix algebra in eq.
  
 \begin_inset Formula $\ref{eq:general gauge}$
@@ -2356,7 +2325,7 @@ This form of
 
 \end_inset
 
-from which we can read off
+from which we can read off the relations
 \begin_inset Formula 
 \[
 \hat{d}^{\prime}=\hat{d}+\boldsymbol{t}_{n-1}\hat{\boldsymbol{b}}-\boldsymbol{s}_{n}\hat{\boldsymbol{c}}^{\prime}
@@ -2380,6 +2349,14 @@ from which we can read off
 
 \end_inset
 
+
+\end_layout
+
+\begin_layout Subsubsection
+Gauge fixing for Ac-block respecting decomposition
+\end_layout
+
+\begin_layout Standard
 The orthogonality conditions are
 \begin_inset Formula 
 \[
@@ -2399,7 +2376,7 @@ The orthogonality conditions are
 
 \end_inset
 
-We need solve this system for 
+We need solve this system of recursion relations for all
 \begin_inset Formula $\boldsymbol{s}_{n}$
 \end_inset
 
@@ -2409,17 +2386,17 @@ We need solve this system for
 
 :
 \begin_inset Formula 
-\[
-\boldsymbol{s}_{n}=\left(\boldsymbol{b}_{0}+\boldsymbol{s}_{n-1}\right)A_{0}^{-1}
-\]
+\begin{equation}
+A_{0}\boldsymbol{s}_{n}=\left(\boldsymbol{b}_{0}+\boldsymbol{s}_{n-1}\right)\label{eq:s recusion}
+\end{equation}
 
 \end_inset
 
 
 \begin_inset Formula 
-\[
-\boldsymbol{t}_{n}=\boldsymbol{c}_{0}+\boldsymbol{t}_{n-1}A_{0}
-\]
+\begin{equation}
+\boldsymbol{t}_{n}=\boldsymbol{c}_{0}+\boldsymbol{t}_{n-1}A_{0}\label{eq:t recusion}
+\end{equation}
 
 \end_inset
 
@@ -2428,11 +2405,19 @@ There is no guarantee that
 \end_inset
 
  is invertable.
- So a better strategy may to be to sweep left to clearing out the 
+ So a better strategy is to sweep left to right, calculating the 
+\begin_inset Formula $\boldsymbol{t}_{n}$
+\end_inset
+
+'s and clearing out the 
 \begin_inset Formula $\boldsymbol{c}_{0}^{\prime}$
 \end_inset
 
-s and sweep back right to left and clear out the 
+s and the sweep back right to left, calculating the 
+\begin_inset Formula $\boldsymbol{s}_{n}$
+\end_inset
+
+'s and clearing out the 
 \begin_inset Formula $\boldsymbol{b}_{0}^{\prime}$
 \end_inset
 
@@ -2440,15 +2425,15 @@ s.
 \end_layout
 
 \begin_layout Subsubsection
-Triangular independent version
+Ac-block respecting QR decomposition
 \end_layout
 
 \begin_layout Standard
-We start with the tranformed 
+We start with the transformed 
 \begin_inset Formula $\hat{W}^{\prime}$
 \end_inset
 
- that satisfies the orthongonality conditions
+ that satisfies the orthogonality conditions
 \begin_inset Formula 
 \[
 \hat{W}^{\prime}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
@@ -2469,8 +2454,9 @@ Now instead of QL decomposing the whole V-block
 \begin_inset Formula $V$
 \end_inset
 
-, and we can us QR instead of QL to make the indpenedence of triangular
- form explicit.
+, and we can us QR instead of QL decomposition to make the Independence
+ of triangular form explicit.
+ Hence
 \begin_inset Formula 
 \[
 \begin{bmatrix}\hat{\boldsymbol{A}}\\
@@ -2565,8 +2551,52 @@ The key advantage here is we don't care about the shape of
 \begin_inset Formula $\mathsf{R}$
 \end_inset
 
-.
- It can evan be all scrambled from column pivoting.
+ which has the following advantages:
+\end_layout
+
+\begin_layout Enumerate
+We can QR or QL decomposition, which ever is most easily available (usually
+ QR) and convenient.
+\end_layout
+
+\begin_layout Enumerate
+We can use column pivoting QR decomposition: 
+\begin_inset Formula $Ap=QR$
+\end_inset
+
+, where 
+\begin_inset Formula $p$
+\end_inset
+
+ is a column permutation matrix.
+ This is the most numerically stable method for handling 
+\begin_inset Formula $QR$
+\end_inset
+
+ decomposition of singular matrices.
+ Rearranging: 
+\begin_inset Formula $A=QRp^{-1}$
+\end_inset
+
+ so 
+\begin_inset Formula $R$
+\end_inset
+
+ gets scrambled and is non-triangular which precludes using column pivoting
+ QR decomposition when using the V-block method
+\end_layout
+
+\begin_layout Enumerate
+For efficiency reasons the 
+\family typewriter
+ITensor
+\family default
+ library does its own sorting and combining of symmetry adapted blocks when
+ using block-sparse tensors.
+ As a result there is no guarantee then tensors will appear triangular after
+ QR decomposition.
+ This is a non issue for Ac-block method, but can cause serious problem
+ when using the V-block method.
 \end_layout
 
 \begin_layout Subsection
@@ -3796,7 +3826,7 @@ Explicit structure of all four
 \end_layout
 
 \begin_layout Subsection
-Emperically determined strategy
+Empirically determined strategy
 \end_layout
 
 \begin_layout Standard
@@ -3851,13 +3881,405 @@ where we have show the repeating unit cell, with
 \end_layout
 
 \begin_layout Subsection
+Gauge fixing for Ac-block respecting decomposition
+\end_layout
+
+\begin_layout Standard
+Prior to Ac-block respecting decomposition we gain need the gauge fix the
+ MPO using the same recusion relations as above (eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:s recusion"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ and eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:t recusion"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+) with two additional contraints
+\begin_inset Formula 
+\[
+s_{0}=s_{N},\quad t_{0}=t_{N}
+\]
+
+\end_inset
+
+where 
+\begin_inset Formula $N$
+\end_inset
+
+is the sise of the repeating unit cell.
+ For 
+\begin_inset Formula $N=1$
+\end_inset
+
+ we have
+\begin_inset Formula 
+\begin{equation}
+A_{0}\boldsymbol{s}_{1}=\left(\boldsymbol{b}_{0}+\boldsymbol{s}_{1}\right)\label{eq:s recusion-1}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\boldsymbol{t}_{1}=\boldsymbol{c}_{0}+\boldsymbol{t}_{1}A_{0}\label{eq:t recusion-1}
+\end{equation}
+
+\end_inset
+
+or
+\begin_inset Formula 
+\[
+\left(A_{0}-\mathsf{𝕀}\right)\boldsymbol{s}_{1}=\boldsymbol{b}_{0}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\boldsymbol{t}_{1}\left(\mathsf{𝕀}-A_{0}\right)=\boldsymbol{c}_{0}
+\]
+
+\end_inset
+
+which can be solved for 
+\begin_inset Formula $\boldsymbol{s}_{1}$
+\end_inset
+
+ and 
+\begin_inset Formula $\boldsymbol{t}_{1}$
+\end_inset
+
+.
+ For local Hamiltonians 
+\begin_inset Formula $A_{0}-\mathsf{𝕀}$
+\end_inset
+
+ is guaranteed to be non singular.
+ When for example 
+\begin_inset Formula $N=2$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+A_{0}^{1}\boldsymbol{s}_{1}=\left(\boldsymbol{b}_{0}^{1}+\boldsymbol{s}_{2}\right)
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+A_{0}^{2}\boldsymbol{s}_{2}=\left(\boldsymbol{b}_{0}^{2}+\boldsymbol{s}_{1}\right)
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\boldsymbol{t}_{1}=\boldsymbol{c}_{0}^{1}+\boldsymbol{t}_{2}A_{0}^{1}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\boldsymbol{t}_{2}=\boldsymbol{c}_{0}^{2}+\boldsymbol{t}_{1}A_{0}^{2}
+\]
+
+\end_inset
+
+or
+\begin_inset Formula 
+\[
+\begin{bmatrix}A_{0}^{1} & 0\\
+0 & A_{0}^{2}
+\end{bmatrix}\begin{bmatrix}\boldsymbol{s}_{1}\\
+\boldsymbol{s}_{2}
+\end{bmatrix}=\begin{bmatrix}\boldsymbol{b}_{0}^{1}\\
+\boldsymbol{b}_{0}^{2}
+\end{bmatrix}+\begin{bmatrix}0 & \mathsf{𝕀}\\
+\mathsf{𝕀} & 0
+\end{bmatrix}\begin{bmatrix}\boldsymbol{s}_{1}\\
+\boldsymbol{s}_{2}
+\end{bmatrix}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\begin{bmatrix}\mathsf{𝕀} & 0\\
+0 & \mathsf{𝕀}
+\end{bmatrix}\begin{bmatrix}\boldsymbol{t}_{1}\\
+\boldsymbol{t}_{2}
+\end{bmatrix}=\begin{bmatrix}\boldsymbol{c}_{0}^{1}\\
+\boldsymbol{c}_{0}^{2}
+\end{bmatrix}+\begin{bmatrix}0 & A_{0}^{1}\\
+A_{0}^{2} & 0
+\end{bmatrix}\begin{bmatrix}\boldsymbol{t}_{1}\\
+\boldsymbol{t}_{2}
+\end{bmatrix}
+\]
+
+\end_inset
+
+or
+\begin_inset Formula 
+\[
+\begin{bmatrix}A_{0}^{1} & \mathsf{-𝕀}\\
+\mathsf{-𝕀} & A_{0}^{2}
+\end{bmatrix}\begin{bmatrix}\boldsymbol{s}_{1}\\
+\boldsymbol{s}_{2}
+\end{bmatrix}=\begin{bmatrix}\boldsymbol{b}_{0}^{1}\\
+\boldsymbol{b}_{0}^{2}
+\end{bmatrix}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\begin{bmatrix}\mathsf{𝕀} & -A_{0}^{1}\\
+A_{0}^{2} & \mathsf{𝕀}
+\end{bmatrix}\begin{bmatrix}\boldsymbol{t}_{1}\\
+\boldsymbol{t}_{2}
+\end{bmatrix}=\begin{bmatrix}\boldsymbol{c}_{0}^{1}\\
+\boldsymbol{c}_{0}^{2}
+\end{bmatrix}
+\]
+
+\end_inset
+
+For the general case
+\begin_inset Formula 
+\[
+A_{0}^{1}\boldsymbol{s}_{1}=\left(\boldsymbol{b}_{0}^{1}+\boldsymbol{s}_{N}\right)
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+A_{0}^{2}\boldsymbol{s}_{2}=\left(\boldsymbol{b}_{0}^{2}+\boldsymbol{s}_{1}\right)
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+A_{0}^{3}\boldsymbol{s}_{3}=\left(\boldsymbol{b}_{0}^{3}+\boldsymbol{s}_{2}\right)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\vdots
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+A_{0}^{N}\boldsymbol{s}_{N}=\left(\boldsymbol{b}_{0}^{N}+\boldsymbol{s}_{N-1}\right)
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\boldsymbol{t}_{1}=\boldsymbol{c}_{0}^{1}+\boldsymbol{t}_{N}A_{0}^{1}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\boldsymbol{t}_{2}=\boldsymbol{c}_{0}^{2}+\boldsymbol{t}_{1}A_{0}^{2}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\boldsymbol{t}_{3}=\boldsymbol{c}_{0}^{3}+\boldsymbol{t}_{2}A_{0}^{3}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\vdots
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\boldsymbol{t}_{N}=\boldsymbol{c}_{0}^{N}+\boldsymbol{t}_{N-1}A_{0}^{N}
+\]
+
+\end_inset
+
+or
+\begin_inset Formula 
+\[
+\begin{bmatrix}A_{0}^{1} & 0 & 0 & \cdots & 0\\
+0 & A_{0}^{2} & 0 & \cdots & 0\\
+0 & 0 & A_{0}^{3} & \cdots & 0\\
+\vdots & \vdots & \vdots & \ddots & \vdots\\
+0 & 0 & 0 & \cdots & A_{0}^{N}
+\end{bmatrix}\begin{bmatrix}\boldsymbol{s}_{1}\\
+\boldsymbol{s}_{2}\\
+\boldsymbol{s}_{3}\\
+\vdots\\
+\boldsymbol{s}_{N}
+\end{bmatrix}=\begin{bmatrix}\boldsymbol{b}_{0}^{1}\\
+\boldsymbol{b}_{0}^{2}\\
+\boldsymbol{b}_{0}^{3}\\
+\vdots\\
+\boldsymbol{b}_{0}^{N}
+\end{bmatrix}+\begin{bmatrix}0 & 0 & 0 & \cdots & 0 & 𝕀\\
+\mathsf{𝕀} & 0 & 0 & \cdots & 0 & 0\\
+0 & 𝕀 & 0 & \cdots & 0 & 0\\
+\vdots & \vdots & \vdots & \ddots & \vdots & \vdots\\
+0 & 0 & 0 & \cdots & 𝕀 & 0
+\end{bmatrix}\begin{bmatrix}\boldsymbol{s}_{1}\\
+\boldsymbol{s}_{2}\\
+\boldsymbol{s}_{3}\\
+\vdots\\
+\boldsymbol{s}_{N}
+\end{bmatrix}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\begin{bmatrix}\mathsf{𝕀} & 0 & 0 & \cdots & 0\\
+0 & \mathsf{𝕀} & 0 & \cdots & 0\\
+0 & 0 & \mathsf{𝕀} & \cdots & 0\\
+\vdots & \vdots & \vdots & \ddots & \vdots\\
+0 & 0 & 0 & \cdots & \mathsf{𝕀}
+\end{bmatrix}\begin{bmatrix}\boldsymbol{t}_{1}\\
+\boldsymbol{t}_{2}\\
+\boldsymbol{t}_{3}\\
+\vdots\\
+\boldsymbol{t}_{N}
+\end{bmatrix}=\begin{bmatrix}\boldsymbol{c}_{0}^{1}\\
+\boldsymbol{c}_{0}^{2}\\
+\boldsymbol{c}_{0}^{3}\\
+\vdots\\
+\boldsymbol{c}_{0}^{N}
+\end{bmatrix}+\begin{bmatrix}0 & 0 & 0 & \cdots & 0 & A_{0}^{1}\\
+A_{0}^{2} & 0 & 0 & \cdots & 0 & 0\\
+0 & A_{0}^{3} & 0 & \cdots & 0 & 0\\
+\vdots & \vdots & \vdots & \ddots & \vdots & \vdots\\
+0 & 0 & 0 & \cdots & A_{0}^{N} & 0
+\end{bmatrix}\begin{bmatrix}\boldsymbol{t}_{1}\\
+\boldsymbol{t}_{2}\\
+\boldsymbol{t}_{3}\\
+\vdots\\
+\boldsymbol{t}_{N}
+\end{bmatrix}
+\]
+
+\end_inset
+
+or
+\begin_inset Formula 
+\[
+\begin{bmatrix}A_{0}^{1} & 0 & 0 & \cdots & 0 & -𝕀\\
+-𝕀 & A_{0}^{2} & 0 & \cdots & 0 & 0\\
+0 & -𝕀 & A_{0}^{3} & \cdots & 0 & 0\\
+\vdots & \vdots & \vdots & \ddots & \vdots & \vdots\\
+0 & 0 & 0 & \cdots & -𝕀 & A_{0}^{N}
+\end{bmatrix}\begin{bmatrix}\boldsymbol{s}_{1}\\
+\boldsymbol{s}_{2}\\
+\boldsymbol{s}_{3}\\
+\vdots\\
+\boldsymbol{s}_{N}
+\end{bmatrix}=\begin{bmatrix}\boldsymbol{b}_{0}^{1}\\
+\boldsymbol{b}_{0}^{2}\\
+\boldsymbol{b}_{0}^{3}\\
+\vdots\\
+\boldsymbol{b}_{0}^{N}
+\end{bmatrix}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\begin{bmatrix}\mathsf{𝕀} & 0 & 0 & \cdots & 0 & -A_{0}^{1}\\
+-A_{0}^{2} & \mathsf{𝕀} & 0 & \cdots & 0 & 0\\
+0 & -A_{0}^{3} & \mathsf{𝕀} & \cdots & 0 & 0\\
+\vdots & \vdots & \vdots & \ddots & \vdots & \vdots\\
+0 & 0 & 0 & \cdots & -A_{0}^{N} & \mathsf{𝕀}
+\end{bmatrix}\begin{bmatrix}\boldsymbol{t}_{1}\\
+\boldsymbol{t}_{2}\\
+\boldsymbol{t}_{3}\\
+\vdots\\
+\boldsymbol{t}_{N}
+\end{bmatrix}=\begin{bmatrix}\boldsymbol{c}_{0}^{1}\\
+\boldsymbol{c}_{0}^{2}\\
+\boldsymbol{c}_{0}^{3}\\
+\vdots\\
+\boldsymbol{c}_{0}^{N}
+\end{bmatrix}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
 QR Orthogonalization
 \end_layout
 
 \begin_layout Standard
 There are three algorithms for this, going from simplest and least reliable
  to the most complex and most reliable.
- In this section we describe the iterated QX orthogonalization scheme.
+ In this section we describe the iterated QR orthogonalization scheme.
  This idea was first introduced for MPS networks
 \begin_inset CommandInset citation
 LatexCommand cite
@@ -3900,10 +4322,11 @@ G_{L0}^{1}=G_{L0}^{2}\cdots=G_{L0}^{N}=\mathbb{I}
 
 \end_inset
 
-Next we do a block respecting, rank revealing QX decomposition on each site
+Next we do a V-block or Ac-block respecting, rank revealing QR decomposition
+ on each site
 \begin_inset Formula 
 \[
-\hat{QX}\left(\hat{W}_{0}^{n}\right)=\hat{Q}_{0}^{n}R_{0}^{n}
+\hat{QR}\left(\hat{W}_{0}^{n}\right)=\hat{Q}_{0}^{n}R_{0}^{n}
 \]
 
 \end_inset
@@ -3961,16 +4384,12 @@ G_{L1}^{n}=R_{0}^{n}G_{L0}^{n}
 
 \end_inset
 
-At this point we can go back to the block QX step.
+At this point we can go back to the block QR step.
 \end_layout
 
 \begin_layout Standard
 As the iterations proceed the 
 \begin_inset Formula $R$
-\end_inset
-
- (or 
-\begin_inset Formula $L)$
 \end_inset
 
  matrices will usually converge towards the identity matrix.
@@ -3981,10 +4400,6 @@ As the iterations proceed the
 
  and 
 \begin_inset Formula $R$
-\end_inset
-
- (or 
-\begin_inset Formula $L)$
 \end_inset
 
  matrices.
@@ -4034,7 +4449,7 @@ Right Canonical (left sweep)
 When we sweep the other direction 
 \begin_inset Formula 
 \[
-\hat{QX}\left(\hat{W}_{0}^{n}\right)=R_{0}^{n}\hat{Q}_{0}^{n}
+\hat{RQ}\left(\hat{W}_{0}^{n}\right)=R_{0}^{n}\hat{Q}_{0}^{n}
 \]
 
 \end_inset
@@ -4461,7 +4876,7 @@ G^{\prime}=\begin{bmatrix}1 & 0 & 0\\
 \end_layout
 
 \begin_layout Section
-Empical Observations
+Empirical Observations
 \end_layout
 
 \begin_layout Subsection

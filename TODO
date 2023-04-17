@@ -74,6 +74,7 @@ Don't need: -block_qx Instead restoring full tri form, just use the part of the 
 -Move code into compression module.
 Ac blocking code:
 -no method matching order(::ITensorMPOCompression.reg_form_Op)
+-Fix Index Tag conventions sections of the docs.
 
 Fix Unknown:
 -For RL_prime problems, try factor R+ = R'*M (instread of M*R) then R' will be square.

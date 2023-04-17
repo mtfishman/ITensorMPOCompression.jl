@@ -493,11 +493,4 @@
   publisher = {arXiv},
 }
 
-@Article{LH-notes,
-  author  = {Loı̈c Herviou},
-  journal = {Private Communication},
-  title   = {Some brief notes on my branch of ITensors},
-  year    = {2023},
-}
-
 @Comment{jabref-meta: databaseType:bibtex;}
