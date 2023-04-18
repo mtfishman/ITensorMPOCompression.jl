@@ -154,6 +154,8 @@ function Solve_b0c0(Hrf::reg_form_iMPO)
             Mt[irb[n]:irb[n]+nr-1,icb[n-1]:icb[n]-1]-=sparseA0
         end
     end
+    # @show b0s c0s 
+    # display(A0s[1])
     s=Ms\b0s
     t=transpose(transpose(Mt)\c0s)
     @assert norm(Ms*s-b0s)<1e-15*n
@@ -175,13 +177,10 @@ function gauge_fix!(W::reg_form_Op,sₙ₋₁::Vector{Float64},sₙ::Vector{Floa
     𝒕ₙ=ITensor(tₙ,Wb.irc,Wb.icc)
     𝒔ₙ₋₁=ITensor(sₙ₋₁,Wb.irb,Wb.icb)
     𝒔ₙ=ITensor(sₙ,Wb.icb,dag(Wb.icA))
-    𝒅⎖ = 𝒅
-        𝒃⎖=𝒃+𝒔ₙ₋₁*𝕀
-        𝒃⎖-=𝒔ₙ*𝑨
-        𝒅⎖ += 𝒕ₙ₋₁*𝒃
-        𝒄⎖ = 𝒄-𝒕ₙ*𝕀
-        𝒄⎖ += 𝒕ₙ₋₁*𝑨
-        𝒅⎖ -= 𝒔ₙ*𝒄⎖
+    #@show sₙ₋₁ sₙ tₙ₋₁ tₙ
+    𝒃⎖ = 𝒃 + 𝒔ₙ₋₁*𝕀 -𝑨 * 𝒔ₙ
+    𝒄⎖ = 𝒄 - 𝒕ₙ  *𝕀 + 𝒕ₙ₋₁*𝑨
+    𝒅⎖ = 𝒅 + 𝒕ₙ₋₁*𝒃 - 𝒔ₙ*𝒄⎖
     
     set_𝒃_block!(W,𝒃⎖)
     @assert is_regular_form(W)

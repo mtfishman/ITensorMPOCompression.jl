@@ -2328,14 +2328,6 @@ This form of
 from which we can read off the relations
 \begin_inset Formula 
 \[
-\hat{d}^{\prime}=\hat{d}+\boldsymbol{t}_{n-1}\hat{\boldsymbol{b}}-\boldsymbol{s}_{n}\hat{\boldsymbol{c}}^{\prime}
-\]
-
-\end_inset
-
-
-\begin_inset Formula 
-\[
 \hat{\boldsymbol{b}}^{\prime}=\hat{\boldsymbol{b}}+\boldsymbol{s}_{n-1}\hat{\mathbb{I}}-\boldsymbol{s}_{n}\hat{A}
 \]
 
@@ -2345,6 +2337,17 @@ from which we can read off the relations
 \begin_inset Formula 
 \[
 \hat{\boldsymbol{c}}^{\prime}=\boldsymbol{t}_{n-1}\hat{A}+\hat{\boldsymbol{c}}-\boldsymbol{t}_{n}\hat{\mathbb{I}}.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\hat{d}^{\prime}=\hat{d}+\boldsymbol{t}_{n-1}\hat{\boldsymbol{b}}-\boldsymbol{s}_{n}\hat{\boldsymbol{c}}^{\prime}
 \]
 
 \end_inset
