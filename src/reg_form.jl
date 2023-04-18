@@ -196,3 +196,35 @@ function reg_form_iMPO(H::InfiniteMPO,eps::Float64=1e-14)
     ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
     return reg_form_iMPO(H,ul)
 end
+
+function ITensorInfiniteMPS.InfiniteMPO(Hrf::reg_form_iMPO)::InfiniteMPO
+    return InfiniteMPO(Ws(Hrf))
+end
+
+function to_openbc(Hrf::reg_form_iMPO)::reg_form_iMPO
+    N=length(Hrf)
+    if N>1
+        l,r=get_lr(Hrf)    
+        Hrf[1].W=l*prime(Hrf[1].W,Hrf[1].ileft)
+        Hrf[N].W=prime(Hrf[N].W,Hrf[N].iright)*r
+        @mpoc_assert length(inds(Hrf[1].W,tags="Link"))==1
+        @mpoc_assert length(inds(Hrf[N].W,tags="Link"))==1
+    end
+    return Hrf
+end
+
+function get_lr(Hrf::reg_form_iMPO)::Tuple{ITensor,ITensor}
+    N=length(Hrf)
+    llink,rlink=Hrf[1].ileft',Hrf[N].iright'
+    l=ITensor(0.0,dag(llink))
+    r=ITensor(0.0,dag(rlink))
+    if Hrf.ul==lower
+        l[llink=>dim(llink)]=1.0
+        r[rlink=>1]=1.0
+    else
+        l[llink=>1]=1.0
+        r[rlink=>dim(rlink)]=1.0
+    end
+
+    return l,r
+end
