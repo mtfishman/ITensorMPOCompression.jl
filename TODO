@@ -76,6 +76,7 @@ Ac blocking code:
 -no method matching order(::ITensorMPOCompression.reg_form_Op)
 -Fix Index Tag conventions sections of the docs.
 -Fix links in reg_form_iMPO
+-make one is_gauge_fixed function for reg_form_MPO and reg_form_iMPO 
 
 Fix Unknown:
 -For RL_prime problems, try factor R+ = R'*M (instread of M*R) then R' will be square.

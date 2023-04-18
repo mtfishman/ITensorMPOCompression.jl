@@ -284,9 +284,7 @@ function set_𝒃𝒄_block!(Wrf::reg_form_Op,𝒃𝒄::ITensor,lr::orth_type)
     end
 end
 
-# noop versions for when b/c are empty.  Happens in edge ops of H.
-function set_𝒃𝒄_block!(::reg_form_Op,::Nothing,::orth_type)
-end
+
 
 function set_𝒅_block!(Wrf::reg_form_Op,𝒅::ITensor)
     check(Wrf)
@@ -312,7 +310,13 @@ function set_𝑨𝒄_block(Wrf::reg_form_Op,𝑨𝒄::ITensor,lr::orth_type)
         Wrf.W[i1=>2:n1-1,i2=>1:max2]=𝑨𝒄
     end
 end
-
+# noop versions for when b/c are empty.  Happens in edge ops of H.
+function set_𝒃𝒄_block!(::reg_form_Op,::Nothing,::orth_type)
+end
+function set_𝒃_block!(::reg_form_Op,::Nothing)
+end
+function set_𝒄_block!(::reg_form_Op,::Nothing)
+end
 #
 #  o1   add row to RL       o2  add column to RL
 #   0   at bottom, Dw1+1    0   at right, Dw2+1
