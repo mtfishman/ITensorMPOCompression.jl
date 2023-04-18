@@ -149,12 +149,15 @@ end
 #  Infinite lattice with unit cell
 #
 function ITensorInfiniteMPS.translatecell(translator::Function, Wrf::reg_form_Op, n::Integer)
-    return ITensors.setinds(Wrf, ITensorInfiniteMPS.translatecell(translator, inds(Wrf), n))
+    new_inds=ITensorInfiniteMPS.translatecell(translator, inds(Wrf), n)
+    Wrf.W=ITensors.setinds(Wrf.W,new_inds)
+    Wrf.ileft,Wrf.iright=parse_links(Wrf.W)
+    return Wrf
 end
   
 
 mutable struct reg_form_iMPO <: AbstractInfiniteMPS
-    data::Vector{reg_form_Op}
+    data::CelledVector{reg_form_Op}
     llim::Int
     rlim::Int
     reverse::Bool

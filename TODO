@@ -80,7 +80,8 @@ Ac blocking code:
 -Take out support to upper.
   Convert upper H's to lower durung the conversion to ref_form_MPO
   Strip out lots of code.
-
+-Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
+-Check reg_form_Op translator.
 Fix Unknown:
 -For RL_prime problems, try factor R+ = R'*M (instread of M*R) then R' will be square.
   THis will only work if R' is orthogonal R_dagger'*R' = Id
