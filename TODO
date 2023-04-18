@@ -77,6 +77,9 @@ Ac blocking code:
 -Fix Index Tag conventions sections of the docs.
 -Fix links in reg_form_iMPO
 -make one is_gauge_fixed function for reg_form_MPO and reg_form_iMPO 
+-Take out support to upper.
+  Convert upper H's to lower durung the conversion to ref_form_MPO
+  Strip out lots of code.
 
 Fix Unknown:
 -For RL_prime problems, try factor R+ = R'*M (instread of M*R) then R' will be square.

@@ -130,7 +130,6 @@ function Solve_b0c0(Hrf::reg_form_iMPO)
         ir+=size(A_0,1)
         ic+=size(A_0,2)
     end
-    @show c0s
 
     @assert nr==nc
     n=nr
@@ -155,17 +154,13 @@ function Solve_b0c0(Hrf::reg_form_iMPO)
             Mt[irb[n]:irb[n]+nr-1,icb[n-1]:icb[n]-1]-=sparseA0
         end
     end
-    # @show length(Ms.nzval)/(n*n)
-    # @show length(Mt.nzval)/(n*n)
-    #@show Mt Ms
     s=Ms\b0s
     t=transpose(transpose(Mt)\c0s)
-    @assert norm(Ms*s-b0s)<1e-15
-    @assert norm(transpose(t*Mt)-c0s)<1e-15
+    @assert norm(Ms*s-b0s)<1e-15*n
+    @assert norm(transpose(t*Mt)-c0s)<1e-15*n
 
     ss=map(n->s[irb[n]:irb[n]+nr-1],1:N)
     ts=map(n->t[irb[n]:irb[n]+nr-1],1:N)
-    @show typeof(ss)
     cvs=CelledVector(ss)
     cvt=CelledVector(ts)
     return cvs,cvt
@@ -176,25 +171,17 @@ function gauge_fix!(W::reg_form_Op,sₙ₋₁::Vector{Float64},sₙ::Vector{Floa
     Wb=extract_blocks(W,left;all=true,fix_inds=true)
     𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅 #for readability below.
   
-    𝒕ₙ₋₁=ITensor(tₙ₋₁,Wb.irb,Wb.ird)
+    𝒕ₙ₋₁=ITensor(tₙ₋₁,dag(Wb.irb),Wb.ird)
     𝒕ₙ=ITensor(tₙ,Wb.irc,Wb.icc)
     𝒔ₙ₋₁=ITensor(sₙ₋₁,Wb.irb,Wb.icb)
-    𝒔ₙ=ITensor(sₙ,Wb.icb,Wb.icA)
-    # 𝒃⎖ = nothing
-    # 𝒄⎖ = nothing
+    𝒔ₙ=ITensor(sₙ,Wb.icb,dag(Wb.icA))
     𝒅⎖ = 𝒅
-    # if  !isnothing(𝒃) 
         𝒃⎖=𝒃+𝒔ₙ₋₁*𝕀
         𝒃⎖-=𝒔ₙ*𝑨
         𝒅⎖ += 𝒕ₙ₋₁*𝒃
-    # elseif !isnothing(𝒄) 
         𝒄⎖ = 𝒄-𝒕ₙ*𝕀
         𝒄⎖ += 𝒕ₙ₋₁*𝑨
         𝒅⎖ -= 𝒔ₙ*𝒄⎖
-        #@show 𝒄 𝒄⎖ 
-    # end
-    
-    #𝒄⎖*𝕀
     
     set_𝒃_block!(W,𝒃⎖)
     @assert is_regular_form(W)
@@ -202,6 +189,4 @@ function gauge_fix!(W::reg_form_Op,sₙ₋₁::Vector{Float64},sₙ::Vector{Floa
     @assert is_regular_form(W)
     set_𝒅_block!(W,𝒅⎖)
     @assert is_regular_form(W)
-
-    return vector_o2(𝒕ₙ)
 end

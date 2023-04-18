@@ -39,10 +39,10 @@ models=[
 
 
 models=[
-    # (make_transIsing_iMPO,"S=1/2",true),
-    # (make_transIsing_AutoiMPO,"S=1/2",true),
-    # (make_Heisenberg_AutoiMPO,"S=1/2",true),
-    # (make_Heisenberg_AutoiMPO,"S=1",true),
+    (make_transIsing_iMPO,"S=1/2",true),
+    (make_transIsing_AutoiMPO,"S=1/2",true),
+    (make_Heisenberg_AutoiMPO,"S=1/2",true),
+    (make_Heisenberg_AutoiMPO,"S=1",true),
     (make_Hubbard_AutoiMPO,"Electron",false)
 ]
 
@@ -115,10 +115,9 @@ import ITensorMPOCompression: check, extract_blocks, A0, b0, c0, vector_o2, reg_
 #     @test norm(transpose(t*Mt)-c0s)<1e-15
 # end
 
-@testset "Gauge fix infinite $(model[1]), qns=$qns, ul=$ul" for model in models, qns in [false], ul=[lower]
+@testset "Gauge fix infinite $(model[1]), qns=$qns, ul=$ul" for model in models, qns in [false true], ul=[lower], N in [1,2,3,4], NNN in [2,4,7]
     eps=1e-14
     initstate(n) = "↑"
-    N,NNN=1,2
     si = infsiteinds(model[2], N; initstate, conserve_qns=qns)
     H0=model[1](si,NNN;ul=ul)
     Hrf=reg_form_iMPO(H0)
@@ -132,8 +131,8 @@ import ITensorMPOCompression: check, extract_blocks, A0, b0, c0, vector_o2, reg_
     @test pre_fixed==is_gauge_fixed(Hrf,eps)
     gauge_fix!(Hrf)
     Wb=extract_blocks(Hrf[1],left;all=true)
-    #@show b0(Wb) c0(Wb)
-    @show norm(b0(Wb)) norm(c0(Wb))
+    @test norm(b0(Wb))<eps
+    @test norm(c0(Wb))<eps
     @test is_gauge_fixed(Hrf,eps)
 end
 nothing
