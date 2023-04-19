@@ -255,7 +255,7 @@ function insert_Q(Wb::regform_blocks,𝐐::ITensor,ileft::Index,ic::Index,iq::In
   return Wrfp.W,iqp
 end
 
-function ac_qx(W::reg_form_Op,lr::orth_type;kwargs...)
+function ac_qx(W::reg_form_Op,lr::orth_type;verbose=false, kwargs...)
   @checkflux(W.W)
   @assert hasinds(W.W, W.ileft, W.iright)
   #@assert dir(W.ileft)==dir(dag(W.iright))
@@ -265,10 +265,10 @@ function ac_qx(W::reg_form_Op,lr::orth_type;kwargs...)
   @checkflux(Wb.𝑨𝒄)
   if lr==left
       Qinds=noncommoninds(Wb.𝑨𝒄,ilf_Ac) 
-      Q,R,iq=qr(Wb.𝑨𝒄,Qinds;verbose=true,positive=true,cutoff=1e-14,tags=tags(ilf))
+      Q,R,iq,p=qr(Wb.𝑨𝒄,Qinds;verbose=verbose,positive=true,cutoff=1e-14,tags=tags(ilf))
   else
       Rinds=ilf_Ac
-      R,Q,iq=lq(Wb.𝑨𝒄,Rinds;verbose=true,positive=true,cutoff=1e-14,tags=tags(ilf))
+      R,Q,iq,p=lq(Wb.𝑨𝒄,Rinds;verbose=verbose,positive=true,cutoff=1e-14,tags=tags(ilf))
   end
   @checkflux(Q)
   @checkflux(R)
@@ -284,5 +284,6 @@ function ac_qx(W::reg_form_Op,lr::orth_type;kwargs...)
   @assert is_regular_form(Wprf)
   R=prime(R,ilf_Ac) #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
   Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ilf'))
-  return Wprf,Rp,iqp
+  p=[1,(p.+1)...,dim(ilf)]
+  return Wprf,Rp,iqp,p
 end

@@ -421,11 +421,11 @@ function ac_orthogonalize!(H::reg_form_iMPO,lr::orth_type;verbose=false,kwargs..
     
     eps=1e-13
     niter=0
-    max_iter=5
+    max_iter=40
     
     if verbose
         previous_Dw=Base.max(get_Dw(H)...)
-        @printf "niter eta\n" 
+        @printf "niter  Dw  eta\n" 
     end
     loop=true
     rng=sweep(H,lr)
@@ -463,22 +463,24 @@ function ac_orthogonalize!(H::reg_form_iMPO,lr::orth_type;verbose=false,kwargs..
     H.rlim = rng.stop+1
     H.llim = rng.stop-1
 
-    if verbose
-        Dw=Base.max(get_Dw(H)...)
-        println("   iMPO After $lr orth sweep, $niter iterations Dw reduced from $previous_Dw to $Dw")
-    end
+    # if verbose
+    #     Dw=Base.max(get_Dw(H)...)
+    #     println("   iMPO After $lr orth sweep, $niter iterations Dw reduced from $previous_Dw to $Dw")
+    # end
     
     return Gs
 end
 
 function ac_qx_step!(W::reg_form_Op,lr::orth_type,eps::Float64;kwargs...)
-    forward= lr==left ? W.iright : w.ileft
-    Q,RL,iq=ac_qx(W,lr;cutoff=1e-14,kwargs...) # r-Q-qx qx-RL-c
+    forward= lr==left ? W.iright : W.ileft
+    Q,RL,iq,p=ac_qx(W,lr;cutoff=1e-14,kwargs...) # r-Q-qx qx-RL-c
     #
     #  How far are we from RL==Id ?
     #
     if dim(forward)==dim(iq)
-        eta=norm(dense(RL)-δ(Float64, inds(RL))) #block sparse - diag no supported yet
+        Rm=matrix(dense(RL))
+        Rmp=Rm[:,p]
+        eta = norm(Rmp-Matrix(LinearAlgebra.I,size(Rmp)))
     else
         eta=99.0 #Rank reduction occured to keep going.
     end

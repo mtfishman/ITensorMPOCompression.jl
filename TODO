@@ -86,6 +86,7 @@ Ac blocking code:
   Strip out lots of code.
 -Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
 -Check reg_form_Op translator.
+-Do ac-orthogonalize! eta = norm(R-I),  do this block by block for block sparse R
 Fix Unknown:
 -For RL_prime problems, try factor R+ = R'*M (instread of M*R) then R' will be square.
   THis will only work if R' is orthogonal R_dagger'*R' = Id
