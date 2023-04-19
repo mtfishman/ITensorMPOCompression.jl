@@ -25,6 +25,11 @@ function is_regular_form(W::reg_form_Op,eps::Float64=default_eps)::Bool
     return detect_regular_form(W.W,eps)[i]
 end
 
+function detect_regular_form(Wrf::reg_form_Op,eps::Float64=default_eps)::Tuple{Bool,Bool}
+    return detect_regular_form(Wrf.W,eps)
+end
+
+
 function check(Wrf::reg_form_Op)
     @mpoc_assert tags(Wrf.ileft)!=tags(Wrf.iright)
     @mpoc_assert hasinds(Wrf.W,Wrf.ileft)
@@ -126,6 +131,7 @@ function is_regular_form(H::reg_form_MPO,eps::Float64=default_eps)::Bool
     return true
 end
 
+
 function check_ortho(Wrf::reg_form_Op,lr::orth_type,eps::Float64=default_eps)::Bool
     ms=matrix_state(Wrf.ul,lr)
     return check_ortho(Wrf.W,ms,eps) 
@@ -137,6 +143,7 @@ function check_ortho(H::reg_form_MPO,lr::orth_type,eps::Float64=default_eps)::Bo
     end
     return true
 end
+
 
 ITensors.inds(Wrf::reg_form_Op)=inds(Wrf.W)
 function ITensors.setinds(Wrf::reg_form_Op,is)::reg_form_Op
@@ -171,9 +178,9 @@ mutable struct reg_form_iMPO <: AbstractInfiniteMPS
         end
         return new(data,H.llim,H.rlim,false,ul)
     end
-    # function reg_form_iMPO(Ws::Vector{reg_form_Op},llim::Int64,rlim::Int64,ul::reg_form)
-    #     return new(Ws,llim,rlim,false,ul)
-    # end
+    function reg_form_iMPO(Ws::CelledVector{reg_form_Op},llim::Int64,rlim::Int64,reverse::Bool,ul::reg_form)
+        return new(Ws,llim,rlim,reverse,ul)
+    end
 end
 
 data(H::reg_form_iMPO)=H.data
@@ -186,7 +193,8 @@ Base.length(H::reg_form_iMPO) = length(H.data)
 Base.reverse(H::reg_form_iMPO) = reg_form_iMPO(Base.reverse(H.data),H.llim,H.rlim,H.reverse,H.ul)
 Base.iterate(H::reg_form_iMPO, args...) = iterate(H.data, args...)
 Base.getindex(H::reg_form_iMPO, n::Integer) = getindex(H.data,n)
-Base.setindex!(H::reg_form_iMPO, n::Integer) = setindex!(H.data, n)
+Base.setindex!(H::reg_form_iMPO, W::reg_form_Op,n::Integer) = setindex!(H.data,W, n)
+Base.copy(H::reg_form_iMPO)=reg_form_iMPO(copy(H.data),H.llim,H.rlim,H.reverse,H.ul)
 
 function reg_form_iMPO(H::InfiniteMPO,eps::Float64=1e-14)
     (bl,bu)=detect_regular_form(H,eps)
@@ -230,4 +238,15 @@ function get_lr(Hrf::reg_form_iMPO)::Tuple{ITensor,ITensor}
     end
 
     return l,r
+end
+
+function get_Dw(Hrf::reg_form_iMPO)
+    return map(n->dim(Hrf[n].iright),eachindex(Hrf))
+end
+
+function check_ortho(H::reg_form_iMPO,lr::orth_type,eps::Float64=default_eps)::Bool
+    for n in sweep(H,lr) #skip the edge row/col opertors
+        !check_ortho(H[n],lr,eps) && return false
+    end
+    return true
 end
