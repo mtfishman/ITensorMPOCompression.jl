@@ -13,36 +13,36 @@ models=[
     [make_Hubbard_AutoMPO,"Electron",false],
     ]
 
-# @testset "Gauge fix finite $(model[1]), qns=$qns, ul=$ul" for model in models, qns in [false,true], ul=[lower,upper]
-#     eps=1e-14
+@testset "Gauge fix finite $(model[1]), qns=$qns, ul=$ul" for model in models, qns in [false,true], ul=[lower,upper]
+    eps=1e-14
     
-#     N=10 #5 sites
-#     NNN=7 #Include 2nd nearest neighbour interactions
-#     sites = siteinds(model[2],N,conserve_qns=qns)
-#     Hrf=reg_form_MPO(model[1](sites,NNN;ul=ul))
-#     pre_fixed=model[3] #Hamiltonian starts gauge fixed
-#     state=[isodd(n) ? "Up" : "Dn" for n=1:N]
+    N=10 #5 sites
+    NNN=7 #Include 2nd nearest neighbour interactions
+    sites = siteinds(model[2],N,conserve_qns=qns)
+    Hrf=reg_form_MPO(model[1](sites,NNN;ul=ul))
+    pre_fixed=model[3] #Hamiltonian starts gauge fixed
+    state=[isodd(n) ? "Up" : "Dn" for n=1:N]
 
-#     H=MPO(Hrf)
-#     psi=randomMPS(sites,state)
-#     E0=inner(psi',H,psi)
+    H=MPO(Hrf)
+    psi=randomMPS(sites,state)
+    E0=inner(psi',H,psi)
     
-#     @test is_regular_form(Hrf)
-#     @test pre_fixed==is_gauge_fixed(Hrf,eps)
-#     gauge_fix!(Hrf)
-#     @test is_regular_form(Hrf)
-#     @test is_gauge_fixed(Hrf,eps)
-#     He=MPO(Hrf)
-#     E1=inner(psi',He,psi)
-#     @test E0 ≈ E1 atol = eps
-# end
+    @test is_regular_form(Hrf)
+    @test pre_fixed==is_gauge_fixed(Hrf,eps)
+    gauge_fix!(Hrf)
+    @test is_regular_form(Hrf)
+    @test is_gauge_fixed(Hrf,eps)
+    He=MPO(Hrf)
+    E1=inner(psi',He,psi)
+    @test E0 ≈ E1 atol = eps
+end
 
 
 models=[
-    # (make_transIsing_iMPO,"S=1/2",true),
-    # (make_transIsing_AutoiMPO,"S=1/2",true),
-    # (make_Heisenberg_AutoiMPO,"S=1/2",true),
-    # (make_Heisenberg_AutoiMPO,"S=1",true),
+    (make_transIsing_iMPO,"S=1/2",true),
+    (make_transIsing_AutoiMPO,"S=1/2",true),
+    (make_Heisenberg_AutoiMPO,"S=1/2",true),
+    (make_Heisenberg_AutoiMPO,"S=1",true),
     (make_Hubbard_AutoiMPO,"Electron",false)
 ]
 
@@ -115,7 +115,6 @@ import ITensorMPOCompression: check, extract_blocks, A0, b0, c0, vector_o2, reg_
 #     @test norm(transpose(t*Mt)-c0s)<1e-15
 # end
 
-#@testset "Gauge fix infinite $(model[1]), qns=$qns, ul=$ul" for model in models, qns in [false true], ul=[lower], N in [1,2,3,4], NNN in [2,4,7]
 @testset "Gauge fix infinite $(model[1]), qns=$qns, ul=$ul" for model in models, qns in [false,true], ul=[lower], N in [1,2,3,4], NNN in [1,4,7]
     eps=1e-14
     initstate(n) = "↑"
