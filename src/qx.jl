@@ -265,10 +265,10 @@ function ac_qx(W::reg_form_Op,lr::orth_type;kwargs...)
   @checkflux(Wb.𝑨𝒄)
   if lr==left
       Qinds=noncommoninds(Wb.𝑨𝒄,ilf_Ac) 
-      Q,R,iq=qr(Wb.𝑨𝒄,Qinds;positive=true,cutoff=1e-14,tags=tags(ilf))
+      Q,R,iq=qr(Wb.𝑨𝒄,Qinds;verbose=true,positive=true,cutoff=1e-14,tags=tags(ilf))
   else
       Rinds=ilf_Ac
-      R,Q,iq=lq(Wb.𝑨𝒄,Rinds;positive=true,cutoff=1e-14,tags=tags(ilf))
+      R,Q,iq=lq(Wb.𝑨𝒄,Rinds;verbose=true,positive=true,cutoff=1e-14,tags=tags(ilf))
   end
   @checkflux(Q)
   @checkflux(R)

@@ -1,14 +1,18 @@
+Issue:
+  How to handle ortho center for N=1 unit cell iMPOs?
+    -InfiniteMPO using llim=b-1,rlim=b+1 for b=orthcenter(H) fails when N=1, because 
+    left/right/unorth all become indistinguishable.
+  Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
+  Rip out direct code for upper?  
+    Do Hu->HL by either:
+      1) Transpose each W. Might move data in ram ?
+      2) Reverse order in lattice -l0-W_1-l1-W_2-l2- ... lN-1-WN-lN -> lN-WN-lN-1-WN-1-......
+          This transposes each W without moving any data. 
+
 Questions:
-  -Should we be using findinds or just inds?
-  -Delete old branches, after merge?
-  -Future of Model("model_name") framework.
-  -verbose mode? (only see it in ctmrg)
   Yes -Is there use for a moving orthogonality center in MPOs? Yes see Matts email March/14/2023
   -Do we need to support multiple truncate sweeps for iMPOs?
   -Should orthognalize!(iMPO) spit out primed Gs?
-  -Support RQ/QL/LQ in factorize?
-  -InfiniteMPO using llim=b-1,rlim=b+1 for b=orthcenter(H) fails when N=1, because 
-   left/right/unorth all become indistinguishable.
   	
   
 More tests:
