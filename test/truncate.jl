@@ -33,7 +33,7 @@ verbose1=false #verbose inside orth algos
         [make_Hubbard_AutoMPO,"Electron",false],
     ]
 
-    @testset "Ac/Ab block respecting decomposition $(model[1]), qns=$qns, ul=$ul, lr=$lr" for model in models, qns in [false,true], ul=[lower,upper],lr=[left,right]
+    @testset "Truncate/Compress MPO $(model[1]), qns=$qns, ul=$ul, lr=$lr" for model in models, qns in [false,true], ul=[lower,upper],lr=[left,right]
         eps=1e-14
         pre_fixed=model[3] #Hamiltonian starts gauge fixed
         N=10 #5 sites

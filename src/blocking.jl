@@ -322,21 +322,21 @@ end
 #   0   at bottom, Dw1+1    0   at right, Dw2+1
 #   1   at top, 1           1   at left, 1
 #
-function growRL(RL::ITensor,iwl::Index,off::V_offsets,qn::Union{QN,Int})::Tuple{ITensor,Index}
-    @mpoc_assert order(RL)==2
-    @checkflux(RL)
-    irl,=filterinds(inds(RL),tags=tags(iwl)) #find the link index of RL
-    irqx=noncommonind(inds(RL),irl) #find the qx link of RL
-    @mpoc_assert dim(iwl)==dim(irl)+1
-    ipqx=redim(irqx,dim(irqx)+1,off.o1,qn) 
-    T=eltype(RL)
-    RLplus=ITensor(T(0.0),iwl,ipqx)
-    RLplus[ipqx=>1,iwl=>1]=1.0 #add 1.0's in the corners
-    RLplus[ipqx=>dim(ipqx),iwl=>dim(iwl)]=1.0
-    RLplus[range(ipqx,off.o1),range(iwl,off.o2)]=RL #plop in RL in approtriate sub block.
-    @checkflux(RL) 
-    return RLplus,dag(ipqx)
-end
+# function growRL(RL::ITensor,iwl::Index,off::V_offsets,qn::Union{QN,Int})::Tuple{ITensor,Index}
+#     @mpoc_assert order(RL)==2
+#     @checkflux(RL)
+#     irl,=filterinds(inds(RL),tags=tags(iwl)) #find the link index of RL
+#     irqx=noncommonind(inds(RL),irl) #find the qx link of RL
+#     @mpoc_assert dim(iwl)==dim(irl)+1
+#     ipqx=redim(irqx,dim(irqx)+1,off.o1,qn) 
+#     T=eltype(RL)
+#     RLplus=ITensor(T(0.0),iwl,ipqx)
+#     RLplus[ipqx=>1,iwl=>1]=1.0 #add 1.0's in the corners
+#     RLplus[ipqx=>dim(ipqx),iwl=>dim(iwl)]=1.0
+#     RLplus[range(ipqx,off.o1),range(iwl,off.o2)]=RL #plop in RL in approtriate sub block.
+#     @checkflux(RL) 
+#     return RLplus,dag(ipqx)
+# end
 
 #
 #  factor LR such that for

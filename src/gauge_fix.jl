@@ -20,14 +20,14 @@ function is_gauge_fixed(W::reg_form_Op,eps::Float64;b=true,c=true)::Bool where {
     return igf
 end
 
-function is_gauge_fixed(Hrf::reg_form_MPO,eps::Float64;kwargs...)::Bool where {T}
-    for W in Hrf
-        !is_gauge_fixed(W,eps;kwargs...) && return false
-    end
-    return true
-end
+# function is_gauge_fixed(Hrf::reg_form_MPO,eps::Float64;kwargs...)::Bool 
+#     for W in Hrf
+#         !is_gauge_fixed(W,eps;kwargs...) && return false
+#     end
+#     return true
+# end
 
-function is_gauge_fixed(Hrf::AbstractMPS,eps::Float64;kwargs...)::Bool where {T}
+function is_gauge_fixed(Hrf::AbstractMPS,eps::Float64;kwargs...)::Bool 
     for W in Hrf
         !is_gauge_fixed(W,eps;kwargs...) && return false
     end

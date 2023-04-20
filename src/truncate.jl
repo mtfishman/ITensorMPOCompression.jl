@@ -4,107 +4,108 @@
 #
 #  Compress one site
 #
-function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spectrum,Bool}
-    lr::orth_type=get(kwargs, :orth, right)
-    ms=matrix_state(ul,lr)
-    iforward,_=parse_links(W,lr) # W[l=$(n-1)l=$n]=W[r,c]
-    # establish some tag strings then depend on lr.
-    (tsvd,tuv) = lr==left ? ("qx","Link,u") : ("m","Link,v")
-    #
-    # Block repecting QR/QL/LQ/RQ factorization.  RL=L or R for upper and lower.
-    # here we purposely turn off rank reavealing feature (rr_cutoff=-1.0) to (mostly) avoid
-    # horizontal rectangular RL matricies which are hard to handle accurately.  All rank reduction
-    # should have been done in the ortho process anyway.
-    #
+# function truncate(W::ITensor,ul::reg_form;kwargs...)::Tuple{ITensor,ITensor,Spectrum,Bool}
+#     lr::orth_type=get(kwargs, :orth, right)
+#     ms=matrix_state(ul,lr)
+#     iforward,_=parse_links(W,lr) # W[l=$(n-1)l=$n]=W[r,c]
+#     # establish some tag strings then depend on lr.
+#     (tsvd,tuv) = lr==left ? ("qx","Link,u") : ("m","Link,v")
+#     #
+#     # Block repecting QR/QL/LQ/RQ factorization.  RL=L or R for upper and lower.
+#     # here we purposely turn off rank reavealing feature (rr_cutoff=-1.0) to (mostly) avoid
+#     # horizontal rectangular RL matricies which are hard to handle accurately.  All rank reduction
+#     # should have been done in the ortho process anyway.
+#     #
    
-    Q,RL,iqx=block_qx(W,iforward,ul;kwargs...,rr_cutoff=-1.0) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
-    # expensive
-    # if order(Q)==4
-    #     @mpoc_assert check_ortho(Q,ms,eps)
-    #     @mpoc_assert is_regular_form(Q,ul,eps)
-    # end
-    c=noncommonind(RL,iqx) #if size changed the old c is not lnger valid
-    #
-    #  If the RL is rectangular in wrong way, then factoring out M is very difficult.
-    #  For now we just bail out.
-    #
-    if dim(c)>dim(iqx) || dim(c)<3
-        replacetags!(RL,"Link,qx",tags(iforward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-        replacetags!(Q ,"Link,qx",tags(iforward)) #W[l=n-1,l=n]
-        return Q,RL,Spectrum([],0),true
-    end
+#     Q,RL,iqx=block_qx(W,iforward,ul;kwargs...,rr_cutoff=-1.0) #left Q[r,qx], RL[qx,c] - right RL[r,qx] Q[qx,c]
+#     # expensive
+#     # if order(Q)==4
+#     #     @mpoc_assert check_ortho(Q,ms,eps)
+#     #     @mpoc_assert is_regular_form(Q,ul,eps)
+#     # end
+#     c=noncommonind(RL,iqx) #if size changed the old c is not lnger valid
+#     #
+#     #  If the RL is rectangular in wrong way, then factoring out M is very difficult.
+#     #  For now we just bail out.
+#     #
+#     if dim(c)>dim(iqx) || dim(c)<3
+#         replacetags!(RL,"Link,qx",tags(iforward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+#         replacetags!(Q ,"Link,qx",tags(iforward)) #W[l=n-1,l=n]
+#         return Q,RL,Spectrum([],0),true
+#     end
     
-    #
-    #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
-    #  M will be returned as a Dw-2 X Dw-2 interior matrix.  M_sans in the Parker paper.
-    #
-    M,RL_prime,im=getM(RL,ms.ul) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
-    #  
-    #  At last we can svd and compress M using epsSVD as the cutoff.  M should be dense.
-    #    
-    isvd=findinds(M,tsvd)[1] #decide the left index
-    U,s,V,spectrum,iu,iv=svd(M,isvd;kwargs...) # ns sing. values survive compression
-    ns=dim(inds(s)[1])
+#     #
+#     #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
+#     #  M will be returned as a Dw-2 X Dw-2 interior matrix.  M_sans in the Parker paper.
+#     #
+#     M,RL_prime,im=getM(RL,ms.ul) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
+#     #  
+#     #  At last we can svd and compress M using epsSVD as the cutoff.  M should be dense.
+#     #    
+#     isvd=findinds(M,tsvd)[1] #decide the left index
+#     U,s,V,spectrum,iu,iv=svd(M,isvd;kwargs...) # ns sing. values survive compression
+#     ns=dim(inds(s)[1])
 
-    #@show diag(array(s))
+#     #@show diag(array(s))
    
-    #
-    #  No recontrsuction RL, and W in the truncated space.
-    #
-    if lr==left
-        iup=redim(iu,ns+2,1)
-        RL=grow(s*V,iup,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
-        Uplus=grow(U,dag(iqx),dag(iup))
-        W=Q*Uplus #W[l=n-1,u]
-    else # right
-        ivp=redim(iv,ns+2,1)
-        RL=RL_prime*grow(U*s,im,ivp) #RL[l=n-1,v] dim Dw1 x ns+2
-        Vplus=grow(V,dag(iqx),dag(ivp)) #lq has the dir of Q so want the opposite on Vplus
-        W=Vplus*Q #W[l=n-1,v]
-    end
-
-    replacetags!(RL,tuv,tags(iforward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-    replacetags!(W ,tuv,tags(iforward)) #W[l=n-1,l=n]
-    # expensive.
-    # @mpoc_assert is_regular_form(W,ul,eps)
-    # @mpoc_assert check_ortho(W,ms,eps)
-    #@show luq lvq inds(Q) inds(Wq) inds(RLq)
-    return W,RL,spectrum,false
-end
-
-
-function one_trunc_sweep!(H::MPO,ul::reg_form;kwargs...)
-    lr::orth_type=get(kwargs, :orth, left)
-    verbose::Bool=get(kwargs, :verbose, false)
-    ss=bond_spectrums(undef,length(H)-1)
-    link_offest = lr==left ? 0 : -1
-    rng=sweep(H,lr)
-    encountered_bailout=false
-    if verbose
-        previous_Dw=Base.max(get_Dw(H)...)
-    end
-    #@show "----------truncate-----------"
-    for n in rng 
-        nn=n+rng.step #index to neighbour
-        W,RL,s,bail=truncate(H[n],ul;kwargs...,orth=lr)
-        encountered_bailout=encountered_bailout||bail
-        H[n]=W
-        H[nn]=RL*H[nn]
+#     #
+#     #  No recontrsuction RL, and W in the truncated space.
+#     #
+#     if lr==left
+#         iup=redim(iu,ns+2,1)
         
-        @mpoc_assert is_regular_form(H[n],ul)
-        @mpoc_assert is_regular_form(H[nn],ul)
-        ss[n+link_offest]=s
+#         RL=grow(s*V,iup,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
+#         Uplus=grow(U,dag(iqx),dag(iup))
+#         W=Q*Uplus #W[l=n-1,u]
+#     else # right
+#         ivp=redim(iv,ns+2,1)
+#         RL=RL_prime*grow(U*s,im,ivp) #RL[l=n-1,v] dim Dw1 x ns+2
+#         Vplus=grow(V,dag(iqx),dag(ivp)) #lq has the dir of Q so want the opposite on Vplus
+#         W=Vplus*Q #W[l=n-1,v]
+#     end
+
+#     replacetags!(RL,tuv,tags(iforward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+#     replacetags!(W ,tuv,tags(iforward)) #W[l=n-1,l=n]
+#     # expensive.
+#     # @mpoc_assert is_regular_form(W,ul,eps)
+#     # @mpoc_assert check_ortho(W,ms,eps)
+#     #@show luq lvq inds(Q) inds(Wq) inds(RLq)
+#     return W,RL,spectrum,false
+# end
+
+
+# function one_trunc_sweep!(H::MPO,ul::reg_form;kwargs...)
+#     lr::orth_type=get(kwargs, :orth, left)
+#     verbose::Bool=get(kwargs, :verbose, false)
+#     ss=bond_spectrums(undef,length(H)-1)
+#     link_offest = lr==left ? 0 : -1
+#     rng=sweep(H,lr)
+#     encountered_bailout=false
+#     if verbose
+#         previous_Dw=Base.max(get_Dw(H)...)
+#     end
+#     #@show "----------truncate-----------"
+#     for n in rng 
+#         nn=n+rng.step #index to neighbour
+#         W,RL,s,bail=truncate(H[n],ul;kwargs...,orth=lr)
+#         encountered_bailout=encountered_bailout||bail
+#         H[n]=W
+#         H[nn]=RL*H[nn]
+        
+#         @mpoc_assert is_regular_form(H[n],ul)
+#         @mpoc_assert is_regular_form(H[nn],ul)
+#         ss[n+link_offest]=s
        
-    end
-    H.rlim = rng.stop+rng.step+1
-    H.llim = rng.stop+rng.step-1
+#     end
+#     H.rlim = rng.stop+rng.step+1
+#     H.llim = rng.stop+rng.step-1
     
-    if verbose
-        Dw=Base.max(get_Dw(H)...)
-        println("After $lr truncation sweep Dw was reduced from $previous_Dw to $Dw")
-    end
-    return ss,encountered_bailout
-end
+#     if verbose
+#         Dw=Base.max(get_Dw(H)...)
+#         println("After $lr truncation sweep Dw was reduced from $previous_Dw to $Dw")
+#     end
+#     return ss,encountered_bailout
+# end
 
 
 @doc """
@@ -176,51 +177,51 @@ true
 
 ```
 """
-function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
-    #@printf "---- start compress ----\n"
-    #
-    # decide left/right and upper/lower
-    #
-    lr::orth_type=get(kwargs, :orth, left)
-    (bl,bu)=detect_regular_form(H)
-    if !(bl || bu)
-        throw(ErrorException("truncate!(H::MPO), H must be in either lower or upper regular form"))
-    end
-    @mpoc_assert !(bl && bu)
-    ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
+# function ITensors.truncate!(H::MPO;kwargs...)::bond_spectrums
+#     #@printf "---- start compress ----\n"
+#     #
+#     # decide left/right and upper/lower
+#     #
+#     lr::orth_type=get(kwargs, :orth, left)
+#     (bl,bu)=detect_regular_form(H)
+#     if !(bl || bu)
+#         throw(ErrorException("truncate!(H::MPO), H must be in either lower or upper regular form"))
+#     end
+#     @mpoc_assert !(bl && bu)
+#     ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
     
-    verbose::Bool=get(kwargs, :verbose, false)
-    if verbose
-        previous_Dw=Base.max(get_Dw(H)...)
-    end#
-    # Now check if H required orthogonalization
-    #
-    if !isortho(H,lr)
-        if verbose
-            println("truncate detected non-orthogonal MPO, will now orthogonalize")
-        end
-        orthogonalize!(H,ul;kwargs...,orth=mirror(lr)) #TODO why fail if spec ul here??
+#     verbose::Bool=get(kwargs, :verbose, false)
+#     if verbose
+#         previous_Dw=Base.max(get_Dw(H)...)
+#     end#
+#     # Now check if H required orthogonalization
+#     #
+#     if !isortho(H,lr)
+#         if verbose
+#             println("truncate detected non-orthogonal MPO, will now orthogonalize")
+#         end
+#         orthogonalize!(H,ul;kwargs...,orth=mirror(lr)) #TODO why fail if spec ul here??
         
-        if verbose
-            previous_Dw=Base.max(get_Dw(H)...)
-        end#
-    end
+#         if verbose
+#             previous_Dw=Base.max(get_Dw(H)...)
+#         end#
+#     end
 
-    svd_cutoff=get(kwargs, :cutoff, 1e-15)
-    ss,encountered_bailout=one_trunc_sweep!(H,ul;kwargs...,cutoff=svd_cutoff)
-    max_sweeps::Int64=get(kwargs,:max_sweeps,5)
+#     svd_cutoff=get(kwargs, :cutoff, 1e-15)
+#     ss,encountered_bailout=one_trunc_sweep!(H,ul;kwargs...,cutoff=svd_cutoff)
+#     max_sweeps::Int64=get(kwargs,:max_sweeps,5)
    
-    nsweeps=1
-    while encountered_bailout && nsweeps<=max_sweeps
-        if verbose
-            println("Encountered bailout, doing extra truncation sweeps")
-        end
-        lr=mirror(lr)
-        ss,encountered_bailout=one_trunc_sweep!(H,ul;kwargs...,orth=lr,cutoff=svd_cutoff)
-        nsweeps+=1
-    end
-    return ss 
-end
+#     nsweeps=1
+#     while encountered_bailout && nsweeps<=max_sweeps
+#         if verbose
+#             println("Encountered bailout, doing extra truncation sweeps")
+#         end
+#         lr=mirror(lr)
+#         ss,encountered_bailout=one_trunc_sweep!(H,ul;kwargs...,orth=lr,cutoff=svd_cutoff)
+#         nsweeps+=1
+#     end
+#     return ss 
+# end
 
 
 
@@ -282,13 +283,13 @@ function truncate(Wrf::reg_form_Op,lr::orth_type;kwargs...)::Tuple{reg_form_Op,I
     #  No recontrsuction RL, and W in the truncated space.
     #
     if lr==left
-        iup=redim(iu,ns+2,1)
+        iup=redim1(iu,1,1,space(iqx))
         RL=grow(s*V,iup,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
         Uplus=grow(U,dag(iqx),dag(iup))
         Wrf.W=Q.W*Uplus #W[l=n-1,u]
         Wrf.iright=settags(dag(iup),tags(iforward))
     else # right
-        ivp=redim(iv,ns+2,1)
+        ivp=redim1(iv,1,1,space(iqx))
         RL=RL_prime*grow(U*s,im,ivp) #RL[l=n-1,v] dim Dw1 x ns+2
         Vplus=grow(V,dag(iqx),dag(ivp)) #lq has the dir of Q so want the opposite on Vplus
         Wrf.W=Vplus*Q.W #W[l=n-1,v]
@@ -489,8 +490,8 @@ function truncate(G::ITensor,igl::Index;kwargs...)
     #
     # Build up U+, S+ and V+
     #
-    iup=redim(iu,dim(iu)+2,1) #Use redim to preserve QNs
-    ivp=redim(iv,dim(iv)+2,1) 
+    iup=redim1(iu,1,1,space(igl)) #Use redim to preserve QNs
+    ivp=redim1(iv,1,1,space(igr))
     #@show iu iup iv ivp igl s dense(s) U
     Up=grow(noprime(U),noprime(igl),dag(iup))
     Sp=grow(s,iup,ivp)

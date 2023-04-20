@@ -18,27 +18,27 @@ models=[
 ]
 
 
-@testset "V Block respecting QX decomposition" for (ul,lr) in [(lower,right),(upper,left)]
-    N=6
-    NNN=4
-    model_kwargs = (hx=0.5, ul=ul )
-    eps=1e-15
-    sites = siteinds("SpinHalf", N)
-    ms=matrix_state(ul,lr)
-    #
-    #  test lower triangular MPO 
-    #
-    H=make_transIsing_MPO(sites,NNN;model_kwargs...)
-    rng=sweep(H,lr)
-    for n in rng
-        W=H[n]
-        @test is_regular_form(W,ms.ul)
-        iln=commonind(H[n],H[n+rng.step])
+# @testset "V Block respecting QX decomposition" for (ul,lr) in [(lower,right),(upper,left)]
+#     N=6
+#     NNN=4
+#     model_kwargs = (hx=0.5, ul=ul )
+#     eps=1e-15
+#     sites = siteinds("SpinHalf", N)
+#     ms=matrix_state(ul,lr)
+#     #
+#     #  test lower triangular MPO 
+#     #
+#     H=make_transIsing_MPO(sites,NNN;model_kwargs...)
+#     rng=sweep(H,lr)
+#     for n in rng
+#         W=H[n]
+#         @test is_regular_form(W,ms.ul)
+#         iln=commonind(H[n],H[n+rng.step])
 
-        Q,RL,lq=block_qx(W,iln,ms.ul;orth=ms.lr,cutoff=0.0)
-        @test check_ortho(Q,ms,eps)
-    end
-end
+#         Q,RL,lq=block_qx(W,iln,ms.ul;orth=ms.lr,cutoff=0.0)
+#         @test check_ortho(Q,ms,eps)
+#     end
+# end
 
 @testset "Ac Block respecting QX decomposition $(model[1]), qns=$qns, ul=$ul, lr=$lr" for model in models, qns in [false,true], ul in [lower,upper], lr in [right,left]
     N=6

@@ -61,35 +61,36 @@ Improvements:
 -Understand factor of 2*J*Xn*Xn+1 in Model("ising")
 -Make a Model("ising_NNN") for arbitrary NNN interactions.
 -Make a table of Ncell for sites, and length(mpo) nsites(His) so we can figure what the rules are.
--Search for TODO items and get them in this list.
-Don't need: -block_qx Instead restoring full tri form, just use the part of the perm than puts I back in the corner.  
-    i.e.   leave the A block scrambled.
+-Search for TODO items and get them on this list.
 -System for hamitonians make_Hubbard_AutoiMPO => Hubbard_Auto_iMPO
 -Use an infinite=true flag for iMPOs?
 -Clean up "where {Elt,N}" code.
--Get rid of getV1 and setV1.  i.e. make all order(W)==4 by adding dummy indices.
+Done: -Get rid of getV1 and setV1.  i.e. make all order(W)==4 by adding dummy indices.
 -Follow Matts kwargs guidelines
 -Eliminate use of tags for finding indices.  Use the network structure instead.  Pass list if indices
   in function calls.  Use linkinds, commoninds, uniqueinds.
 -For iMPOs set llim,rlim=-1,1 so that they are interpreted as non-ortho when N=1.
--iMPO truncate user HL,HR instead of H,Hm ?
+No: -iMPO truncate user HL,HR instead of H,Hm ?
 -Go over all the Problems in VScode.  Are they real?
 -format
 -Move code into compression module.
 Ac blocking code:
 -no method matching order(::ITensorMPOCompression.reg_form_Op)
 -Fix Index Tag conventions sections of the docs.
--Fix links in reg_form_iMPO
--make one is_gauge_fixed function for reg_form_MPO and reg_form_iMPO 
+Done: -Fix links in reg_form_iMPO
+Done: -make one is_gauge_fixed function for reg_form_MPO and reg_form_iMPO 
 -Take out support to upper.
   Convert upper H's to lower durung the conversion to ref_form_MPO
   Strip out lots of code.
 -Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
--Check reg_form_Op translator.
+Done: -Check in reg_form_Op translator.
 -Do ac-orthogonalize! eta = norm(R-I),  do this block by block for block sparse R
-Fix Unknown:
--For RL_prime problems, try factor R+ = R'*M (instread of M*R) then R' will be square.
-  THis will only work if R' is orthogonal R_dagger'*R' = Id
+-get rid of matrix_state
+-check and fix equal_edge_blocks in truncate.  Use redim1 for all orth/truncate code.
+-Fix emprical observations section of the tech notes.
+-Overload ref_form_Op*ITensor can we auto fix ileft,iright?
+
+
 
 julia --sysimage /home/janr/.julia/sysimages/sys_itensors.so
 
