@@ -7,6 +7,9 @@ mutable struct reg_form_Op
     iright::Index
     ul::reg_form
     function reg_form_Op(W::ITensor,ileft::Index,iright::Index,ul::reg_form) 
+        if !hasinds(W,ileft,iright)
+            @show inds(W,tags="Link") ileft iright
+        end
         @assert hasinds(W,ileft,iright)
         return new(W,ileft,iright,ul)
     end
@@ -157,9 +160,9 @@ end
 #
 function ITensorInfiniteMPS.translatecell(translator::Function, Wrf::reg_form_Op, n::Integer)
     new_inds=ITensorInfiniteMPS.translatecell(translator, inds(Wrf), n)
-    Wrf.W=ITensors.setinds(Wrf.W,new_inds)
-    Wrf.ileft,Wrf.iright=parse_links(Wrf.W)
-    return Wrf
+    W=ITensors.setinds(Wrf.W,new_inds)
+    ileft,iright=parse_links(W)
+    return reg_form_Op(W,ileft,iright,Wrf.ul)
 end
   
 
