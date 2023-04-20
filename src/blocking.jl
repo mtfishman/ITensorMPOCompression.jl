@@ -1,119 +1,28 @@
-#using Printf
 
-function getspace(i::QNIndex,off::Int64)
-    @mpoc_assert off==0 || off==1
-    nb=nblocks(i)
-    qnb=off==0 ? space(i)[nb] : space(i)[1]
-    #@show off space(i)
-    #@mpoc_assert blockdim(qnb)==1 TODO: get this working.
-    return qn(qnb) 
-end
-function getspace(i::Index,off::Int64)
-    return 1 
-end
 #
 #  create a Vblock IndexRange using the supplied offset.
 #
-range(i::Index,offset::Int64) = i=>1+offset:dim(i)-1+offset
+Base.range(i::Index,offset::Int64) = i=>1+offset:dim(i)-1+offset
 #
 # functions for getting and setting V blocks required for block respecting QX and SVD
 #
-function getV(W::ITensor,off::V_offsets)::Tuple{ITensor, Union{QN,Int}}
+function getV(W::ITensor,off::V_offsets)::ITensor
     if order(W)==3
         w1=filterinds(inds(W),tags="Link")[1]
-        return W[range(w1,off.o1)],getspace(w1,off.o1)
+        return W[range(w1,off.o1)]
     elseif order(W)==4
         w1,w2=filterinds(inds(W),tags="Link")
         if dim(w1)==1
-            return W[w1=>1:1,range(w2,off.o2)],getspace(w1,off.o1)
+            return W[w1=>1:1,range(w2,off.o2)]
         elseif dim(w2)==1
-            return W[range(w1,off.o1),w2=>1:1],getspace(w1,off.o1)
+            return W[range(w1,off.o1),w2=>1:1]
         else
-            return W[range(w1,off.o1),range(w2,off.o2)],getspace(w1,off.o1)
+            return W[range(w1,off.o1),range(w2,off.o2)]
         end
     else 
         @show inds(W)
         @error("getV(W::ITensor,off::V_offsets) Case with order(W)=$(order(W)) not supported.")
     end
-end
-# Handles W with only one link index
-function setV1(W::ITensor,V::ITensor,iqx::Index,ms::matrix_state)::ITensor
-    iwl,=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
-    ivl,=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
-    @mpoc_assert inds(W,tags="Site")==inds(V,tags="Site")
-    off=V_offsets(ms)
-    @mpoc_assert(off.o1==off.o2)
-    # 
-    # W & V need to have the same Link tags as W1 for the assignments below to work.
-    #
-    W=replacetags(W,tags(iwl),tags(iqx))
-    V=replacetags(V,tags(ivl),tags(iqx)) 
-    iwl,=inds(W,tags=tags(iqx))
-    #
-    #  Make a new tensor to copy V and one row of W into
-    #
-    T=eltype(V)
-    W1=ITensor(T(0.0),iqx,inds(W,tags="Site"))
-    rc= off.o1==1 ? 1 : dim(iwl) #preserve row/col 1 or Dw
-    rc1= off.o1==1 ? 1 : dim(iqx)
-    W1[iqx=>rc1:rc1]=W[iwl=>rc:rc]
-    W1[range(iqx,off.o1)]=V #Finally we can do the assingment of the V-block.
-    return W1
-end
-
-#
-#  This function is non trivial for 3 reasons:
-#   1) V could have a truncted number of rows or columns as a result of rank revealing QX
-#      W then has to be re-sized accordingly
-#   2) If W gets resized we need to preserve particular rows/columns outside the Vblock from the old W.
-#   3) V and W should have one common link index so we need to find those and pair them together. But we
-#      need to match on tags&plev because dims are different so ID matching won't work. 
-#
-function setV(W::ITensor,V::ITensor,iqx::Index,ms::matrix_state)::ITensor
-    if order(W)==3
-        return setV1(W,V,iqx,ms) #Handle row/col vectors
-    end
-    #
-    #  Deduce all link indices
-    #
-    @mpoc_assert order(W)==4
-    wils=filterinds(inds(W),tags="Link") #should be l=n, l=n-1
-    vils=filterinds(inds(V),tags="Link") #should be qx and {l=n,l=n-1} depending on sweep direction
-    @mpoc_assert length(wils)==2
-    @mpoc_assert length(vils)==2
-    ivqx,=inds(V,tags="Link,qx") #get the qx index.  This is the one that can change size
-    ivl=noncommonind(vils,ivqx)  #get the other link l=n index on V
-    iwl=wils[match_tagplev(ivl,wils...)] #now find the W link index with the same tags/plev as ivl
-    iwqx=noncommonind(wils,iwl) #get the other link l=n index on W
-    off=V_offsets(ms)
-    @mpoc_assert off.o1==off.o2
-    # 
-    # W & V need to have the same Link tags as W1 for the assignments below to work.
-    #
-    W=replacetags(W,tags(iwqx),tags(iqx))
-    V=replacetags(V,tags(ivqx),tags(iqx)) #V needs to have the same Link tags as W for the assignment below to work.
-    iwqx,=inds(W,tags=tags(iqx))
-    #
-    #  Make a new tensor to copy V and one row of W into
-    #
-    iss=filterinds(inds(W),tags="Site")
-    T=eltype(V)
-    W1=ITensor(T(0.0),iqx,iwl,iss)
-    rc= off.o1==1 ? 1 : dim(iwqx) #preserve row/col 1 or Dw
-    rc1= off.o1==1 ? 1 : dim(iqx)
-    #@show iwqx rc iqx rc1 iwl
-    #@pprint W
-    #@show W[iwqx=>rc:rc,iwl=>1:dim(iwl)]
-    W1[iqx=>rc1:rc1,iwl=>1:dim(iwl)]=W[iwqx=>rc:rc,iwl=>1:dim(iwl)] #copy row/col rc/rc1
-    #@pprint W1
-    if dim(iqx)==1
-        W1[iqx=>1:1,range(iwl,off.o2)]=V 
-    elseif dim(iwl)==1
-        W1[range(iqx,off.o1),iwl=>1:1]=V
-    else
-        W1[range(iqx,off.o1),range(iwl,off.o2)]=V #Finally we can do the assingment of the V-block.
-    end
-    return W1
 end
 
 #-------------------------------------------------------------------------------
@@ -318,27 +227,6 @@ end
 function set_𝒄_block!(::reg_form_Op,::Nothing)
 end
 #
-#  o1   add row to RL       o2  add column to RL
-#   0   at bottom, Dw1+1    0   at right, Dw2+1
-#   1   at top, 1           1   at left, 1
-#
-# function growRL(RL::ITensor,iwl::Index,off::V_offsets,qn::Union{QN,Int})::Tuple{ITensor,Index}
-#     @mpoc_assert order(RL)==2
-#     @checkflux(RL)
-#     irl,=filterinds(inds(RL),tags=tags(iwl)) #find the link index of RL
-#     irqx=noncommonind(inds(RL),irl) #find the qx link of RL
-#     @mpoc_assert dim(iwl)==dim(irl)+1
-#     ipqx=redim(irqx,dim(irqx)+1,off.o1,qn) 
-#     T=eltype(RL)
-#     RLplus=ITensor(T(0.0),iwl,ipqx)
-#     RLplus[ipqx=>1,iwl=>1]=1.0 #add 1.0's in the corners
-#     RLplus[ipqx=>dim(ipqx),iwl=>dim(iwl)]=1.0
-#     RLplus[range(ipqx,off.o1),range(iwl,off.o2)]=RL #plop in RL in approtriate sub block.
-#     @checkflux(RL) 
-#     return RLplus,dag(ipqx)
-# end
-
-#
 #  factor LR such that for
 #       lr=left  LR=M*RM_prime
 #       lr=right LR=RL_prime*M
@@ -389,13 +277,6 @@ function getM(RL::ITensor,iqx1::Index,ul::reg_form)::Tuple{ITensor,ITensor,Index
     return M,RL_prime,dag(im)
 end
 
-
-function show_blocks(T::ITensor)
-    for b in nzblocks(T)
-        qns=ntuple(i->space(inds(T)[i])[b[i]],length(inds(T)))
-        @show b,qns
-    end
-end
 
 function my_similar(::DenseTensor{ElT,N},inds...) where {ElT,N}
     return ITensor(inds...)

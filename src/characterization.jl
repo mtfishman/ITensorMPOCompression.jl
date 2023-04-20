@@ -155,7 +155,7 @@ end
 #  Detection of canonical (orthogonal) forms
 #
 function check_ortho(W::ITensor,ms::matrix_state,eps::Float64=default_eps)::Bool
-    V,qn=getV(W,V_offsets(ms))
+    V=getV(W,V_offsets(ms))
     forward,reverse=parse_links(V,ms.lr)
     d,n,space=parse_site(W)
     DwDw=dim(forward)*dim(reverse)
