@@ -1,30 +1,4 @@
 
-#
-#  create a Vblock IndexRange using the supplied offset.
-#
-Base.range(i::Index,offset::Int64) = i=>1+offset:dim(i)-1+offset
-#
-# functions for getting and setting V blocks required for block respecting QX and SVD
-#
-function getV(W::ITensor,off::V_offsets)::ITensor
-    if order(W)==3
-        w1=filterinds(inds(W),tags="Link")[1]
-        return W[range(w1,off.o1)]
-    elseif order(W)==4
-        w1,w2=filterinds(inds(W),tags="Link")
-        if dim(w1)==1
-            return W[w1=>1:1,range(w2,off.o2)]
-        elseif dim(w2)==1
-            return W[range(w1,off.o1),w2=>1:1]
-        else
-            return W[range(w1,off.o1),range(w2,off.o2)]
-        end
-    else 
-        @show inds(W)
-        @error("getV(W::ITensor,off::V_offsets) Case with order(W)=$(order(W)) not supported.")
-    end
-end
-
 #-------------------------------------------------------------------------------
 #
 #  Blocking functions
@@ -48,6 +22,7 @@ mutable struct regform_blocks
     𝕀::Union{ITensor,Nothing}
     𝑨::Union{ITensor,Nothing}
     𝑨𝒄::Union{ITensor,Nothing}
+    𝑽::Union{ITensor,Nothing}
     𝒃::Union{ITensor,Nothing}
     𝒄::Union{ITensor,Nothing}
     𝒅::Union{ITensor,Nothing}
@@ -55,13 +30,15 @@ mutable struct regform_blocks
     icA::Union{Index,Nothing}
     irAc::Union{Index,Nothing}
     icAc::Union{Index,Nothing}
+    irV::Union{Index,Nothing}
+    icV::Union{Index,Nothing}
     irb::Union{Index,Nothing}
     icb::Union{Index,Nothing}
     irc::Union{Index,Nothing}
     icc::Union{Index,Nothing}
     ird::Union{Index,Nothing}
     icd::Union{Index,Nothing}    
-    regform_blocks()=new(nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing)
+    regform_blocks()=new(nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing)
 end
 
 d(rfb::regform_blocks)::Float64=scalar(rfb.𝕀*dag(rfb.𝕀))
@@ -83,11 +60,11 @@ llur(ul::reg_form,lr::orth_type)= lr==left && ul==lower || lr==right&&ul==upper
 llur(W::reg_form_Op,lr::orth_type)=llur(W.ul,lr)
 llur(ms::matrix_state)=llur(ms.ul,ms.lr)
 
-#  Use recognizably distinct UTF symbols for operators, and op valued vectors and matrices: 𝕀 𝑨 𝒃 𝒄 𝒅 ⌃ c₀ 𝑨𝒄
+#  Use recognizably distinct UTF symbols for operators, and op valued vectors and matrices: 𝕀 𝑨 𝒃 𝒄 𝒅 𝑽 ⌃ c₀ 𝑨𝒄
 # symbols from here: https://www.compart.com/en/unicode/block/U+1D400
 #extract_blocks(W::reg_form_Op,lr::orth_type;kwargs...)=extract_blocks(W.W,W.ileft,W.iright,matrix_state(W.ul,lr);kwargs...)
 
-function extract_blocks(Wrf::reg_form_Op,lr::orth_type;all=false,c=true,b=false,d=false,A=false,Ac=false,I=true,fix_inds=false,swap_bc=true)::regform_blocks
+function extract_blocks(Wrf::reg_form_Op,lr::orth_type;all=false,c=false,b=false,d=false,A=false,Ac=false,V=false,I=true,fix_inds=false,swap_bc=true)::regform_blocks
     check(Wrf)
     @assert plev(Wrf.ileft)==0
     @assert plev(Wrf.iright)==0
@@ -130,6 +107,20 @@ function extract_blocks(Wrf::reg_form_Op,lr::orth_type;all=false,c=true,b=false,
         end
         Wb.irAc,=inds(Wb.𝑨𝒄,tags=tags(ir))
         Wb.icAc,=inds(Wb.𝑨𝒄,tags=tags(ic))
+    end
+    if V
+        i1,i2,n1,n2=swap_ul(Wrf)
+        if llur(Wrf,lr) #lower left/upper right
+            min1=Base.min(n1,2)
+            min2=Base.min(n2,2)
+            Wb.𝑽=W[i1=>min1:n1,i2=>min2:n2] #Bottom right corner
+        else #lower right/upper left
+            max1=Base.max(n1-1,1)
+            max2=Base.max(n2-1,1)
+            Wb.𝑽=W[i1=>1:max1,i2=>1:max2] #top left corner
+        end
+        Wb.irV,=inds(Wb.𝑽,tags=tags(ir))
+        Wb.icV,=inds(Wb.𝑽,tags=tags(ic))
     end
     if b
         Wb.𝒃= W[ir=>2:nr-1,ic=>1:1]

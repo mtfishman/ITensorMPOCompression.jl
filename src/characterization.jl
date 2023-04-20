@@ -154,33 +154,6 @@ end
 #
 #  Detection of canonical (orthogonal) forms
 #
-function check_ortho(W::ITensor,ms::matrix_state,eps::Float64=default_eps)::Bool
-    V=getV(W,V_offsets(ms))
-    forward,reverse=parse_links(V,ms.lr)
-    d,n,space=parse_site(W)
-    DwDw=dim(forward)*dim(reverse)
-    
-    Id=V*prime(dag(V),forward)/d
-    if order(Id)==2
-        is_can = norm(dense(Id)-delta(forward,dag(forward')))/sqrt(DwDw)<eps
-        if !is_can
-            #@show Id
-        end
-    elseif order(Id)==0
-        is_can = abs(scalar(Id)-d)<eps
-    end
-    return is_can    
-end
-
-
-function check_ortho(H::AbstractMPS,ms::matrix_state,eps::Float64=default_eps)::Bool
-    N=length(H)
-    ic=true
-    for n in sweep(H,ms.lr) #skip the edge row/col opertors
-        ic=ic &&  check_ortho(H[n],ms,eps)
-    end
-    return ic
-end
 
 @doc """
 check_ortho(H,lr[,eps])::Bool

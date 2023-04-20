@@ -89,7 +89,7 @@ Done: -Do ac-orthogonalize! eta = norm(R-I),  do this block by block for block s
 Done: -check and fix equal_edge_blocks in truncate.  Use redim1 for all orth/truncate code.
 -Fix emprical observations section of the tech notes.
 -Overload ref_form_Op*ITensor can we auto fix ileft,iright?
--Replace getV with another member in extract_blocks
+Done: -Replace getV with another member in extract_blocks
 
 
 

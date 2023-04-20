@@ -136,8 +136,20 @@ end
 
 
 function check_ortho(Wrf::reg_form_Op,lr::orth_type,eps::Float64=default_eps)::Bool
-    ms=matrix_state(Wrf.ul,lr)
-    return check_ortho(Wrf.W,ms,eps) 
+    Wb=extract_blocks(Wrf,lr;V=true)
+    DwDw=dim(Wb.irV)*dim(Wb.icV)
+    forward = llur(Wrf,lr) ? Wb.icV : Wb.irV
+    
+    Id=Wb.𝑽*prime(dag(Wb.𝑽),forward)/d(Wb)
+    if order(Id)==2
+        is_can = norm(dense(Id)-delta(forward,dag(forward')))/sqrt(DwDw)<eps
+        # if !is_can
+        #     @show Id
+        # end
+    elseif order(Id)==0
+        is_can = abs(scalar(Id)-d(Wb))<eps
+    end
+    return is_can
 end
 
 function check_ortho(H::reg_form_MPO,lr::orth_type,eps::Float64=default_eps)::Bool
