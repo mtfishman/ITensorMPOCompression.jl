@@ -23,13 +23,72 @@ function Base.getindex(Wrf::reg_form_Op,rleft::UnitRange,rright::UnitRange)
     return Wrf.W[Wrf.ileft=>rleft,Wrf.iright=>rright]
 end
 
-function is_regular_form(W::reg_form_Op,eps::Float64=default_eps)::Bool
-    i = W.ul==lower ? 1 : 2
-    return detect_regular_form(W.W,eps)[i]
+function detect_regular_form(Wrf::reg_form_Op,eps::Float64=default_eps)::Tuple{Bool,Bool}
+    return is_regular_form(Wrf,lower,eps),is_regular_form(Wrf,upper,eps)
 end
 
-function detect_regular_form(Wrf::reg_form_Op,eps::Float64=default_eps)::Tuple{Bool,Bool}
-    return detect_regular_form(Wrf.W,eps)
+flip(ul::reg_form)= ul==lower ? upper : lower
+
+is_regular_form(Wrf::reg_form_Op,eps::Float64=default_eps)=is_regular_form(Wrf,Wrf.ul,eps)
+
+function is_regular_form(Wrf::reg_form_Op,ul::reg_form,eps::Float64=default_eps)::Bool
+    ul_cache=Wrf.ul
+    Wrf.ul=flip(ul)
+    Wb=extract_blocks(Wrf,left;b=true,c=true,d=true)
+    is=noncommoninds(Wrf.W,Wrf.ileft,Wrf.iright)
+    𝕀=delta(is) #We need to make our own, can't trust Wb.𝕀 is ul is wrong.
+    dh=dim(is[1])
+    nr,nc=dim(Wrf.ileft),dim(Wrf.iright)
+    if (nc==1 && ul==lower) || (nr==1 && ul==upper)
+        i1=abs(scalar(dag(𝕀) * slice(Wrf.W,Wrf.ileft=>1,Wrf.iright=>1))-dh)<eps
+        iN=bz=cz=dz=true
+    end
+    if (nr==1 && ul==lower) || (nc==1 && ul==upper)
+        iN=abs(scalar(dag(𝕀) * slice(Wrf.W,Wrf.ileft=>nr,Wrf.iright=>nc))-dh)<eps
+        i1=bz=cz=dz=true
+    end
+    if nr>1 && nc>1   
+        i1=abs(scalar(dag(Wb.𝕀) * slice(Wrf.W,Wrf.ileft=>1,Wrf.iright=>1))-dh)<eps
+        iN=abs(scalar(dag(Wb.𝕀) * slice(Wrf.W,Wrf.ileft=>nr,Wrf.iright=>nc))-dh)<eps
+        bz=isnothing(Wb.𝒃) ? true : norm(Wb.𝒃)<eps
+        cz=isnothing(Wb.𝒄) ? true : norm(Wb.𝒄)<eps
+        dz=norm(Wb.𝒅)<eps
+    end
+    
+    Wrf.ul=ul_cache
+    # if !(i1 && iN && bz && cz && dz)
+    #     pprint(Wrf.W)
+    #     @show ul nr nc i1 iN bz cz dz
+    #     @show dh scalar(dag(𝕀) * slice(Wrf.W,Wrf.ileft=>1,Wrf.iright=>1)) Wb.𝕀 𝕀
+    # end
+
+
+    return i1 && iN && bz && cz && dz
+end
+
+function Base.show(io::IO, Wrf::reg_form_Op)
+    show(io,Wrf.ileft)
+    show(io,Wrf.iright)
+    show(io,Wrf.W)
+end
+
+ITensors.order(Wrf::reg_form_Op)=order(Wrf.W)
+
+function check_ortho(Wrf::reg_form_Op,lr::orth_type,eps::Float64=default_eps)::Bool
+    Wb=extract_blocks(Wrf,lr;V=true)
+    DwDw=dim(Wb.irV)*dim(Wb.icV)
+    ilf = llur(Wrf,lr) ? Wb.icV : Wb.irV
+    
+    Id=Wb.𝑽*prime(dag(Wb.𝑽),ilf)/d(Wb)
+    if order(Id)==2
+        is_can = norm(dense(Id)-delta(ilf,dag(ilf')))/sqrt(DwDw)<eps
+        # if !is_can
+        #     @show Id
+        # end
+    elseif order(Id)==0
+        is_can = abs(scalar(Id)-d(Wb))<eps
+    end
+    return is_can
 end
 
 
@@ -137,23 +196,6 @@ function is_regular_form(H::reg_form_MPO,eps::Float64=default_eps)::Bool
     return true
 end
 
-
-function check_ortho(Wrf::reg_form_Op,lr::orth_type,eps::Float64=default_eps)::Bool
-    Wb=extract_blocks(Wrf,lr;V=true)
-    DwDw=dim(Wb.irV)*dim(Wb.icV)
-    ilf = llur(Wrf,lr) ? Wb.icV : Wb.irV
-    
-    Id=Wb.𝑽*prime(dag(Wb.𝑽),ilf)/d(Wb)
-    if order(Id)==2
-        is_can = norm(dense(Id)-delta(ilf,dag(ilf')))/sqrt(DwDw)<eps
-        # if !is_can
-        #     @show Id
-        # end
-    elseif order(Id)==0
-        is_can = abs(scalar(Id)-d(Wb))<eps
-    end
-    return is_can
-end
 
 function check_ortho(H::reg_form_MPO,lr::orth_type,eps::Float64=default_eps)::Bool
     for n in sweep(H,lr) #skip the edge row/col opertors
@@ -265,6 +307,13 @@ end
 function check_ortho(H::reg_form_iMPO,lr::orth_type,eps::Float64=default_eps)::Bool
     for n in sweep(H,lr) #skip the edge row/col opertors
         !check_ortho(H[n],lr,eps) && return false
+    end
+    return true
+end
+
+function is_regular_form(H::reg_form_iMPO,eps::Float64=default_eps)::Bool
+    for W in H
+        !is_regular_form(W,eps) && return false
     end
     return true
 end

@@ -63,6 +63,7 @@ function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
         𝒄⎖=𝒄+𝒕ₙ₋₁*𝑨-𝒕ₙ*𝕀
         𝒅⎖=𝒅+𝒕ₙ₋₁*𝒃
     end
+    @assert is_regular_form(W)
     
     set_𝒅_block!(W,𝒅⎖)
     @assert is_regular_form(W)

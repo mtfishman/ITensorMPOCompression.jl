@@ -301,167 +301,7 @@ The function returns two Bools in order to handle cases where W is not in regula
 (false,false) and W is in a special pseudo diagonal regular form, returning (true,true).
     
 """
-function detect_regular_form(W::ITensor,eps::Float64=default_eps)::Tuple{Bool,Bool}
-    r,c=parse_links(W)
-    Dw1,Dw2=dim(r),dim(c)
-    #handle edge row and col vectors
-    if Dw1==1 #left edge row vector
-        if order(W)==3
-            return is_unit(slice(W,c=>Dw2),eps),is_unit(slice(W,c=>1),eps)
-        else
-            return is_unit(slice(W,r=>1,c=>Dw2),eps),is_unit(slice(W,r=>1,c=>1),eps)
-        end
-    end
-    if Dw2==1 #right edge col vector
-        if order(W)==3
-            return is_unit(slice(W,r=>1),eps),is_unit(slice(W,r=>Dw1),eps)
-        else
-            return is_unit(slice(W,r=>1,c=>1),eps),is_unit(slice(W,r=>Dw1,c=>1),eps)
-        end
-    end
 
-    #ul=detect_upper_lower(W) is the a requirement??
-    irf=true #is regular form
-    # There must be unit matrices in the top left and bottom right corners.
-    irf=irf && is_unit(slice(W,r=>1  ,c=>1  ),eps)
-    irf=irf && is_unit(slice(W,r=>Dw1,c=>Dw2),eps)
-    # now look for zeroed partial rows and columns, avoiding the corner unit matricies.
-    top_row_zero=norm(W[r=>1:1,c=>2:Dw2])<eps
-    right_col_zero=norm(W[r=>1:Dw1-1,c=>Dw2:Dw2])<eps
-    bot_row_zero=norm(W[r=>Dw1:Dw1,c=>1:Dw2-1])<eps
-    left__col_zero=norm(W[r=>2:Dw1,c=>1:1])<eps
-    reg_lower=irf && top_row_zero && right_col_zero
-    reg_upper=irf && bot_row_zero && left__col_zero
-    # before returning we should also check for any unit matricies along the diagonal
-    # this gets a bit tricky for non-square matrices.
-    # diag_unit = false
-    # if Dw1>=Dw2
-    #     for ic in 2:Dw2-1
-    #         diag_unit = diag_unit || is_unit(slice(W,r=>ic,c=>ic  ),eps)
-    #     end
-    # else
-    #     dr=Dw2-Dw1
-    #     for ir in 2:Dw1-1
-    #         diag_unit = diag_unit || is_unit(slice(W,r=>ir,c=>ir+dr),eps)
-    #     end
-    # end
-    #
-    #  Not sure how to hanlde this right now ... unit ops seem to appear with alarming
-    #  frequency after compression.
-    #
-    # if diag_unit
-    #     pprint(W,eps)
-    #     println("ITensorMPOCompression.is_regular_form\n  Warning: found unit operator along the diagonal of an MPO")
-    # end    
-   
-    return reg_lower,reg_upper
-end
-
-@doc """
-    is_regular_form(W,ul[,eps])::Bool
-
-Determine if an operator-valued matrix, `W`, is in `ul` regular form.
-
-# Arguments
-- `W::ITensor` : operator-valued matrix to be characterized. `W` is expected to have 2 site indices and 
-    1 or 2 link indices
-- 'ul::reg_form' : choose `lower` or `upper`.
-- `eps::Float64 = 1e-14` : operators inside `W` with norm(W[i,j])<eps are assumed to be zero.
-
-# Returns 
-- `true` if `W` is in `ul` regular form.
-
-"""
-function is_regular_form(W::ITensor,ul::reg_form,eps::Float64=default_eps)::Bool
-    i = ul==lower ? 1 : 2
-    return detect_regular_form(W,eps)[i]
-end
-
-@doc """
-    is_lower_regular_form(W[,eps])::Bool
-
-Determine if an operator-valued matrix, `W`, is in lower regular form.
-
-# Arguments
-- `W::ITensor` : operator-valued matrix to be characterized. `W` is expected to have 2 site indices and 
-    1 or 2 link indices
-- `eps::Float64 = 1e-14` : operators inside `W` with norm(W[i,j])<eps are assumed to be zero.
-
-# Returns 
-- `true` if `W` is in lower regular form.
-
-"""
-function is_lower_regular_form(W::ITensor,eps::Float64=default_eps)::Bool
-    return detect_regular_form(W,eps)[1]
-end
-
-@doc """
-    is_upper_regular_form(W[,eps])::Bool
-
-Determine if an operator-valued matrix, `W`, is in upper regular form.
-
-# Arguments
-- `W::ITensor` : operator-valued matrix to be characterized. `W` is expected to have 2 site indices and 
-    1 or 2 link indices
-- `eps::Float64 = 1e-14` : operators inside `W` with norm(W[i,j])<eps are assumed to be zero.
-
-# Returns
-- `true` if `W` is in upper regular form.
-
-"""
-function is_upper_regular_form(W::ITensor,eps::Float64=default_eps)::Bool
-    return detect_regular_form(W,eps)[2]
-end
-
-@doc """
-    is_regular_form(H[,eps])::Bool
-
-Determine if an MPO, `H`, is in either lower xor upper regular form. All sites in H must be
-in the same (lower or upper) regular form in order to return true.  In other words mixtures
-of lower and upper will fail.
-
-# Arguments
-- `H::MPO` : MPO to be characterized. 
-- `eps::Float64 = 1e-14` : operators inside `H` with norm(W[i,j])<eps are assumed to be zero.
-
-# Returns 
-- `true` if *all* sites in `H` are in either lower xor upper regular form.
-
-"""
-function is_regular_form(H::AbstractMPS,eps::Float64=default_eps)::Bool
-    N=length(H)
-    lrf,urf=true,true
-    for n in 1:N
-        l,u=detect_regular_form(H[n],eps) #there must be some trick to get all this onto one line
-        lrf=lrf && l
-        urf=urf && u
-    end
-    return lrf || urf
-end
-
-@doc """
-    is_regular_form(H,ul[,eps])::Bool
-
-Determine is a MPO, `H`, is in `ul` regular form. All sites in H must
-in the same `ul` regular form in order to return true.
-
-# Arguments
-- `H::MPO` : MPO to be characterized. 
-- 'ul::reg_form' : choose `lower` or `upper`.
-- `eps::Float64 = 1e-14` : operators inside `H` with norm(W[i,j])<eps are assumed to be zero.
-
-# Returns 
-- `true` if *all* sites in `H` are in `ul` regular form.
-
-"""
-function is_regular_form(H::AbstractMPS,ul::reg_form,eps::Float64=default_eps)::Bool
-    N=length(H)
-    irf=true
-    for n in 1:N
-        irf=irf && is_regular_form(H[n],ul,eps)
-    end
-    return irf
-end
 
 @doc """
     detect_regular_form(H[,eps])::Tuple{Bool,Bool}
@@ -478,50 +318,22 @@ Inspect the structure of an MPO `H` to see if it satisfies the regular form cond
 The function returns two Bools in order to handle cases where `H` is not regular form, returning (`false`,`false`) and `H` is in a special pseudo-diagonal regular form, returning (`true`,`true`).
     
 """
-function detect_regular_form(H::AbstractMPS,eps::Float64=default_eps)::Tuple{Bool,Bool}
-    N=length(H)
-    l,u=true,true
-    for n in 1:N
-        ln,un=detect_regular_form(H[n],eps)
-        l= l && ln
-        u= u && un
+function is_regular_form(H::AbstractMPS,ul::reg_form,eps::Float64=default_eps)::Bool
+    il=dag(linkind(H,1))
+    for n in 2:length(H)-1
+        ir=linkind(H,n)
+        #@show il ir inds(H[n])
+        Wrf=reg_form_Op(H[n],il,ir,ul)
+        !is_regular_form(Wrf,eps) && return false
+        il=dag(ir)
     end
-    return l,u
+    return true
 end
 
-@doc """
-    is_lower_regular_form(H[,eps])::Bool
-
-Determine if all sites in an MPO, `H`, are in lower regular form.
-
-# Arguments
-- `H::MPO` : MPO to be characterized. 
-- `eps::Float64 = 1e-14` : operators inside `H` with norm(W[i,j])<eps are assumed to be zero.
-
-# Returns 
-- `true` if *all* sites in `H` are in lower regular form.
-
-"""
-function is_lower_regular_form(H::AbstractMPS,eps::Float64=default_eps)::Bool
-    return is_regular_form(H,lower,eps)
+function detect_regular_form(H::AbstractMPS,eps::Float64=default_eps)::Tuple{Bool,Bool}
+   return is_regular_form(H,lower,eps),is_regular_form(H,upper,eps)
 end
 
-@doc """
-    is_upper_regular_form(H[,eps])::Bool
-
-Determine if all sites in an MPO, `H`, are in upper regular form.
-
-# Arguments
-- `H::MPO` : MPO to be characterized. 
-- `eps::Float64 = 1e-14` : operators inside `H` with norm(W[i,j])<eps are assumed to be zero.
-
-# Returns 
-- `true` if *all* sites in `H` are in upper regular form.
-
-"""
-function is_upper_regular_form(H::AbstractMPS,eps::Float64=default_eps)::Bool
-    return is_regular_form(H,upper,eps)
-end
 
 function get_Dw(H::MPO)::Vector{Int64}
     N=length(H)

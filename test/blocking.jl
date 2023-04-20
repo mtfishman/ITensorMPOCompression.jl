@@ -4,6 +4,8 @@ using Test
 using Revise,Printf
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
 
+import ITensorMPOCompression: flip
+
 @testset "Extract blocks qns=$qns, ul=$ul" for qns in [false,true], ul=[lower,upper]
     eps=1e-15
     N=5 #5 sites
@@ -69,6 +71,19 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control flo
     @test norm(array(Wb.𝑽)-array(Wrf[2:nr,2:nc]))<eps
 
 end
+
+@testset "Detect regular form qns=$qns, ul=$ul" for qns in [false,true], ul=[lower,upper]
+    eps=1e-15
+    N=5 #5 sites
+    NNN=2 #Include 2nd nearest neighbour interactions
+    sites = siteinds("Electron",N,conserve_qns=qns)
+    H=reg_form_MPO(make_Hubbard_AutoMPO(sites,NNN;ul=ul))
+    for W in H
+        @test is_regular_form(W,ul,eps)
+        @test dim(W.ileft)==1 || dim(W.iright)==1 || !is_regular_form(W,flip(ul),eps)
+    end
+end
+
 
 # @testset "Sub tensor assign for block sparse matrices with compatable QN spaces" begin 
 #     qns=[QN("Sz",0)=>1,QN("Sz",0)=>3,QN("Sz",0)=>2]
