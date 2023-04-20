@@ -243,13 +243,31 @@ function ac_qx_step!(W::reg_form_Op,lr::orth_type,eps::Float64;kwargs...)
     #  How far are we from RL==Id ?
     #
     if dim(forward)==dim(iq)
-        Rm=matrix(dense(RL))
-        Rmp=Rm[:,p]
-        eta = norm(Rmp-Matrix(LinearAlgebra.I,size(Rmp)))
+        eta = RmI(RL,p) #Different handling for dense and block-sparse
     else
         eta=99.0 #Rank reduction occured to keep going.
     end
     RL=prime(RL,iq)
     check(Q)
     return Q,RL,eta
+end
+
+#
+#  Evaluate norm(R-I)
+#
+RmI(R::ITensor,perms)=RmI(tensor(R),perms)
+function RmI(R::DenseTensor,perm::Vector{Int64})
+    Rmp=matrix(R)[:,perm]
+    return norm(Rmp-Matrix(LinearAlgebra.I,size(Rmp)))
+end
+
+function RmI(R::BlockSparseTensor,perms::Vector{Vector{Int64}})
+    @assert nnzblocks(R)==length(perms)
+    eta2=0.0
+    for (n,b) in enumerate(nzblocks(R))
+        bv=ITensors.blockview(R,b)
+        Rp=bv[:,perms[n]] #un-permute the columns
+        eta2+=norm(Rp-Matrix(LinearAlgebra.I,size(Rp)))^2
+    end
+    return sqrt(eta2) 
 end

@@ -143,6 +143,20 @@ function ac_qx(W::reg_form_Op,lr::orth_type;verbose=false, kwargs...)
   @assert is_regular_form(Wprf)
   R=prime(R,ilf_Ac) #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
   Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ilf'))
-  p=[1,(p.+1)...,dim(ilf)]
+  p=add_edges(p)
   return Wprf,Rp,iqp,p
+end
+
+function add_edges(p::Vector{Int64})
+  Dw=length(p)+2
+  return [1,(p.+1)...,Dw]
+end
+
+#
+#  This assumes the edge D=1 blocks appear first in the block list
+#  If this fails we need to return a dict{Block,Vector{Int64}} so we can 
+#  associate block with perm vectors
+#
+function add_edges(p::Vector{Vector{Int64}})
+    return [[1],[1],p...]
 end
