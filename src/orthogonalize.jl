@@ -237,12 +237,11 @@ function ac_orthogonalize!(H::reg_form_iMPO,lr::orth_type;verbose=false,kwargs..
 end
 
 function ac_qx_step!(W::reg_form_Op,lr::orth_type,eps::Float64;kwargs...)
-    forward= lr==left ? W.iright : W.ileft
     Q,RL,iq,p=ac_qx(W,lr;cutoff=1e-14,kwargs...) # r-Q-qx qx-RL-c
     #
     #  How far are we from RL==Id ?
     #
-    if dim(forward)==dim(iq)
+    if dim(forward(W,lr))==dim(iq)
         eta = RmI(RL,p) #Different handling for dense and block-sparse
     else
         eta=99.0 #Rank reduction occured to keep going.

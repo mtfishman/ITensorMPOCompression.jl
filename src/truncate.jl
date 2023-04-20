@@ -69,7 +69,7 @@ true
 ```
 """
 function truncate(Wrf::reg_form_Op,lr::orth_type;kwargs...)::Tuple{reg_form_Op,ITensor,Spectrum,Bool}
-    iforward,_=parse_links(Wrf.W,lr) # W[l=$(n-1)l=$n]=W[r,c]
+    ilf = forward(Wrf,lr) # W[l=$(n-1)l=$n]=W[r,c]
     # establish some tag strings then depend on lr.
     (tsvd,tuv) = lr==left ? ("qx","Link,u") : ("m","Link,v")
     #
@@ -101,8 +101,8 @@ function truncate(Wrf::reg_form_Op,lr::orth_type;kwargs...)::Tuple{reg_form_Op,I
     #  For now we just bail out.
     #
     if dim(c)>dim(iqx) || dim(c)<3
-        replacetags!(RL,"Link,qx",tags(iforward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-        replacetags!(Q ,"Link,qx",tags(iforward)) #W[l=n-1,l=n]
+        replacetags!(RL,"Link,qx",tags(ilf)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+        replacetags!(Q ,"Link,qx",tags(ilf)) #W[l=n-1,l=n]
         return Q,RL,Spectrum([],0),true
     end
     
@@ -116,8 +116,6 @@ function truncate(Wrf::reg_form_Op,lr::orth_type;kwargs...)::Tuple{reg_form_Op,I
     #    
     isvd=findinds(M,tsvd)[1] #decide the left index
     U,s,V,spectrum,iu,iv=svd(M,isvd;kwargs...) # ns sing. values survive compression
-    ns=dim(inds(s)[1])
-
     #@show diag(array(s))
    
     #
@@ -128,17 +126,17 @@ function truncate(Wrf::reg_form_Op,lr::orth_type;kwargs...)::Tuple{reg_form_Op,I
         RL=grow(s*V,iup,im)*RL_prime #RL[l=n,u] dim ns+2 x Dw2
         Uplus=grow(U,dag(iqx),dag(iup))
         Wrf.W=Q.W*Uplus #W[l=n-1,u]
-        Wrf.iright=settags(dag(iup),tags(iforward))
+        Wrf.iright=settags(dag(iup),tags(ilf))
     else # right
         ivp=redim1(iv,1,1,space(iqx))
         RL=RL_prime*grow(U*s,im,ivp) #RL[l=n-1,v] dim Dw1 x ns+2
         Vplus=grow(V,dag(iqx),dag(ivp)) #lq has the dir of Q so want the opposite on Vplus
         Wrf.W=Vplus*Q.W #W[l=n-1,v]
-        Wrf.ileft=settags(dag(ivp),tags(iforward))
+        Wrf.ileft=settags(dag(ivp),tags(ilf))
     end
 
-    replacetags!(RL,tuv,tags(iforward)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-    replacetags!(Wrf.W ,tuv,tags(iforward)) #W[l=n-1,l=n]
+    replacetags!(RL,tuv,tags(ilf)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+    replacetags!(Wrf.W ,tuv,tags(ilf)) #W[l=n-1,l=n]
     check(Wrf)
     # expensive.
     # @mpoc_assert is_regular_form(W,ul,eps)

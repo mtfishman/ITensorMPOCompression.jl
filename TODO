@@ -52,15 +52,7 @@ Improvements:
 -Refactor out all the link fixing and PBC code for MPO making functions.
 -iMPO truncate fails with a trivial 2x2 hamiltonian.
 
--Add support for swapxz flag in trans-ising Hamiltonian
-  -Change Hx flag to just h.
 -Support Ncell>1 in InfinitSum{MPO}(InfiniteMPO)  constructor.
--Bug report for ITensorInfiniteMPS crash in Hx SzSz model
-  -Try and fix the bug
--Look at InfinitSum{ITensor}
--Understand factor of 2*J*Xn*Xn+1 in Model("ising")
--Make a Model("ising_NNN") for arbitrary NNN interactions.
--Make a table of Ncell for sites, and length(mpo) nsites(His) so we can figure what the rules are.
 -Search for TODO items and get them on this list.
 -System for hamitonians make_Hubbard_AutoiMPO => Hubbard_Auto_iMPO
 -Use an infinite=true flag for iMPOs?
@@ -83,7 +75,6 @@ Done: -make one is_gauge_fixed function for reg_form_MPO and reg_form_iMPO
 -Take out support to upper.
   Convert upper H's to lower durung the conversion to ref_form_MPO
   Strip out lots of code.
--Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
 Done: -Check in reg_form_Op translator.
 Done: -Do ac-orthogonalize! eta = norm(R-I),  do this block by block for block sparse R
 Done: -get rid of matrix_state
@@ -93,6 +84,16 @@ Done: -Replace getV with another member in extract_blocks
 Make forward(Wrf::ref_form_Op), and backward(Wrf::ref_form_Op)
 -Detect_upper_lower should use extract blocks.
 
+ITensorInfiniteMPS:
+  -Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
+  -Bug report for ITensorInfiniteMPS crash in Hx SzSz model
+    -Try and fix the bug
+  -Look at InfinitSum{ITensor}
+  -Understand factor of 2*J*Xn*Xn+1 in Model("ising")
+  -Make a Model("ising_NNN") for arbitrary NNN interactions.
+  -Make a table of Ncell for sites, and length(mpo) nsites(His) so we can figure what the rules are.
+  -Add support for swapxz flag in trans-ising Hamiltonian
+    -Change Hx flag to just h.
 
 
 julia --sysimage /home/janr/.julia/sysimages/sys_itensors.so

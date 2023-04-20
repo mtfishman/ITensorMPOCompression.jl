@@ -43,6 +43,9 @@ function check(Wrf::reg_form_Op)
     end
 end
 
+forward(Wrf::reg_form_Op,lr::orth_type)= lr==left ? Wrf.iright : Wrf.ileft
+backward(Wrf::reg_form_Op,lr::orth_type)= lr==left ? Wrf.ileft : Wrf.iright
+
 #-----------------------------------------------------------------------
 #
 #  Finite lattice with open BCs
@@ -138,11 +141,11 @@ end
 function check_ortho(Wrf::reg_form_Op,lr::orth_type,eps::Float64=default_eps)::Bool
     Wb=extract_blocks(Wrf,lr;V=true)
     DwDw=dim(Wb.irV)*dim(Wb.icV)
-    forward = llur(Wrf,lr) ? Wb.icV : Wb.irV
+    ilf = llur(Wrf,lr) ? Wb.icV : Wb.irV
     
-    Id=Wb.𝑽*prime(dag(Wb.𝑽),forward)/d(Wb)
+    Id=Wb.𝑽*prime(dag(Wb.𝑽),ilf)/d(Wb)
     if order(Id)==2
-        is_can = norm(dense(Id)-delta(forward,dag(forward')))/sqrt(DwDw)<eps
+        is_can = norm(dense(Id)-delta(ilf,dag(ilf')))/sqrt(DwDw)<eps
         # if !is_can
         #     @show Id
         # end

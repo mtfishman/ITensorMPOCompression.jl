@@ -97,8 +97,8 @@ function redim1(iq::Index,pad1::Int64,pad2::Int64,Dw::Int64)
 end
 
 
-function insert_Q(Wb::regform_blocks,𝐐::ITensor,ileft::Index,ic::Index,iq::Index,ul::reg_form,lr::orth_type)
-  ilb,ilf =  lr==left ? (ileft,ic) : (ic,ileft) #Backward and forward indices.
+function insert_Q(Wb::regform_blocks,𝐐::ITensor,ileft::Index,iright::Index,iq::Index,ul::reg_form,lr::orth_type)
+  ilb,ilf =  lr==left ? (ileft,iright) : (iright,ileft) #Backward and forward indices.
   @assert !isnothing(Wb.𝑨𝒄)
   is=noncommoninds(Wb.𝑨𝒄,Wb.irAc,Wb.icAc)
   @assert hasinds(𝐐,iq,is...)
@@ -120,7 +120,7 @@ function ac_qx(Wrf::reg_form_Op,lr::orth_type;verbose=false, kwargs...)
   @checkflux(Wrf.W)
   Wb=extract_blocks(Wrf,lr;Ac=true,all=true)
   ilf_Ac = llur(Wrf,lr) ?  Wb.icAc : Wb.irAc
-  ilb,ilf =  lr==left ? (Wrf.ileft,Wrf.iright) : (Wrf.iright,Wrf.ileft) #Backward and forward indices.
+  ilb,ilf =  backward(Wrf,lr),forward(Wrf,lr) #Backward and forward indices.
   @checkflux(Wb.𝑨𝒄)
   if lr==left
       Qinds=noncommoninds(Wb.𝑨𝒄,ilf_Ac) 
