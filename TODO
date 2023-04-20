@@ -73,10 +73,11 @@ Done: -Get rid of getV1 and setV1.  i.e. make all order(W)==4 by adding dummy in
 No: -iMPO truncate user HL,HR instead of H,Hm ?
 -Go over all the Problems in VScode.  Are they real?
 -format
--Move code into compression module.
+Done: -Move code into compression module.
 Ac blocking code:
 -no method matching order(::ITensorMPOCompression.reg_form_Op)
 -Fix Index Tag conventions sections of the docs.
+-Fix emprical observations section of the tech notes.
 Done: -Fix links in reg_form_iMPO
 Done: -make one is_gauge_fixed function for reg_form_MPO and reg_form_iMPO 
 -Take out support to upper.
@@ -85,12 +86,12 @@ Done: -make one is_gauge_fixed function for reg_form_MPO and reg_form_iMPO
 -Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
 Done: -Check in reg_form_Op translator.
 Done: -Do ac-orthogonalize! eta = norm(R-I),  do this block by block for block sparse R
--get rid of matrix_state
+Done: -get rid of matrix_state
 Done: -check and fix equal_edge_blocks in truncate.  Use redim1 for all orth/truncate code.
--Fix emprical observations section of the tech notes.
 -Overload ref_form_Op*ITensor can we auto fix ileft,iright?
 Done: -Replace getV with another member in extract_blocks
 Make forward(Wrf::ref_form_Op), and backward(Wrf::ref_form_Op)
+-Detect_upper_lower should use extract blocks.
 
 
 

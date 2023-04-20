@@ -15,7 +15,7 @@ export slice,assign!,redim #operator handling
 export getV,setV,growRL,V_offsets #blocking related
 export my_similar
 # lots of characterization functions
-export reg_form,orth_type,matrix_state,upper,lower,left,right,mirror
+export reg_form,orth_type,upper,lower,left,right,mirror
 export parse_links,parse_link,parse_site,is_regular_form,getM,grow,detect_regular_form
 export is_lower_regular_form,is_upper_regular_form
 export detect_upper_lower,is_upper_lower,sweep
@@ -85,15 +85,6 @@ function mirror(lr::orth_type)::orth_type
         ret=left
     end
     return ret
-end
-
- """
-     Indicates both the `orth_type` and `reg_form` of an MPO
-     See also [`orth_type`](@ref) [`reg_form`](@ref)
- """
-struct matrix_state
-    ul::reg_form
-    lr::orth_type
 end
 
 bond_spectrums = Vector{Spectrum}

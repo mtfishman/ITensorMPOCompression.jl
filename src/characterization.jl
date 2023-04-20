@@ -168,12 +168,7 @@ Test if all sites in an MPO statisfty the condition for `lr` orthogonal (canonic
 Returns `true` if the MPO is in `lr` orthogonal (canonical) form.  This is an expensive operation which scales as N*Dw^3 which should mostly be used only for unit testing code or in debug mode.  In production code use isortho which looks at the cached ortho state.
 
 """
-# function check_ortho(H::AbstractMPS,lr::orth_type,eps::Float64=default_eps)::Bool
-#     l,u=detect_regular_form(H)
-#     @mpoc_assert u || l
-#     ul = u ? upper : lower
-#     return check_ortho(H,matrix_state(ul,lr),eps)
-# end
+
 
 @doc """
 isortho(H,lr)::Bool

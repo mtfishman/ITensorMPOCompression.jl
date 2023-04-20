@@ -97,8 +97,8 @@ function redim1(iq::Index,pad1::Int64,pad2::Int64,Dw::Int64)
 end
 
 
-function insert_Q(Wb::regform_blocks,𝐐::ITensor,ileft::Index,ic::Index,iq::Index,ms::matrix_state)
-  ilb,ilf =  ms.lr==left ? (ileft,ic) : (ic,ileft) #Backward and forward indices.
+function insert_Q(Wb::regform_blocks,𝐐::ITensor,ileft::Index,ic::Index,iq::Index,ul::reg_form,lr::orth_type)
+  ilb,ilf =  lr==left ? (ileft,ic) : (ic,ileft) #Backward and forward indices.
   @assert !isnothing(Wb.𝑨𝒄)
   is=noncommoninds(Wb.𝑨𝒄,Wb.irAc,Wb.icAc)
   @assert hasinds(𝐐,iq,is...)
@@ -107,12 +107,12 @@ function insert_Q(Wb::regform_blocks,𝐐::ITensor,ileft::Index,ic::Index,iq::In
   #
   iqp=redim1(iq,1,1,space(ilf))  #pad with 1 at the start and 1 and the end: iqp =(1,iq,1).
   Wp=ITensor(0.0,ilb,iqp,is)
-  ileft,iright =  ms.lr==left ? (ilb,iqp) :  (iqp,ilb)
-  Wrfp=reg_form_Op(Wp,ileft,iright,ms.ul)
-  set_𝒃𝒄_block!(Wrfp,Wb.𝒃,ms.lr) #preserve b or c block from old W
+  ileft,iright =  lr==left ? (ilb,iqp) :  (iqp,ilb)
+  Wrfp=reg_form_Op(Wp,ileft,iright,ul)
+  set_𝒃𝒄_block!(Wrfp,Wb.𝒃,lr) #preserve b or c block from old W
   set_𝒅_block!(Wrfp,Wb.𝒅) #preserve d block from old W
   set_𝕀_block!(Wrfp,Wb.𝕀) #init I blocks from old W
-  set_𝑨𝒄_block(Wrfp,𝐐,ms.lr) #Insert new Qs form QR decomp
+  set_𝑨𝒄_block(Wrfp,𝐐,lr) #Insert new Qs form QR decomp
   return Wrfp.W,iqp
 end
 
@@ -137,7 +137,7 @@ function ac_qx(Wrf::reg_form_Op,lr::orth_type;verbose=false, kwargs...)
   Q*=sqrt(dh)
   R/=sqrt(dh)
 
-  Wp,iqp=insert_Q(Wb,Q,Wrf.ileft,Wrf.iright,iq,matrix_state(Wrf.ul,lr)) 
+  Wp,iqp=insert_Q(Wb,Q,Wrf.ileft,Wrf.iright,iq,Wrf.ul,lr) 
   Wprf=lr==left ? reg_form_Op(Wp,ilb,iqp,Wrf.ul) : reg_form_Op(Wp,iqp,ilb,Wrf.ul)
   @assert equal_edge_blocks(ilf,iqp)
   @assert is_regular_form(Wprf)
