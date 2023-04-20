@@ -432,8 +432,7 @@ function ac_orthogonalize!(H::reg_form_iMPO,lr::orth_type;verbose=false,kwargs..
     while loop
         eta=0.0
         for n in rng
-            Wrf,RLs[n],etan=ac_qx_step!(H[n],lr,eps;kwargs...)
-            H[n]=Wrf
+            H[n],RLs[n],etan=ac_qx_step!(H[n],lr,eps;kwargs...)
             if lr==left
                 Gs[n]=noprime(RLs[n]*Gs[n])  #  Update the accumulated gauge transform
             else
@@ -446,13 +445,16 @@ function ac_orthogonalize!(H::reg_form_iMPO,lr::orth_type;verbose=false,kwargs..
         #  H now contains all the Qs.  We need to transfer the RL's
         #
         for n in rng
-            R=RLs[n-rng.step]
-           
+            R=noprime(RLs[n-rng.step])
             ic=commonind(R,H[n].W)
             il=noncommonind(R,ic)
-            H[n].ileft=noprime(il)
-            H[n].W=R*H[n].W #W(n)=RL(n-1)*Q(n)
-            H[n].W=noprime(H[n].W,tags="Link")
+            RH=R*H[n].W
+            if lr==left
+                H[n]=reg_form_Op(RH,noprime(il),H[n].iright,H[n].ul)
+            else
+                H[n]=reg_form_Op(RH,H[n].ileft,noprime(il),H[n].ul)
+            end
+            check(H[n])
         end
         niter+=1
         if verbose
@@ -484,11 +486,7 @@ function ac_qx_step!(W::reg_form_Op,lr::orth_type,eps::Float64;kwargs...)
     else
         eta=99.0 #Rank reduction occured to keep going.
     end
-    #
-    #  Fix up "Link,qx" indices.
-    #
-    ilnp=prime(settags(iq,tags(forward))) #"qx" -> "l=$n" prime
-    replaceind!(RL,iq,ilnp)
-    replaceind!(Q.W ,iq,ilnp)
+    RL=prime(RL,iq)
+    check(Q)
     return Q,RL,eta
 end
