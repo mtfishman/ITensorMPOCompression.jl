@@ -85,7 +85,7 @@ Make forward(Wrf::ref_form_Op), and backward(Wrf::ref_form_Op)
 Done: -Detect_upper_lower should use extract blocks.
 -Simplify the whole getM process in MPO truncate.
 -WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
--Get rid if triangular tests.
+Done: -Get rid if triangular tests.
 
 ITensorInfiniteMPS:
   -Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
