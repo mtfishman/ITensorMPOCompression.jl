@@ -41,10 +41,10 @@ mutable struct regform_blocks
     regform_blocks()=new(nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing,nothing)
 end
 
-d(rfb::regform_blocks)::Float64=scalar(rfb.𝕀*dag(rfb.𝕀))
-b0(rfb::regform_blocks)::ITensor=rfb.𝒃*dag(rfb.𝕀)/d(rfb)
-c0(rfb::regform_blocks)::ITensor=rfb.𝒄*dag(rfb.𝕀)/d(rfb)
-A0(rfb::regform_blocks)::ITensor=rfb.𝑨*dag(rfb.𝕀)/d(rfb)
+d(Wb::regform_blocks)::Float64=scalar(Wb.𝕀*dag(Wb.𝕀))
+b0(Wb::regform_blocks)::ITensor=Wb.𝒃*dag(Wb.𝕀)/d(Wb)
+c0(Wb::regform_blocks)::ITensor=Wb.𝒄*dag(Wb.𝕀)/d(Wb)
+A0(Wb::regform_blocks)::ITensor=Wb.𝑨*dag(Wb.𝕀)/d(Wb)
 
 #
 #  Transpose inds for upper, no-op for lower
@@ -56,13 +56,11 @@ function swap_ul(Wrf::reg_form_Op)
     return Wrf.ul==lower ? (Wrf.ileft,Wrf.iright,dim(Wrf.ileft),dim(Wrf.iright)) :  (Wrf.iright,Wrf.ileft,dim(Wrf.iright),dim(Wrf.ileft))
 end
 # lower left or upper right
-llur(ul::reg_form,lr::orth_type)= lr==left && ul==lower || lr==right&&ul==upper
+llur(ul::reg_form,lr::orth_type)= lr==left && ul==lower || lr==right && ul==upper
 llur(W::reg_form_Op,lr::orth_type)=llur(W.ul,lr)
-llur(ms::matrix_state)=llur(ms.ul,ms.lr)
 
 #  Use recognizably distinct UTF symbols for operators, and op valued vectors and matrices: 𝕀 𝑨 𝒃 𝒄 𝒅 𝑽 ⌃ c₀ 𝑨𝒄
-# symbols from here: https://www.compart.com/en/unicode/block/U+1D400
-#extract_blocks(W::reg_form_Op,lr::orth_type;kwargs...)=extract_blocks(W.W,W.ileft,W.iright,matrix_state(W.ul,lr);kwargs...)
+#    symbols from here: https://www.compart.com/en/unicode/block/U+1D400
 
 function extract_blocks(Wrf::reg_form_Op,lr::orth_type;all=false,c=false,b=false,d=false,A=false,Ac=false,V=false,I=true,fix_inds=false,swap_bc=true)::regform_blocks
     check(Wrf)

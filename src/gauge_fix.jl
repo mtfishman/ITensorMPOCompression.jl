@@ -44,7 +44,7 @@ function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
     #  Make in ITensor with suitable indices from the 𝒕ₙ₋₁ vector.
     #
     if nb>1
-        ibd,ibb = llur(matrix_state(W.ul,lr)) ?  (Wb.ird, Wb.irb) : (Wb.icd, Wb.icb)
+        ibd,ibb = llur(W,lr) ?  (Wb.ird, Wb.irb) : (Wb.icd, Wb.icb)
         𝒕ₙ₋₁=ITensor(tₙ₋₁,dag(ibb),ibd)
     end
     𝒄⎖=nothing
@@ -68,7 +68,7 @@ function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
     @assert is_regular_form(W)
 
     if !isnothing(𝒄⎖)
-        if llur(matrix_state(W.ul,lr))
+        if llur(W,lr)
             set_𝒄_block!(W,𝒄⎖)
         else
             set_𝒃_block!(W,𝒄⎖)

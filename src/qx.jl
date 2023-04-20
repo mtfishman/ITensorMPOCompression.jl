@@ -116,11 +116,11 @@ function insert_Q(Wb::regform_blocks,𝐐::ITensor,ileft::Index,ic::Index,iq::In
   return Wrfp.W,iqp
 end
 
-function ac_qx(W::reg_form_Op,lr::orth_type;verbose=false, kwargs...)
-  @checkflux(W.W)
-  Wb=extract_blocks(W,lr;Ac=true,all=true)
-  ilf_Ac = llur(matrix_state(W.ul,lr)) ?  Wb.icAc : Wb.irAc
-  ilb,ilf =  lr==left ? (W.ileft,W.iright) : (W.iright,W.ileft) #Backward and forward indices.
+function ac_qx(Wrf::reg_form_Op,lr::orth_type;verbose=false, kwargs...)
+  @checkflux(Wrf.W)
+  Wb=extract_blocks(Wrf,lr;Ac=true,all=true)
+  ilf_Ac = llur(Wrf,lr) ?  Wb.icAc : Wb.irAc
+  ilb,ilf =  lr==left ? (Wrf.ileft,Wrf.iright) : (Wrf.iright,Wrf.ileft) #Backward and forward indices.
   @checkflux(Wb.𝑨𝒄)
   if lr==left
       Qinds=noncommoninds(Wb.𝑨𝒄,ilf_Ac) 
@@ -137,8 +137,8 @@ function ac_qx(W::reg_form_Op,lr::orth_type;verbose=false, kwargs...)
   Q*=sqrt(dh)
   R/=sqrt(dh)
 
-  Wp,iqp=insert_Q(Wb,Q,W.ileft,W.iright,iq,matrix_state(W.ul,lr)) 
-  Wprf=lr==left ? reg_form_Op(Wp,ilb,iqp,W.ul) : reg_form_Op(Wp,iqp,ilb,W.ul)
+  Wp,iqp=insert_Q(Wb,Q,Wrf.ileft,Wrf.iright,iq,matrix_state(Wrf.ul,lr)) 
+  Wprf=lr==left ? reg_form_Op(Wp,ilb,iqp,Wrf.ul) : reg_form_Op(Wp,iqp,ilb,Wrf.ul)
   @assert equal_edge_blocks(ilf,iqp)
   @assert is_regular_form(Wprf)
   R=prime(R,ilf_Ac) #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.

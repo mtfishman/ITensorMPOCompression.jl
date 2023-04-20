@@ -55,68 +55,7 @@ verbose1=false #verbose inside orth algos
         @test E0 ≈ E1 atol = eps
     end
 
-    # function test_truncate(makeH::Function,sitetype::String,N::Int64,NNN::Int64,hx::Float64,ms::matrix_state,qns::Bool)
-        
-    #     eps=1e-14
-
-    #     sites = siteinds(sitetype, N;conserve_qns=qns)
-    #     state=[isodd(n) ? "Up" : "Dn" for n=1:N]
-    #     psi=randomMPS(sites,state)
-    #     #
-    #     # Make right canonical, then compress to left canonical
-    #     #
-    #     H=makeH(sites,NNN;hx=hx,ul=ms.ul)
-    #     E0l=inner(psi',H,psi)/(N-1)
-    #     @test is_regular_form(H,ms.ul,eps)
-        
-    #     # orthogonalize!(H;verbose=verbose1,orth=ms.lr)
-    #     # E1l=inner(psi',H,psi)/(N-1)
-    #     # RE=abs((E0l-E1l)/E0l)
-    #     # #@printf "E0=%1.5f E1=%1.5f rel. error=%.5e  \n" E0l E1l RE 
-    #     # @test RE ≈ 0 atol = 2*eps
-    #     # @test is_regular_form(H,ms.ul,eps)
-    #     # @test isortho(H,ms.lr)
-    #     # @test check_ortho(H,ms,eps)
-
-    #     truncate!(H;verbose=verbose1,orth=ms.lr)
-
-    #     @test is_regular_form(H,ms.ul,eps)
-    #     @test isortho(H,ms.lr)
-    #     @test check_ortho(H,ms,eps)
-    #     # make sure the energy in unchanged
-    #     E2l=inner(psi',H,psi)/(N-1)
-    #     RE=abs((E0l-E2l)/E0l)
-    #     REs= RE/sqrt(1e-15)
-    #     if verbose
-    #         @printf "E0=%8.5f Etrunc=%8.5f rel. error=%7.1e RE/sqrt(espSVD)=%6.2f \n" E0l E2l RE REs
-    #     end
-    #     @test REs<1.0 
-        
-    # end
-
-    #  @testset verbose=true "Truncate/Compress" begin
-
-
-
-    #     test_combos=[
-    #         (make_transIsing_MPO,"S=1/2"),
-    #         (make_transIsing_AutoMPO,"S=1/2"),
-    #         (make_Heisenberg_AutoMPO,"S=1/2"),
-    #         (make_Heisenberg_AutoMPO,"S=1"),
-    #         (make_Hubbard_AutoMPO,"Electron")
-    #     ]
-
-    # @testset "Compress $(test_combo[1]) MPO with ul=$ul, lr=$lr, QNs=$qns" for test_combo in test_combos, lr in [left,right], ul=[lower,upper], qns in [true]
-    #     hx= qns ? 0.0 : 0.5 
-    #     ms=matrix_state(ul,lr)
-    #     #                                         V=N sites
-    #     #                                           V=Num Nearest Neighbours in H
-    #     test_truncate(test_combo[1],test_combo[2],5,1,hx,ms,qns)
-    #     test_truncate(test_combo[1],test_combo[2],5,3,hx,ms,qns)
-    #     test_truncate(test_combo[1],test_combo[2],10,7,hx,ms,qns)  
-    #     #test_truncate(test_combo[1],test_combo[3],14,13,hx,ms,qns)  
-    # end 
-
+    
     # @testset "Test ground states" for qns in [false,true]
     #     eps=3e-13
     #     N=10

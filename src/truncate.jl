@@ -69,7 +69,6 @@ true
 ```
 """
 function truncate(Wrf::reg_form_Op,lr::orth_type;kwargs...)::Tuple{reg_form_Op,ITensor,Spectrum,Bool}
-    ms=matrix_state(Wrf.ul,lr)
     iforward,_=parse_links(Wrf.W,lr) # W[l=$(n-1)l=$n]=W[r,c]
     # establish some tag strings then depend on lr.
     (tsvd,tuv) = lr==left ? ("qx","Link,u") : ("m","Link,v")

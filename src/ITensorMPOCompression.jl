@@ -96,53 +96,6 @@ struct matrix_state
     lr::orth_type
 end
 
-mirror(ms::matrix_state)::matrix_state=matrix_state(ms.ul,mirror(ms.lr))
-
-"""
-    V_offsets
-
-A simple struct for encapsulating offsets for V-blocks
-
-"""
-struct V_offsets
-    o1::Int64 #currently o1=o2 for std. Parker compression.  
-    o2::Int64 #Leave them distinct for now until we know more
-    #
-    # The purpose of this struct is to ensure the asserts below
-    #
-    V_offsets(o1_::Int64, o2_::Int64) = begin
-        @mpoc_assert o1_==0 || o1_==1
-        @mpoc_assert o2_==0 || o2_==1 
-        new(o1_,o2_)
-    end 
-end
-
-"""
-    V_offsets(ms::matrix_state)
-
-Derives the correct V-block offsets for the given `matrix_state`
-"""
-V_offsets(ms::matrix_state) = begin
-    if ms.lr==left
-        if ms.ul ==lower
-            o1_=1
-            o2_=1
-        else #upper
-            o1_=0
-            o2_=0
-        end
-    else #right
-        if ms.ul ==lower
-            o1_=0
-            o2_=0
-        else #upper
-            o1_=1
-            o2_=1
-        end
-    end
-    V_offsets(o1_,o2_)
-end
-
 bond_spectrums = Vector{Spectrum}
 
 function max(s::Spectrum)::Float64 sqrt(eigs(s)[1]) end
@@ -305,29 +258,6 @@ function redim(i::Index,j::Index,offset::Int64=0)::Index
     end
 end
 
-
-"""
-    set_scale!(RL::ITensor,Q::ITensor,off::V_offsets)
-
-Fix the gauge freedom between QR/QL after a block respecting QR/QL decomposition. The
-gauge fix is to ensure that either the top left or bottom right corner of `R` is 1.0. 
-"""
-function set_scale!(RL::ITensor,Q::ITensor,off::V_offsets)
-    @mpoc_assert order(RL)==2
-    is=inds(RL)
-    Dw1,Dw2=map(dim,is)
-    i1= off.o1==0 ? 1 : Dw1
-    i2= off.o2==0 ? 1 : Dw2
-    scale=RL[is[1]=>i1,is[2]=>i2]
-    @mpoc_assert abs(scale)>1e-12
-    d,n,space=parse_site(Q)
-    @mpoc_assert scale>0.0
-    if abs(scale^2-d)>2e-15
-        @warn "scale^2 != d, scale^2=$(scale^2), d=$d, abs(scale^2-d)=$(abs(scale^2-d))"
-    end
-    RL./=scale
-    Q.*=scale
-end
 
 include("subtensor.jl")
 include("reg_form.jl")
