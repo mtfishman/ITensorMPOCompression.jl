@@ -400,76 +400,60 @@ site  Ns   max(s)     min(s)    Entropy  Tr. Error
 
 ```
 """
-function ITensors.truncate!(H::InfiniteMPO;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
+function ITensors.truncate!(H::reg_form_iMPO,lr::orth_type;rr_cutoff=1e-14,kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
     #@printf "---- start compress ----\n"
-    #
-    # decide left/right and upper/lower
-    #
-    lr::orth_type=get(kwargs, :orth, left) #this specifies the final output orth direction.
-    verbose::Bool=get(kwargs, :verbose, false)
-    (bl,bu)=detect_regular_form(H)
-    if !(bl || bu)
-        throw(ErrorException("truncate!(H::MPO), H must be in either lower or upper regular form"))
-    end
-    @mpoc_assert !(bl && bu)
-    ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
     #
     # Now check if H requires orthogonalization
     #
-    can1,can2=isortho(H,lr),isortho(H,mirror(lr))
-    if !(can1||can2)
-        rr_cutoff=get(kwargs, :cutoff, 1e-15)
-        orthogonalize!(H,ul;orth=mirror(lr),rr_cutoff=rr_cutoff,max_sweeps=1,verbose=verbose) 
-        Hm=copy(H)
-        Gs=orthogonalize!(H,ul;orth=lr,rr_cutoff=rr_cutoff,max_sweeps=1,verbose=verbose) #TODO why fail if spec ul here??
-    else
-        # user supplied canonical H but not the Gs so we cannot proceed unless we do one more
-        # wasteful sweep
-        @mpoc_assert false #for now.
+    if isortho(H,lr)
+        @warn "truncate!(iMPO), iMPO is already orthogonalized, but the truncate algorithm needs the gauge transform tensors." *
+        "running orthongonalie!() again to get the gauge tranforms."        
     end
-    return truncate!(H,Hm,Gs,lr,ul;kwargs...)
+    ac_orthogonalize!(H,mirror(lr),cutoff=rr_cutoff;kwargs...) 
+    Hm=copy(H)
+    Gs=ac_orthogonalize!(H,lr;cutoff=rr_cutoff,kwargs...) 
+    return truncate!(H,Hm,Gs,lr;kwargs...)
 end
 
-ITensors.truncate!(H::InfiniteMPO,Gs::CelledVector{ITensor},lr::orth_type,ul::reg_form;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any} = ITensors.truncate!(H,nothing,Gs,lr,ul;kwargs...)
-
-function ITensors.truncate!(H::InfiniteMPO,Hm::InfiniteMPO,Gs::CelledVector{ITensor},lr::orth_type,ul::reg_form;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
-    verbose::Bool=get(kwargs, :verbose, false)
+function ITensors.truncate!(H::reg_form_iMPO,Hm::reg_form_iMPO,Gs::CelledVector{ITensor},lr::orth_type;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
+    if !is_gauge_fixed(H,1e-14)
+        gauge_fix!(H)
+    end
+    
     N=length(H)
-    ms=matrix_state(ul,lr)
     ss=bond_spectrums(undef,N)
     Ss=CelledVector{ITensor}(undef,N)
     for n in 1:N 
-        if lr==left
-            if need_guage_fix(Gs,H,n,ms)
-                gauge_tranform!(Gs,H,Hm,ms)
-                verbose && println("Gauge fixing left")
-            end
-        else
-            if need_guage_fix(Gs,Hm,n,ms)
-                gauge_tranform!(Gs,Hm,H,ms)
-                verbose && println("Gauge fixing right")
-            end
-        end
         #prime the right index of G so that indices can be distinguished.
         #Ideally orthogonalize!() would spit out Gs that are already like this.
-        igl=commonind(Gs[n],H[n])
+        igl=commonind(Gs[n],H[n].W)
         igr=noncommonind(Gs[n],igl)
         Gs[n]=replaceind(Gs[n],igr,prime(igr))
-        iln=linkind(H,n) #Link between Hn amd Hn+1
-        
+        #iln=linkind(H,n) #Link between Hn amd Hn+1
+        iln=H[n].iright
+        #           
+        #  -----G[n-1]-----HR[n]-----   ==    -----HL[n]-----G[n]-----  
+        #
         if lr==left
             @assert igl==iln
             # println("-----------------Left----------------------")
             igl=iln #right link of Hn is the left link of Gn
             U,Sp,V,spectrum=truncate(Gs[n],dag(igl);kwargs...)
+            check(H[n])
+          
             transform(H,U,n)
             transform(Hm,dag(V),n)
+            check(H[n])
+            check(Hm[n])
         else
             # println("-----------------Right----------------------")
             igl=noncommonind(Gs[n],iln) #left link of Hn+1 is the right link Gn
             U,Sp,V,spectrum=truncate(Gs[n],igl;kwargs...) 
+            check(H[n])
             transform(H,dag(V),n)
             transform(Hm,U,n)
+            check(H[n])
+            check(Hm[n])
         end
        
         Ss[n]=Sp
@@ -479,11 +463,19 @@ function ITensors.truncate!(H::InfiniteMPO,Hm::InfiniteMPO,Gs::CelledVector{ITen
 
 end
 
-function transform(H::InfiniteMPO,uv::ITensor,n::Int64)
-    H[n]=H[n]*uv
-    H[n+1]=dag(uv)*H[n+1]
-    @mpoc_assert order(H[n])==4
-    @mpoc_assert order(H[n+1])==4
+function transform(H::reg_form_iMPO,uv::ITensor,n::Int64)
+    @assert length(commoninds(H[n].W,uv))==1
+    @assert length(commoninds(H[n+1].W,uv))==1
+    ihu=commonind(H[n].W,uv)
+    ihnu=noncommonind(uv,ihu)
+    ihv=commonind(H[n+1].W,dag(uv))
+    ihnv=noncommonind(uv,ihv)
+
+
+    H[n]=reg_form_Op(H[n].W*uv,H[n].ileft,ihnu,H[n].ul)
+    H[n+1]=reg_form_Op(dag(uv)*H[n+1].W,ihnv,H[n+1].iright,H[n+1].ul)
+    @mpoc_assert order(H[n].W)==4
+    @mpoc_assert order(H[n+1].W)==4
 end
 
 
