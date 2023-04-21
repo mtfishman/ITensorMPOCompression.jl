@@ -97,61 +97,64 @@ function redim1(iq::Index,pad1::Int64,pad2::Int64,Dw::Int64)
 end
 
 
+  
 function insert_Q(Wrf::reg_form_Op,𝐐::ITensor,iq::Index,lr::orth_type)
-  Wb=extract_blocks(Wrf,lr;b=true,c=true,d=true)
+  #
+  #  Create new index by growing iq.
+  #
   ilb,ilf = linkinds(Wrf,lr) #Backward and forward indices.
-  is=siteinds(Wrf)
-  @assert hasinds(𝐐,iq,is...)
+  iq⎖=redim1(iq,1,1,space(ilf))  #pad with 1 at the start and 1 and the end: iqp =(1,iq,1).
+  ileft,iright =  lr==left ? (ilb,iq⎖) :  (iq⎖,ilb)
   #
-  #  Build new index and MPO Tensor
+  #  Create a new reg form tensor
   #
-  iqp=redim1(iq,1,1,space(ilf))  #pad with 1 at the start and 1 and the end: iqp =(1,iq,1).
-  Wp=ITensor(0.0,ilb,iqp,is)
-  ileft,iright =  lr==left ? (ilb,iqp) :  (iqp,ilb)
-  Wrfp=reg_form_Op(Wp,ileft,iright,Wrf.ul)
-  set_𝒃𝒄_block!(Wrfp,Wb.𝒃,lr) #preserve b or c block from old W
-  set_𝒅_block!(Wrfp,Wb.𝒅) #preserve d block from old W
-  set_𝕀_block!(Wrfp,Wb.𝕀) #init I blocks from old W
-  set_𝑨𝒄_block(Wrfp,𝐐,lr) #Insert new Qs form QR decomp
-  return Wrfp.W,iqp
+  W=ITensor(0.0,ileft,iright,siteinds(Wrf))
+  Wrf⎖=reg_form_Op(W,ileft,iright,Wrf.ul)
+  #
+  #  Preserve b,c,d blocks and insert Q
+  #
+  Wb=extract_blocks(Wrf,lr;b=true,c=true,d=true)
+  set_𝒃𝒄_block!(Wrf⎖,Wb.𝒃,lr) #preserve b or c block from old W
+  set_𝒅_block!(Wrf⎖,Wb.𝒅) #preserve d block from old W
+  set_𝕀_block!(Wrf⎖,Wb.𝕀) #init I blocks from old W
+  set_𝑨𝒄_block(Wrf⎖,𝐐,lr) #Insert new Qs form QR decomp
+
+  return Wrf⎖,iq⎖
 end
 
 function ac_qx(Wrf::reg_form_Op,lr::orth_type;qprime=false,verbose=false, kwargs...)
   @checkflux(Wrf.W)
   Wb=extract_blocks(Wrf,lr;Ac=true)
   ilf_Ac = llur(Wrf,lr) ?  Wb.icAc : Wb.irAc
-  ilb,ilf =  linkinds(Wrf,lr) #Backward and forward indices.
+  ilf =  forward(Wrf,lr) #Backward and forward indices.
   @checkflux(Wb.𝑨𝒄)
   if lr==left
       Qinds=noncommoninds(Wb.𝑨𝒄,ilf_Ac) 
-      Q,R,iq,p=qr(Wb.𝑨𝒄,Qinds;verbose=verbose,positive=true,cutoff=1e-14,tags=tags(ilf))
+      𝐐,R,iq,p=qr(Wb.𝑨𝒄,Qinds;verbose=verbose,positive=true,cutoff=1e-14,tags=tags(ilf))
   else
       Rinds=ilf_Ac
-      R,Q,iq,p=lq(Wb.𝑨𝒄,Rinds;verbose=verbose,positive=true,cutoff=1e-14,tags=tags(ilf))
+      R,𝐐,iq,p=lq(Wb.𝑨𝒄,Rinds;verbose=verbose,positive=true,cutoff=1e-14,tags=tags(ilf))
   end
-  @checkflux(Q)
+  @checkflux(𝐐)
   @checkflux(R)
   # Re-scale
   dh=d(Wb) #dimension of local Hilbert space.
-  @assert abs(dh-round(dh))==0.0
-  Q*=sqrt(dh)
+  @assert abs(dh-round(dh))==0.0 #better be an integer!
+  𝐐*=sqrt(dh)
   R/=sqrt(dh)
 
-  Wp,iqp=insert_Q(Wrf,Q,iq,lr) 
-  il,ir=lr==left ? (ilb,iqp) : (iqp,ilb)
-  Wprf=reg_form_Op(Wp,il,ir,Wrf.ul)
-  check(Wprf)
-  @assert equal_edge_blocks(ilf,iqp)
+  Wrf⎖,iq⎖=insert_Q(Wrf,𝐐,iq,lr) #create a new W with Q.  The size may change.
+  @assert equal_edge_blocks(ilf,iq⎖)
   
-  R=prime(R,iq) #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
-  Rp=grow(R,dag(iqp'),ilf)
+  #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
+  R⎖=grow(prime(R,iq),dag(iq⎖)',ilf)
   p=add_edges(p) #grow p so we can apply it to Rp.
   if qprime
-    iqp=prime(iqp)
+    iq⎖=prime(iq⎖)
   else
-    Rp=noprime(Rp)
+    R⎖=noprime(R⎖)
   end
-  return Wprf,Rp,iqp,p
+  return Wrf⎖,R⎖,iq⎖,p
 end
 
 function add_edges(p::Vector{Int64})
