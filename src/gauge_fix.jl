@@ -30,7 +30,7 @@ end
 function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
     @assert is_regular_form(W)
     Wb=extract_blocks(W,lr;all=true,fix_inds=true)
-    𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅 #for readability below.
+    𝕀,𝑨,𝐛̂,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝐛̂,Wb.𝒄,Wb.𝒅 #for readability below.
     nr,nc=dims(W)
     nb,nf = lr==left ? (nr,nc) : (nc,nr)
     #
@@ -49,12 +49,12 @@ function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
         𝒄⎖=𝒄-𝕀*𝒕ₙ
         𝒅⎖=𝒅
     elseif nf==1 ##col/row at the end of the sweep
-        𝒅⎖=𝒅+𝒕ₙ₋₁*𝒃
+        𝒅⎖=𝒅+𝒕ₙ₋₁*𝐛̂
         𝒕ₙ=ITensor(1.0,Index(1),Index(1)) #Not used, but required for the return statement.
     else
         𝒕ₙ=𝒕ₙ₋₁*A0(Wb)+c0(Wb)
         𝒄⎖=𝒄+𝒕ₙ₋₁*𝑨-𝒕ₙ*𝕀
-        𝒅⎖=𝒅+𝒕ₙ₋₁*𝒃
+        𝒅⎖=𝒅+𝒕ₙ₋₁*𝐛̂
     end
     @assert is_regular_form(W)
     
@@ -65,7 +65,7 @@ function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
         if llur(W,lr)
             set_𝒄_block!(W,𝒄⎖)
         else
-            set_𝒃_block!(W,𝒄⎖)
+            set_𝐛̂_block!(W,𝒄⎖)
         end
     end
     @assert is_regular_form(W)
@@ -165,18 +165,18 @@ end
 function gauge_fix!(W::reg_form_Op,sₙ₋₁::Vector{Float64},sₙ::Vector{Float64},tₙ::Vector{Float64},tₙ₋₁::Vector{Float64})
     @assert is_regular_form(W)
     Wb=extract_blocks(W,left;all=true,fix_inds=true)
-    𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅 #for readability below.
+    𝕀,𝑨,𝐛̂,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝐛̂,Wb.𝒄,Wb.𝒅 #for readability below.
   
     𝒕ₙ₋₁=ITensor(tₙ₋₁,dag(Wb.irb),Wb.ird)
     𝒕ₙ=ITensor(tₙ,Wb.irc,Wb.icc)
     𝒔ₙ₋₁=ITensor(sₙ₋₁,Wb.irb,Wb.icb)
     𝒔ₙ=ITensor(sₙ,Wb.icb,dag(Wb.icA))
     #@show sₙ₋₁ sₙ tₙ₋₁ tₙ
-    𝒃⎖ = 𝒃 + 𝒔ₙ₋₁*𝕀 -𝑨 * 𝒔ₙ
+    𝐛̂⎖ = 𝐛̂ + 𝒔ₙ₋₁*𝕀 -𝑨 * 𝒔ₙ
     𝒄⎖ = 𝒄 - 𝒕ₙ  *𝕀 + 𝒕ₙ₋₁*𝑨
-    𝒅⎖ = 𝒅 + 𝒕ₙ₋₁*𝒃 - 𝒔ₙ*𝒄⎖
+    𝒅⎖ = 𝒅 + 𝒕ₙ₋₁*𝐛̂ - 𝒔ₙ*𝒄⎖
     
-    set_𝒃_block!(W,𝒃⎖)
+    set_𝐛̂_block!(W,𝐛̂⎖)
     @assert is_regular_form(W)
     set_𝒄_block!(W,𝒄⎖)
     @assert is_regular_form(W)

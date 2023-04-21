@@ -19,7 +19,7 @@ function calculate_ts(H::MPO,ils::Vector{Index{T}},irs::Vector{Index{T}},ms::mat
     for n in eachindex(H)
         ir=irs[n]
         Wb=extract_blocks(H[n],il,ir,ms;all=true,fix_inds=true)
-        𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅
+        𝕀,𝑨,𝐛̂,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝐛̂,Wb.𝒄,Wb.𝒅
         dh=d(Wb)
         nr,nc=dim(il),dim(ir)
         if nr==1 
@@ -29,7 +29,7 @@ function calculate_ts(H::MPO,ils::Vector{Index{T}},irs::Vector{Index{T}},ms::mat
             t=zeros(1)
         else
             @assert hasinds(Wb.𝑨,Wb.irA,Wb.icA)
-            ict=commonind(𝒃,(Wb.irA,Wb.icA))
+            ict=commonind(𝐛̂,(Wb.irA,Wb.icA))
             irt=commonind(𝒅,(Wb.irc,Wb.icc))
             tprevT=ITensor(tprev,irt,dag(ict))
 
@@ -237,7 +237,7 @@ mutable struct regform_blocks
     𝕀::Union{ITensor,Nothing}
     𝑨::Union{ITensor,Nothing}
     𝑨𝒄::Union{ITensor,Nothing}
-    𝒃::Union{ITensor,Nothing}
+    𝐛̂::Union{ITensor,Nothing}
     𝒄::Union{ITensor,Nothing}
     𝒅::Union{ITensor,Nothing}
     irA::Union{Index,Nothing}
@@ -254,7 +254,7 @@ mutable struct regform_blocks
 end
 
 d(rfb::regform_blocks)::Float64=scalar(rfb.𝕀*dag(rfb.𝕀))
-b0(rfb::regform_blocks)::ITensor=rfb.𝒃*dag(rfb.𝕀)/d(rfb)
+b0(rfb::regform_blocks)::ITensor=rfb.𝐛̂*dag(rfb.𝕀)/d(rfb)
 c0(rfb::regform_blocks)::ITensor=rfb.𝒄*dag(rfb.𝕀)/d(rfb)
 A0(rfb::regform_blocks)::ITensor=rfb.𝑨*dag(rfb.𝕀)/d(rfb)
 
@@ -320,9 +320,9 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
         rfb.icAc,=inds(rfb.𝑨𝒄,tags=tags(ic))
     end
     if b
-        rfb.𝒃= W[ir=>2:nr-1,ic=>1:1]
-        rfb.irb,=inds(rfb.𝒃,tags=tags(ir))
-        rfb.icb,=inds(rfb.𝒃,tags=tags(ic))
+        rfb.𝐛̂= W[ir=>2:nr-1,ic=>1:1]
+        rfb.irb,=inds(rfb.𝐛̂,tags=tags(ir))
+        rfb.icb,=inds(rfb.𝐛̂,tags=tags(ic))
     end
     if c
         rfb.𝒄= W[ir=>nr:nr,ic=>2:nc-1]
@@ -340,8 +340,8 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
             rfb.𝒄=replaceind(rfb.𝒄,rfb.irc,rfb.ird)
             rfb.irc=rfb.ird
         end
-        if !isnothing(rfb.𝒃)
-            rfb.𝒃=replaceind(rfb.𝒃,rfb.icb,rfb.icd)
+        if !isnothing(rfb.𝐛̂)
+            rfb.𝐛̂=replaceind(rfb.𝐛̂,rfb.icb,rfb.icd)
             rfb.icb=rfb.icd
         end
         if !isnothing(rfb.𝑨)
@@ -350,7 +350,7 @@ function extract_blocks(W::ITensor,ir::Index,ic::Index,ms::matrix_state;all=fals
         end
     end
     if !llur(ms) && swap_bc #not lower-left or upper-right
-        rfb.𝒃,rfb.𝒄=rfb.𝒄,rfb.𝒃
+        rfb.𝐛̂,rfb.𝒄=rfb.𝒄,rfb.𝐛̂
         rfb.irb,rfb.irc=rfb.irc,rfb.irb
         rfb.icb,rfb.icc=rfb.icc,rfb.icb
     end
@@ -364,10 +364,10 @@ end
 llur(ms::matrix_state)=ms.lr==left&&ms.ul==lower || ms.lr==right&&ms.ul==upper
 
 
-function set_𝒃_block!(W::ITensor,𝒃::ITensor,ileft::Index,iright::Index,ul::reg_form)
+function set_𝐛̂_block!(W::ITensor,𝐛̂::ITensor,ileft::Index,iright::Index,ul::reg_form)
     @assert hasinds(W,ileft,iright)
     i1,i2,n1,n2=swap_ul(ileft,iright,ul)
-    W[i1=>2:n1-1,i2=>1:1]=𝒃
+    W[i1=>2:n1-1,i2=>1:1]=𝐛̂
 end
 
 function set_𝒄_block!(W::ITensor,𝒄::ITensor,ileft::Index,iright::Index,ul::reg_form)
@@ -375,18 +375,18 @@ function set_𝒄_block!(W::ITensor,𝒄::ITensor,ileft::Index,iright::Index,ul:
     i1,i2,n1,n2=swap_ul(ileft,iright,ul)
     W[i1=>n1:n1,i2=>2:n2-1]=𝒄
 end
-function set_𝒃𝒄_block!(W::ITensor,𝒃𝒄::ITensor,ileft::Index,iright::Index,ms::matrix_state)
+function set_𝐛̂𝒄_block!(W::ITensor,𝐛̂𝒄::ITensor,ileft::Index,iright::Index,ms::matrix_state)
     if llur(ms)
-        set_𝒃_block!(W,𝒃𝒄,ileft,iright,ms.ul)
+        set_𝐛̂_block!(W,𝐛̂𝒄,ileft,iright,ms.ul)
     else
-        set_𝒄_block!(W,𝒃𝒄,ileft,iright,ms.ul)
+        set_𝒄_block!(W,𝐛̂𝒄,ileft,iright,ms.ul)
     end
 end
 
 # noop versions for when b/c are empty.  Happens in edge ops of H.
-function set_𝒃𝒄_block!(::ITensor,::Nothing,::Index,::Index,::matrix_state)
+function set_𝐛̂𝒄_block!(::ITensor,::Nothing,::Index,::Index,::matrix_state)
 end
-function set_𝒃_block!(::ITensor,::Nothing,::Index,::Index,::reg_form)
+function set_𝐛̂_block!(::ITensor,::Nothing,::Index,::Index,::reg_form)
 end
 function set_𝒄_block!(::ITensor,::Nothing,::Index,::Index,::reg_form)
 end
@@ -417,13 +417,13 @@ function set_𝑨𝒄_block(W::ITensor,𝑨𝒄::ITensor,ileft::Index,iright::In
 end
 #-------------------------------------------------------------------------------
 #
-#  Gauge fixing functions.  In this conext gauge fixing means setting b₀=<𝒃,𝕀> && c₀=<𝒄,𝕀> to zero
+#  Gauge fixing functions.  In this conext gauge fixing means setting b₀=<𝐛̂,𝕀> && c₀=<𝒄,𝕀> to zero
 #
 function is_gauge_fixed(W::ITensor,il::Index{T},ir::Index{T},ul::reg_form,eps::Float64;b=true,c=true)::Bool where {T}
     igf=true
     ms=matrix_state(ul,left)
     Wb=extract_blocks(W,il,ir,ms;c=true,b=true)
-    if b && !isnothing(Wb.𝒃) 
+    if b && !isnothing(Wb.𝐛̂) 
         igf=igf && norm(b0(Wb))<eps
     end
     if c && !isnothing(Wb.𝒄)
@@ -478,7 +478,7 @@ end
 function gauge_fix!(W::ITensor,ileft::Index,iright::Index,tₙ₋₁::Vector{Float64},ms::matrix_state)
     @assert is_regular_form(W,ms.ul)
     Wb=extract_blocks(W,ileft,iright,ms;all=true,fix_inds=true)
-    𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅 #for readability below.
+    𝕀,𝑨,𝐛̂,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝐛̂,Wb.𝒄,Wb.𝒅 #for readability below.
     nr,nc=dim(ileft),dim(iright)
     nb,nf = ms.lr==left ? (nr,nc) : (nc,nr)
     #
@@ -497,12 +497,12 @@ function gauge_fix!(W::ITensor,ileft::Index,iright::Index,tₙ₋₁::Vector{Flo
         𝒄⎖=𝒄-𝕀*𝒕ₙ
         𝒅⎖=𝒅
     elseif nf==1 ##col/row at the end of the sweep
-        𝒅⎖=𝒅+𝒕ₙ₋₁*𝒃
+        𝒅⎖=𝒅+𝒕ₙ₋₁*𝐛̂
         𝒕ₙ=ITensor(1.0,Index(1),Index(1)) #Not used, but required for the return statement.
     else
         𝒕ₙ=𝒕ₙ₋₁*A0(Wb)+c0(Wb)
         𝒄⎖=𝒄+𝒕ₙ₋₁*𝑨-𝒕ₙ*𝕀
-        𝒅⎖=𝒅+𝒕ₙ₋₁*𝒃
+        𝒅⎖=𝒅+𝒕ₙ₋₁*𝐛̂
     end
     
     set_𝒅_block!(W,𝒅⎖,ileft,iright,ms.ul)
@@ -512,7 +512,7 @@ function gauge_fix!(W::ITensor,ileft::Index,iright::Index,tₙ₋₁::Vector{Flo
         if llur(ms)
             set_𝒄_block!(W,𝒄⎖,ileft,iright,ms.ul)
         else
-            set_𝒃_block!(W,𝒄⎖,ileft,iright,ms.ul)
+            set_𝐛̂_block!(W,𝒄⎖,ileft,iright,ms.ul)
         end
     end
     @assert is_regular_form(W,ms.ul)
@@ -524,7 +524,7 @@ end
 function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
     @assert is_regular_form(W)
     Wb=extract_blocks(W,lr;all=true,fix_inds=true)
-    𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅 #for readability below.
+    𝕀,𝑨,𝐛̂,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝐛̂,Wb.𝒄,Wb.𝒅 #for readability below.
     nr,nc=dim(W.ileft),dim(W.iright)
     nb,nf = lr==left ? (nr,nc) : (nc,nr)
     #
@@ -543,12 +543,12 @@ function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
         𝒄⎖=𝒄-𝕀*𝒕ₙ
         𝒅⎖=𝒅
     elseif nf==1 ##col/row at the end of the sweep
-        𝒅⎖=𝒅+𝒕ₙ₋₁*𝒃
+        𝒅⎖=𝒅+𝒕ₙ₋₁*𝐛̂
         𝒕ₙ=ITensor(1.0,Index(1),Index(1)) #Not used, but required for the return statement.
     else
         𝒕ₙ=𝒕ₙ₋₁*A0(Wb)+c0(Wb)
         𝒄⎖=𝒄+𝒕ₙ₋₁*𝑨-𝒕ₙ*𝕀
-        𝒅⎖=𝒅+𝒕ₙ₋₁*𝒃
+        𝒅⎖=𝒅+𝒕ₙ₋₁*𝐛̂
     end
     
     set_𝒅_block!(W.W,𝒅⎖,W.ileft,W.iright,W.ul)
@@ -558,7 +558,7 @@ function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
         if llur(matrix_state(W.ul,lr))
             set_𝒄_block!(W.W,𝒄⎖,W.ileft,W.iright,W.ul)
         else
-            set_𝒃_block!(W.W,𝒄⎖,W.ileft,W.iright,W.ul)
+            set_𝐛̂_block!(W.W,𝒄⎖,W.ileft,W.iright,W.ul)
         end
     end
     @assert is_regular_form(W)
@@ -614,7 +614,7 @@ function equal_edge_blocks(::Index,::Index)::Bool
 end
 #-------------------------------------------------------------------------------
 #
-#  block qx and orthogonalization of the vcat(𝑨,𝒄) and hcat(𝒃,𝑨) blocks. 𝐐
+#  block qx and orthogonalization of the vcat(𝑨,𝒄) and hcat(𝐛̂,𝑨) blocks. 𝐐
 #
 function redim1(iq::ITensors.QNIndex,pad1::Int64,pad2::Int64,qns::ITensors.QNBlocks)
     @assert pad1==blockdim(qns[1]) #Splitting blocks not supported
@@ -642,7 +642,7 @@ function insert_Q(Wb::regform_blocks,𝐐::ITensor,ileft::Index,ic::Index,iq::In
     iqp=redim1(iq,1,1,space(ilf))  #pad with 1 at the start and 1 and the end: iqp =(1,iq,1).
     Wp=ITensor(0.0,ilb,iqp,is)
     ileft,iright =  ms.lr==left ? (ilb,iqp) :  (iqp,ilb)
-    set_𝒃𝒄_block!(Wp,Wb.𝒃,ileft,iright,ms) #preserve b or c block from old W
+    set_𝐛̂𝒄_block!(Wp,Wb.𝐛̂,ileft,iright,ms) #preserve b or c block from old W
     set_𝒅_block!(Wp,Wb.𝒅,ileft,iright,ms.ul) #preserve d block from old W
     set_𝕀_block!(Wp,Wb.𝕀,ileft,iright,ms.ul) #init I blocks from old W
     set_𝑨𝒄_block(Wp,𝐐,ileft,iright,ms) #Insert new Qs form QR decomp
@@ -954,13 +954,13 @@ verbose=false
         @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
         @test isnothing(rfb.𝑨) 
         if ul==lower   
-            @test isnothing(rfb.𝒃)
+            @test isnothing(rfb.𝐛̂)
             norm(array(rfb.𝒅)-array(W[il=>nr:nr,ir=>1:1]))<eps
             norm(array(rfb.𝒄)-array(W[il=>nr:nr,ir=>2:nc-1]))<eps
         else
             @test isnothing(rfb.𝒄)
             norm(array(rfb.𝒅)-array(W[il=>1:1,ir=>nc:nc]))<eps
-            norm(array(rfb.𝒃)-array(W[il=>1:1,ir=>2:nc-1]))<eps
+            norm(array(rfb.𝐛̂)-array(W[il=>1:1,ir=>2:nc-1]))<eps
         end
         
         W=H[N]
@@ -972,9 +972,9 @@ verbose=false
         if ul==lower 
             @test isnothing(rfb.𝒄) 
             @test norm(array(rfb.𝒅)-array(W[il=>nr:nr,ir=>1:1]))<eps
-            @test norm(array(rfb.𝒃)-array(W[il=>2:nr-1,ir=>1:1]))<eps
+            @test norm(array(rfb.𝐛̂)-array(W[il=>2:nr-1,ir=>1:1]))<eps
         else
-            @test isnothing(rfb.𝒃) 
+            @test isnothing(rfb.𝐛̂) 
             @test norm(array(rfb.𝒅)-array(W[il=>1:1,ir=>nc:nc]))<eps
             @test norm(array(rfb.𝒄)-array(W[il=>2:nr-1,ir=>nc:nc]))<eps
         end
@@ -986,14 +986,14 @@ verbose=false
         if ul==lower
             @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
             @test norm(array(rfb.𝒅)-array(W[il=>nr:nr,ir=>1:1]))<eps
-            @test norm(array(rfb.𝒃)-array(W[il=>2:nr-1,ir=>1:1]))<eps
+            @test norm(array(rfb.𝐛̂)-array(W[il=>2:nr-1,ir=>1:1]))<eps
             @test norm(array(rfb.𝒄)-array(W[il=>nr:nr,ir=>2:nc-1]))<eps
             @test norm(array(rfb.𝑨)-array(W[il=>2:nr-1,ir=>2:nc-1]))<eps
             @test norm(array(rfb.𝑨𝒄)-array(W[il=>2:nr,ir=>2:nc-1]))<eps
         else
             @test norm(matrix(rfb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
             @test norm(array(rfb.𝒅)-array(W[il=>1:1,ir=>nc:nc]))<eps
-            @test norm(array(rfb.𝒃)-array(W[il=>1:1,ir=>2:nc-1]))<eps
+            @test norm(array(rfb.𝐛̂)-array(W[il=>1:1,ir=>2:nc-1]))<eps
             @test norm(array(rfb.𝒄)-array(W[il=>2:nr-1,ir=>nc:nc]))<eps
             @test norm(array(rfb.𝑨)-array(W[il=>2:nr-1,ir=>2:nc-1]))<eps
             @test norm(array(rfb.𝑨𝒄)-array(W[il=>2:nr-1,ir=>2:nc]))<eps

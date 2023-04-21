@@ -88,6 +88,7 @@ Done: -Simplify the whole getM process in MPO truncate.
 Done: -Get rid if triangular tests.
 Done: -ac_qx option to prime iqx ?
 -Remove the bail out block in truncate(MPO)?
+-Use proper 𝐛̂ hatted symbols for OP valued tensors.
 
 ITensorInfiniteMPS:
   -Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>

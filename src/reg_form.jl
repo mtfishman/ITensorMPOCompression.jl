@@ -50,7 +50,7 @@ function is_regular_form(Wrf::reg_form_Op,ul::reg_form,eps::Float64=default_eps)
     if nr>1 && nc>1   
         i1=abs(scalar(dag(Wb.𝕀) * slice(Wrf.W,Wrf.ileft=>1,Wrf.iright=>1))-dh)<eps
         iN=abs(scalar(dag(Wb.𝕀) * slice(Wrf.W,Wrf.ileft=>nr,Wrf.iright=>nc))-dh)<eps
-        bz=isnothing(Wb.𝒃) ? true : norm(Wb.𝒃)<eps
+        bz=isnothing(Wb.𝐛̂) ? true : norm(Wb.𝐛̂)<eps
         cz=isnothing(Wb.𝒄) ? true : norm(Wb.𝒄)<eps
         dz=norm(Wb.𝒅)<eps
     end

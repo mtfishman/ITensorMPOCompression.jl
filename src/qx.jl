@@ -114,7 +114,7 @@ function insert_Q(Wrf::reg_form_Op,𝐐::ITensor,iq::Index,lr::orth_type)
   #  Preserve b,c,d blocks and insert Q
   #
   Wb=extract_blocks(Wrf,lr;b=true,c=true,d=true)
-  set_𝒃𝒄_block!(Wrf⎖,Wb.𝒃,lr) #preserve b or c block from old W
+  set_𝐛̂𝒄_block!(Wrf⎖,Wb.𝐛̂,lr) #preserve b or c block from old W
   set_𝒅_block!(Wrf⎖,Wb.𝒅) #preserve d block from old W
   set_𝕀_block!(Wrf⎖,Wb.𝕀) #init I blocks from old W
   set_𝑨𝒄_block(Wrf⎖,𝐐,lr) #Insert new Qs form QR decomp

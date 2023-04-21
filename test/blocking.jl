@@ -23,13 +23,13 @@ import ITensorMPOCompression: flip
     @test norm(matrix(Wb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
     @test isnothing(Wb.𝑨) 
     if ul==lower   
-        @test isnothing(Wb.𝒃)
+        @test isnothing(Wb.𝐛̂)
         @test norm(array(Wb.𝒅)-array(Wrf[nr:nr,1:1]))<eps
         @test norm(array(Wb.𝒄)-array(Wrf[nr:nr,2:nc-1]))<eps
     else
         @test isnothing(Wb.𝒄)
         @test norm(array(Wb.𝒅)-array(Wrf[1:1,nc:nc]))<eps
-        @test norm(array(Wb.𝒃)-array(Wrf[1:1,2:nc-1]))<eps
+        @test norm(array(Wb.𝐛̂)-array(Wrf[1:1,2:nc-1]))<eps
     end
     @test norm(array(Wb.𝑽)-array(Wrf[1:1,2:nc]))<eps
     
@@ -41,9 +41,9 @@ import ITensorMPOCompression: flip
     if ul==lower 
         @test isnothing(Wb.𝒄) 
         @test norm(array(Wb.𝒅)-array(Wrf[nr:nr,1:1]))<eps
-        @test norm(array(Wb.𝒃)-array(Wrf[2:nr-1,1:1]))<eps
+        @test norm(array(Wb.𝐛̂)-array(Wrf[2:nr-1,1:1]))<eps
     else
-        @test isnothing(Wb.𝒃) 
+        @test isnothing(Wb.𝐛̂) 
         @test norm(array(Wb.𝒅)-array(Wrf[1:1,nc:nc]))<eps
         @test norm(array(Wb.𝒄)-array(Wrf[2:nr-1,nc:nc]))<eps
     end
@@ -56,14 +56,14 @@ import ITensorMPOCompression: flip
     if ul==lower
         @test norm(matrix(Wb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
         @test norm(array(Wb.𝒅)-array(Wrf[nr:nr,1:1]))<eps
-        @test norm(array(Wb.𝒃)-array(Wrf[2:nr-1,1:1]))<eps
+        @test norm(array(Wb.𝐛̂)-array(Wrf[2:nr-1,1:1]))<eps
         @test norm(array(Wb.𝒄)-array(Wrf[nr:nr,2:nc-1]))<eps
         @test norm(array(Wb.𝑨)-array(Wrf[2:nr-1,2:nc-1]))<eps
         @test norm(array(Wb.𝑨𝒄)-array(Wrf[2:nr,2:nc-1]))<eps
     else
         @test norm(matrix(Wb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
         @test norm(array(Wb.𝒅)-array(Wrf[1:1,nc:nc]))<eps
-        @test norm(array(Wb.𝒃)-array(Wrf[1:1,2:nc-1]))<eps
+        @test norm(array(Wb.𝐛̂)-array(Wrf[1:1,2:nc-1]))<eps
         @test norm(array(Wb.𝒄)-array(Wrf[2:nr-1,nc:nc]))<eps
         @test norm(array(Wb.𝑨)-array(Wrf[2:nr-1,2:nc-1]))<eps
         @test norm(array(Wb.𝑨𝒄)-array(Wrf[2:nr-1,2:nc]))<eps

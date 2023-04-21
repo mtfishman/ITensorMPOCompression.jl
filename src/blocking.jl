@@ -23,7 +23,7 @@ mutable struct regform_blocks
     𝑨::Union{ITensor,Nothing}
     𝑨𝒄::Union{ITensor,Nothing}
     𝑽::Union{ITensor,Nothing}
-    𝒃::Union{ITensor,Nothing}
+    𝐛̂::Union{ITensor,Nothing}
     𝒄::Union{ITensor,Nothing}
     𝒅::Union{ITensor,Nothing}
     irA::Union{Index,Nothing}
@@ -42,7 +42,7 @@ mutable struct regform_blocks
 end
 
 d(Wb::regform_blocks)::Float64=scalar(Wb.𝕀*dag(Wb.𝕀))
-b0(Wb::regform_blocks)::ITensor=Wb.𝒃*dag(Wb.𝕀)/d(Wb)
+b0(Wb::regform_blocks)::ITensor=Wb.𝐛̂*dag(Wb.𝕀)/d(Wb)
 c0(Wb::regform_blocks)::ITensor=Wb.𝒄*dag(Wb.𝕀)/d(Wb)
 A0(Wb::regform_blocks)::ITensor=Wb.𝑨*dag(Wb.𝕀)/d(Wb)
 
@@ -59,8 +59,10 @@ end
 llur(ul::reg_form,lr::orth_type)= lr==left && ul==lower || lr==right && ul==upper
 llur(W::reg_form_Op,lr::orth_type)=llur(W.ul,lr)
 
-#  Use recognizably distinct UTF symbols for operators, and op valued vectors and matrices: 𝕀 𝑨 𝒃 𝒄 𝒅 𝑽 ⌃ c₀ 𝑨𝒄
+#  Use recognizably distinct UTF symbols for operators, and op valued vectors and matrices: 
+#  𝕀 𝑨 𝒃 𝒄 𝒅 𝑽 ⌃ c₀ 𝑨𝒄
 #    symbols from here: https://www.compart.com/en/unicode/block/U+1D400
+#  𝐀̂ 𝐛̂ 𝐜̂ 𝐝̂
 
 function extract_blocks(Wrf::reg_form_Op,lr::orth_type;all=false,c=false,b=false,d=false,A=false,Ac=false,V=false,I=true,fix_inds=false,swap_bc=true)::regform_blocks
     check(Wrf)
@@ -121,9 +123,9 @@ function extract_blocks(Wrf::reg_form_Op,lr::orth_type;all=false,c=false,b=false
         Wb.icV,=inds(Wb.𝑽,tags=tags(ic))
     end
     if b
-        Wb.𝒃= W[ir=>2:nr-1,ic=>1:1]
-        Wb.irb,=inds(Wb.𝒃,tags=tags(ir))
-        Wb.icb,=inds(Wb.𝒃,tags=tags(ic))
+        Wb.𝐛̂= W[ir=>2:nr-1,ic=>1:1]
+        Wb.irb,=inds(Wb.𝐛̂,tags=tags(ir))
+        Wb.icb,=inds(Wb.𝐛̂,tags=tags(ic))
     end
     if c
         Wb.𝒄= W[ir=>nr:nr,ic=>2:nc-1]
@@ -141,8 +143,8 @@ function extract_blocks(Wrf::reg_form_Op,lr::orth_type;all=false,c=false,b=false
             Wb.𝒄=replaceind(Wb.𝒄,Wb.irc,Wb.ird)
             Wb.irc=Wb.ird
         end
-        if !isnothing(Wb.𝒃)
-            Wb.𝒃=replaceind(Wb.𝒃,Wb.icb,Wb.icd)
+        if !isnothing(Wb.𝐛̂)
+            Wb.𝐛̂=replaceind(Wb.𝐛̂,Wb.icb,Wb.icd)
             Wb.icb=Wb.icd
         end
         if !isnothing(Wb.𝑨)
@@ -151,7 +153,7 @@ function extract_blocks(Wrf::reg_form_Op,lr::orth_type;all=false,c=false,b=false
         end
     end
     if !llur(Wrf,lr) && swap_bc #not lower-left or upper-right
-        Wb.𝒃,Wb.𝒄=Wb.𝒄,Wb.𝒃
+        Wb.𝐛̂,Wb.𝒄=Wb.𝒄,Wb.𝐛̂
         Wb.irb,Wb.irc=Wb.irc,Wb.irb
         Wb.icb,Wb.icc=Wb.icc,Wb.icb
     end
@@ -162,10 +164,10 @@ function extract_blocks(Wrf::reg_form_Op,lr::orth_type;all=false,c=false,b=false
 end
 
 
-function set_𝒃_block!(Wrf::reg_form_Op,𝒃::ITensor)
+function set_𝐛̂_block!(Wrf::reg_form_Op,𝐛̂::ITensor)
     check(Wrf)
     i1,i2,n1,n2=swap_ul(Wrf)
-    Wrf.W[i1=>2:n1-1,i2=>1:1]=𝒃
+    Wrf.W[i1=>2:n1-1,i2=>1:1]=𝐛̂
 end
 
 function set_𝒄_block!(Wrf::reg_form_Op,𝒄::ITensor)
@@ -174,11 +176,11 @@ function set_𝒄_block!(Wrf::reg_form_Op,𝒄::ITensor)
     Wrf.W[i1=>n1:n1,i2=>2:n2-1]=𝒄
 end
 
-function set_𝒃𝒄_block!(Wrf::reg_form_Op,𝒃𝒄::ITensor,lr::orth_type)
+function set_𝐛̂𝒄_block!(Wrf::reg_form_Op,𝐛̂𝒄::ITensor,lr::orth_type)
     if llur(Wrf,lr)
-        set_𝒃_block!(Wrf,𝒃𝒄)
+        set_𝐛̂_block!(Wrf,𝐛̂𝒄)
     else
-        set_𝒄_block!(Wrf,𝒃𝒄)
+        set_𝒄_block!(Wrf,𝐛̂𝒄)
     end
 end
 
@@ -209,9 +211,9 @@ function set_𝑨𝒄_block(Wrf::reg_form_Op,𝑨𝒄::ITensor,lr::orth_type)
     end
 end
 # noop versions for when b/c are empty.  Happens in edge ops of H.
-function set_𝒃𝒄_block!(::reg_form_Op,::Nothing,::orth_type)
+function set_𝐛̂𝒄_block!(::reg_form_Op,::Nothing,::orth_type)
 end
-function set_𝒃_block!(::reg_form_Op,::Nothing)
+function set_𝐛̂_block!(::reg_form_Op,::Nothing)
 end
 function set_𝒄_block!(::reg_form_Op,::Nothing)
 end
