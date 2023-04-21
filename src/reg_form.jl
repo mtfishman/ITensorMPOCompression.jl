@@ -91,9 +91,9 @@ function check_ortho(Wrf::reg_form_Op,lr::orth_type,eps::Float64=default_eps)::B
     return is_can
 end
 
-dims(Wrf::reg_form_Op)=dim(Wrf.ileft),dim(Wrf.iright)
-getindex(Wrf::reg_form_Op,lr::orth_type)=lr==left ? Wrf.ileft : Wrf.iright 
-function setindex!(Wrf::reg_form_Op,il::Index,lr::orth_type)
+ITensors.dims(Wrf::reg_form_Op)=dim(Wrf.ileft),dim(Wrf.iright)
+Base.getindex(Wrf::reg_form_Op,lr::orth_type)=lr==left ? Wrf.ileft : Wrf.iright 
+function Base.setindex!(Wrf::reg_form_Op,il::Index,lr::orth_type)
     if lr==left 
          Wrf.ileft=il
     else
@@ -102,9 +102,10 @@ function setindex!(Wrf::reg_form_Op,il::Index,lr::orth_type)
 end
 forward(Wrf::reg_form_Op,lr::orth_type)= Wrf[mirror(lr)]    
 backward(Wrf::reg_form_Op,lr::orth_type)= Wrf[lr]   
-siteinds(Wrf::reg_form_Op)=noncommoninds(Wrf.W,Wrf.ileft,Wrf.iright)
-linkinds(Wrf::reg_form_Op)=Wrf.ileft,Wrf.iright
-linkinds(Wrf::reg_form_Op,lr::orth_type)=backward(Wrf,lr),forward(Wrf,lr)
+
+ITensors.siteinds(Wrf::reg_form_Op)=noncommoninds(Wrf.W,Wrf.ileft,Wrf.iright)
+ITensors.linkinds(Wrf::reg_form_Op)=Wrf.ileft,Wrf.iright
+ITensors.linkinds(Wrf::reg_form_Op,lr::orth_type)=backward(Wrf,lr),forward(Wrf,lr)
 
 function check(Wrf::reg_form_Op)
     @mpoc_assert order(Wrf.W)==4
