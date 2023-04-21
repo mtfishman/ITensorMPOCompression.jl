@@ -21,33 +21,33 @@ import ITensorMPOCompression: flip
     #pprint(Wrf.W)
     Wb=extract_blocks(Wrf,lr;all=true,V=true)
     @test norm(matrix(Wb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
-    @test isnothing(Wb.𝑨) 
+    @test isnothing(Wb.𝐀̂) 
     if ul==lower   
         @test isnothing(Wb.𝐛̂)
-        @test norm(array(Wb.𝒅)-array(Wrf[nr:nr,1:1]))<eps
-        @test norm(array(Wb.𝒄)-array(Wrf[nr:nr,2:nc-1]))<eps
+        @test norm(array(Wb.𝐝̂)-array(Wrf[nr:nr,1:1]))<eps
+        @test norm(array(Wb.𝐜̂)-array(Wrf[nr:nr,2:nc-1]))<eps
     else
-        @test isnothing(Wb.𝒄)
-        @test norm(array(Wb.𝒅)-array(Wrf[1:1,nc:nc]))<eps
+        @test isnothing(Wb.𝐜̂)
+        @test norm(array(Wb.𝐝̂)-array(Wrf[1:1,nc:nc]))<eps
         @test norm(array(Wb.𝐛̂)-array(Wrf[1:1,2:nc-1]))<eps
     end
-    @test norm(array(Wb.𝑽)-array(Wrf[1:1,2:nc]))<eps
+    @test norm(array(Wb.𝐕̂)-array(Wrf[1:1,2:nc]))<eps
     
     Wrf=H[N]
     nr,nc=dims(Wrf)
     Wb=extract_blocks(Wrf,lr;all=true,V=true,fix_inds=true)
     @test norm(matrix(Wb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
-    @test isnothing(Wb.𝑨)    
+    @test isnothing(Wb.𝐀̂)    
     if ul==lower 
-        @test isnothing(Wb.𝒄) 
-        @test norm(array(Wb.𝒅)-array(Wrf[nr:nr,1:1]))<eps
+        @test isnothing(Wb.𝐜̂) 
+        @test norm(array(Wb.𝐝̂)-array(Wrf[nr:nr,1:1]))<eps
         @test norm(array(Wb.𝐛̂)-array(Wrf[2:nr-1,1:1]))<eps
     else
         @test isnothing(Wb.𝐛̂) 
-        @test norm(array(Wb.𝒅)-array(Wrf[1:1,nc:nc]))<eps
-        @test norm(array(Wb.𝒄)-array(Wrf[2:nr-1,nc:nc]))<eps
+        @test norm(array(Wb.𝐝̂)-array(Wrf[1:1,nc:nc]))<eps
+        @test norm(array(Wb.𝐜̂)-array(Wrf[2:nr-1,nc:nc]))<eps
     end
-    @test norm(array(Wb.𝑽)-array(Wrf[2:nr,1:1]))<eps
+    @test norm(array(Wb.𝐕̂)-array(Wrf[2:nr,1:1]))<eps
 
 
     Wrf=H[2]
@@ -55,20 +55,20 @@ import ITensorMPOCompression: flip
     Wb=extract_blocks(Wrf,lr;all=true,V=true,fix_inds=true,Ac=true)
     if ul==lower
         @test norm(matrix(Wb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
-        @test norm(array(Wb.𝒅)-array(Wrf[nr:nr,1:1]))<eps
+        @test norm(array(Wb.𝐝̂)-array(Wrf[nr:nr,1:1]))<eps
         @test norm(array(Wb.𝐛̂)-array(Wrf[2:nr-1,1:1]))<eps
-        @test norm(array(Wb.𝒄)-array(Wrf[nr:nr,2:nc-1]))<eps
-        @test norm(array(Wb.𝑨)-array(Wrf[2:nr-1,2:nc-1]))<eps
-        @test norm(array(Wb.𝑨𝒄)-array(Wrf[2:nr,2:nc-1]))<eps
+        @test norm(array(Wb.𝐜̂)-array(Wrf[nr:nr,2:nc-1]))<eps
+        @test norm(array(Wb.𝐀̂)-array(Wrf[2:nr-1,2:nc-1]))<eps
+        @test norm(array(Wb.𝐀̂𝐜̂)-array(Wrf[2:nr,2:nc-1]))<eps
     else
         @test norm(matrix(Wb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
-        @test norm(array(Wb.𝒅)-array(Wrf[1:1,nc:nc]))<eps
+        @test norm(array(Wb.𝐝̂)-array(Wrf[1:1,nc:nc]))<eps
         @test norm(array(Wb.𝐛̂)-array(Wrf[1:1,2:nc-1]))<eps
-        @test norm(array(Wb.𝒄)-array(Wrf[2:nr-1,nc:nc]))<eps
-        @test norm(array(Wb.𝑨)-array(Wrf[2:nr-1,2:nc-1]))<eps
-        @test norm(array(Wb.𝑨𝒄)-array(Wrf[2:nr-1,2:nc]))<eps
+        @test norm(array(Wb.𝐜̂)-array(Wrf[2:nr-1,nc:nc]))<eps
+        @test norm(array(Wb.𝐀̂)-array(Wrf[2:nr-1,2:nc-1]))<eps
+        @test norm(array(Wb.𝐀̂𝐜̂)-array(Wrf[2:nr-1,2:nc]))<eps
     end
-    @test norm(array(Wb.𝑽)-array(Wrf[2:nr,2:nc]))<eps
+    @test norm(array(Wb.𝐕̂)-array(Wrf[2:nr,2:nc]))<eps
 
 end
 

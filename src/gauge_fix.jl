@@ -30,7 +30,7 @@ end
 function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
     @assert is_regular_form(W)
     Wb=extract_blocks(W,lr;all=true,fix_inds=true)
-    𝕀,𝑨,𝐛̂,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝐛̂,Wb.𝒄,Wb.𝒅 #for readability below.
+    𝕀,𝐀̂,𝐛̂,𝐜̂,𝐝̂=Wb.𝕀,Wb.𝐀̂,Wb.𝐛̂,Wb.𝐜̂,Wb.𝐝̂ #for readability below.
     nr,nc=dims(W)
     nb,nf = lr==left ? (nr,nc) : (nc,nr)
     #
@@ -40,32 +40,32 @@ function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
         ibd,ibb = llur(W,lr) ?  (Wb.ird, Wb.irb) : (Wb.icd, Wb.icb)
         𝒕ₙ₋₁=ITensor(tₙ₋₁,dag(ibb),ibd)
     end
-    𝒄⎖=nothing
+    𝐜̂⎖=nothing
     #
     #  First two if blocks are special handling for row and column vector at the edges of the MPO
     #
     if nb==1 #col/row at start of sweep.
         𝒕ₙ=c0(Wb) 
-        𝒄⎖=𝒄-𝕀*𝒕ₙ
-        𝒅⎖=𝒅
+        𝐜̂⎖=𝐜̂-𝕀*𝒕ₙ
+        𝐝̂⎖=𝐝̂
     elseif nf==1 ##col/row at the end of the sweep
-        𝒅⎖=𝒅+𝒕ₙ₋₁*𝐛̂
+        𝐝̂⎖=𝐝̂+𝒕ₙ₋₁*𝐛̂
         𝒕ₙ=ITensor(1.0,Index(1),Index(1)) #Not used, but required for the return statement.
     else
         𝒕ₙ=𝒕ₙ₋₁*A0(Wb)+c0(Wb)
-        𝒄⎖=𝒄+𝒕ₙ₋₁*𝑨-𝒕ₙ*𝕀
-        𝒅⎖=𝒅+𝒕ₙ₋₁*𝐛̂
+        𝐜̂⎖=𝐜̂+𝒕ₙ₋₁*𝐀̂-𝒕ₙ*𝕀
+        𝐝̂⎖=𝐝̂+𝒕ₙ₋₁*𝐛̂
     end
     @assert is_regular_form(W)
     
-    set_𝒅_block!(W,𝒅⎖)
+    set_𝐝̂_block!(W,𝐝̂⎖)
     @assert is_regular_form(W)
 
-    if !isnothing(𝒄⎖)
+    if !isnothing(𝐜̂⎖)
         if llur(W,lr)
-            set_𝒄_block!(W,𝒄⎖)
+            set_𝐜̂_block!(W,𝐜̂⎖)
         else
-            set_𝐛̂_block!(W,𝒄⎖)
+            set_𝐛̂_block!(W,𝐜̂⎖)
         end
     end
     @assert is_regular_form(W)
@@ -165,21 +165,21 @@ end
 function gauge_fix!(W::reg_form_Op,sₙ₋₁::Vector{Float64},sₙ::Vector{Float64},tₙ::Vector{Float64},tₙ₋₁::Vector{Float64})
     @assert is_regular_form(W)
     Wb=extract_blocks(W,left;all=true,fix_inds=true)
-    𝕀,𝑨,𝐛̂,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝐛̂,Wb.𝒄,Wb.𝒅 #for readability below.
+    𝕀,𝐀̂,𝐛̂,𝐜̂,𝐝̂=Wb.𝕀,Wb.𝐀̂,Wb.𝐛̂,Wb.𝐜̂,Wb.𝐝̂ #for readability below.
   
     𝒕ₙ₋₁=ITensor(tₙ₋₁,dag(Wb.irb),Wb.ird)
     𝒕ₙ=ITensor(tₙ,Wb.irc,Wb.icc)
     𝒔ₙ₋₁=ITensor(sₙ₋₁,Wb.irb,Wb.icb)
     𝒔ₙ=ITensor(sₙ,Wb.icb,dag(Wb.icA))
     #@show sₙ₋₁ sₙ tₙ₋₁ tₙ
-    𝐛̂⎖ = 𝐛̂ + 𝒔ₙ₋₁*𝕀 -𝑨 * 𝒔ₙ
-    𝒄⎖ = 𝒄 - 𝒕ₙ  *𝕀 + 𝒕ₙ₋₁*𝑨
-    𝒅⎖ = 𝒅 + 𝒕ₙ₋₁*𝐛̂ - 𝒔ₙ*𝒄⎖
+    𝐛̂⎖ = 𝐛̂ + 𝒔ₙ₋₁*𝕀 -𝐀̂ * 𝒔ₙ
+    𝐜̂⎖ = 𝐜̂ - 𝒕ₙ  *𝕀 + 𝒕ₙ₋₁*𝐀̂
+    𝐝̂⎖ = 𝐝̂ + 𝒕ₙ₋₁*𝐛̂ - 𝒔ₙ*𝐜̂⎖
     
     set_𝐛̂_block!(W,𝐛̂⎖)
     @assert is_regular_form(W)
-    set_𝒄_block!(W,𝒄⎖)
+    set_𝐜̂_block!(W,𝐜̂⎖)
     @assert is_regular_form(W)
-    set_𝒅_block!(W,𝒅⎖)
+    set_𝐝̂_block!(W,𝐝̂⎖)
     @assert is_regular_form(W)
 end

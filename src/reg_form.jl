@@ -51,8 +51,8 @@ function is_regular_form(Wrf::reg_form_Op,ul::reg_form,eps::Float64=default_eps)
         i1=abs(scalar(dag(Wb.𝕀) * slice(Wrf.W,Wrf.ileft=>1,Wrf.iright=>1))-dh)<eps
         iN=abs(scalar(dag(Wb.𝕀) * slice(Wrf.W,Wrf.ileft=>nr,Wrf.iright=>nc))-dh)<eps
         bz=isnothing(Wb.𝐛̂) ? true : norm(Wb.𝐛̂)<eps
-        cz=isnothing(Wb.𝒄) ? true : norm(Wb.𝒄)<eps
-        dz=norm(Wb.𝒅)<eps
+        cz=isnothing(Wb.𝐜̂) ? true : norm(Wb.𝐜̂)<eps
+        dz=norm(Wb.𝐝̂)<eps
     end
     
     Wrf.ul=ul_cache
@@ -79,7 +79,7 @@ function check_ortho(Wrf::reg_form_Op,lr::orth_type,eps::Float64=default_eps)::B
     DwDw=dim(Wb.irV)*dim(Wb.icV)
     ilf = llur(Wrf,lr) ? Wb.icV : Wb.irV
     
-    Id=Wb.𝑽*prime(dag(Wb.𝑽),ilf)/d(Wb)
+    Id=Wb.𝐕̂*prime(dag(Wb.𝐕̂),ilf)/d(Wb)
     if order(Id)==2
         is_can = norm(dense(Id)-delta(ilf,dag(ilf')))/sqrt(DwDw)<eps
         # if !is_can
