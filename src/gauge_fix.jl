@@ -8,24 +8,17 @@ function vector_o2(T::ITensor)
     return vector(T*dag(onehot(i1=>1)))
 end
 
-function is_gauge_fixed(W::reg_form_Op,eps::Float64;b=true,c=true)::Bool where {T}
-    igf=true
-    Wb=extract_blocks(W,left;c=true,b=true)
-    if b && dim(W.ileft)>1
-        igf=igf && norm(b0(Wb))<eps
+function is_gauge_fixed(Wrf::reg_form_Op,eps::Float64;b=true,c=true)::Bool where {T}
+    Wb=extract_blocks(Wrf,left;c=c,b=b)
+    nr,nc=dims(Wrf)
+    if b && nr>1
+        !(norm(b0(Wb))<eps) && return false
     end
-    if c && dim(W.iright)>1
-        igf=igf && norm(c0(Wb))<eps
+    if c && nc>1
+        !(norm(c0(Wb))<eps) && return false
     end
-    return igf
+    return true
 end
-
-# function is_gauge_fixed(Hrf::reg_form_MPO,eps::Float64;kwargs...)::Bool 
-#     for W in Hrf
-#         !is_gauge_fixed(W,eps;kwargs...) && return false
-#     end
-#     return true
-# end
 
 function is_gauge_fixed(Hrf::AbstractMPS,eps::Float64;kwargs...)::Bool 
     for W in Hrf
@@ -38,7 +31,7 @@ function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
     @assert is_regular_form(W)
     Wb=extract_blocks(W,lr;all=true,fix_inds=true)
     𝕀,𝑨,𝒃,𝒄,𝒅=Wb.𝕀,Wb.𝑨,Wb.𝒃,Wb.𝒄,Wb.𝒅 #for readability below.
-    nr,nc=dim(W.ileft),dim(W.iright)
+    nr,nc=dims(W)
     nb,nf = lr==left ? (nr,nc) : (nc,nr)
     #
     #  Make in ITensor with suitable indices from the 𝒕ₙ₋₁ vector.

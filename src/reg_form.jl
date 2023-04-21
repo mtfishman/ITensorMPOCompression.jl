@@ -35,10 +35,10 @@ function is_regular_form(Wrf::reg_form_Op,ul::reg_form,eps::Float64=default_eps)
     ul_cache=Wrf.ul
     Wrf.ul=flip(ul)
     Wb=extract_blocks(Wrf,left;b=true,c=true,d=true)
-    is=noncommoninds(Wrf.W,Wrf.ileft,Wrf.iright)
+    is=siteinds(Wrf)
     𝕀=delta(is) #We need to make our own, can't trust Wb.𝕀 is ul is wrong.
     dh=dim(is[1])
-    nr,nc=dim(Wrf.ileft),dim(Wrf.iright)
+    nr,nc=dims(Wrf)
     if (nc==1 && ul==lower) || (nr==1 && ul==upper)
         i1=abs(scalar(dag(𝕀) * slice(Wrf.W,Wrf.ileft=>1,Wrf.iright=>1))-dh)<eps
         iN=bz=cz=dz=true
@@ -91,6 +91,17 @@ function check_ortho(Wrf::reg_form_Op,lr::orth_type,eps::Float64=default_eps)::B
     return is_can
 end
 
+dims(Wrf::reg_form_Op)=dim(Wrf.ileft),dim(Wrf.iright)
+getindex(Wrf::reg_form_Op,lr::orth_type)=lr==left ? Wrf.ileft : Wrf.iright 
+function setindex!(Wrf::reg_form_Op,il::Index,lr::orth_type)
+    if lr==left 
+         Wrf.ileft=il
+    else
+         Wrf.iright=il
+    end
+end
+siteinds(Wrf::reg_form_Op)=noncommoninds(Wrf.W,Wrf.ileft,Wrf.iright)
+linkinds(Wrf::reg_form_Op)=Wrf.ileft,Wrf.iright
 
 function check(Wrf::reg_form_Op)
     @mpoc_assert order(Wrf.W)==4
@@ -103,8 +114,8 @@ function check(Wrf::reg_form_Op)
     end
 end
 
-forward(Wrf::reg_form_Op,lr::orth_type)= lr==left ? Wrf.iright : Wrf.ileft
-backward(Wrf::reg_form_Op,lr::orth_type)= lr==left ? Wrf.ileft : Wrf.iright
+forward(Wrf::reg_form_Op,lr::orth_type)= Wrf[mirror(lr)]    
+backward(Wrf::reg_form_Op,lr::orth_type)= Wrf[lr]   
 
 #-----------------------------------------------------------------------
 #
@@ -287,15 +298,15 @@ end
 
 function get_lr(Hrf::reg_form_iMPO)::Tuple{ITensor,ITensor}
     N=length(Hrf)
-    llink,rlink=Hrf[1].ileft',Hrf[N].iright'
-    l=ITensor(0.0,dag(llink))
-    r=ITensor(0.0,dag(rlink))
+    llink,rlink=linkinds(Hrf[1])
+    l=ITensor(0.0,dag(llink'))
+    r=ITensor(0.0,dag(rlink'))
     if Hrf.ul==lower
-        l[llink=>dim(llink)]=1.0
-        r[rlink=>1]=1.0
+        l[llink'=>dim(llink)]=1.0
+        r[rlink'=>1]=1.0
     else
-        l[llink=>1]=1.0
-        r[rlink=>dim(rlink)]=1.0
+        l[llink'=>1]=1.0
+        r[rlink'=>dim(rlink)]=1.0
     end
 
     return l,r

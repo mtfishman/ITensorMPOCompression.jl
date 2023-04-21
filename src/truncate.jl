@@ -111,11 +111,8 @@ function truncate(Wrf::reg_form_Op,lr::orth_type;kwargs...)::Tuple{reg_form_Op,I
     Uplus=grow(U,dag(iqx),dag(iup))
     Uplus=noprime(Uplus,iqx)
     Wrf.W=Q.W*Uplus #W[l=n-1,u]
-    if lr==left
-        Wrf.iright=settags(dag(iup),tags(ilf))
-    else
-        Wrf.ileft=settags(dag(iup),tags(ilf))
-    end
+    Wrf[mirror(lr)]=settags(dag(iup),tags(ilf))
+   
 
     replacetags!(R,"Link,u",tags(ilf)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
     replacetags!(Wrf.W ,"Link,u",tags(ilf)) #W[l=n-1,l=n]
@@ -138,11 +135,10 @@ function ITensors.truncate!(H::reg_form_MPO,lr::orth_type;eps=1e-14,kwargs...)::
     if lr==left
         for n in rng
             nn=n+rng.step
-            #@show inds(H[n].W,tags="Link") H[n].ileft H[n].iright
             check(H[n])
             W,R,s,bail=truncate(H[n],lr;kwargs...)
             H[n]=W
-            H[nn].ileft=noncommonind(R,H[nn].W)
+            H[nn][lr]=noncommonind(R,H[nn].W)
             H[nn].W=R*H[nn].W
             check(H[n])
             check(H[nn])
@@ -154,7 +150,7 @@ function ITensors.truncate!(H::reg_form_MPO,lr::orth_type;eps=1e-14,kwargs...)::
             check(H[n])
             W,R,s,bail=truncate(H[n],lr;kwargs...)
             H[n]=W
-            H[nn].iright=noncommonind(R,H[nn].W)
+            H[nn][lr]=noncommonind(R,H[nn].W)
             H[nn].W=R*H[nn].W
             check(H[n])
             check(H[nn])

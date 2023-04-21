@@ -86,7 +86,7 @@ function ac_orthogonalize!(H::reg_form_MPO,lr::orth_type;eps::Float64=1e-14,kwar
             @assert H[n].iright==iqp
 
             H[nn].W=R*H[nn].W
-            H[nn].ileft=dag(iqp)
+            H[nn][lr]=dag(iqp)
             @assert is_regular_form(H[nn])
         end
     else
@@ -97,7 +97,7 @@ function ac_orthogonalize!(H::reg_form_MPO,lr::orth_type;eps::Float64=1e-14,kwar
             @assert dir(H[n].ileft)==dir(iqp)
 
             H[nn].W=R*H[nn].W
-            H[nn].iright=dag(iqp)
+            H[nn][lr]=dag(iqp)
             @assert is_regular_form(H[nn])
         end
     end

@@ -67,7 +67,7 @@ function extract_blocks(Wrf::reg_form_Op,lr::orth_type;all=false,c=false,b=false
     @assert plev(Wrf.ileft)==0
     @assert plev(Wrf.iright)==0
     W=Wrf.W
-    ir,ic=Wrf.ileft,Wrf.iright
+    ir,ic=linkinds(Wrf)
     if Wrf.ul==upper
         ir,ic=ic,ir #transpose
     end

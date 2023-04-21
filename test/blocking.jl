@@ -17,7 +17,7 @@ import ITensorMPOCompression: flip
     lr= ul==lower ? left : right
 
     Wrf=H[1]
-    nr,nc=dim(Wrf.ileft),dim(Wrf.iright)
+    nr,nc=dims(Wrf)
     #pprint(Wrf.W)
     Wb=extract_blocks(Wrf,lr;all=true,V=true)
     @test norm(matrix(Wb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
@@ -34,7 +34,7 @@ import ITensorMPOCompression: flip
     @test norm(array(Wb.𝑽)-array(Wrf[1:1,2:nc]))<eps
     
     Wrf=H[N]
-    nr,nc=dim(Wrf.ileft),dim(Wrf.iright)
+    nr,nc=dims(Wrf)
     Wb=extract_blocks(Wrf,lr;all=true,V=true,fix_inds=true)
     @test norm(matrix(Wb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
     @test isnothing(Wb.𝑨)    
@@ -51,7 +51,7 @@ import ITensorMPOCompression: flip
 
 
     Wrf=H[2]
-    nr,nc=dim(Wrf.ileft),dim(Wrf.iright)
+    nr,nc=dims(Wrf)
     Wb=extract_blocks(Wrf,lr;all=true,V=true,fix_inds=true,Ac=true)
     if ul==lower
         @test norm(matrix(Wb.𝕀)-1.0*Matrix(LinearAlgebra.I,d,d))<eps
