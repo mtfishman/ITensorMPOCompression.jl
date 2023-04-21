@@ -79,27 +79,13 @@ function ac_orthogonalize!(H::reg_form_MPO,lr::orth_type;eps::Float64=1e-14,kwar
         gauge_fix!(H)
     end
     rng=sweep(H,lr)
-    if lr==left
-        for n in rng
-            nn=n+rng.step
-            H[n],R,iqp=ac_qx(H[n],lr)
-            @assert H[n].iright==iqp
-
-            H[nn].W=R*H[nn].W
-            H[nn][lr]=dag(iqp)
-            @assert is_regular_form(H[nn])
-        end
-    else
-        for n in rng
-            nn=n+rng.step
-            H[n],R,iqp=ac_qx(H[n],lr)
-            @assert H[n].ileft==iqp
-            @assert dir(H[n].ileft)==dir(iqp)
-
-            H[nn].W=R*H[nn].W
-            H[nn][lr]=dag(iqp)
-            @assert is_regular_form(H[nn])
-        end
+    for n in rng
+        nn=n+rng.step
+        H[n],R,iqp=ac_qx(H[n],lr)
+        H[nn].W=R*H[nn].W
+        H[nn][lr]=dag(iqp)
+        check(H[n])
+        check(H[nn])
     end
     H.rlim = rng.stop+rng.step+1
     H.llim = rng.stop+rng.step-1
@@ -237,18 +223,16 @@ function ac_orthogonalize!(H::reg_form_iMPO,lr::orth_type;verbose=false,kwargs..
 end
 
 function ac_qx_step!(W::reg_form_Op,lr::orth_type,eps::Float64;kwargs...)
-    Q,RL,iq,p=ac_qx(W,lr;cutoff=1e-14,kwargs...) # r-Q-qx qx-RL-c
+    Q,R,iq,p=ac_qx(W,lr;cutoff=1e-14,qprime=true,kwargs...) # r-Q-qx qx-RL-c
     #
     #  How far are we from RL==Id ?
     #
     if dim(forward(W,lr))==dim(iq)
-        eta = RmI(RL,p) #Different handling for dense and block-sparse
+        eta = RmI(R,p) #Different handling for dense and block-sparse
     else
-        eta=99.0 #Rank reduction occured to keep going.
+        eta=99.0 #Rank reduction occured so keep going.
     end
-    RL=prime(RL,iq)
-    check(Q)
-    return Q,RL,eta
+    return Q,R,eta
 end
 
 #

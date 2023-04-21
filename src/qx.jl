@@ -97,10 +97,10 @@ function redim1(iq::Index,pad1::Int64,pad2::Int64,Dw::Int64)
 end
 
 
-function insert_Q(Wb::regform_blocks,𝐐::ITensor,ileft::Index,iright::Index,iq::Index,ul::reg_form,lr::orth_type)
-  ilb,ilf =  lr==left ? (ileft,iright) : (iright,ileft) #Backward and forward indices.
-  @assert !isnothing(Wb.𝑨𝒄)
-  is=noncommoninds(Wb.𝑨𝒄,Wb.irAc,Wb.icAc)
+function insert_Q(Wrf::reg_form_Op,𝐐::ITensor,iq::Index,lr::orth_type)
+  Wb=extract_blocks(Wrf,lr;b=true,c=true,d=true)
+  ilb,ilf = linkinds(Wrf,lr) #Backward and forward indices.
+  is=siteinds(Wrf)
   @assert hasinds(𝐐,iq,is...)
   #
   #  Build new index and MPO Tensor
@@ -108,7 +108,7 @@ function insert_Q(Wb::regform_blocks,𝐐::ITensor,ileft::Index,iright::Index,iq
   iqp=redim1(iq,1,1,space(ilf))  #pad with 1 at the start and 1 and the end: iqp =(1,iq,1).
   Wp=ITensor(0.0,ilb,iqp,is)
   ileft,iright =  lr==left ? (ilb,iqp) :  (iqp,ilb)
-  Wrfp=reg_form_Op(Wp,ileft,iright,ul)
+  Wrfp=reg_form_Op(Wp,ileft,iright,Wrf.ul)
   set_𝒃𝒄_block!(Wrfp,Wb.𝒃,lr) #preserve b or c block from old W
   set_𝒅_block!(Wrfp,Wb.𝒅) #preserve d block from old W
   set_𝕀_block!(Wrfp,Wb.𝕀) #init I blocks from old W
@@ -118,9 +118,9 @@ end
 
 function ac_qx(Wrf::reg_form_Op,lr::orth_type;qprime=false,verbose=false, kwargs...)
   @checkflux(Wrf.W)
-  Wb=extract_blocks(Wrf,lr;Ac=true,all=true)
+  Wb=extract_blocks(Wrf,lr;Ac=true)
   ilf_Ac = llur(Wrf,lr) ?  Wb.icAc : Wb.irAc
-  ilb,ilf =  backward(Wrf,lr),forward(Wrf,lr) #Backward and forward indices.
+  ilb,ilf =  linkinds(Wrf,lr) #Backward and forward indices.
   @checkflux(Wb.𝑨𝒄)
   if lr==left
       Qinds=noncommoninds(Wb.𝑨𝒄,ilf_Ac) 
@@ -137,10 +137,12 @@ function ac_qx(Wrf::reg_form_Op,lr::orth_type;qprime=false,verbose=false, kwargs
   Q*=sqrt(dh)
   R/=sqrt(dh)
 
-  Wp,iqp=insert_Q(Wb,Q,Wrf.ileft,Wrf.iright,iq,Wrf.ul,lr) 
-  Wprf=lr==left ? reg_form_Op(Wp,ilb,iqp,Wrf.ul) : reg_form_Op(Wp,iqp,ilb,Wrf.ul)
+  Wp,iqp=insert_Q(Wrf,Q,iq,lr) 
+  il,ir=lr==left ? (ilb,iqp) : (iqp,ilb)
+  Wprf=reg_form_Op(Wp,il,ir,Wrf.ul)
+  check(Wprf)
   @assert equal_edge_blocks(ilf,iqp)
-  @assert is_regular_form(Wprf)
+  
   R=prime(R,iq) #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
   Rp=grow(R,dag(iqp'),ilf)
   p=add_edges(p) #grow p so we can apply it to Rp.

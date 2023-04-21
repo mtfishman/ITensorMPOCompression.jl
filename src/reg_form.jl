@@ -100,8 +100,11 @@ function setindex!(Wrf::reg_form_Op,il::Index,lr::orth_type)
          Wrf.iright=il
     end
 end
+forward(Wrf::reg_form_Op,lr::orth_type)= Wrf[mirror(lr)]    
+backward(Wrf::reg_form_Op,lr::orth_type)= Wrf[lr]   
 siteinds(Wrf::reg_form_Op)=noncommoninds(Wrf.W,Wrf.ileft,Wrf.iright)
 linkinds(Wrf::reg_form_Op)=Wrf.ileft,Wrf.iright
+linkinds(Wrf::reg_form_Op,lr::orth_type)=backward(Wrf,lr),forward(Wrf,lr)
 
 function check(Wrf::reg_form_Op)
     @mpoc_assert order(Wrf.W)==4
@@ -114,8 +117,6 @@ function check(Wrf::reg_form_Op)
     end
 end
 
-forward(Wrf::reg_form_Op,lr::orth_type)= Wrf[mirror(lr)]    
-backward(Wrf::reg_form_Op,lr::orth_type)= Wrf[lr]   
 
 #-----------------------------------------------------------------------
 #
