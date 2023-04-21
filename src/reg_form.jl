@@ -93,7 +93,8 @@ end
 
 
 function check(Wrf::reg_form_Op)
-    @mpoc_assert tags(Wrf.ileft)!=tags(Wrf.iright)
+    @mpoc_assert order(Wrf.W)==4
+    @mpoc_assert tags(Wrf.ileft)!=tags(Wrf.iright) || plev(Wrf.ileft)!=plev(Wrf.iright)
     @mpoc_assert hasinds(Wrf.W,Wrf.ileft)
     @mpoc_assert hasinds(Wrf.W,Wrf.iright)
     if hasqns(Wrf.W) 

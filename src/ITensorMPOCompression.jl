@@ -16,7 +16,7 @@ export getV,setV,growRL,V_offsets #blocking related
 export my_similar
 # lots of characterization functions
 export reg_form,orth_type,upper,lower,left,right,mirror
-export parse_links,parse_link,parse_site,is_regular_form,getM,grow,detect_regular_form
+export parse_links,parse_link,parse_site,is_regular_form,build_R⎖,grow,detect_regular_form
 export is_lower_regular_form,is_upper_regular_form
 export detect_upper_lower,is_upper_lower,sweep
 export isortho, check_ortho

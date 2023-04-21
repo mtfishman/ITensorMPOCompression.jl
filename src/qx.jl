@@ -116,7 +116,7 @@ function insert_Q(Wb::regform_blocks,𝐐::ITensor,ileft::Index,iright::Index,iq
   return Wrfp.W,iqp
 end
 
-function ac_qx(Wrf::reg_form_Op,lr::orth_type;verbose=false, kwargs...)
+function ac_qx(Wrf::reg_form_Op,lr::orth_type;qprime=false,verbose=false, kwargs...)
   @checkflux(Wrf.W)
   Wb=extract_blocks(Wrf,lr;Ac=true,all=true)
   ilf_Ac = llur(Wrf,lr) ?  Wb.icAc : Wb.irAc
@@ -141,9 +141,14 @@ function ac_qx(Wrf::reg_form_Op,lr::orth_type;verbose=false, kwargs...)
   Wprf=lr==left ? reg_form_Op(Wp,ilb,iqp,Wrf.ul) : reg_form_Op(Wp,iqp,ilb,Wrf.ul)
   @assert equal_edge_blocks(ilf,iqp)
   @assert is_regular_form(Wprf)
-  R=prime(R,ilf_Ac) #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
-  Rp=noprime(ITensorMPOCompression.grow(R,dag(iqp),ilf'))
-  p=add_edges(p)
+  R=prime(R,iq) #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
+  Rp=grow(R,dag(iqp'),ilf)
+  p=add_edges(p) #grow p so we can apply it to Rp.
+  if qprime
+    iqp=prime(iqp)
+  else
+    Rp=noprime(Rp)
+  end
   return Wprf,Rp,iqp,p
 end
 

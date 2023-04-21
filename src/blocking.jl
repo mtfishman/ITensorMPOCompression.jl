@@ -215,55 +215,40 @@ function set_𝒃_block!(::reg_form_Op,::Nothing)
 end
 function set_𝒄_block!(::reg_form_Op,::Nothing)
 end
-#
-#  factor LR such that for
-#       lr=left  LR=M*RM_prime
-#       lr=right LR=RL_prime*M
-#  However becuase of how the ITensor index works we don't need to distinguish between left and 
-#  right matrix multiplication in the code.  THis simplified code requires the RL is square.
-#
 
-function getM(RL::ITensor,iqx1::Index,ul::reg_form)::Tuple{ITensor,ITensor,Index}
-    @mpoc_assert order(RL)==2
-    @checkflux(RL)
-    mtags=ts"Link,m"
-    iqx,=inds(RL,tags="Link,qx") #Grab the qx link index
-    il=noncommonind(RL,iqx) #Grab the remaining link index
-    Dw=dim(iqx)
-    @mpoc_assert Dw==dim(il) #make sure RL is square
-    
-    M=RL[iqx=>2:Dw-1,il=>2:Dw-1] #pull out the M sub block
-    #
-    # Now we need RL_prime such that RL=M*RL_prime.
-    # RL_prime is just the perimeter of RL with 1's on the diagonal
-    #
-    RL=replacetags(RL,tags(iqx),mtags)  #change Link,qx to Link,m
-    iqx=replacetags(iqx,tags(iqx),mtags)
-    im=redim(iqx,Dw) #new common index between M_plus and RL_prime
-    if dir(im)!=dir(iqx1)
-        im=dag(im)
+# 
+#  Given R, build R⎖ such that lr=left  R=M*R⎖, lr=right R=R⎖*M
+#
+function build_R⎖(R::ITensor,iqx::Index,ilf::Index,ul::reg_form)::Tuple{ITensor,Index}
+    @mpoc_assert order(R)==2
+    @mpoc_assert hasinds(R,iqx,ilf)
+    @mpoc_assert dim(iqx)==dim(ilf) #make sure RL is square
+    @checkflux(R)
+    im=Index(space(iqx),tags=tags(iqx),dir=dir(iqx),plev=1) #new common index between M and R⎖
+    R⎖=ITensor(0.0,im,ilf) 
+    #R⎖+=δ(im,ilf) #set diagonal ... blocksparse + diag is not supported yet.  So we do it manually below.
+    Dw=dim(im)
+    for j1 in 2:Dw-1 
+        R⎖[im=>j1,ilf=>j1]=1.0 # Fill in the interior diagonal
     end
-    RL_prime=ITensor(0.0,im,il)
     #
     #  Copy over the perimeter of RL.
     #
     if ul==upper
-        RL_prime[im=>1:1,il=>1:Dw]=RL[iqx=>1:1 ,il=>1:Dw] #first row
-        RL_prime[im=>2:Dw,il=>Dw:Dw]=RL[iqx=>2:Dw,il=>Dw:Dw] #last col
+        R⎖[im=>1:1,ilf=>1:Dw]=R[iqx=>1:1 ,ilf=>1:Dw] #first row
+        R⎖[im=>2:Dw,ilf=>Dw:Dw]=R[iqx=>2:Dw,ilf=>Dw:Dw] #last col
     else
-        RL_prime[im=>Dw:Dw,il=>2:Dw]=RL[iqx=>Dw:Dw,il=>2:Dw] #last row
-        RL_prime[im=>1:Dw,il=>1:1]=RL[iqx=>1:Dw,il=>1:1] #first col
+        R⎖[im=>Dw:Dw,ilf=>2:Dw]=R[iqx=>Dw:Dw,ilf=>2:Dw] #last row
+        R⎖[im=>1:Dw,ilf=>1:1]=R[iqx=>1:Dw,ilf=>1:1] #first col
     end
+    @checkflux(R⎖)
+    #
+    #  Fix up index tags and primes.
+    #
+    im=noprime(settags(im,"Link,m"))
+    RL_prime=noprime(replacetags(R⎖,tags(iqx),tags(im),plev=1))
     
-    # Fill in interior diagonal
-    #@show inds(RL_prime) im il iqx
-    for j1 in 2:Dw-1 #
-        RL_prime[im=>j1,il=>j1]=1.0
-    end
-    @checkflux(RL_prime)
-    M=replacetags(M,tags(il),mtags) #change Link,l=n to Link,m
-   
-    return M,RL_prime,dag(im)
+    return RL_prime,dag(im)
 end
 
 

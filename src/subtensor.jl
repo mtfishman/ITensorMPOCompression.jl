@@ -321,7 +321,9 @@ function permute(indsT::T,irs::IndexRange...) where T<:(Tuple{Vararg{T, N}} wher
     isort=ispec...,inot... #all indices sorted so user specified ones are first.
     isort_sub=redim(irs)...,inot... #all indices for subtensor
     p=getperm(indsT, ntuple(n -> isort[n], length(isort)))
-    #@show p
+    if !isperm(p)
+        @show p ispec inot indsT isort
+    end
     return permute(isort_sub,p),permute((ranges(irs)...,ranges(inot)...),p)
 end
 #

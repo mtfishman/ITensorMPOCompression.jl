@@ -81,11 +81,13 @@ Done: -get rid of matrix_state
 Done: -check and fix equal_edge_blocks in truncate.  Use redim1 for all orth/truncate code.
 -Overload ref_form_Op*ITensor can we auto fix ileft,iright?
 Done: -Replace getV with another member in extract_blocks
-Make forward(Wrf::ref_form_Op), and backward(Wrf::ref_form_Op)
+Done: Make forward(Wrf::ref_form_Op), and backward(Wrf::ref_form_Op)
 Done: -Detect_upper_lower should use extract blocks.
--Simplify the whole getM process in MPO truncate.
+Done: -Simplify the whole getM process in MPO truncate.
 -WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
 Done: -Get rid if triangular tests.
+Done: -ac_qx option to prime iqx ?
+-Remove the bail out block in truncate(MPO)?
 
 ITensorInfiniteMPS:
   -Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
