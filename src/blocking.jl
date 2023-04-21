@@ -60,8 +60,6 @@ llur(ul::reg_form,lr::orth_type)= lr==left && ul==lower || lr==right && ul==uppe
 llur(W::reg_form_Op,lr::orth_type)=llur(W.ul,lr)
 
 #  Use recognizably distinct UTF symbols for operators, and op valued vectors and matrices: 
-#  𝕀 𝐀̂ 𝒃 𝐜̂ 𝐝̂ �̂ ⌃ c₀ 𝐀̂𝐜̂
-#    symbols from here: https://www.compart.com/en/unicode/block/U+1D400
 #  𝐀̂ 𝐛̂ 𝐜̂ 𝐝̂ 𝐕̂ 
 
 function extract_blocks(Wrf::reg_form_Op,lr::orth_type;all=false,c=false,b=false,d=false,A=false,Ac=false,V=false,I=true,fix_inds=false,swap_bc=true)::regform_blocks

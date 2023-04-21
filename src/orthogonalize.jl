@@ -166,7 +166,7 @@ function ac_orthogonalize!(H::reg_form_iMPO,lr::orth_type;verbose=false,kwargs..
         ln=lr==left ? H[n].iright : dag(H[n].iright) #get the forward link index
         Gs[n]=δ(Float64,dag(ln),ln') 
     end
-    RLs=CelledVector{ITensor}(undef,N)
+    Rs=CelledVector{ITensor}(undef,N)
     
     eps=1e-13
     niter=0
@@ -181,11 +181,11 @@ function ac_orthogonalize!(H::reg_form_iMPO,lr::orth_type;verbose=false,kwargs..
     while loop
         eta=0.0
         for n in rng
-            H[n],RLs[n],etan=ac_qx_step!(H[n],lr,eps;kwargs...)
+            H[n],Rs[n],etan=ac_qx_step!(H[n],lr,eps;kwargs...)
             if lr==left
-                Gs[n]=noprime(RLs[n]*Gs[n])  #  Update the accumulated gauge transform
+                Gs[n]=noprime(Rs[n]*Gs[n])  #  Update the accumulated gauge transform
             else
-                Gs[n-1]=noprime(RLs[n]*Gs[n-1])  #  Update the accumulated gauge transform
+                Gs[n-1]=noprime(Rs[n]*Gs[n-1])  #  Update the accumulated gauge transform
             end
             @mpoc_assert order(Gs[n])==2 #This will fail if the indices somehow got messed up.
             eta=Base.max(eta,etan)
@@ -194,14 +194,14 @@ function ac_orthogonalize!(H::reg_form_iMPO,lr::orth_type;verbose=false,kwargs..
         #  H now contains all the Qs.  We need to transfer the RL's
         #
         for n in rng
-            R=noprime(RLs[n-rng.step])
+            R=noprime(Rs[n-rng.step])
             ic=commonind(R,H[n].W)
             il=noncommonind(R,ic)
-            RH=R*H[n].W
+            RW=R*H[n].W
             if lr==left
-                H[n]=reg_form_Op(RH,noprime(il),H[n].iright,H[n].ul)
+                H[n]=reg_form_Op(RW,noprime(il),H[n].iright,H[n].ul)
             else
-                H[n]=reg_form_Op(RH,H[n].ileft,noprime(il),H[n].ul)
+                H[n]=reg_form_Op(RW,H[n].ileft,noprime(il),H[n].ul)
             end
             check(H[n])
         end
@@ -222,17 +222,17 @@ function ac_orthogonalize!(H::reg_form_iMPO,lr::orth_type;verbose=false,kwargs..
     return Gs
 end
 
-function ac_qx_step!(W::reg_form_Op,lr::orth_type,eps::Float64;kwargs...)
-    Q,R,iq,p=ac_qx(W,lr;cutoff=1e-14,qprime=true,kwargs...) # r-Q-qx qx-RL-c
+function ac_qx_step!(Ŵ::reg_form_Op,lr::orth_type,eps::Float64;kwargs...)
+    Q̂,R,iq,p=ac_qx(Ŵ,lr;cutoff=1e-14,qprime=true,kwargs...) # r-Q-qx qx-RL-c
     #
     #  How far are we from RL==Id ?
     #
-    if dim(forward(W,lr))==dim(iq)
+    if dim(forward(Ŵ,lr))==dim(iq)
         eta = RmI(R,p) #Different handling for dense and block-sparse
     else
         eta=99.0 #Rank reduction occured so keep going.
     end
-    return Q,R,eta
+    return Q̂,R,eta
 end
 
 #

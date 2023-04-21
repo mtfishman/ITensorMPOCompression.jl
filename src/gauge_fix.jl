@@ -177,9 +177,7 @@ function gauge_fix!(W::reg_form_Op,sₙ₋₁::Vector{Float64},sₙ::Vector{Floa
     𝐝̂⎖ = 𝐝̂ + 𝒕ₙ₋₁*𝐛̂ - 𝒔ₙ*𝐜̂⎖
     
     set_𝐛̂_block!(W,𝐛̂⎖)
-    @assert is_regular_form(W)
     set_𝐜̂_block!(W,𝐜̂⎖)
-    @assert is_regular_form(W)
     set_𝐝̂_block!(W,𝐝̂⎖)
-    @assert is_regular_form(W)
+    check(W)
 end
