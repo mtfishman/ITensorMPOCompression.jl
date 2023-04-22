@@ -68,73 +68,77 @@ true
 
 ```
 """
-function truncate(Ŵrf::reg_form_Op,lr::orth_type;kwargs...)::Tuple{reg_form_Op,ITensor,Spectrum,Bool}
-    ilf = forward(Ŵrf,lr) 
-    #   l=n-1   l=n        l=n-1  l=n  l=n
-    #   ------W----   -->  -----Q-----R-----
-    #           ilf               iqx   ilf
-    Q̂,R,iqx=ac_qx(Ŵrf,lr;qprime=true,kwargs...) #left Q[r,qx], R[qx,c] - right R[r,qx] Q[qx,c]
-    @checkflux(Q̂.W) 
-    @checkflux(R) 
-    #
-    #  If the RL is rectangular in the wrong way, then factoring out M is very difficult.
-    #  For now we just bail out.
-    #
-    if dim(ilf)>dim(iqx) || dim(ilf)<3
-        @assert false
-        replacetags!(R,"Link,qx",tags(ilf)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-        replacetags!(Q̂ ,"Link,qx",tags(ilf)) #W[l=n-1,l=n]
-        return Q̂,R,Spectrum([],0),true
-    end
-    #
-    #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
-    #  M will be returned as a Dw-2 X Dw-2 interior matrix.  M_sans in the Parker paper.
-    #
-    Dw=dim(iqx)
-    M=R[dag(iqx)=>2:Dw-1,ilf=>2:Dw-1] 
-    M=replacetags(M,tags(ilf),"Link,m",plev=0)
-    #  l=n'    l=n           l=n'   m      l=n
-    #  ------R----   --->   -----M------R'----
-    #  iqx'    ilf           iqx'   im     ilf
-    R⎖,im=build_R⎖(R,iqx,ilf,Ŵrf.ul) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
-    #  
-    #  svd decomp M. 
-    #    
-    isvd=inds(M,tags=tags(iqx))[1] #decide the backward index for svd.  Works for both sweep directions.
-    U,s,V,spectrum,iu,iv=svd(M,isvd;kwargs...) # ns sing. values survive compression
-    #@show diag(array(s))
-    #
-    #  Now recontrsuct R, and W in the truncated space.
-    #
-    iup=redim1(iu,1,1,space(iqx))
-    R=grow(s*V,iup,im)*R⎖ #RL[l=n,u] dim ns+2 x Dw2
-    Uplus=grow(U,dag(iqx),dag(iup))
-    Uplus=noprime(Uplus,iqx)
-    Ŵrf=Q̂*Uplus #W[l=n-1,u]
+function truncate(
+  Ŵrf::reg_form_Op, lr::orth_type; kwargs...
+)::Tuple{reg_form_Op,ITensor,Spectrum,Bool}
+  ilf = forward(Ŵrf, lr)
+  #   l=n-1   l=n        l=n-1  l=n  l=n
+  #   ------W----   -->  -----Q-----R-----
+  #           ilf               iqx   ilf
+  Q̂, R, iqx = ac_qx(Ŵrf, lr; qprime=true, kwargs...) #left Q[r,qx], R[qx,c] - right R[r,qx] Q[qx,c]
+  @checkflux(Q̂.W)
+  @checkflux(R)
+  #
+  #  If the RL is rectangular in the wrong way, then factoring out M is very difficult.
+  #  For now we just bail out.
+  #
+  if dim(ilf) > dim(iqx) || dim(ilf) < 3
+    @assert false
+    replacetags!(R, "Link,qx", tags(ilf)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+    replacetags!(Q̂, "Link,qx", tags(ilf)) #W[l=n-1,l=n]
+    return Q̂, R, Spectrum([], 0), true
+  end
+  #
+  #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
+  #  M will be returned as a Dw-2 X Dw-2 interior matrix.  M_sans in the Parker paper.
+  #
+  Dw = dim(iqx)
+  M = R[dag(iqx) => 2:(Dw - 1), ilf => 2:(Dw - 1)]
+  M = replacetags(M, tags(ilf), "Link,m"; plev=0)
+  #  l=n'    l=n           l=n'   m      l=n
+  #  ------R----   --->   -----M------R'----
+  #  iqx'    ilf           iqx'   im     ilf
+  R⎖, im = build_R⎖(R, iqx, ilf, Ŵrf.ul) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
+  #  
+  #  svd decomp M. 
+  #    
+  isvd = inds(M; tags=tags(iqx))[1] #decide the backward index for svd.  Works for both sweep directions.
+  U, s, V, spectrum, iu, iv = svd(M, isvd; kwargs...) # ns sing. values survive compression
+  #@show diag(array(s))
+  #
+  #  Now recontrsuct R, and W in the truncated space.
+  #
+  iup = redim1(iu, 1, 1, space(iqx))
+  R = grow(s * V, iup, im) * R⎖ #RL[l=n,u] dim ns+2 x Dw2
+  Uplus = grow(U, dag(iqx), dag(iup))
+  Uplus = noprime(Uplus, iqx)
+  Ŵrf = Q̂ * Uplus #W[l=n-1,u]
 
-    R=replacetags(R,"Link,u",tags(ilf)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-    Ŵrf=replacetags(Ŵrf ,"Link,u",tags(ilf)) #W[l=n-1,l=n]
-    check(Ŵrf)
-    return Ŵrf,R,spectrum,false
+  R = replacetags(R, "Link,u", tags(ilf)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+  Ŵrf = replacetags(Ŵrf, "Link,u", tags(ilf)) #W[l=n-1,l=n]
+  check(Ŵrf)
+  return Ŵrf, R, spectrum, false
 end
 
-function ITensors.truncate!(H::reg_form_MPO,lr::orth_type;eps=1e-14,kwargs...)::bond_spectrums
-    if !isortho(H)
-        ac_orthogonalize!(H,lr;eps=eps,kwargs...)
-        ac_orthogonalize!(H,mirror(lr);eps=eps,kwargs...)
-    end
-    gauge_fix!(H)
-    ss=bond_spectrums(undef,0)
-    rng=sweep(H,lr)
-    for n in rng
-        nn=n+rng.step
-        H[n],R,s,bail=truncate(H[n],lr;kwargs...)
-        H[nn]*=R
-        push!(ss,s)
-    end
-    H.rlim = rng.stop+rng.step+1
-    H.llim = rng.stop+rng.step-1
-    return ss
+function ITensors.truncate!(
+  H::reg_form_MPO, lr::orth_type; eps=1e-14, kwargs...
+)::bond_spectrums
+  if !isortho(H)
+    ac_orthogonalize!(H, lr; eps=eps, kwargs...)
+    ac_orthogonalize!(H, mirror(lr); eps=eps, kwargs...)
+  end
+  gauge_fix!(H)
+  ss = bond_spectrums(undef, 0)
+  rng = sweep(H, lr)
+  for n in rng
+    nn = n + rng.step
+    H[n], R, s, bail = truncate(H[n], lr; kwargs...)
+    H[nn] *= R
+    push!(ss, s)
+  end
+  H.rlim = rng.stop + rng.step + 1
+  H.llim = rng.stop + rng.step - 1
+  return ss
 end
 
 @doc """
@@ -189,107 +193,105 @@ site  Ns   max(s)     min(s)    Entropy  Tr. Error
 
 ```
 """
-function ITensors.truncate!(H::reg_form_iMPO,lr::orth_type;rr_cutoff=1e-14,kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
-    #@printf "---- start compress ----\n"
-    #
-    # Now check if H requires orthogonalization
-    #
-    if isortho(H,lr)
-        @warn "truncate!(iMPO), iMPO is already orthogonalized, but the truncate algorithm needs the gauge transform tensors." *
-        "running orthongonalie!() again to get the gauge tranforms."        
-    end
-    ac_orthogonalize!(H,mirror(lr),cutoff=rr_cutoff;kwargs...) 
-    Hm=copy(H)
-    Gs=ac_orthogonalize!(H,lr;cutoff=rr_cutoff,kwargs...) 
-    return truncate!(H,Hm,Gs,lr;kwargs...)
+function ITensors.truncate!(
+  H::reg_form_iMPO, lr::orth_type; rr_cutoff=1e-14, kwargs...
+)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
+  #@printf "---- start compress ----\n"
+  #
+  # Now check if H requires orthogonalization
+  #
+  if isortho(H, lr)
+    @warn "truncate!(iMPO), iMPO is already orthogonalized, but the truncate algorithm needs the gauge transform tensors." *
+      "running orthongonalie!() again to get the gauge tranforms."
+  end
+  ac_orthogonalize!(H, mirror(lr); cutoff=rr_cutoff, kwargs...)
+  Hm = copy(H)
+  Gs = ac_orthogonalize!(H, lr; cutoff=rr_cutoff, kwargs...)
+  return truncate!(H, Hm, Gs, lr; kwargs...)
 end
 
-function ITensors.truncate!(H::reg_form_iMPO,Hm::reg_form_iMPO,Gs::CelledVector{ITensor},lr::orth_type;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
-    gauge_fix!(H)
-    
-    N=length(H)
-    ss=bond_spectrums(undef,N)
-    Ss=CelledVector{ITensor}(undef,N)
-    for n in 1:N 
-        #prime the right index of G so that indices can be distinguished.
-        #Ideally orthogonalize!() would spit out Gs that are already like this.
-        igl=commonind(Gs[n],H[n].W)
-        igr=noncommonind(Gs[n],igl)
-        Gs[n]=replaceind(Gs[n],igr,prime(igr))
-        #iln=linkind(H,n) #Link between Hn amd Hn+1
-        iln=H[n].iright
-        #           
-        #  -----G[n-1]-----HR[n]-----   ==    -----HL[n]-----G[n]-----  
-        #
-        if lr==left
-            @assert igl==iln
-            # println("-----------------Left----------------------")
-            igl=iln #right link of Hn is the left link of Gn
-            U,Sp,V,spectrum=truncate(Gs[n],dag(igl);kwargs...)
-            check(H[n])
-          
-            H[n]*=U 
-            H[n+1]*=dag(U)
-            Hm[n]*=dag(V) 
-            Hm[n+1]*=V
-            check(H[n])
-            check(Hm[n])
-        else
-            # println("-----------------Right----------------------")
-            igl=noncommonind(Gs[n],iln) #left link of Hn+1 is the right link Gn
-            U,Sp,V,spectrum=truncate(Gs[n],igl;kwargs...) 
-            check(H[n])
-            H[n]*=dag(V)
-            H[n+1]*=V
-            Hm[n]*=U
-            Hm[n+1]*=dag(U)
-            check(H[n])
-            check(Hm[n])
-        end
-       
-        Ss[n]=Sp
-        ss[n]=spectrum
-    end
-    return Ss,ss,Hm
+function ITensors.truncate!(
+  H::reg_form_iMPO, Hm::reg_form_iMPO, Gs::CelledVector{ITensor}, lr::orth_type; kwargs...
+)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
+  gauge_fix!(H)
 
+  N = length(H)
+  ss = bond_spectrums(undef, N)
+  Ss = CelledVector{ITensor}(undef, N)
+  for n in 1:N
+    #prime the right index of G so that indices can be distinguished.
+    #Ideally orthogonalize!() would spit out Gs that are already like this.
+    igl = commonind(Gs[n], H[n].W)
+    igr = noncommonind(Gs[n], igl)
+    Gs[n] = replaceind(Gs[n], igr, prime(igr))
+    #iln=linkind(H,n) #Link between Hn amd Hn+1
+    iln = H[n].iright
+    #           
+    #  -----G[n-1]-----HR[n]-----   ==    -----HL[n]-----G[n]-----  
+    #
+    if lr == left
+      @assert igl == iln
+      # println("-----------------Left----------------------")
+      igl = iln #right link of Hn is the left link of Gn
+      U, Sp, V, spectrum = truncate(Gs[n], dag(igl); kwargs...)
+      check(H[n])
+
+      H[n] *= U
+      H[n + 1] *= dag(U)
+      Hm[n] *= dag(V)
+      Hm[n + 1] *= V
+      check(H[n])
+      check(Hm[n])
+    else
+      # println("-----------------Right----------------------")
+      igl = noncommonind(Gs[n], iln) #left link of Hn+1 is the right link Gn
+      U, Sp, V, spectrum = truncate(Gs[n], igl; kwargs...)
+      check(H[n])
+      H[n] *= dag(V)
+      H[n + 1] *= V
+      Hm[n] *= U
+      Hm[n + 1] *= dag(U)
+      check(H[n])
+      check(Hm[n])
+    end
+
+    Ss[n] = Sp
+    ss[n] = spectrum
+  end
+  return Ss, ss, Hm
 end
 
-function truncate(G::ITensor,igl::Index;kwargs...)
-    @mpoc_assert order(G)==2
-    igr=noncommonind(G,igl)
-    @mpoc_assert tags(igl)!=tags(igr) || plev(igl)!=plev(igr) #Make sure subtensr can distinguish igl and igr
-    M=G[igl=>2:dim(igl)-1,igr=>2:dim(igr)-1]
-    iml,=inds(M,plev=plev(igl)) #tags are the same, so plev is the only way to distinguish
-    U,s,V,spectrum,iu,iv=svd(M,iml;kwargs...)
-    #
-    # Build up U+, S+ and V+
-    #
-    iup=redim1(iu,1,1,space(igl)) #Use redim to preserve QNs
-    ivp=redim1(iv,1,1,space(igr))
-    #@show iu iup iv ivp igl s dense(s) U
-    Up=grow(noprime(U),noprime(igl),dag(iup))
-    Sp=grow(s,iup,ivp)
-    Vp=grow(noprime(V),dag(ivp),noprime(igr))
-    #
-    #  But external link tags in so contractions with W[n] tensors will work.
-    #
-    replacetags!(Up,tags(iu),tags(igl))
-    replacetags!(Sp,tags(iu),tags(igl))
-    replacetags!(Sp,tags(iv),tags(igr))
-    replacetags!(Vp,tags(iv),tags(igr))
-    #@mpoc_assert norm(dense(noprime(G))-dense(Up)*Sp*dense(Vp))<1e-12    #expensive!!!
-    return Up,Sp,Vp,spectrum
+function truncate(G::ITensor, igl::Index; kwargs...)
+  @mpoc_assert order(G) == 2
+  igr = noncommonind(G, igl)
+  @mpoc_assert tags(igl) != tags(igr) || plev(igl) != plev(igr) #Make sure subtensr can distinguish igl and igr
+  M = G[igl => 2:(dim(igl) - 1), igr => 2:(dim(igr) - 1)]
+  iml, = inds(M; plev=plev(igl)) #tags are the same, so plev is the only way to distinguish
+  U, s, V, spectrum, iu, iv = svd(M, iml; kwargs...)
+  #
+  # Build up U+, S+ and V+
+  #
+  iup = redim1(iu, 1, 1, space(igl)) #Use redim to preserve QNs
+  ivp = redim1(iv, 1, 1, space(igr))
+  #@show iu iup iv ivp igl s dense(s) U
+  Up = grow(noprime(U), noprime(igl), dag(iup))
+  Sp = grow(s, iup, ivp)
+  Vp = grow(noprime(V), dag(ivp), noprime(igr))
+  #
+  #  But external link tags in so contractions with W[n] tensors will work.
+  #
+  replacetags!(Up, tags(iu), tags(igl))
+  replacetags!(Sp, tags(iu), tags(igl))
+  replacetags!(Sp, tags(iv), tags(igr))
+  replacetags!(Vp, tags(iv), tags(igr))
+  #@mpoc_assert norm(dense(noprime(G))-dense(Up)*Sp*dense(Vp))<1e-12    #expensive!!!
+  return Up, Sp, Vp, spectrum
 end
 
 #
 #  Make sure indices are ordered and then convert to a matrix
 #
-function NDTensors.matrix(il::Index,T::ITensor,ir::Index)
-        T1=ITensors.permute(T,il,ir; allow_alias=true)
-        return matrix(T1)
+function NDTensors.matrix(il::Index, T::ITensor, ir::Index)
+  T1 = ITensors.permute(T, il, ir; allow_alias=true)
+  return matrix(T1)
 end
-
-
-
-
-

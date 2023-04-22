@@ -74,24 +74,24 @@ true
 ```
 
 """
-function ac_orthogonalize!(H::reg_form_MPO,lr::orth_type;eps::Float64=1e-14,kwargs...) 
-    gauge_fix!(H)
-    rng=sweep(H,lr)
-    for n in rng
-        nn=n+rng.step
-        H[n],R,iqp=ac_qx(H[n],lr)
-        H[nn]*=R
-        check(H[n])
-        check(H[nn])
-    end
-    H.rlim = rng.stop+rng.step+1
-    H.llim = rng.stop+rng.step-1
+function ac_orthogonalize!(H::reg_form_MPO, lr::orth_type; eps::Float64=1e-14, kwargs...)
+  gauge_fix!(H)
+  rng = sweep(H, lr)
+  for n in rng
+    nn = n + rng.step
+    H[n], R, iqp = ac_qx(H[n], lr)
+    H[nn] *= R
+    check(H[n])
+    check(H[nn])
+  end
+  H.rlim = rng.stop + rng.step + 1
+  return H.llim = rng.stop + rng.step - 1
 end
 
-function ac_orthogonalize!(H::MPO,lr::orth_type;kwargs...) 
-    Hrf=reg_form_MPO(H)
-    ac_orthogonalize!(Hrf,lr;kwargs)
-    return MPO(Hrf)
+function ac_orthogonalize!(H::MPO, lr::orth_type; kwargs...)
+  Hrf = reg_form_MPO(H)
+  ac_orthogonalize!(Hrf, lr; kwargs)
+  return MPO(Hrf)
 end
 
 #--------------------------------------------------------------------------------------------
@@ -150,87 +150,86 @@ true
 ```
 
 """
-function ac_orthogonalize!(H::reg_form_iMPO,lr::orth_type;verbose=false,kwargs...)
-    gauge_fix!(H)
+function ac_orthogonalize!(H::reg_form_iMPO, lr::orth_type; verbose=false, kwargs...)
+  gauge_fix!(H)
 
-    N=length(H)
-    #
-    #  Init gauge transform with unit matrices.
-    #
-    Gs=CelledVector{ITensor}(undef,N)
-    Rs=CelledVector{ITensor}(undef,N)
-    for n in 1:N
-        ln=lr==left ? H[n].iright : dag(H[n].iright) #get the forward link index
-        Gs[n]=δ(Float64,dag(ln),ln') 
+  N = length(H)
+  #
+  #  Init gauge transform with unit matrices.
+  #
+  Gs = CelledVector{ITensor}(undef, N)
+  Rs = CelledVector{ITensor}(undef, N)
+  for n in 1:N
+    ln = lr == left ? H[n].iright : dag(H[n].iright) #get the forward link index
+    Gs[n] = δ(Float64, dag(ln), ln')
+  end
+
+  if verbose
+    previous_Dw = Base.max(get_Dw(H)...)
+    @printf "niter  Dw  eta\n"
+  end
+
+  eps = 1e-13
+  niter = 0
+  max_iter = 40
+  loop = true
+  rng = sweep(H, lr)
+  dn = lr == left ? 0 : -1 #index shift for Gs[n]
+  while loop
+    eta = 0.0
+    for n in rng
+      H[n], Rs[n], etan = ac_qx_step!(H[n], lr, eps; kwargs...)
+      Gs[n + dn] = noprime(Rs[n] * Gs[n + dn])  #  Update the accumulated gauge transform
+      @mpoc_assert order(Gs[n + dn]) == 2 #This will fail if the indices somehow got messed up.
+      eta = Base.max(eta, etan)
     end
-
+    #
+    #  H now contains all the Qs.  We need to transfer the R's to the neighbouring sites.
+    #
+    for n in rng
+      H[n] *= noprime(Rs[n - rng.step])
+      check(H[n])
+    end
+    niter += 1
     if verbose
-        previous_Dw=Base.max(get_Dw(H)...)
-        @printf "niter  Dw  eta\n" 
+      @printf "%4i %4i %1.1e\n" niter Base.max(get_Dw(H)...) eta
     end
-
-
-    eps=1e-13
-    niter=0
-    max_iter=40
-    loop=true
-    rng=sweep(H,lr)
-    dn = lr==left ? 0 : -1 #index shift for Gs[n]
-    while loop
-        eta=0.0
-        for n in rng
-            H[n],Rs[n],etan=ac_qx_step!(H[n],lr,eps;kwargs...)
-            Gs[n+dn]=noprime(Rs[n]*Gs[n+dn])  #  Update the accumulated gauge transform
-            @mpoc_assert order(Gs[n+dn])==2 #This will fail if the indices somehow got messed up.
-            eta=Base.max(eta,etan)
-        end
-        #
-        #  H now contains all the Qs.  We need to transfer the R's to the neighbouring sites.
-        #
-        for n in rng
-            H[n]*=noprime(Rs[n-rng.step])
-            check(H[n])
-        end
-        niter+=1
-        if verbose
-            @printf "%4i %4i %1.1e\n" niter Base.max(get_Dw(H)...) eta
-        end
-        loop=eta>1e-13 && niter<max_iter
-    end
-    H.rlim = rng.stop+1
-    H.llim = rng.stop-1
-    return Gs
+    loop = eta > 1e-13 && niter < max_iter
+  end
+  H.rlim = rng.stop + 1
+  H.llim = rng.stop - 1
+  return Gs
 end
 
-function ac_qx_step!(Ŵ::reg_form_Op,lr::orth_type,eps::Float64;kwargs...)
-    Q̂,R,iq,p=ac_qx(Ŵ,lr;cutoff=1e-14,qprime=true,kwargs...) # r-Q-qx qx-RL-c
-    #
-    #  How far are we from RL==Id ?
-    #
-    if dim(forward(Ŵ,lr))==dim(iq)
-        eta = RmI(R,p) #Different handling for dense and block-sparse
-    else
-        eta=99.0 #Rank reduction occured so keep going.
-    end
-    return Q̂,R,eta
+function ac_qx_step!(Ŵ::reg_form_Op, lr::orth_type, eps::Float64; kwargs...)
+  Q̂, R, iq, p = ac_qx(Ŵ, lr; cutoff=1e-14, qprime=true, kwargs...) # r-Q-qx qx-RL-c
+  #
+  #  How far are we from RL==Id ?
+  #
+  if dim(forward(Ŵ, lr)) == dim(iq)
+    eta = RmI(R, p) #Different handling for dense and block-sparse
+  else
+    eta = 99.0 #Rank reduction occured so keep going.
+  end
+  return Q̂, R, eta
 end
 
 #
 #  Evaluate norm(R-I)
 #
-RmI(R::ITensor,perms)=RmI(tensor(R),perms)
-function RmI(R::DenseTensor,perm::Vector{Int64})
-    Rmp=matrix(R)[:,perm]
-    return norm(Rmp-Matrix(LinearAlgebra.I,size(Rmp)))
+RmI(R::ITensor, perms) = RmI(tensor(R), perms)
+function RmI(R::DenseTensor, perm::Vector{Int64})
+  Rmp = matrix(R)[:, perm]
+  return norm(Rmp - Matrix(LinearAlgebra.I, size(Rmp)))
 end
 
-function RmI(R::BlockSparseTensor,perms::Vector{Vector{Int64}})
-    @assert nnzblocks(R)==length(perms)
-    eta2=0.0
-    for (n,b) in enumerate(nzblocks(R))
-        bv=ITensors.blockview(R,b)
-        Rp=bv[:,perms[n]] #un-permute the columns
-        eta2+=norm(Rp-Matrix(LinearAlgebra.I,size(Rp)))^2
-    end
-    return sqrt(eta2) 
+function RmI(R::BlockSparseTensor, perms::Vector{Vector{Int64}})
+  @assert nnzblocks(R) == length(perms)
+  eta2 = 0.0
+  for (n, b) in enumerate(nzblocks(R))
+    bv = ITensors.blockview(R, b)
+    Rp = bv[:, perms[n]] #un-permute the columns
+    eta2 += norm(Rp - Matrix(LinearAlgebra.I, size(Rp)))^2
+  end
+  return sqrt(eta2)
 end

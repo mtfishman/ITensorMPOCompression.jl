@@ -64,8 +64,7 @@ Done: -Get rid of getV1 and setV1.  i.e. make all order(W)==4 by adding dummy in
 -For iMPOs set llim,rlim=-1,1 so that they are interpreted as non-ortho when N=1.
 No: -iMPO truncate user HL,HR instead of H,Hm ?
 -Go over all the Problems in VScode.  Are they real?
--format
-Done: -Move code into compression module.
+Done: -format
 Ac blocking code:
 -Fix Index Tag conventions sections of the docs.
 -Fix emprical observations section of the tech notes.
@@ -73,7 +72,6 @@ Ac blocking code:
 -Take out support for upper.
   Convert upper H's to lower durung the conversion to ref_form_MPO
   Strip out lots of code.
-Done: -Overload ref_form_Op*ITensor can we auto fix ileft,iright?
 Yes: -Will this help clean up truncate(iMPO) code?
 -WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
 -Remove the bail out block in truncate(MPO)?
@@ -82,10 +80,6 @@ Yes: -Will this help clean up truncate(iMPO) code?
       AL::InfiniteMPO
       C::InfiniteMPO
       AR::InfiniteMPO
-    end
-Done: -DO if inside gauge_fix 
-  if !is_gauge_fixed(H,eps)
-        gauge_fix!(H)
     end
 -More usage of replacetags(reg_form_OP,...)
 
@@ -111,6 +105,12 @@ open("/home/janr/prof1.txt", "w") do s
        
 
 Old:
+Done: -Move code into compression module.
+Done: -DO if inside gauge_fix 
+  if !is_gauge_fixed(H,eps)
+        gauge_fix!(H)
+    end
+Done: -Overload ref_form_Op*ITensor can we auto fix ileft,iright?
 Done: -no method matching order(::ITensorMPOCompression.reg_form_Op)
 Done: -Fix links in reg_form_iMPO
 Done: -make one is_gauge_fixed function for reg_form_MPO and reg_form_iMPO 

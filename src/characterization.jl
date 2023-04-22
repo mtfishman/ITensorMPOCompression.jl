@@ -14,141 +14,139 @@
 #
 #  returns forward,reverse relatvie to sweep direction indexes
 #  if lr=left, then the sweep direction is o the right, and i_right is the forward index.
-function parse_links(A::ITensor,lr::orth_type)::Tuple{Index,Index}
-    i_left,i_right = parse_links(A)
-    return lr==left ? (i_right,i_left) : (i_left,i_right)
+function parse_links(A::ITensor, lr::orth_type)::Tuple{Index,Index}
+  i_left, i_right = parse_links(A)
+  return lr == left ? (i_right, i_left) : (i_left, i_right)
 end
 
 function parse_links(A::ITensor)::Tuple{Index,Index}
-    #
-    #  find any site index and try and extract the site number
-    #
-    d,nsite,space=parse_site(A)
-    #
-    #  Now process the link tags
-    #
-    ils=filterinds(inds(A),tags="Link")
-    if length(ils)==2
-        n1,c1= parse_link(ils[1])
-        n2,c2= parse_link(ils[2]) #find the "l=$n" tags. -1 if not such tag
-        n1,n2=infer_site_numbers(n1,n2,nsite) #handle qx links with no l=$n tags.
-        if c1>c2
-            return ils[2],ils[1]
-        elseif c2>c1
-            return ils[1],ils[2]
-        elseif n1>n2
-            return ils[2],ils[1]
-        elseif n2>n1
-            return ils[1],ils[2]
-        else
-            @mpoc_assert false #no way to dermine order of links
-        end
-    elseif length(ils)==1
-        n,c=parse_link(ils[1])
-        if n==Nothing
-            return Index(1),ils[1] #probably a qx link, don't know if row or col
-        elseif nsite==1
-            return Index(1),ils[1] #row vector
-        else
-            return ils[1],Index(1) #col vector
-        end
+  #
+  #  find any site index and try and extract the site number
+  #
+  d, nsite, space = parse_site(A)
+  #
+  #  Now process the link tags
+  #
+  ils = filterinds(inds(A); tags="Link")
+  if length(ils) == 2
+    n1, c1 = parse_link(ils[1])
+    n2, c2 = parse_link(ils[2]) #find the "l=$n" tags. -1 if not such tag
+    n1, n2 = infer_site_numbers(n1, n2, nsite) #handle qx links with no l=$n tags.
+    if c1 > c2
+      return ils[2], ils[1]
+    elseif c2 > c1
+      return ils[1], ils[2]
+    elseif n1 > n2
+      return ils[2], ils[1]
+    elseif n2 > n1
+      return ils[1], ils[2]
     else
-        @show ils
-        @mpoc_assert false
+      @mpoc_assert false #no way to dermine order of links
     end
+  elseif length(ils) == 1
+    n, c = parse_link(ils[1])
+    if n == Nothing
+      return Index(1), ils[1] #probably a qx link, don't know if row or col
+    elseif nsite == 1
+      return Index(1), ils[1] #row vector
+    else
+      return ils[1], Index(1) #col vector
+    end
+  else
+    @show ils
+    @mpoc_assert false
+  end
 end
-undef_int=-99999
+undef_int = -99999
 
 function parse_site(W::ITensor)
-    is=inds(W,tags="Site")[1]
-    return parse_site(is)
+  is = inds(W; tags="Site")[1]
+  return parse_site(is)
 end
 
 function parse_site(is::Index)
-    @mpoc_assert hastags(is,"Site")
-    nsite=undef_int #sentenal value
-    for t in tags(is)
-        ts=String(t)
-        if ts[1:2]=="n="
-            nsite::Int64=tryparse(Int64,ts[3:end])
-        end
-        if length(ts)>=4 && ts[1:4]=="Spin"
-            space=ts
-        end
-        if ts[1:2]=="S="
-            space=ts[3:end]
-        end
+  @mpoc_assert hastags(is, "Site")
+  nsite = undef_int #sentenal value
+  for t in tags(is)
+    ts = String(t)
+    if ts[1:2] == "n="
+      nsite::Int64 = tryparse(Int64, ts[3:end])
     end
-    @mpoc_assert nsite>=0
-    return dim(is),nsite,space
+    if length(ts) >= 4 && ts[1:4] == "Spin"
+      space = ts
+    end
+    if ts[1:2] == "S="
+      space = ts[3:end]
+    end
+  end
+  @mpoc_assert nsite >= 0
+  return dim(is), nsite, space
 end
 
 function parse_link(il::Index)::Tuple{Int64,Int64}
-    @mpoc_assert hastags(il,"Link")
-    nsite=ncell=undef_int #sentinel values
-    for t in tags(il)
-        ts=String(t)
-        if ts[1:2]=="l=" || ts[1:2]=="n="
-            nsite::Int64=tryparse(Int64,ts[3:end])
-        end
-        if ts[1:2]=="c="
-            ncell::Int64=tryparse(Int64,ts[3:end])
-        end
+  @mpoc_assert hastags(il, "Link")
+  nsite = ncell = undef_int #sentinel values
+  for t in tags(il)
+    ts = String(t)
+    if ts[1:2] == "l=" || ts[1:2] == "n="
+      nsite::Int64 = tryparse(Int64, ts[3:end])
     end
-    return nsite,ncell
+    if ts[1:2] == "c="
+      ncell::Int64 = tryparse(Int64, ts[3:end])
+    end
+  end
+  return nsite, ncell
 end
-
 
 #
 # if one ot links is "Link,qx" then we don't get any site info from it.
 # All this messy logic below tries to infer the site # of qx link from site index
 # and link number of other index.
 #
-function infer_site_numbers(n1::Int64,n2::Int64,nsite::Int64)::Tuple{Int64,Int64}
-    if n1==undef_int && n2==undef_int
-        @mpoc_assert false
+function infer_site_numbers(n1::Int64, n2::Int64, nsite::Int64)::Tuple{Int64,Int64}
+  if n1 == undef_int && n2 == undef_int
+    @mpoc_assert false
+  end
+  if n1 == undef_int
+    if n2 == nsite
+      n1 = nsite - 1
+    elseif n2 == nsite - 1
+      n1 = nsite
+    else
+      @mpoc_assert false
     end
-    if n1==undef_int
-        if n2==nsite
-            n1=nsite-1 
-        elseif n2==nsite-1
-            n1=nsite 
-        else
-            @mpoc_assert false
-        end
+  end
+  if n2 == undef_int
+    if n1 == nsite
+      n2 = nsite - 1
+    elseif n1 == nsite - 1
+      n2 = nsite
+    else
+      @mpoc_assert false
     end
-    if n2==undef_int
-        if n1==nsite
-            n2=nsite-1 
-        elseif n1==nsite-1
-            n2=nsite 
-        else
-            @mpoc_assert false
-        end
-    end    
-    return n1,n2
+  end
+  return n1, n2
 end
 
 #
 #  Handles direction and leaving out the last element in the sweep.
 #
-function sweep(H::AbstractMPS,lr::orth_type)::StepRange{Int64, Int64}
-    N=length(H)
-    return lr==left ? (1:1:N-1) : (N:-1:2)
+function sweep(H::AbstractMPS, lr::orth_type)::StepRange{Int64,Int64}
+  N = length(H)
+  return lr == left ? (1:1:(N - 1)) : (N:-1:2)
 end
 
 #
 #  Handles direction only.  For iMPOs we include the last site in the unit cell.
 #
-function sweep(H::AbstractInfiniteMPS,lr::orth_type)::StepRange{Int64, Int64}
-    N=length(H)
-    return lr==left ? (1:1:N) : (N:-1:1)
+function sweep(H::AbstractInfiniteMPS, lr::orth_type)::StepRange{Int64,Int64}
+  N = length(H)
+  return lr == left ? (1:1:N) : (N:-1:1)
 end
 
 function linkind(M::AbstractInfiniteMPS, j::Integer)
-    return commonind(M[j], M[j + 1])
+  return commonind(M[j], M[j + 1])
 end
-  
 
 #----------------------------------------------------------------------------
 #
@@ -169,7 +167,6 @@ Returns `true` if the MPO is in `lr` orthogonal (canonical) form.  This is an ex
 
 """
 
-
 @doc """
 isortho(H,lr)::Bool
 
@@ -181,27 +178,26 @@ Test if anMPO is in `lr` orthogonal (canonical) form by checking the cached orth
 
 Returns `true` if the MPO is in `lr` orthogonal (canonical) form.  This is a fast operation and should be safe to use in time critical production code.  The one exception is for iMPO with Ncell=1, where currently the ortho center does not distinguis between left/right or un-orthognal states.
 """
-function isortho(H::AbstractMPS,lr::orth_type)::Bool 
-    io=false
-    # if length(H)==1
-    #     io=check_ortho(H,lr) #Expensive!!
-    # else
-        if isortho(H)
-            if lr==left
-                io= orthocenter(H)==length(H)
-            else
-                io=orthocenter(H) == 1
-            end
-        end
-    #end
-    return  io
+function isortho(H::AbstractMPS, lr::orth_type)::Bool
+  io = false
+  # if length(H)==1
+  #     io=check_ortho(H,lr) #Expensive!!
+  # else
+  if isortho(H)
+    if lr == left
+      io = orthocenter(H) == length(H)
+    else
+      io = orthocenter(H) == 1
+    end
+  end
+  #end
+  return io
 end
 
 #----------------------------------------------------------------------------
 #
 #  Detection of upper and lower regular forms
 #
-
 
 #
 # This test is complicated by two things
@@ -232,7 +228,6 @@ The function returns two Bools in order to handle cases where W is not in regula
     
 """
 
-
 @doc """
     detect_regular_form(H[,eps])::Tuple{Bool,Bool}
     
@@ -248,86 +243,84 @@ Inspect the structure of an MPO `H` to see if it satisfies the regular form cond
 The function returns two Bools in order to handle cases where `H` is not regular form, returning (`false`,`false`) and `H` is in a special pseudo-diagonal regular form, returning (`true`,`true`).
     
 """
-function is_regular_form(H::AbstractMPS,ul::reg_form,eps::Float64=default_eps)::Bool
-    il=dag(linkind(H,1))
-    for n in 2:length(H)-1
-        ir=linkind(H,n)
-        #@show il ir inds(H[n])
-        Wrf=reg_form_Op(H[n],il,ir,ul)
-        !is_regular_form(Wrf,eps) && return false
-        il=dag(ir)
-    end
-    return true
+function is_regular_form(H::AbstractMPS, ul::reg_form, eps::Float64=default_eps)::Bool
+  il = dag(linkind(H, 1))
+  for n in 2:(length(H) - 1)
+    ir = linkind(H, n)
+    #@show il ir inds(H[n])
+    Wrf = reg_form_Op(H[n], il, ir, ul)
+    !is_regular_form(Wrf, eps) && return false
+    il = dag(ir)
+  end
+  return true
 end
 
-function detect_regular_form(H::AbstractMPS,eps::Float64=default_eps)::Tuple{Bool,Bool}
-   return is_regular_form(H,lower,eps),is_regular_form(H,upper,eps)
+function detect_regular_form(H::AbstractMPS, eps::Float64=default_eps)::Tuple{Bool,Bool}
+  return is_regular_form(H, lower, eps), is_regular_form(H, upper, eps)
 end
-
 
 function get_Dw(H::MPO)::Vector{Int64}
-    N=length(H)
-    Dws=Vector{Int64}(undef,N-1)
-    for n in 1:N-1
-        l=commonind(H[n],H[n+1])
-        Dws[n]=dim(l)
-    end
-    return Dws
+  N = length(H)
+  Dws = Vector{Int64}(undef, N - 1)
+  for n in 1:(N - 1)
+    l = commonind(H[n], H[n + 1])
+    Dws[n] = dim(l)
+  end
+  return Dws
 end
 
 function get_Dw(H::InfiniteMPO)::Vector{Int64}
-    N=length(H)
-    Dws=Vector{Int64}(undef,N)
-    for n in 1:N
-        l=commonind(H[n],H[n+1])
-        Dws[n]=dim(l)
-    end
-    return Dws
+  N = length(H)
+  Dws = Vector{Int64}(undef, N)
+  for n in 1:N
+    l = commonind(H[n], H[n + 1])
+    Dws[n] = dim(l)
+  end
+  return Dws
 end
-    
-function get_traits(W::ITensor,eps::Float64)
-    r,c=parse_links(W)
-    d,n,space=parse_site(W)
-    Dw1,Dw2=dim(r),dim(c)
-    bl,bu = detect_regular_form(W,eps)
-    l= bl ? 'L' : ' '
-    u= bu ? 'U' : ' '
-    if bl && bu
-        l='D'
-        u=' '
-    elseif !(bl || bu)
-        l='N'
-        u='o'
-    end
 
-    tri = bl ? lower : upper
-    msl=matrix_state(tri,left)
-    msr=matrix_state(tri,right)
-    is__left=check_ortho(W,msl,eps)
-    is_right=check_ortho(W,msr,eps)
-    if is__left && is_right
-        lr='B'
-    elseif is__left && !is_right
-        lr='L'
-    elseif !is__left && is_right
-        lr='R'
-    else
-        lr='M'
-    end
+function get_traits(W::ITensor, eps::Float64)
+  r, c = parse_links(W)
+  d, n, space = parse_site(W)
+  Dw1, Dw2 = dim(r), dim(c)
+  bl, bu = detect_regular_form(W, eps)
+  l = bl ? 'L' : ' '
+  u = bu ? 'U' : ' '
+  if bl && bu
+    l = 'D'
+    u = ' '
+  elseif !(bl || bu)
+    l = 'N'
+    u = 'o'
+  end
 
-    bl,bu,RC=detect_upper_lower(W)
-    lt= bl ? 'L' : ' '
-    ut= bu ? 'U' : ' '
-    if RC!=' '
-        lt=RC
-        ut=' '
-    elseif bl && bu
-        lt='D'
-        ut=' '
-    elseif !(bl || bu)
-        lt='F'
-        ut=' '
-    end
-    return Dw1,Dw2,d,l,u,lr,lt,ut
+  tri = bl ? lower : upper
+  msl = matrix_state(tri, left)
+  msr = matrix_state(tri, right)
+  is__left = check_ortho(W, msl, eps)
+  is_right = check_ortho(W, msr, eps)
+  if is__left && is_right
+    lr = 'B'
+  elseif is__left && !is_right
+    lr = 'L'
+  elseif !is__left && is_right
+    lr = 'R'
+  else
+    lr = 'M'
+  end
+
+  bl, bu, RC = detect_upper_lower(W)
+  lt = bl ? 'L' : ' '
+  ut = bu ? 'U' : ' '
+  if RC != ' '
+    lt = RC
+    ut = ' '
+  elseif bl && bu
+    lt = 'D'
+    ut = ' '
+  elseif !(bl || bu)
+    lt = 'F'
+    ut = ' '
+  end
+  return Dw1, Dw2, d, l, u, lr, lt, ut
 end
-    

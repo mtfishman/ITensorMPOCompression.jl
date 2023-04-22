@@ -71,96 +71,98 @@ I 0 0 0 0
 ```
 """
 
-
-
-function equal_edge_blocks(i1::ITensors.QNIndex,i2::ITensors.QNIndex)::Bool
-  qns1,qns2=space(i1),space(i2)
-  qn11,qn1n=qns1[1],qns1[nblocks(qns1)]
-  qn21,qn2n=qns2[1],qns2[nblocks(qns2)]
-  return ITensors.have_same_qns(qn(qn11),qn(qn21)) && ITensors.have_same_qns(qn(qn1n),qn(qn2n))
+function equal_edge_blocks(i1::ITensors.QNIndex, i2::ITensors.QNIndex)::Bool
+  qns1, qns2 = space(i1), space(i2)
+  qn11, qn1n = qns1[1], qns1[nblocks(qns1)]
+  qn21, qn2n = qns2[1], qns2[nblocks(qns2)]
+  return ITensors.have_same_qns(qn(qn11), qn(qn21)) &&
+         ITensors.have_same_qns(qn(qn1n), qn(qn2n))
 end
 
-function equal_edge_blocks(::Index,::Index)::Bool
-   return true
+function equal_edge_blocks(::Index, ::Index)::Bool
+  return true
 end
 
-function redim1(iq::ITensors.QNIndex,pad1::Int64,pad2::Int64,qns::ITensors.QNBlocks)
-  @assert pad1==blockdim(qns[1]) #Splitting blocks not supported
-  @assert pad2==blockdim(qns[end]) #Splitting blocks not supported
-  qnsp=[qns[1],space(iq)...,qns[end]] #creat the new space
-  return Index(qnsp,tags=tags(iq),plev=plev(iq),dir=dir(iq)) #create new index.
+function redim1(iq::ITensors.QNIndex, pad1::Int64, pad2::Int64, qns::ITensors.QNBlocks)
+  @assert pad1 == blockdim(qns[1]) #Splitting blocks not supported
+  @assert pad2 == blockdim(qns[end]) #Splitting blocks not supported
+  qnsp = [qns[1], space(iq)..., qns[end]] #creat the new space
+  return Index(qnsp; tags=tags(iq), plev=plev(iq), dir=dir(iq)) #create new index.
 end
 
-function redim1(iq::Index,pad1::Int64,pad2::Int64,Dw::Int64)
-  @assert dim(iq)+pad1+pad2<=Dw #Splitting blocks not supported
-  return Index(dim(iq)+pad1+pad2,tags=tags(iq),plev=plev(iq),dir=dir(iq)) #create new index.
+function redim1(iq::Index, pad1::Int64, pad2::Int64, Dw::Int64)
+  @assert dim(iq) + pad1 + pad2 <= Dw #Splitting blocks not supported
+  return Index(dim(iq) + pad1 + pad2; tags=tags(iq), plev=plev(iq), dir=dir(iq)) #create new index.
 end
 
 #   Q̂
 
-  
-function insert_Q(Ŵrf::reg_form_Op,Q̂::ITensor,iq::Index,lr::orth_type)
+function insert_Q(Ŵrf::reg_form_Op, Q̂::ITensor, iq::Index, lr::orth_type)
   #
   #  Create new index by growing iq.
   #
-  ilb,ilf = linkinds(Ŵrf,lr) #Backward and forward indices.
-  iq⎖=redim1(iq,1,1,space(ilf))  #pad with 1 at the start and 1 and the end: iqp =(1,iq,1).
-  ileft,iright =  lr==left ? (ilb,iq⎖) :  (iq⎖,ilb)
+  ilb, ilf = linkinds(Ŵrf, lr) #Backward and forward indices.
+  iq⎖ = redim1(iq, 1, 1, space(ilf))  #pad with 1 at the start and 1 and the end: iqp =(1,iq,1).
+  ileft, iright = lr == left ? (ilb, iq⎖) : (iq⎖, ilb)
   #
   #  Create a new reg form tensor
   #
-  Ŵ=ITensor(0.0,ileft,iright,siteinds(Ŵrf))
-  Ŵrf⎖=reg_form_Op(Ŵ,ileft,iright,Ŵrf.ul)
+  Ŵ = ITensor(0.0, ileft, iright, siteinds(Ŵrf))
+  Ŵrf⎖ = reg_form_Op(Ŵ, ileft, iright, Ŵrf.ul)
   #
   #  Preserve b,c,d blocks and insert Q
   #
-  Wb=extract_blocks(Ŵrf,lr;b=true,c=true,d=true)
-  set_𝐛̂𝐜̂_block!(Ŵrf⎖,Wb.𝐛̂,lr) #preserve b or c block from old W
-  set_𝐝̂_block!(Ŵrf⎖,Wb.𝐝̂) #preserve d block from old W
-  set_𝕀_block!(Ŵrf⎖,Wb.𝕀) #init I blocks from old W
-  set_𝐀̂𝐜̂_block(Ŵrf⎖,Q̂,lr) #Insert new Qs form QR decomp
+  Wb = extract_blocks(Ŵrf, lr; b=true, c=true, d=true)
+  set_𝐛̂𝐜̂_block!(Ŵrf⎖, Wb.𝐛̂, lr) #preserve b or c block from old W
+  set_𝐝̂_block!(Ŵrf⎖, Wb.𝐝̂) #preserve d block from old W
+  set_𝕀_block!(Ŵrf⎖, Wb.𝕀) #init I blocks from old W
+  set_𝐀̂𝐜̂_block(Ŵrf⎖, Q̂, lr) #Insert new Qs form QR decomp
 
-  return Ŵrf⎖,iq⎖
+  return Ŵrf⎖, iq⎖
 end
 
-function ac_qx(Ŵrf::reg_form_Op,lr::orth_type;qprime=false,verbose=false, kwargs...)
+function ac_qx(Ŵrf::reg_form_Op, lr::orth_type; qprime=false, verbose=false, kwargs...)
   @checkflux(Ŵrf.W)
-  Wb=extract_blocks(Ŵrf,lr;Ac=true)
-  ilf_Ac = llur(Ŵrf,lr) ?  Wb.icAc : Wb.irAc
-  ilf =  forward(Ŵrf,lr) #Backward and forward indices.
+  Wb = extract_blocks(Ŵrf, lr; Ac=true)
+  ilf_Ac = llur(Ŵrf, lr) ? Wb.icAc : Wb.irAc
+  ilf = forward(Ŵrf, lr) #Backward and forward indices.
   @checkflux(Wb.𝐀̂𝐜̂)
-  if lr==left
-      Qinds=noncommoninds(Wb.𝐀̂𝐜̂,ilf_Ac) 
-      Q̂,R,iq,p=qr(Wb.𝐀̂𝐜̂,Qinds;verbose=verbose,positive=true,cutoff=1e-14,tags=tags(ilf))
+  if lr == left
+    Qinds = noncommoninds(Wb.𝐀̂𝐜̂, ilf_Ac)
+    Q̂, R, iq, p = qr(
+      Wb.𝐀̂𝐜̂, Qinds; verbose=verbose, positive=true, cutoff=1e-14, tags=tags(ilf)
+    )
   else
-      Rinds=ilf_Ac
-      R,Q̂,iq,p=lq(Wb.𝐀̂𝐜̂,Rinds;verbose=verbose,positive=true,cutoff=1e-14,tags=tags(ilf))
+    Rinds = ilf_Ac
+    R, Q̂, iq, p = lq(
+      Wb.𝐀̂𝐜̂, Rinds; verbose=verbose, positive=true, cutoff=1e-14, tags=tags(ilf)
+    )
   end
   @checkflux(Q̂)
   @checkflux(R)
   # Re-scale
-  dh=d(Wb) #dimension of local Hilbert space.
-  @assert abs(dh-round(dh))==0.0 #better be an integer!
-  Q̂*=sqrt(dh)
-  R/=sqrt(dh)
+  dh = d(Wb) #dimension of local Hilbert space.
+  @assert abs(dh - round(dh)) == 0.0 #better be an integer!
+  Q̂ *= sqrt(dh)
+  R /= sqrt(dh)
 
-  Ŵrf⎖,iq⎖=insert_Q(Ŵrf,Q̂,iq,lr) #create a new W with Q.  The size may change.
-  @assert equal_edge_blocks(ilf,iq⎖)
-  
+  Ŵrf⎖, iq⎖ = insert_Q(Ŵrf, Q̂, iq, lr) #create a new W with Q.  The size may change.
+  @assert equal_edge_blocks(ilf, iq⎖)
+
   #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
-  R⎖=grow(prime(R,iq),dag(iq⎖)',ilf)
-  p=add_edges(p) #grow p so we can apply it to Rp.
+  R⎖ = grow(prime(R, iq), dag(iq⎖)', ilf)
+  p = add_edges(p) #grow p so we can apply it to Rp.
   if qprime
-    iq⎖=prime(iq⎖)
+    iq⎖ = prime(iq⎖)
   else
-    R⎖=noprime(R⎖)
+    R⎖ = noprime(R⎖)
   end
-  return Ŵrf⎖,R⎖,iq⎖,p
+  return Ŵrf⎖, R⎖, iq⎖, p
 end
 
 function add_edges(p::Vector{Int64})
-  Dw=length(p)+2
-  return [1,(p.+1)...,Dw]
+  Dw = length(p) + 2
+  return [1, (p .+ 1)..., Dw]
 end
 
 #
@@ -169,5 +171,5 @@ end
 #  associate block with perm vectors
 #
 function add_edges(p::Vector{Vector{Int64}})
-    return [[1],[1],p...]
+  return [[1], [1], p...]
 end

@@ -1,40 +1,40 @@
 using Printf
 
-function is_unit(O::ITensor,eps::Float64)::Bool
-    s=inds(O)
-    @ITensors.debug_check begin
-        @mpoc_assert(length(s)==2)
+function is_unit(O::ITensor, eps::Float64)::Bool
+  s = inds(O)
+  ITensors.@debug_check begin
+    @mpoc_assert(length(s) == 2)
+  end
+  Id = delta(s[1], s[2])
+  if hasqns(s)
+    nm = 0.0
+    for b in eachnzblock(Id)
+      isv = [s[i] => b[i] for i in 1:length(b)]
+      nm += abs(O[isv...] - Id[isv...])
     end
-    Id=delta(s[1],s[2])
-    if hasqns(s)
-        nm=0.0
-        for b in eachnzblock(Id)
-            isv=[s[i]=>b[i] for i in 1:length(b)]
-            nm+=abs(O[isv...]-Id[isv...])
-        end
-        return nm<eps
-    else
-        return norm(O-Id)<eps
-    end
+    return nm < eps
+  else
+    return norm(O - Id) < eps
+  end
 end
 
-function to_char(O::ITensor,eps::Float64)::Char
-    c='0'
-    if is_unit(O,eps)
-        c='I'
-    elseif norm(O)>eps
-        c='S'
-    end
-    c
+function to_char(O::ITensor, eps::Float64)::Char
+  c = '0'
+  if is_unit(O, eps)
+    c = 'I'
+  elseif norm(O) > eps
+    c = 'S'
+  end
+  return c
 end
-function to_char(O::Float64,eps::Float64)::Char
-    c='0'
-    if abs(O-1.0)<eps
-        c='I'
-    elseif abs(O)>eps
-        c='S'
-    end
-    c
+function to_char(O::Float64, eps::Float64)::Char
+  c = '0'
+  if abs(O - 1.0) < eps
+    c = 'I'
+  elseif abs(O) > eps
+    c = 'S'
+  end
+  return c
 end
 
 @doc """
@@ -61,72 +61,86 @@ S 0 0 0 0
 0 S 0 S I 
 ```
 """
-function pprint(W::ITensor,eps::Float64=default_eps)
-    r,c=parse_links(W)
-    pprint(r,W,c,eps)
+function pprint(W::ITensor, eps::Float64=default_eps)
+  r, c = parse_links(W)
+  return pprint(r, W, c, eps)
 end
 
-function pprint(W::ITensor,c::Index,eps::Float64=default_eps)
-    r,=noncommoninds(W,c,tags="Link")
-    @mpoc_assert length(c)==1
-    pprint(r,W,c,eps)
+function pprint(W::ITensor, c::Index, eps::Float64=default_eps)
+  r, = noncommoninds(W, c; tags="Link")
+  @mpoc_assert length(c) == 1
+  return pprint(r, W, c, eps)
 end
 
-function pprint(r::Index,W::ITensor,eps::Float64=default_eps)
-    c,=noncommoninds(W,r,tags="Link")
-    @mpoc_assert length(c)==1
-    pprint(r,W,c,eps)
+function pprint(r::Index, W::ITensor, eps::Float64=default_eps)
+  c, = noncommoninds(W, r; tags="Link")
+  @mpoc_assert length(c) == 1
+  return pprint(r, W, c, eps)
 end
 
 macro pprint(W)
-    quote
-    println($(string(W))," = ")
+  quote
+    println($(string(W)), " = ")
     pprint($(esc(W)))
-    end
+  end
 end
 
 function Base.show(io::IO, ss::bond_spectrums)
-    N=length(ss)
-    print(io,"\nBond  Ns   max(s)     min(s)    Entropy  Tr. Error\n")
-    for n in 1:N
-        s=ss[n]
-        if length(s.eigs)>0
-            @printf(io,"%4i %4i  %1.5f   %1.2e   %1.5f  %1.2e\n",n,length(s.eigs),max(s),min(s),entropy(s),truncerror(s))
-        else
-            @printf(io,"%4i %4i  -------   --------   -------  %1.2e\n",n,length(s.eigs),truncerror(s))
-        end
+  N = length(ss)
+  print(io, "\nBond  Ns   max(s)     min(s)    Entropy  Tr. Error\n")
+  for n in 1:N
+    s = ss[n]
+    if length(s.eigs) > 0
+      @printf(
+        io,
+        "%4i %4i  %1.5f   %1.2e   %1.5f  %1.2e\n",
+        n,
+        length(s.eigs),
+        max(s),
+        min(s),
+        entropy(s),
+        truncerror(s)
+      )
+    else
+      @printf(
+        io,
+        "%4i %4i  -------   --------   -------  %1.2e\n",
+        n,
+        length(s.eigs),
+        truncerror(s)
+      )
     end
+  end
 end
 
-
-function pprint(r::Index,W::ITensor,c::Index,eps::Float64=default_eps)
-    # @mpoc_assert hasind(W,r) can't assume this becuse parse_links could return a Dw=1 dummy index.
-    # @mpoc_assert hasind(W,c)
-    isl=filterinds(W,tags="Link")
-    ord=order(W)
-    if length(isl)==2
-        for ir in  eachindval(r)
-            for ic in  eachindval(c)
-                if ord==4
-                    Oij=slice(W,ir,ic)
-                else
-                    @mpoc_assert ord==2
-                    Oij=abs(W[ir,ic])
-                end
-                Base.print(to_char(Oij,eps))
-                Base.print(" ")
-            end
-            Base.print("\n")
+function pprint(r::Index, W::ITensor, c::Index, eps::Float64=default_eps)
+  # @mpoc_assert hasind(W,r) can't assume this becuse parse_links could return a Dw=1 dummy index.
+  # @mpoc_assert hasind(W,c)
+  isl = filterinds(W; tags="Link")
+  ord = order(W)
+  if length(isl) == 2
+    for ir in eachindval(r)
+      for ic in eachindval(c)
+        if ord == 4
+          Oij = slice(W, ir, ic)
+        else
+          @mpoc_assert ord == 2
+          Oij = abs(W[ir, ic])
         end
-    elseif length(isl)==1
-        for i in  eachindval(isl[1])
-        Oij=slice(W,i)
-        Base.print(to_char(Oij,eps))
+        Base.print(to_char(Oij, eps))
         Base.print(" ")
-        end
-        Base.print("\n")
+      end
+      Base.print("\n")
+    end
+  elseif length(isl) == 1
+    for i in eachindval(isl[1])
+      Oij = slice(W, i)
+      Base.print(to_char(Oij, eps))
+      Base.print(" ")
     end
     Base.print("\n")
+  end
+  return Base.print("\n")
 end
 
 @doc """
@@ -200,38 +214,37 @@ n    Dw1  Dw2   d   Reg.  Orth.  Tri.
 10    3    1    2    L      M     C 
 ```
 """
-function pprint(H::MPO,eps::Float64=default_eps)
-    N=length(H)
-    println("  n    Dw1  Dw2   d   Reg.  Orth.  Tri.")
-    println("                      Form  Form   Form")
-    
-    for n in 1:N
-        Dw1,Dw2,d,l,u,lr,lt,ut=get_traits(H[n],eps)
-        #println(" $n    $Dw1    $Dw2    $d    $l$u     $lr   $lt$ut")
-        @printf "%4i %4i %4i %4i    %s%s     %s     %s%s\n" n Dw1 Dw2 d l u lr lt ut
-    end
+function pprint(H::MPO, eps::Float64=default_eps)
+  N = length(H)
+  println("  n    Dw1  Dw2   d   Reg.  Orth.  Tri.")
+  println("                      Form  Form   Form")
+
+  for n in 1:N
+    Dw1, Dw2, d, l, u, lr, lt, ut = get_traits(H[n], eps)
+    #println(" $n    $Dw1    $Dw2    $d    $l$u     $lr   $lt$ut")
+    @printf "%4i %4i %4i %4i    %s%s     %s     %s%s\n" n Dw1 Dw2 d l u lr lt ut
+  end
 end
 
-
-get_directions(psi::ITensors.AbstractMPS) = map(n->dir(inds(psi[n],tags="Link,l=$n")[1]),1:length(psi)-1)
+function get_directions(psi::ITensors.AbstractMPS)
+  return map(n -> dir(inds(psi[n]; tags="Link,l=$n")[1]), 1:(length(psi) - 1))
+end
 
 function show_directions(psi::ITensors.AbstractMPS)
-    dirs=get_directions(psi)
-    n=1
-    for d in dirs
-        print(" $n ")
-        if d==ITensors.In
-            print("<--")
-        elseif d==ITensors.Out
-            print("-->")
-        elseif d==ITensors.Neither
-            print("???")
-        else
-            @assert(false)
-        end
-        n+=1
+  dirs = get_directions(psi)
+  n = 1
+  for d in dirs
+    print(" $n ")
+    if d == ITensors.In
+      print("<--")
+    elseif d == ITensors.Out
+      print("-->")
+    elseif d == ITensors.Neither
+      print("???")
+    else
+      @assert(false)
     end
-    print(" $n \n")
+    n += 1
+  end
+  return print(" $n \n")
 end
-
-
