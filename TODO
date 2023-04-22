@@ -85,15 +85,16 @@ Ac blocking code:
   Strip out lots of code.
 Yes: -Will this help clean up truncate(iMPO) code?
 -WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
--Remove the bail out block in truncate(MPO)?
+Done: -Remove the bail out block in truncate(MPO)?
 -Start using 
     struct InfiniteCanonicalMPO <: AbstractInfiniteMPS
       AL::InfiniteMPO
       C::InfiniteMPO
       AR::InfiniteMPO
     end
--More usage of replacetags(reg_form_OP,...)
+Done -More usage of replacetags(reg_form_OP,...)
 Done: -Get rid of the old redim functions
+Done: -test_3body should do better on Dw for inf lattice.
 
 
 

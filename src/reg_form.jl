@@ -282,7 +282,7 @@ mutable struct reg_form_iMPO <: AbstractInfiniteMPS
       il, ir = parse_links(H[n])
       data[n] = reg_form_Op(H[n], il, ir, ul)
     end
-    return new(data, H.llim, H.rlim, false, ul)
+    return new(data, -1, 1, false, ul)
   end
   function reg_form_iMPO(
     Ws::CelledVector{reg_form_Op}, llim::Int64, rlim::Int64, reverse::Bool, ul::reg_form
@@ -353,6 +353,10 @@ end
 function get_Dw(Hrf::reg_form_iMPO)
   return map(n -> dim(Hrf[n].iright), eachindex(Hrf))
 end
+
+maxlinkdim(Hrf::reg_form_iMPO)=maximum(get_Dw(Hrf))
+maxlinkdim(Hrf::reg_form_MPO)=maximum(get_Dw(Hrf))
+
 
 function check_ortho(H::reg_form_iMPO, lr::orth_type, eps::Float64=default_eps)::Bool
   for n in sweep(H, lr) #skip the edge row/col opertors

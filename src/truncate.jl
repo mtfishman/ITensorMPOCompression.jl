@@ -70,7 +70,7 @@ true
 """
 function truncate(
   Ŵrf::reg_form_Op, lr::orth_type; kwargs...
-)::Tuple{reg_form_Op,ITensor,Spectrum,Bool}
+)::Tuple{reg_form_Op,ITensor,Spectrum}
   ilf = forward(Ŵrf, lr)
   #   l=n-1   l=n        l=n-1  l=n  l=n
   #   ------W----   -->  -----Q-----R-----
@@ -78,16 +78,7 @@ function truncate(
   Q̂, R, iqx = ac_qx(Ŵrf, lr; qprime=true, kwargs...) #left Q[r,qx], R[qx,c] - right R[r,qx] Q[qx,c]
   @checkflux(Q̂.W)
   @checkflux(R)
-  #
-  #  If the RL is rectangular in the wrong way, then factoring out M is very difficult.
-  #  For now we just bail out.
-  #
-  if dim(ilf) > dim(iqx) || dim(ilf) < 3
-    @assert false
-    R=replacetags(R, "Link,qx", tags(ilf)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-    Q=replacetags(Q̂, "Link,qx", tags(ilf)) #W[l=n-1,l=n]
-    return Q̂, R, Spectrum([], 0), true
-  end
+  @mpoc_assert dim(ilf) == dim(iqx) #Rectanuglar not allowed
   #
   #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
   #  M will be returned as a Dw-2 X Dw-2 interior matrix.  M_sans in the Parker paper.
@@ -117,12 +108,13 @@ function truncate(
   R = replacetags(R, "Link,u", tags(ilf)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
   Ŵrf = replacetags(Ŵrf, "Link,u", tags(ilf)) #W[l=n-1,l=n]
   check(Ŵrf)
-  return Ŵrf, R, spectrum, false
+  return Ŵrf, R, spectrum
 end
 
 function ITensors.truncate!(
   H::reg_form_MPO, lr::orth_type; eps=1e-14, kwargs...
 )::bond_spectrums
+  #Two sweeps are essential for avoiding rectangular R in site truncate.
   if !isortho(H)
     ac_orthogonalize!(H, lr; eps=eps, kwargs...)
     ac_orthogonalize!(H, mirror(lr); eps=eps, kwargs...)
@@ -132,7 +124,7 @@ function ITensors.truncate!(
   rng = sweep(H, lr)
   for n in rng
     nn = n + rng.step
-    H[n], R, s, bail = truncate(H[n], lr; kwargs...)
+    H[n], R, s = truncate(H[n], lr; kwargs...)
     H[nn] *= R
     push!(ss, s)
   end
@@ -207,6 +199,9 @@ function ITensors.truncate!(
   ac_orthogonalize!(H, mirror(lr); cutoff=rr_cutoff, kwargs...)
   Hm = copy(H)
   Gs = ac_orthogonalize!(H, lr; cutoff=rr_cutoff, kwargs...)
+  # @show get_Dw(Hm)
+  # @show get_Dw(H)
+  
   return truncate!(H, Hm, Gs, lr; kwargs...)
 end
 
@@ -266,7 +261,7 @@ function truncate(G::ITensor, igl::Index; kwargs...)
   igr = noncommonind(G, igl)
   @mpoc_assert tags(igl) != tags(igr) || plev(igl) != plev(igr) #Make sure subtensr can distinguish igl and igr
   M = G[igl => 2:(dim(igl) - 1), igr => 2:(dim(igr) - 1)]
-  iml, = inds(M; plev=plev(igl)) #tags are the same, so plev is the only way to distinguish
+  iml, = inds(M; plev=plev(igl)) #tags are the same, so plev is the only way to distinguish.
   U, s, V, spectrum, iu, iv = svd(M, iml; kwargs...)
   #
   # Build up U+, S+ and V+

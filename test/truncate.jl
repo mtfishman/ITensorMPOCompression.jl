@@ -59,6 +59,90 @@ verbose1 = false #verbose inside orth algos
     @test E0 ≈ E1 atol = eps
   end
 
+ 
+  models = [
+    (make_transIsing_iMPO, "S=1/2"),
+    (make_transIsing_AutoiMPO, "S=1/2"),
+    (make_Heisenberg_AutoiMPO, "S=1/2"),
+    (make_Heisenberg_AutoiMPO, "S=1"),
+    (make_Hubbard_AutoiMPO, "Electron"),
+  ]
+
+  @testset "Truncate/Compress iMPO Check gauge relations, H=$(model[1]), ul=$ul, qbs=$qns, N=$N, NNN=$NNN" for model in
+                                                                                                               models,
+    ul in [lower],
+    qns in [false, true],
+    N in [1, 2, 3, 4],
+    NNN in [1, 2, 4, 7]
+
+    initstate(n) = "↑"
+    makeH = model[1]
+    site_type = model[2]
+    eps = qns ? 1e-14 * NNN : 3e-14 * NNN #dense and larger NNN both get more roundoff noise.
+    si = infsiteinds(site_type, N; initstate, conserve_qns=qns)
+    H0 = reg_form_iMPO(model[1](si, NNN; ul=ul))
+    H0.llim = -1
+    H0.rlim = 1
+    @test is_regular_form(H0)
+    Dw0 = Base.max(get_Dw(H0)...)
+    #
+    #  Do truncate outputting left ortho Hamiltonian
+    #
+    HL = copy(H0)
+    Ss, ss, HR = truncate!(HL, left; verbose=verbose1)
+    #@show Ss ss
+    @test typeof(storage(Ss[1])) == (
+      if qns
+        NDTensors.DiagBlockSparse{Float64,Vector{Float64},2}
+      else
+        Diag{Float64,Vector{Float64}}
+      end
+    )
+
+    DwL = Base.max(get_Dw(HL)...)
+    @test is_regular_form(HL)
+    @test isortho(HL, left)
+    @test isortho(HR, right)
+    @test check_ortho(HL, left)
+    @test check_ortho(HR, right, 1e-12)
+    #
+    #  Now test guage relations using the diagonal singular value matrices
+    #  as the gauge transforms.
+    #
+    for n in 1:N
+      # @show inds(Ss[n-1]) inds(HR[n].W,tags="Link") inds(Ss[n]) inds(HL[n].W,tags="Link") 
+      D1 = Ss[n - 1] * HR[n].W
+      @assert order(D1) == 4
+      D2 = HL[n].W * Ss[n]
+      @assert order(D2) == 4
+      @test norm(Ss[n - 1] * HR[n].W - HL[n].W * Ss[n]) ≈ 0.0 atol = eps
+    end
+    #
+    #  Do truncate from H0 outputting right ortho Hamiltonian
+    #
+    HR = copy(H0)
+    Ss, ss, HL = truncate!(HR, right; verbose=verbose1)
+    @test typeof(storage(Ss[1])) == (
+      if qns
+        NDTensors.DiagBlockSparse{Float64,Vector{Float64},2}
+      else
+        Diag{Float64,Vector{Float64}}
+      end
+    )
+    DwR = Base.max(get_Dw(HR)...)
+    @test is_regular_form(HR)
+    @test isortho(HL, left)
+    @test isortho(HR, right)
+    @test check_ortho(HL, left)
+    @test check_ortho(HR, right)
+    for n in 1:N
+      @test norm(Ss[n - 1] * HR[n].W - HL[n].W * Ss[n]) ≈ 0.0 atol = eps
+    end
+    if verbose
+      @printf " %4i %4i   %4i   %4i  %4i \n" N NNN Dw0 DwL DwR
+    end
+  end
+
   # @testset "Test ground states" for qns in [false,true]
   #     eps=3e-13
   #     N=10
@@ -169,89 +253,7 @@ verbose1 = false #verbose inside orth algos
 
   # end
 
-  models = [
-    (make_transIsing_iMPO, "S=1/2"),
-    (make_transIsing_AutoiMPO, "S=1/2"),
-    (make_Heisenberg_AutoiMPO, "S=1/2"),
-    (make_Heisenberg_AutoiMPO, "S=1"),
-    (make_Hubbard_AutoiMPO, "Electron"),
-  ]
-
-  @testset "Truncate/Compress iMPO Check gauge relations, H=$(model[1]), ul=$ul, qbs=$qns, N=$N, NNN=$NNN" for model in
-                                                                                                               models,
-    ul in [lower],
-    qns in [false, true],
-    N in [1, 2, 3, 4],
-    NNN in [1, 2, 4, 7]
-
-    initstate(n) = "↑"
-    makeH = model[1]
-    site_type = model[2]
-    eps = qns ? 1e-14 * NNN : 3e-14 * NNN #dense and larger NNN both get more roundoff noise.
-    si = infsiteinds(site_type, N; initstate, conserve_qns=qns)
-    H0 = reg_form_iMPO(model[1](si, NNN; ul=ul))
-    H0.llim = -1
-    H0.rlim = 1
-    @test is_regular_form(H0)
-    Dw0 = Base.max(get_Dw(H0)...)
-    #
-    #  Do truncate outputting left ortho Hamiltonian
-    #
-    HL = copy(H0)
-    Ss, ss, HR = truncate!(HL, left; verbose=verbose1)
-    #@show Ss ss
-    @test typeof(storage(Ss[1])) == (
-      if qns
-        NDTensors.DiagBlockSparse{Float64,Vector{Float64},2}
-      else
-        Diag{Float64,Vector{Float64}}
-      end
-    )
-
-    DwL = Base.max(get_Dw(HL)...)
-    @test is_regular_form(HL)
-    @test isortho(HL, left)
-    @test isortho(HR, right)
-    @test check_ortho(HL, left)
-    @test check_ortho(HR, right, 1e-12)
-    #
-    #  Now test guage relations using the diagonal singular value matrices
-    #  as the gauge transforms.
-    #
-    for n in 1:N
-      # @show inds(Ss[n-1]) inds(HR[n].W,tags="Link") inds(Ss[n]) inds(HL[n].W,tags="Link") 
-      D1 = Ss[n - 1] * HR[n].W
-      @assert order(D1) == 4
-      D2 = HL[n].W * Ss[n]
-      @assert order(D2) == 4
-      @test norm(Ss[n - 1] * HR[n].W - HL[n].W * Ss[n]) ≈ 0.0 atol = eps
-    end
-    #
-    #  Do truncate from H0 outputting right ortho Hamiltonian
-    #
-    HR = copy(H0)
-    Ss, ss, HL = truncate!(HR, right; verbose=verbose1)
-    @test typeof(storage(Ss[1])) == (
-      if qns
-        NDTensors.DiagBlockSparse{Float64,Vector{Float64},2}
-      else
-        Diag{Float64,Vector{Float64}}
-      end
-    )
-    DwR = Base.max(get_Dw(HR)...)
-    @test is_regular_form(HR)
-    @test isortho(HL, left)
-    @test isortho(HR, right)
-    @test check_ortho(HL, left)
-    @test check_ortho(HR, right)
-    for n in 1:N
-      @test norm(Ss[n - 1] * HR[n].W - HL[n].W * Ss[n]) ≈ 0.0 atol = eps
-    end
-    if verbose
-      @printf " %4i %4i   %4i   %4i  %4i \n" N NNN Dw0 DwL DwR
-    end
-  end
-
+ 
   # @testset "Try a lattice with alternating S=1/2 and S=1 sites. iMPO. Qns=$qns" for qns in [false,true]
   #     initstate(n) = isodd(n) ? "Dn" : "Up"
   #     ul=lower

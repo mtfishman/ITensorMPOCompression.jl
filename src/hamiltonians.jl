@@ -307,6 +307,8 @@ function make_3body_MPO(sites, NNN::Int64; kwargs...)
   end
   addW!(sites, H, W)
   daisychain_links!(H; kwargs...)
+  H.llim,H.rlim=-1,1
+
   return H
 end
 
