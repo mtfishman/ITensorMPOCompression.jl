@@ -118,7 +118,33 @@ function check(Wrf::reg_form_Op)
     end
 end
 
+#
+# Detect which link index ileft/iright is common with B
+# and replace it with the correct remaining link from B
+#
+function product(Wrf::reg_form_Op,B::ITensor)::reg_form_Op
+    WB=Wrf.W*B
+    ic=commonind(Wrf.W,B)
+    @assert hastags(ic,"Link")
+    new_index=noncommonind(B,ic,siteinds(Wrf))
+    if ic== Wrf.iright
+        return reg_form_Op(WB,Wrf.ileft,new_index,Wrf.ul)
+    elseif ic==Wrf.ileft
+        return reg_form_Op(WB,new_index,Wrf.iright,Wrf.ul)
+    else
+        @assert false
+    end
+end
 
+Base.:*(Wrf::reg_form_Op,B::ITensor)::reg_form_Op=product(Wrf,B)
+Base.:*(A::ITensor,Wrf::reg_form_Op)::reg_form_Op=product(Wrf,A)
+
+function ITensors.replacetags(Wrf::reg_form_Op,tsold, tsnew)
+    Wrf.W=replacetags(Wrf.W,tsold,tsnew)
+    Wrf.ileft=replacetags(Wrf.ileft,tsold,tsnew)
+    Wrf.iright=replacetags(Wrf.iright,tsold,tsnew)
+    return Wrf
+end
 #-----------------------------------------------------------------------
 #
 #  Finite lattice with open BCs

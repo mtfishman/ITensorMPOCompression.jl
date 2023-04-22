@@ -110,12 +110,10 @@ function truncate(Ŵrf::reg_form_Op,lr::orth_type;kwargs...)::Tuple{reg_form_Op,
     R=grow(s*V,iup,im)*R⎖ #RL[l=n,u] dim ns+2 x Dw2
     Uplus=grow(U,dag(iqx),dag(iup))
     Uplus=noprime(Uplus,iqx)
-    Ŵrf.W=Q̂.W*Uplus #W[l=n-1,u]
-    Ŵrf[mirror(lr)]=settags(dag(iup),tags(ilf))
-   
+    Ŵrf=Q̂*Uplus #W[l=n-1,u]
 
-    replacetags!(R,"Link,u",tags(ilf)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-    replacetags!(Ŵrf.W ,"Link,u",tags(ilf)) #W[l=n-1,l=n]
+    R=replacetags(R,"Link,u",tags(ilf)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+    Ŵrf=replacetags(Ŵrf ,"Link,u",tags(ilf)) #W[l=n-1,l=n]
     check(Ŵrf)
     return Ŵrf,R,spectrum,false
 end
@@ -133,8 +131,7 @@ function ITensors.truncate!(H::reg_form_MPO,lr::orth_type;eps=1e-14,kwargs...)::
     for n in rng
         nn=n+rng.step
         H[n],R,s,bail=truncate(H[n],lr;kwargs...)
-        H[nn][lr]=noncommonind(R,H[nn].W)
-        H[nn].W=R*H[nn].W
+        H[nn]*=R
         push!(ss,s)
     end
     H.rlim = rng.stop+rng.step+1
@@ -235,8 +232,10 @@ function ITensors.truncate!(H::reg_form_iMPO,Hm::reg_form_iMPO,Gs::CelledVector{
             U,Sp,V,spectrum=truncate(Gs[n],dag(igl);kwargs...)
             check(H[n])
           
-            transform(H,U,n)
-            transform(Hm,dag(V),n)
+            H[n]*=U 
+            H[n+1]*=dag(U)
+            Hm[n]*=dag(V) 
+            Hm[n+1]*=V
             check(H[n])
             check(Hm[n])
         else
@@ -244,8 +243,10 @@ function ITensors.truncate!(H::reg_form_iMPO,Hm::reg_form_iMPO,Gs::CelledVector{
             igl=noncommonind(Gs[n],iln) #left link of Hn+1 is the right link Gn
             U,Sp,V,spectrum=truncate(Gs[n],igl;kwargs...) 
             check(H[n])
-            transform(H,dag(V),n)
-            transform(Hm,U,n)
+            H[n]*=dag(V)
+            H[n+1]*=V
+            Hm[n]*=U
+            Hm[n+1]*=dag(U)
             check(H[n])
             check(Hm[n])
         end
@@ -256,22 +257,6 @@ function ITensors.truncate!(H::reg_form_iMPO,Hm::reg_form_iMPO,Gs::CelledVector{
     return Ss,ss,Hm
 
 end
-
-function transform(H::reg_form_iMPO,uv::ITensor,n::Int64)
-    @assert length(commoninds(H[n].W,uv))==1
-    @assert length(commoninds(H[n+1].W,uv))==1
-    ihu=commonind(H[n].W,uv)
-    ihnu=noncommonind(uv,ihu)
-    ihv=commonind(H[n+1].W,dag(uv))
-    ihnv=noncommonind(uv,ihv)
-
-
-    H[n]=reg_form_Op(H[n].W*uv,H[n].ileft,ihnu,H[n].ul)
-    H[n+1]=reg_form_Op(dag(uv)*H[n+1].W,ihnv,H[n+1].iright,H[n+1].ul)
-    @mpoc_assert order(H[n].W)==4
-    @mpoc_assert order(H[n+1].W)==4
-end
-
 
 function truncate(G::ITensor,igl::Index;kwargs...)
     @mpoc_assert order(G)==2

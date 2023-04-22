@@ -82,8 +82,7 @@ function ac_orthogonalize!(H::reg_form_MPO,lr::orth_type;eps::Float64=1e-14,kwar
     for n in rng
         nn=n+rng.step
         H[n],R,iqp=ac_qx(H[n],lr)
-        H[nn].W=R*H[nn].W
-        H[nn][lr]=dag(iqp)
+        H[nn]*=R
         check(H[n])
         check(H[nn])
     end
@@ -157,52 +156,43 @@ function ac_orthogonalize!(H::reg_form_iMPO,lr::orth_type;verbose=false,kwargs..
     if !is_gauge_fixed(H,1e-14)
         gauge_fix!(H)
     end
+
     N=length(H)
     #
     #  Init gauge transform with unit matrices.
     #
     Gs=CelledVector{ITensor}(undef,N)
+    Rs=CelledVector{ITensor}(undef,N)
     for n in 1:N
         ln=lr==left ? H[n].iright : dag(H[n].iright) #get the forward link index
         Gs[n]=δ(Float64,dag(ln),ln') 
     end
-    Rs=CelledVector{ITensor}(undef,N)
-    
-    eps=1e-13
-    niter=0
-    max_iter=40
-    
+
     if verbose
         previous_Dw=Base.max(get_Dw(H)...)
         @printf "niter  Dw  eta\n" 
     end
+
+
+    eps=1e-13
+    niter=0
+    max_iter=40
     loop=true
     rng=sweep(H,lr)
+    dn = lr==left ? 0 : -1 #index shift for Gs[n]
     while loop
         eta=0.0
         for n in rng
             H[n],Rs[n],etan=ac_qx_step!(H[n],lr,eps;kwargs...)
-            if lr==left
-                Gs[n]=noprime(Rs[n]*Gs[n])  #  Update the accumulated gauge transform
-            else
-                Gs[n-1]=noprime(Rs[n]*Gs[n-1])  #  Update the accumulated gauge transform
-            end
-            @mpoc_assert order(Gs[n])==2 #This will fail if the indices somehow got messed up.
+            Gs[n+dn]=noprime(Rs[n]*Gs[n+dn])  #  Update the accumulated gauge transform
+            @mpoc_assert order(Gs[n+dn])==2 #This will fail if the indices somehow got messed up.
             eta=Base.max(eta,etan)
         end
         #
-        #  H now contains all the Qs.  We need to transfer the RL's
+        #  H now contains all the Qs.  We need to transfer the R's to the neighbouring sites.
         #
         for n in rng
-            R=noprime(Rs[n-rng.step])
-            ic=commonind(R,H[n].W)
-            il=noncommonind(R,ic)
-            RW=R*H[n].W
-            if lr==left
-                H[n]=reg_form_Op(RW,noprime(il),H[n].iright,H[n].ul)
-            else
-                H[n]=reg_form_Op(RW,H[n].ileft,noprime(il),H[n].ul)
-            end
+            H[n]*=noprime(Rs[n-rng.step])
             check(H[n])
         end
         niter+=1
@@ -213,12 +203,6 @@ function ac_orthogonalize!(H::reg_form_iMPO,lr::orth_type;verbose=false,kwargs..
     end
     H.rlim = rng.stop+1
     H.llim = rng.stop-1
-
-    # if verbose
-    #     Dw=Base.max(get_Dw(H)...)
-    #     println("   iMPO After $lr orth sweep, $niter iterations Dw reduced from $previous_Dw to $Dw")
-    # end
-    
     return Gs
 end
 

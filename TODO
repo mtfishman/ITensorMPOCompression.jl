@@ -73,8 +73,8 @@ Ac blocking code:
 -Take out support for upper.
   Convert upper H's to lower durung the conversion to ref_form_MPO
   Strip out lots of code.
--Overload ref_form_Op*ITensor can we auto fix ileft,iright?
--Will this help clean up truncate(iMPO) code?
+Done: -Overload ref_form_Op*ITensor can we auto fix ileft,iright?
+Yes: -Will this help clean up truncate(iMPO) code?
 -WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
 -Remove the bail out block in truncate(MPO)?
 -Start using 
@@ -83,6 +83,11 @@ Ac blocking code:
       C::InfiniteMPO
       AR::InfiniteMPO
     end
+-DO if inside gauge_fix 
+  if !is_gauge_fixed(H,eps)
+        gauge_fix!(H)
+    end
+-More usage of replacetags(reg_form_OP,...)
 
 ITensorInfiniteMPS:
   -Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
