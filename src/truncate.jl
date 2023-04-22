@@ -84,8 +84,8 @@ function truncate(
   #
   if dim(ilf) > dim(iqx) || dim(ilf) < 3
     @assert false
-    replacetags!(R, "Link,qx", tags(ilf)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-    replacetags!(Q̂, "Link,qx", tags(ilf)) #W[l=n-1,l=n]
+    R=replacetags(R, "Link,qx", tags(ilf)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
+    Q=replacetags(Q̂, "Link,qx", tags(ilf)) #W[l=n-1,l=n]
     return Q̂, R, Spectrum([], 0), true
   end
   #
@@ -280,10 +280,10 @@ function truncate(G::ITensor, igl::Index; kwargs...)
   #
   #  But external link tags in so contractions with W[n] tensors will work.
   #
-  replacetags!(Up, tags(iu), tags(igl))
-  replacetags!(Sp, tags(iu), tags(igl))
-  replacetags!(Sp, tags(iv), tags(igr))
-  replacetags!(Vp, tags(iv), tags(igr))
+  Up=replacetags(Up, tags(iu), tags(igl))
+  Sp=replacetags(Sp, tags(iu), tags(igl))
+  Sp=replacetags(Sp, tags(iv), tags(igr))
+  Vp=replacetags(Vp, tags(iv), tags(igr))
   #@mpoc_assert norm(dense(noprime(G))-dense(Up)*Sp*dense(Vp))<1e-12    #expensive!!!
   return Up, Sp, Vp, spectrum
 end
