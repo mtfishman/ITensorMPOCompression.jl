@@ -68,13 +68,13 @@ true
 
 ```
 """
-function truncate(Wrf::reg_form_Op,lr::orth_type;kwargs...)::Tuple{reg_form_Op,ITensor,Spectrum,Bool}
-    ilf = forward(Wrf,lr) 
+function truncate(Ŵrf::reg_form_Op,lr::orth_type;kwargs...)::Tuple{reg_form_Op,ITensor,Spectrum,Bool}
+    ilf = forward(Ŵrf,lr) 
     #   l=n-1   l=n        l=n-1  l=n  l=n
     #   ------W----   -->  -----Q-----R-----
     #           ilf               iqx   ilf
-    Q,R,iqx=ac_qx(Wrf,lr;qprime=true,kwargs...) #left Q[r,qx], R[qx,c] - right R[r,qx] Q[qx,c]
-    @checkflux(Q.W) 
+    Q̂,R,iqx=ac_qx(Ŵrf,lr;qprime=true,kwargs...) #left Q[r,qx], R[qx,c] - right R[r,qx] Q[qx,c]
+    @checkflux(Q̂.W) 
     @checkflux(R) 
     #
     #  If the RL is rectangular in the wrong way, then factoring out M is very difficult.
@@ -83,8 +83,8 @@ function truncate(Wrf::reg_form_Op,lr::orth_type;kwargs...)::Tuple{reg_form_Op,I
     if dim(ilf)>dim(iqx) || dim(ilf)<3
         @assert false
         replacetags!(R,"Link,qx",tags(ilf)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-        replacetags!(Q ,"Link,qx",tags(ilf)) #W[l=n-1,l=n]
-        return Q,R,Spectrum([],0),true
+        replacetags!(Q̂ ,"Link,qx",tags(ilf)) #W[l=n-1,l=n]
+        return Q̂,R,Spectrum([],0),true
     end
     #
     #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
@@ -96,7 +96,7 @@ function truncate(Wrf::reg_form_Op,lr::orth_type;kwargs...)::Tuple{reg_form_Op,I
     #  l=n'    l=n           l=n'   m      l=n
     #  ------R----   --->   -----M------R'----
     #  iqx'    ilf           iqx'   im     ilf
-    R⎖,im=build_R⎖(R,iqx,ilf,Wrf.ul) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
+    R⎖,im=build_R⎖(R,iqx,ilf,Ŵrf.ul) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
     #  
     #  svd decomp M. 
     #    
@@ -110,14 +110,14 @@ function truncate(Wrf::reg_form_Op,lr::orth_type;kwargs...)::Tuple{reg_form_Op,I
     R=grow(s*V,iup,im)*R⎖ #RL[l=n,u] dim ns+2 x Dw2
     Uplus=grow(U,dag(iqx),dag(iup))
     Uplus=noprime(Uplus,iqx)
-    Wrf.W=Q.W*Uplus #W[l=n-1,u]
-    Wrf[mirror(lr)]=settags(dag(iup),tags(ilf))
+    Ŵrf.W=Q̂.W*Uplus #W[l=n-1,u]
+    Ŵrf[mirror(lr)]=settags(dag(iup),tags(ilf))
    
 
     replacetags!(R,"Link,u",tags(ilf)) #RL[l=n,l=n] sames tags, different id's and possibly diff dimensions.
-    replacetags!(Wrf.W ,"Link,u",tags(ilf)) #W[l=n-1,l=n]
-    check(Wrf)
-    return Wrf,R,spectrum,false
+    replacetags!(Ŵrf.W ,"Link,u",tags(ilf)) #W[l=n-1,l=n]
+    check(Ŵrf)
+    return Ŵrf,R,spectrum,false
 end
 
 function ITensors.truncate!(H::reg_form_MPO,lr::orth_type;eps=1e-14,kwargs...)::bond_spectrums
@@ -128,34 +128,14 @@ function ITensors.truncate!(H::reg_form_MPO,lr::orth_type;eps=1e-14,kwargs...)::
     if !is_gauge_fixed(H,eps)
         gauge_fix!(H)
     end
-    ss=bond_spectrums(undef,length(H)-1)
-    link_offest = lr==left ? 0 : -1
+    ss=bond_spectrums(undef,0)
     rng=sweep(H,lr)
-    
-    if lr==left
-        for n in rng
-            nn=n+rng.step
-            check(H[n])
-            W,R,s,bail=truncate(H[n],lr;kwargs...)
-            H[n]=W
-            H[nn][lr]=noncommonind(R,H[nn].W)
-            H[nn].W=R*H[nn].W
-            check(H[n])
-            check(H[nn])
-            ss[n+link_offest]=s
-        end
-    else
-        for n in rng
-            nn=n+rng.step
-            check(H[n])
-            W,R,s,bail=truncate(H[n],lr;kwargs...)
-            H[n]=W
-            H[nn][lr]=noncommonind(R,H[nn].W)
-            H[nn].W=R*H[nn].W
-            check(H[n])
-            check(H[nn])
-            ss[n+link_offest]=s
-        end
+    for n in rng
+        nn=n+rng.step
+        H[n],R,s,bail=truncate(H[n],lr;kwargs...)
+        H[nn][lr]=noncommonind(R,H[nn].W)
+        H[nn].W=R*H[nn].W
+        push!(ss,s)
     end
     H.rlim = rng.stop+rng.step+1
     H.llim = rng.stop+rng.step-1

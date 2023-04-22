@@ -1,5 +1,5 @@
 Issue:
-  How to handle ortho center for N=1 unit cell iMPOs?
+  Resolved: How to handle ortho center for N=1 unit cell iMPOs?
     -InfiniteMPO using llim=b-1,rlim=b+1 for b=orthcenter(H) fails when N=1, because 
     left/right/unorth all become indistinguishable.
   Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
@@ -11,7 +11,7 @@ Issue:
 
 Questions:
   Yes -Is there use for a moving orthogonality center in MPOs? Yes see Matts email March/14/2023
-  -Do we need to support multiple truncate sweeps for iMPOs?
+  No: -Do we need to support multiple truncate sweeps for iMPOs?
   -Should orthognalize!(iMPO) spit out primed Gs?
   	
   
@@ -40,7 +40,7 @@ Improvements requiring changes to other modules:
    This requires a mod to ITensors MPO struct
 
 Improvements:
--assign!() is still wildley inefficient.  We need a way to do
+-assign!() is still inefficient.  We need a way to do
   W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
   at the NDTensors level.
 -Organize exports and imports.
@@ -67,28 +67,22 @@ No: -iMPO truncate user HL,HR instead of H,Hm ?
 -format
 Done: -Move code into compression module.
 Ac blocking code:
--no method matching order(::ITensorMPOCompression.reg_form_Op)
 -Fix Index Tag conventions sections of the docs.
 -Fix emprical observations section of the tech notes.
-Done: -Fix links in reg_form_iMPO
-Done: -make one is_gauge_fixed function for reg_form_MPO and reg_form_iMPO 
--Take out support to upper.
+
+-Take out support for upper.
   Convert upper H's to lower durung the conversion to ref_form_MPO
   Strip out lots of code.
-Done: -Check in reg_form_Op translator.
-Done: -Do ac-orthogonalize! eta = norm(R-I),  do this block by block for block sparse R
-Done: -get rid of matrix_state
-Done: -check and fix equal_edge_blocks in truncate.  Use redim1 for all orth/truncate code.
 -Overload ref_form_Op*ITensor can we auto fix ileft,iright?
-Done: -Replace getV with another member in extract_blocks
-Done: Make forward(Wrf::ref_form_Op), and backward(Wrf::ref_form_Op)
-Done: -Detect_upper_lower should use extract blocks.
-Done: -Simplify the whole getM process in MPO truncate.
+-Will this help clean up truncate(iMPO) code?
 -WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
-Done: -Get rid if triangular tests.
-Done: -ac_qx option to prime iqx ?
 -Remove the bail out block in truncate(MPO)?
--Use proper 𝐛̂ hatted symbols for OP valued tensors.
+-Start using 
+    struct InfiniteCanonicalMPO <: AbstractInfiniteMPS
+      AL::InfiniteMPO
+      C::InfiniteMPO
+      AR::InfiniteMPO
+    end
 
 ITensorInfiniteMPS:
   -Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
@@ -112,6 +106,20 @@ open("/home/janr/prof1.txt", "w") do s
        
 
 Old:
+Done: -no method matching order(::ITensorMPOCompression.reg_form_Op)
+Done: -Fix links in reg_form_iMPO
+Done: -make one is_gauge_fixed function for reg_form_MPO and reg_form_iMPO 
+Done: -Check in reg_form_Op translator.
+Done: -Do ac-orthogonalize! eta = norm(R-I),  do this block by block for block sparse R
+Done: -get rid of matrix_state
+Done: -check and fix equal_edge_blocks in truncate.  Use redim1 for all orth/truncate code.
+Done: -Replace getV with another member in extract_blocks
+Done: Make forward(Wrf::ref_form_Op), and backward(Wrf::ref_form_Op)
+Done: -Detect_upper_lower should use extract blocks.
+Done: -Simplify the whole getM process in MPO truncate.
+Done: -Get rid if triangular tests.
+Done: -ac_qx option to prime iqx ?
+Done: -Use proper 𝐛̂ hatted symbols for OP valued tensors.
 Done: -parse_links ... accept n=1 for link indices.
  Done: -Take out the h_mirror feature.
 Done: -Test with pivoting
