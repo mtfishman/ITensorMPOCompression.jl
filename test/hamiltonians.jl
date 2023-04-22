@@ -5,6 +5,8 @@ using ITensorMPOCompression
 using Revise
 using Test
 
+import ITensorMPOCompression: redim
+
 # using Printf
 # Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f)
 
@@ -61,9 +63,7 @@ end
           il = make_random_qindex(d, nq)
           Dw = dim(il)
           if Dw > 1 + offset
-            #@show il
             ilr = redim(il, Dw - offset - 1, offset)
-            #@show ilr
             @test dim(ilr) == Dw - offset - 1
           end
         end #for nq

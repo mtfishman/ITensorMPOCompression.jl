@@ -38,6 +38,17 @@ Improvements requiring changes to other modules:
 -Save regular_form upper/lower/irreg/unknown in the MPO struct so we never have to call
  detect_regular_form.
    This requires a mod to ITensors MPO struct
+ITensorInfiniteMPS:
+  -Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
+  -Bug report for ITensorInfiniteMPS crash in Hx SzSz model
+    -Try and fix the bug
+  -Look at InfinitSum{ITensor}
+  -Understand factor of 2*J*Xn*Xn+1 in Model("ising")
+  -Make a Model("ising_NNN") for arbitrary NNN interactions.
+  -Make a table of Ncell for sites, and length(mpo) nsites(His) so we can figure what the rules are.
+  -Add support for swapxz flag in trans-ising Hamiltonian
+    -Change Hx flag to just h.
+
 
 Improvements:
 -assign!() is still inefficient.  We need a way to do
@@ -82,24 +93,8 @@ Yes: -Will this help clean up truncate(iMPO) code?
       AR::InfiniteMPO
     end
 -More usage of replacetags(reg_form_OP,...)
+Done: -Get rid of the old redim functions
 
-ITensorInfiniteMPS:
-  -Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
-  -Bug report for ITensorInfiniteMPS crash in Hx SzSz model
-    -Try and fix the bug
-  -Look at InfinitSum{ITensor}
-  -Understand factor of 2*J*Xn*Xn+1 in Model("ising")
-  -Make a Model("ising_NNN") for arbitrary NNN interactions.
-  -Make a table of Ncell for sites, and length(mpo) nsites(His) so we can figure what the rules are.
-  -Add support for swapxz flag in trans-ising Hamiltonian
-    -Change Hx flag to just h.
-
-
-julia --sysimage /home/janr/.julia/sysimages/sys_itensors.so
-
-open("/home/janr/prof1.txt", "w") do s
-           Profile.print(IOContext(s, :displaysize => (24, 500)),format=:flat)
-       end
 
 
        
@@ -360,3 +355,9 @@ Umpo = apply(U, Id; cutoff=1e-15)
 
 That form could make it easier to apply the circuit (or just a gate) to the Hamiltonian MPO to keep it in a form where it can be used with the Parker et al. algorithm.
 
+
+julia --sysimage /home/janr/.julia/sysimages/sys_itensors.so
+
+open("/home/janr/prof1.txt", "w") do s
+           Profile.print(IOContext(s, :displaysize => (24, 500)),format=:flat)
+       end

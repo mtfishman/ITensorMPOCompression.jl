@@ -12,7 +12,7 @@ import ITensorInfiniteMPS: AbstractInfiniteMPS, translatecell
 import Base: similar, reverse
 
 export block_qx #qx related
-export slice, assign!, redim #operator handling
+export slice, assign!  #operator handling
 export getV, setV, growRL, V_offsets #blocking related
 export my_similar
 # lots of characterization functions
@@ -163,109 +163,79 @@ end
     
     Create an index with the same tags ans plev, but different dimension(s) and and id 
 """
-function redim(i::Index, Dw::Int64, offset::Int64=0, qn::Union{QN,Int}=QN())::Index
-  if hasqns(i)
-    qns = copy(space(i))
-    if Dw > dim(i)
-      #
-      # We need grow the space.  If there are multiple QNs, where to add the space?
-      # Lets add to the end for now.
-      #
-      @mpoc_assert offset == 0 || offset == 1 #not ready to handle other cases yet.
-      nq = Dw - dim(i)
-      q = qn => 1
-      if offset == 0
-        # dq=qns[end].second #dim of space for last QN
-        # qns[end]=qns[end].first=>dq+delta
-        newqs = fill(q, nq)
-        qns = vcat(qns, newqs)
-      else
-        newqs = fill(q, nq - 1)
-        qns = vcat([q], qns)
-        qns = vcat(qns, newqs)
+#
+# Build and increased QN space with padding at the begining and end.
+# Use the sample qns argument get the correct blocks for padding.
+# Ability to split blocks is not needed, therefore not supported.
+#
+function redim(iq::ITensors.QNIndex, pad1::Int64, pad2::Int64, qns::ITensors.QNBlocks)
+  @assert pad1 == blockdim(qns[1]) #Splitting blocks not supported
+  @assert pad2 == blockdim(qns[end]) #Splitting blocks not supported
+  qnsp = [qns[1], space(iq)..., qns[end]] #creat the new space
+  return Index(qnsp; tags=tags(iq), plev=plev(iq), dir=dir(iq)) #create new index.
+end
+
+function redim(i::Index, pad1::Int64, pad2::Int64, Dw::Int64)
+  @assert dim(i) + pad1 + pad2 <= Dw 
+  return Index(dim(i) + pad1 + pad2; tags=tags(i), plev=plev(i), dir=dir(i)) #create new index.
+end
+
+#
+#  Build a reduced QN space from offset->Dw+offset, possibly splitting QNBlocks at the
+#  begining and end of the space.
+#
+function redim(iq::ITensors.QNIndex, Dw::Int64, offset::Int64)
+  # println("---------------------")
+  # @show iq Dw offset
+  @assert dim(iq) - offset >= Dw 
+  qns=copy(space(iq))
+  qns1=ITensors.QNBlocks()
+  
+  is=1
+  for i in 0:length(qns) #starting at 0 quickly dispenses with the offset==0 case.
+    _Dw=dim(qns[1:i])
+    if _Dw==offset
+      is=i+1
+      break
+    elseif _Dw>offset
+      excess = _Dw-offset 
+      if excess==blockdim(qns[i])
+        is=i #no need to split the block.  Add this block below.
+      else  #we need to split this block and add it here.
+        qn_split=qn(qns[i])=>excess
+        #push!(qns1,qn_split)
+        qns[i]=qn_split
+        is=i
       end
-      return Index(qns; dir=dir(i), tags=tags(i), plev=plev(i))
+      break
+    end
+  end
+  # @show qns1 is
+  
+  for i in is:length(qns)
+    _Dw=dim(qns[is:i])
+    if _Dw==Dw #no need to split .. and we are done.
+      push!(qns1,qns[i])
+      break;
+    elseif _Dw>Dw #Need to split
+      excess = _Dw-Dw #How much space to leave
+      bdim=blockdim(qns[i])
+      qn_split=qn(qns[i])=>bdim-excess
+      push!(qns1,qn_split)
+      break 
     else
-      start_offset = offset
-      end_offset = dim(i) - Dw - offset
-      #
-      #  Set spaces from 1<=d<=1+offset and Dw<d<D to zero 
-      #
-      for n in eachindex(qns)
-        dq = qns[n].second #dim of space
-        d_remain = Base.max(0, dq - start_offset) #How much space to leave
-        qns[n] = qns[n].first => d_remain #update dim of QN
-        start_offset -= (dq - d_remain) #decrement start_offset 
-        if start_offset == 0
-          break
-        end #are we done?
-        @mpoc_assert start_offset > 0 #sanity check
-      end
-
-      for n in Base.reverse(eachindex(qns))
-        dq = qns[n].second
-        d_remain = Base.max(0, dq - end_offset) #How much space to leave
-        qns[n] = qns[n].first => d_remain #update dim of QN
-        end_offset -= (dq - d_remain) #decrement end_offset 
-        if end_offset == 0
-          break
-        end #are we done?
-        @mpoc_assert end_offset > 0 #sanity check
-      end
-
-      #
-      #  now trim out all the QNs with dim(q)==0
-      #
-      qns_trim = Pair{QN,Int64}[]
-      for q in qns
-        if q.second > 0
-          append!(qns_trim, [q])
-        end
-      end
-      @mpoc_assert Dw == sum(map((q) -> q.second, qns_trim))
-      return Index(qns_trim; dir=dir(i), tags=tags(i), plev=plev(i))
-    end #if Dw>dim(i)
-  else
-    return Index(Dw; tags=tags(i), plev=plev(i))
+      push!(qns1,qns[i])
+    end
   end
+  # @show qns1
+  @mpoc_assert Dw==dim(qns1)
+  return Index(qns1; tags=tags(iq), plev=plev(iq), dir=dir(iq)) #create new index.
 end
 
-function redim(i::Index, j::Index, offset::Int64=0)::Index
-  if hasqns(i)
-    @mpoc_assert hasqns(j)
-    qnsi = space(i)
-    pnsj = space(i)
-    qns = Pair{QN,Int64}[]
-    for q in space(i)
-      @mpoc_assert q.second <= offset
-      push!(qns, q)
-      offset -= q.second
-      if offset == 0
-        break
-      end
-    end
-    d = dim(j)
-    for q in space(j)
-      @mpoc_assert q.second <= d
-      push!(qns, q)
-      d -= q.second
-      if d == 0
-        break
-      end
-    end
-    d = sum(map((q) -> q.second, qns))
-    d1 = 0
-    for q in space(i)
-      d1 += q.second
-      if d1 > d
-        push!(qns, q)
-      end
-    end
-    return Index(qns; dir=dir(i), tags=tags(i), plev=plev(i))
-  else
-    return redim(i, dim(j), offset)
-  end
+function redim(i::Index, Dw::Int64, offset::Int64=0)
+  return Index(Dw; tags=tags(i), plev=plev(i)) #create new index.
 end
+
 
 include("subtensor.jl")
 include("reg_form.jl")

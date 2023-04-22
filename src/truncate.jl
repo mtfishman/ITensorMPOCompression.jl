@@ -108,7 +108,7 @@ function truncate(
   #
   #  Now recontrsuct R, and W in the truncated space.
   #
-  iup = redim1(iu, 1, 1, space(iqx))
+  iup = redim(iu, 1, 1, space(iqx))
   R = grow(s * V, iup, im) * R⎖ #RL[l=n,u] dim ns+2 x Dw2
   Uplus = grow(U, dag(iqx), dag(iup))
   Uplus = noprime(Uplus, iqx)
@@ -271,8 +271,8 @@ function truncate(G::ITensor, igl::Index; kwargs...)
   #
   # Build up U+, S+ and V+
   #
-  iup = redim1(iu, 1, 1, space(igl)) #Use redim to preserve QNs
-  ivp = redim1(iv, 1, 1, space(igr))
+  iup = redim(iu, 1, 1, space(igl)) #Use redim to preserve QNs
+  ivp = redim(iv, 1, 1, space(igr))
   #@show iu iup iv ivp igl s dense(s) U
   Up = grow(noprime(U), noprime(igl), dag(iup))
   Sp = grow(s, iup, ivp)

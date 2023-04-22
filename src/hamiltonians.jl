@@ -149,6 +149,14 @@ end
 #         | d1+d2 c1 c2 I |
 # χ
 #
+function add_ops(i1::QNIndex,i2::QNIndex)
+  qns=[space(i1)[1:end-1]...,space(i2)[2:end]...]
+  return Index(qns,tags=tags(l1),plev=plev(i1),dir=dir(i1))
+end
+function add_ops(i1::Index,i2::Index)
+  return Index(space(i1)+space(i2)-2,tags=tags(i1),plev=plev(i1),dir=dir(i1))
+end
+
 function add_ops(W1::ITensor, W2::ITensor)::ITensor
   #@pprint(W1)
   #@pprint(W2)
@@ -162,7 +170,7 @@ function add_ops(W1::ITensor, W2::ITensor)::ITensor
   χl1, χr1 = dim(l1) - 2, dim(r1) - 2
   χl2, χr2 = dim(l2) - 2, dim(r2) - 2
   χl, χr = χl1 + χl2, χr1 + χr2
-  l, r = redim(l1, χl + 2), redim(r1, χr + 2)
+  l, r = add_ops(l1,l2), add_ops(r1,r2)
   W = ITensor(0.0, l, r, is1, is1')
   Id = slice(W1, l1 => 1, r1 => 1)
   assign!(W, Id, l => 1, r => 1)

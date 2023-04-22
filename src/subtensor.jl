@@ -1,6 +1,6 @@
 import ITensors: dim, dims, DenseTensor, eachindval, eachval, getindex, setindex!
 import NDTensors: getperm, permute, BlockDim, blockstart, blockend
-import ITensorMPOCompression: redim
+#import ITensorMPOCompression: redim
 import Base.range
 
 struct IndexRange
@@ -122,53 +122,53 @@ function get_subtensor(
   bs = Vector{Block{N}}()
   #@show rs
   dbs, = get_offset_block_counts(inds(T), rs...)
-  for tb in eachnzblock(T)
-    blockT = blockview(T, tb)
+  # for tb in eachnzblock(T)
+  #   blockT = blockview(T, tb)
 
-    if in_range(blockstart(T, tb), blockend(T, tb), rs...) #&& !isnothing(blockT)
-      # @show "inrange"
-      # @show tb blockT blockstart(T,tb) blockend(T,tb) 
-      iT = blockstart(T, tb)
-      #iT=ntuple(i->iT[i]+rs[i].start-1,N)
-      #iA=ntuple(i->iA[i]+dbs_ci[i],N)
+  #   if in_range(blockstart(T, tb), blockend(T, tb), rs...) #&& !isnothing(blockT)
+  #     # @show "inrange"
+  #     # @show tb blockT blockstart(T,tb) blockend(T,tb) 
+  #     iT = blockstart(T, tb)
+  #     #iT=ntuple(i->iT[i]+rs[i].start-1,N)
+  #     #iA=ntuple(i->iA[i]+dbs_ci[i],N)
 
-      index_within_block, tb1 = blockindex(T, Tuple(iT)...)
-      #@show index_within_block tb1
-      dT = [blockend(T, tb)...] - [index_within_block...] + fill(1, N)
-      rs1 = ntuple(i -> index_within_block[i]:(index_within_block[i] + dT[i] - iT[i]), N)
-      if isnothing(blockT)
-        @show iT dT rs1 blockT T
-      end
-      push!(Ds, blockT[rs1...])
-      bc = CartesianIndex(tb) - CartesianIndex(dbs)
-      push!(bs, bc)
-    end
-  end
+  #     index_within_block, tb1 = blockindex(T, Tuple(iT)...)
+  #     #@show index_within_block tb1
+  #     dT = [blockend(T, tb)...] - [index_within_block...] + fill(1, N)
+  #     rs1 = ntuple(i -> index_within_block[i]:(index_within_block[i] + dT[i] - iT[i]), N)
+  #     if isnothing(blockT)
+  #       @show iT dT rs1 blockT T
+  #     end
+  #     push!(Ds, blockT[rs1...])
+  #     bc = CartesianIndex(tb) - CartesianIndex(dbs)
+  #     push!(bs, bc)
+  #   end
+  # end
 
   # Ds = Vector{DenseTensor{ElT,N}}()
   # bs = Vector{Block{N}}()
   # dbs,=get_offset_block_counts(inds(T),rs...)
-  # for (jj, b) in enumerate(eachnzblock(T))
-  #     #TODO use index_within_block,tb=blockindex(T,Tuple(iT)...)
-  #     blockT = blockview(T, b)
-  #     if in_range(blockstart(T,b),blockend(T,b),rs...)# && !isnothing(blockT)
-  #         println("----------------------------------")
-  #         rs1=fix_ranges(blockstart(T,b),blockend(T,b),rs...)
-  #         #@show "In of range" b dims(blockT) rs rs1 NDTensors.blockstart(T,b)
-  #         push!(Ds,blockT[rs1...])
-  #         index_within_block,tb1=blockindex(T,Tuple(blockstart(T,b))...)
-  #         bc=CartesianIndex(b)-CartesianIndex(dbs)
-  #         db=CartesianIndex(blockend(T,b))-CartesianIndex(blockstart(T,b))
-  #         b2=CartesianIndex(tb1)-db
-  #         if bc!=b2
-  #             @show CartesianIndex(b) CartesianIndex(dbs) db bc b2 index_within_block tb1 blockstart(T,b) blockend(T,b)
-  #         end
-  #         #bc=CartesianIndex(b)-b2
+  for (jj, b) in enumerate(eachnzblock(T))
+      #TODO use index_within_block,tb=blockindex(T,Tuple(iT)...)
+      blockT = blockview(T, b)
+      if in_range(blockstart(T,b),blockend(T,b),rs...)# && !isnothing(blockT)
+          #println("----------------------------------")
+          rs1=fix_ranges(blockstart(T,b),blockend(T,b),rs...)
+          #@show "In of range" b dims(blockT) rs rs1 NDTensors.blockstart(T,b)
+          push!(Ds,blockT[rs1...])
+          index_within_block,tb1=blockindex(T,Tuple(blockstart(T,b))...)
+          bc=CartesianIndex(b)-CartesianIndex(dbs)
+          # db=CartesianIndex(blockend(T,b))-CartesianIndex(blockstart(T,b))
+          # b2=CartesianIndex(tb1)-db
+          # if bc!=b2
+          #     @show CartesianIndex(b) CartesianIndex(dbs) db bc b2 index_within_block tb1 blockstart(T,b) blockend(T,b)
+          # end
+          #bc=CartesianIndex(b)-b2
 
-  #         b=bc #Decrement block numbers by the number of skipped blocks.
-  #         push!(bs,b)
-  #     end
-  # end
+          b=bc #Decrement block numbers by the number of skipped blocks.
+          push!(bs,b)
+      end
+  end
   if length(Ds) == 0
     return BlockSparseTensor(new_inds)
   end

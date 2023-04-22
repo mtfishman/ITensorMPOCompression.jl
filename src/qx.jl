@@ -83,26 +83,14 @@ function equal_edge_blocks(::Index, ::Index)::Bool
   return true
 end
 
-function redim1(iq::ITensors.QNIndex, pad1::Int64, pad2::Int64, qns::ITensors.QNBlocks)
-  @assert pad1 == blockdim(qns[1]) #Splitting blocks not supported
-  @assert pad2 == blockdim(qns[end]) #Splitting blocks not supported
-  qnsp = [qns[1], space(iq)..., qns[end]] #creat the new space
-  return Index(qnsp; tags=tags(iq), plev=plev(iq), dir=dir(iq)) #create new index.
-end
 
-function redim1(iq::Index, pad1::Int64, pad2::Int64, Dw::Int64)
-  @assert dim(iq) + pad1 + pad2 <= Dw #Splitting blocks not supported
-  return Index(dim(iq) + pad1 + pad2; tags=tags(iq), plev=plev(iq), dir=dir(iq)) #create new index.
-end
-
-#   Q̂
 
 function insert_Q(Ŵrf::reg_form_Op, Q̂::ITensor, iq::Index, lr::orth_type)
   #
   #  Create new index by growing iq.
   #
   ilb, ilf = linkinds(Ŵrf, lr) #Backward and forward indices.
-  iq⎖ = redim1(iq, 1, 1, space(ilf))  #pad with 1 at the start and 1 and the end: iqp =(1,iq,1).
+  iq⎖ = redim(iq, 1, 1, space(ilf))  #pad with 1 at the start and 1 and the end: iqp =(1,iq,1).
   ileft, iright = lr == left ? (ilb, iq⎖) : (iq⎖, ilb)
   #
   #  Create a new reg form tensor
