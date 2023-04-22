@@ -27,6 +27,22 @@ function is_gauge_fixed(Hrf::AbstractMPS,eps::Float64;kwargs...)::Bool
     return true
 end
 
+function gauge_fix!(H::reg_form_MPO)
+    if !is_gauge_fixed(H,1e-14) 
+        tₙ=Vector{Float64}(undef,1)
+        for W in H
+            tₙ=gauge_fix!(W,tₙ,left)
+            @assert is_regular_form(W)
+        end
+        #tₙ=Vector{Float64}(undef,1) end of sweep above already returns this.
+        for W in reverse(H)
+            tₙ=gauge_fix!(W,tₙ,right)
+            @assert is_regular_form(W)
+        end
+    end
+end
+
+
 function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
     @assert is_regular_form(W)
     Wb=extract_blocks(W,lr;all=true,fix_inds=true)
@@ -74,28 +90,16 @@ function gauge_fix!(W::reg_form_Op,tₙ₋₁::Vector{Float64},lr::orth_type)
     return vector_o2(𝒕ₙ)
 end
 
-function gauge_fix!(H::reg_form_MPO) 
-    tₙ=Vector{Float64}(undef,1)
-    for W in H
-        tₙ=gauge_fix!(W,tₙ,left)
-        @assert is_regular_form(W)
-    end
-    #tₙ=Vector{Float64}(undef,1) end of sweep above already returns this.
-    for W in reverse(H)
-        tₙ=gauge_fix!(W,tₙ,right)
-        @assert is_regular_form(W)
-    end
-end
-
-
 #-----------------------------------------------------------------------
 #
 #  Infinite lattice with unit cell
 #
 function gauge_fix!(H::reg_form_iMPO)
-    sₙ,tₙ=Solve_b0c0(H)
-    for n in eachindex(H)
-        gauge_fix!(H[n],sₙ[n-1],sₙ[n],tₙ[n-1],tₙ[n])
+    if !is_gauge_fixed(H,1e-14)
+        sₙ,tₙ=Solve_b0c0(H)
+        for n in eachindex(H)
+            gauge_fix!(H[n],sₙ[n-1],sₙ[n],tₙ[n-1],tₙ[n])
+        end
     end
 end
 

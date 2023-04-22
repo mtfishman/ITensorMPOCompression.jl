@@ -123,9 +123,7 @@ function ITensors.truncate!(H::reg_form_MPO,lr::orth_type;eps=1e-14,kwargs...)::
         ac_orthogonalize!(H,lr;eps=eps,kwargs...)
         ac_orthogonalize!(H,mirror(lr);eps=eps,kwargs...)
     end
-    if !is_gauge_fixed(H,eps)
-        gauge_fix!(H)
-    end
+    gauge_fix!(H)
     ss=bond_spectrums(undef,0)
     rng=sweep(H,lr)
     for n in rng
@@ -207,9 +205,7 @@ function ITensors.truncate!(H::reg_form_iMPO,lr::orth_type;rr_cutoff=1e-14,kwarg
 end
 
 function ITensors.truncate!(H::reg_form_iMPO,Hm::reg_form_iMPO,Gs::CelledVector{ITensor},lr::orth_type;kwargs...)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
-    if !is_gauge_fixed(H,1e-14)
-        gauge_fix!(H)
-    end
+    gauge_fix!(H)
     
     N=length(H)
     ss=bond_spectrums(undef,N)

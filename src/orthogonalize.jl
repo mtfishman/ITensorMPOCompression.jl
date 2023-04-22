@@ -75,9 +75,7 @@ true
 
 """
 function ac_orthogonalize!(H::reg_form_MPO,lr::orth_type;eps::Float64=1e-14,kwargs...) 
-    if !is_gauge_fixed(H,eps)
-        gauge_fix!(H)
-    end
+    gauge_fix!(H)
     rng=sweep(H,lr)
     for n in rng
         nn=n+rng.step
@@ -153,9 +151,7 @@ true
 
 """
 function ac_orthogonalize!(H::reg_form_iMPO,lr::orth_type;verbose=false,kwargs...)
-    if !is_gauge_fixed(H,1e-14)
-        gauge_fix!(H)
-    end
+    gauge_fix!(H)
 
     N=length(H)
     #
