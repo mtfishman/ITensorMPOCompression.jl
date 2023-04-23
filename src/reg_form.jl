@@ -24,7 +24,7 @@ function detect_regular_form(Wrf::reg_form_Op, eps::Float64=default_eps)::Tuple{
   return is_regular_form(Wrf, lower, eps), is_regular_form(Wrf, upper, eps)
 end
 
-flip(ul::reg_form) = ul == lower ? upper : lower
+
 
 function is_regular_form(Wrf::reg_form_Op, eps::Float64=default_eps)
   return is_regular_form(Wrf, Wrf.ul, eps)
@@ -70,6 +70,8 @@ function Base.show(io::IO, Wrf::reg_form_Op)
   return show(io, Wrf.W)
 end
 
+pprint(Wrf::reg_form_Op)=pprint(Wrf.ileft,Wrf.W,Wrf.iright)
+
 ITensors.order(Wrf::reg_form_Op) = order(Wrf.W)
 
 function check_ortho(Wrf::reg_form_Op, lr::orth_type, eps::Float64=default_eps)::Bool
@@ -98,6 +100,16 @@ function Base.setindex!(Wrf::reg_form_Op, il::Index, lr::orth_type)
     Wrf.iright = il
   end
 end
+
+
+ITensors.inds(Wrf::reg_form_Op;kwargs...) = inds(Wrf.W;kwargs...)
+
+function ITensors.setinds(Wrf::reg_form_Op, is)::reg_form_Op
+  ITensors.setinds(Wrf.W, is)
+  Wrf.ileft, Wrf.iright = parse_links(Wrf.W, left)
+  return Wrf
+end
+
 forward(Wrf::reg_form_Op, lr::orth_type) = Wrf[mirror(lr)]
 backward(Wrf::reg_form_Op, lr::orth_type) = Wrf[lr]
 
@@ -143,6 +155,7 @@ function ITensors.replacetags(Wrf::reg_form_Op, tsold, tsnew)
   Wrf.iright = replacetags(Wrf.iright, tsold, tsnew)
   return Wrf
 end
+
 #-----------------------------------------------------------------------
 #
 #  Finite lattice with open BCs
@@ -250,11 +263,25 @@ function check_ortho(H::reg_form_MPO, lr::orth_type, eps::Float64=default_eps)::
   return true
 end
 
-ITensors.inds(Wrf::reg_form_Op) = inds(Wrf.W)
-function ITensors.setinds(Wrf::reg_form_Op, is)::reg_form_Op
-  ITensors.setinds(Wrf.W, is)
-  Wrf.ileft, Wrf.iright = parse_links(Wrf.W, left)
-  return Wrf
+
+function Base.transpose(Hrf::reg_form_MPO)::reg_form_MPO
+  Ws=reg_form_Op[]
+  N=length(Hrf)
+  for n in N:-1:1
+    W=Hrf[n].W
+    Wd=ITensors.data(W)
+    is=siteinds(Hrf[n])
+
+    il=replacetags(Hrf[n].ileft,"l=$(n-1)","l=$(N-n+1)")
+    ir=replacetags(Hrf[n].iright,"l=$n","l=$(N-n)")
+    #@show il ir
+    W1=ITensor(Wd,il,ir,is)
+    push!(Ws,reg_form_Op(W1,ir,il,flip(Hrf.ul)))
+  end
+  d0=replacetags(Hrf.dN,"l=$N","l=0")
+  dN=replacetags(Hrf.d0,"l=0","l=$N")
+  
+  return reg_form_MPO(Ws,Hrf.llim, Hrf.rlim, d0, dN, flip(Hrf.ul))
 end
 #-----------------------------------------------------------------------
 #

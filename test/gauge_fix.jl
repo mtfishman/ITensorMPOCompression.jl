@@ -48,7 +48,7 @@ models = [
   (make_Hubbard_AutoiMPO, "Electron", false),
 ]
 
-import ITensorMPOCompression: check, extract_blocks, A0, b0, c0, vector_o2, reg_form_Op, MPO
+import ITensorMPOCompression: check, extract_blocks, A0, b0, c0, vector_o2, MPO
 
 @testset "Gauge fix infinite $(model[1]), qns=$qns, ul=$ul" for model in models,
   qns in [false, true],

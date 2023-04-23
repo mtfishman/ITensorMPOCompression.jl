@@ -9,14 +9,15 @@ import ITensors.BlockSparseTensor,
   ITensors.DenseTensor, ITensors.DiagTensor, ITensors.tensor
 
 import ITensorInfiniteMPS: AbstractInfiniteMPS, translatecell
-import Base: similar, reverse
+import Base: similar, reverse, transpose
+ 
 
 export block_qx #qx related
 export slice, assign!  #operator handling
 export getV, setV, growRL, V_offsets #blocking related
 export my_similar
 # lots of characterization functions
-export reg_form, orth_type, upper, lower, left, right, mirror
+export reg_form, orth_type, upper, lower, left, right, mirror, flip
 export parse_links,
   parse_link, parse_site, is_regular_form, build_R⎖, grow, detect_regular_form
 export is_lower_regular_form, is_upper_regular_form
@@ -49,7 +50,7 @@ export IndexRange, indices, range, ranges, getperm, permute, start
 #  New ac_qx
 #
 export reg_form_MPO, extract_blocks, is_gauge_fixed, gauge_fix!, ac_qx, ac_orthogonalize!
-export reg_form_iMPO
+export reg_form_iMPO, transpose, check
 
 macro mpoc_assert(ex)
   esc(:($Base.@assert $ex))
@@ -96,6 +97,8 @@ function mirror(lr::orth_type)::orth_type
   end
   return ret
 end
+
+flip(ul::reg_form) = ul == lower ? upper : lower
 
 bond_spectrums = Vector{Spectrum}
 

@@ -158,9 +158,9 @@ function Solve_b0c0(Hrf::reg_form_iMPO)
   # @show b0s c0s 
   # display(A0s[1])
   s = Ms \ b0s
-  t = transpose(transpose(Mt) \ c0s)
+  t = Base.transpose(Base.transpose(Mt) \ c0s)
   @assert norm(Ms * s - b0s) < 1e-15 * n
-  @assert norm(transpose(t * Mt) - c0s) < 1e-15 * n
+  @assert norm(Base.transpose(t * Mt) - c0s) < 1e-15 * n
 
   ss = map(n -> s[irb[n]:(irb[n] + nr - 1)], 1:N)
   ts = map(n -> t[irb[n]:(irb[n] + nr - 1)], 1:N)

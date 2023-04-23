@@ -221,6 +221,35 @@ end
     @test hasqns(H[1]) == qns
     verify_links(H)
   end
+
+  
+
+  @testset "Convert upper to lower using lattice reverse idea" begin
+    N,NNN=5,2
+    sites = siteinds("SpinHalf", N; conserve_qns=false)
+    Hu = reg_form_MPO(make_transIsing_MPO(sites, NNN;ul=upper))
+    Hl = transpose(Hu)
+    @test is_regular_form(Hu)
+    @test is_regular_form(Hl)
+    @test !check_ortho(Hu,left)
+    @test !check_ortho(Hl,left)
+    @test !check_ortho(Hu,right)
+    @test !check_ortho(Hl,right)
+    Hl1=MPO(Hl)
+    @test order(Hl1[1])==3
+    @test order(Hl1[N])==3
+
+    ac_orthogonalize!(Hl,left)
+
+    @test check_ortho(Hl,left)
+    @test !check_ortho(Hu,left)
+    Hu1=transpose(Hl)
+    @test check_ortho(Hu1,right)
+    Hl1=MPO(Hl)
+    @test order(Hl1[1])==3
+    @test order(Hl1[N])==3
+    
+  end
 end #Hamiltonians testset
 
 nothing
