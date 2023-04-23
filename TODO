@@ -71,18 +71,13 @@ Improvements:
 -Follow Matts kwargs guidelines
 -Eliminate use of tags for finding indices.  Use the network structure instead.  Pass list if indices
   in function calls.  Use linkinds, commoninds, uniqueinds.
--For iMPOs set llim,rlim=-1,1 so that they are interpreted as non-ortho when N=1.
-No: -iMPO truncate user HL,HR instead of H,Hm ?
--Go over all the Problems in VScode.  Are they real?
-Done: -format
-Ac blocking code:
 -Fix Index Tag conventions sections of the docs.
 -Fix emprical observations section of the tech notes.
 
--Build reg_form Hamiltonians by default.
 -Take out support for upper.
   Done: Convert upper H's to lower durung the conversion to ref_form_MPO
   Strip out lots of code.
+  After InfiniteCanonicalMPO implementation
 -WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
 -Start using 
     struct InfiniteCanonicalMPO <: AbstractInfiniteMPS
@@ -90,12 +85,29 @@ Ac blocking code:
       C::InfiniteMPO
       AR::InfiniteMPO
     end
+  -How to coordintae with reg_form_MPOs?
+  -Build reg_form Hamiltonians by default.
+  -Follow Matts kwargs guidelines
 
 
+InfiniteCanonicalMPO Plan:
+  -Write a usage case for orthgonalization:
+    Hi = InfiniteMPO(model, s; model_kwargs...)
+    Ho = orthogonalize!(Hi) returns InfiniteCanonicalMPO
+    @test check_ortho(Ho)
 
+    similar for truncation
        
 
 Old:
+NO: -Go over all the Problems in VScode.  Are they real?
+  Not seeing any now.  Did formatting fix this?
+Done: -format
+
+NO: -For iMPOs set llim,rlim=-1,1 so that they are interpreted as non-ortho when N=1.
+  Not going to use these
+No: -iMPO truncate user HL,HR instead of H,Hm ?
+
 Done: -Remove the bail out block in truncate(MPO)?
 Done: -More usage of replacetags(reg_form_OP,...)
 Done: -Get rid of the old redim functions

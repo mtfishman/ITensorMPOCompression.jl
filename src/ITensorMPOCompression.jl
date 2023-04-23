@@ -50,7 +50,8 @@ export IndexRange, indices, range, ranges, getperm, permute, start
 #  New ac_qx
 #
 export reg_form_MPO, extract_blocks, is_gauge_fixed, gauge_fix!, ac_qx, ac_orthogonalize!
-export reg_form_iMPO, transpose, check
+export reg_form_iMPO, transpose, check, check_ortho
+export InfiniteCanonicalMPO
 
 macro mpoc_assert(ex)
   esc(:($Base.@assert $ex))
@@ -252,5 +253,6 @@ include("qx.jl")
 include("characterization.jl")
 include("orthogonalize.jl")
 include("truncate.jl")
+include("infinite_canonical_mpo.jl")
 
 end
