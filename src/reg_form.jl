@@ -250,6 +250,10 @@ Base.iterate(H::reg_form_MPO, args...) = iterate(H.data, args...)
 Base.getindex(H::reg_form_MPO, args...) = getindex(H.data, args...)
 Base.setindex!(H::reg_form_MPO, args...) = setindex!(H.data, args...)
 
+function get_Dw(H::reg_form_MPO)
+  return get_Dw(MPO(H))
+end
+
 function is_regular_form(H::reg_form_MPO, eps::Float64=default_eps)::Bool
   for W in H
     !is_regular_form(W, eps) && return false

@@ -66,9 +66,7 @@ verbose1 = false #verbose inside orth algos
     @test E0 ≈ E2 atol = eps
   end
 
-  function ITensorMPOCompression.get_Dw(H::reg_form_MPO)
-    return get_Dw(MPO(H))
-  end
+  
 
   @testset "Compare Dws for Ac orthogonalized hand built MPO, vs Auto MPO, NNN=$NNN, ul=$ul, qns=$qns" for NNN in
                                                                                                            [
