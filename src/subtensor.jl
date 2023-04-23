@@ -416,7 +416,9 @@ function set_subtensor_ND(T::ITensor, A::ITensor, irs::IndexRange...)
   inotT = Tuple(noncommoninds(inds(T), ireqT)) #indices not requested by caller
   ireqA = Tuple(noncommoninds(inds(A), inotT)) #Get the requested indices for a
   inotA = Tuple(noncommoninds(inds(A), ireqA))
-  if length(ireqT) != length(ireqA) || inotA != inotT
+  p=getperm(inotA,ntuple(n -> inotT[n], length(inotT)))
+  inotA_sorted=permute(inotA,p)
+  if length(ireqT) != length(ireqA) || inotA_sorted != inotT
     @show inotA inotT ireqT ireqA inotA != inotT length(ireqT) length(ireqA)
     @error(
       "subtensor assign, incompatable indices\ndestination inds=$(inds(T)),\n source inds=$(inds(A))."
