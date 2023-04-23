@@ -226,6 +226,18 @@ function pprint(H::MPO, eps::Float64=default_eps)
   end
 end
 
+function pprint(H::reg_form_MPO, eps::Float64=default_eps)
+  N = length(H)
+  println("  n    Dw1  Dw2   d   Reg.  Orth.  Tri.")
+  println("                      Form  Form   Form")
+
+  for n in 1:N
+    Dw1, Dw2, d, l, u, lr = get_traits(H[n], eps)
+    #println(" $n    $Dw1    $Dw2    $d    $l$u     $lr   $lt$ut")
+    @printf "%4i %4i %4i %4i    %s%s     %s\n" n Dw1 Dw2 d l u lr 
+  end
+end
+
 function get_directions(psi::ITensors.AbstractMPS)
   return map(n -> dir(inds(psi[n]; tags="Link,l=$n")[1]), 1:(length(psi) - 1))
 end

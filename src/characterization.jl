@@ -291,9 +291,9 @@ function get_Dw(H::InfiniteMPO)::Vector{Int64}
   return Dws
 end
 
-function get_traits(W::ITensor, eps::Float64)
-  r, c = parse_links(W)
-  d, n, space = parse_site(W)
+function get_traits(W::reg_form_Op, eps::Float64)
+  r, c = W.ileft, W.iright
+  d, n, space = parse_site(W.W)
   Dw1, Dw2 = dim(r), dim(c)
   bl, bu = detect_regular_form(W, eps)
   l = bl ? 'L' : ' '
@@ -307,10 +307,8 @@ function get_traits(W::ITensor, eps::Float64)
   end
 
   tri = bl ? lower : upper
-  msl = matrix_state(tri, left)
-  msr = matrix_state(tri, right)
-  is__left = check_ortho(W, msl, eps)
-  is_right = check_ortho(W, msr, eps)
+  is__left = check_ortho(W, left, eps)
+  is_right = check_ortho(W, right, eps)
   if is__left && is_right
     lr = 'B'
   elseif is__left && !is_right
@@ -321,18 +319,5 @@ function get_traits(W::ITensor, eps::Float64)
     lr = 'M'
   end
 
-  bl, bu, RC = detect_upper_lower(W)
-  lt = bl ? 'L' : ' '
-  ut = bu ? 'U' : ' '
-  if RC != ' '
-    lt = RC
-    ut = ' '
-  elseif bl && bu
-    lt = 'D'
-    ut = ' '
-  elseif !(bl || bu)
-    lt = 'F'
-    ut = ' '
-  end
-  return Dw1, Dw2, d, l, u, lr, lt, ut
+  return Dw1, Dw2, d, l, u, lr
 end
