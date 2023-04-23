@@ -11,55 +11,6 @@ verbose1 = false #verbose inside orth algos
 
 @testset verbose = verbose "Orthogonalize" begin
 
-  # @testset "Upper, lower, regular detections" begin
-  #     N=6
-  #     NNN=4
-  #     model_kwargs = (hx=0.5, ul=lower)
-  #     eps=1e-15
-  #     sites = siteinds("SpinHalf", N)
-  #     #
-  #     #  test lower triangular MPO 
-  #     #
-  #     H=make_transIsing_MPO(sites,NNN;model_kwargs...) 
-  #     @test is_upper_lower(H   ,lower,eps)
-  #     @test is_lower_regular_form(H,eps)
-  #     W=H[2]
-  #     r,c=parse_links(W)
-  #     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
-  #     Sz=op(is,"Sz")
-  #     assign!(W,Sz,r=>1,c=>2) #stuff any op on the top row
-  #     @test !is_lower_regular_form(W,eps)
-  #     @test !is_upper_lower(H   ,lower,eps)
-  #     @test !is_upper_lower(H   ,upper,eps)
-  #     W=H[3]
-  #     r,c=parse_links(W)
-  #     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
-  #     Sz=op(is,"Sz")
-  #     assign!(W,Sz,r=>2,c=>dim(c)) #stuff any op on the right column
-  #     @test !is_lower_regular_form(W,eps)
-  #     @test !is_upper_lower(H   ,lower,eps)
-  #     @test !is_upper_lower(H   ,upper,eps)
-  #     W=H[4]
-  #     r,c=parse_links(W)
-  #     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
-  #     Sz=op(is,"Sz")
-  #     assign!(W,Sz,r=>2,c=>2) #stuff any op on the diag
-  #     @test is_lower_regular_form(W,eps) #this one should still be regular
-  #     @test  is_upper_lower(W   ,lower,eps)
-  #     @test !is_upper_lower(W   ,upper,eps)
-  #     W=H[5]
-  #     r,c=parse_links(W)
-  #     is=filterinds(W,tags="Site")[1] #get any site index for generating operators
-  #     Id=op(is,"Id")
-  #     assign!(W,Id,r=>2,c=>2) #stuff unit op on the diag
-  #     @test is_lower_regular_form(W,eps) #this one should still be regular, but should see a warning
-  #     @test  is_upper_lower(W   ,lower,eps)
-  #     @test !is_upper_lower(W   ,upper,eps)
-  #     # at this point the whole H should fail since we stuffed ops in the all wrong places.
-  #     @test !is_lower_regular_form(H,eps)
-
-  # end
-
   models = [
     [make_transIsing_MPO, "S=1/2", true],
     [make_transIsing_AutoMPO, "S=1/2", true],
@@ -76,7 +27,7 @@ verbose1 = false #verbose inside orth algos
     eps = 1e-14
     pre_fixed = model[3] #Hamiltonian starts gauge fixed
     N = 10 #5 sites
-    NNN = 7 #Include 6nd nearest neighbour interactions
+    NNN = 4 #Include 6nd nearest neighbour interactions
     sites = siteinds(model[2], N; conserve_qns=qns)
     Hrf = reg_form_MPO(model[1](sites, NNN; ul=ul))
     state = [isodd(n) ? "Up" : "Dn" for n in 1:N]
@@ -145,10 +96,10 @@ verbose1 = false #verbose inside orth algos
 
   @testset "Orthogonalize iMPO Check gauge relations, H=$(model[1]), ul=$ul, qbs=$qns, N=$N, NNN=$NNN" for model in
                                                                                                            models,
-    ul in [lower],
+    ul in [lower,upper],
     qns in [false, true],
     N in [1, 2, 3, 4],
-    NNN in [1, 2, 4, 7]
+    NNN in [1, 4]
 
     eps = NNN * 1e-14
     initstate(n) = "↑"

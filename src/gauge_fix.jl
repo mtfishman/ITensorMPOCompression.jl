@@ -93,13 +93,19 @@ end
 #
 #  Infinite lattice with unit cell
 #
-function gauge_fix!(H::reg_form_iMPO)
+function gauge_fix!(Hin::reg_form_iMPO)
+  if Hin.ul==upper
+    H=ITensorMPOCompression.transpose(Hin)
+  else
+    H=Hin
+  end
   if !is_gauge_fixed(H, 1e-14)
     sₙ, tₙ = Solve_b0c0(H)
     for n in eachindex(H)
       gauge_fix!(H[n], sₙ[n - 1], sₙ[n], tₙ[n - 1], tₙ[n])
     end
   end
+  Hin=H
 end
 
 function ITensorInfiniteMPS.translatecell(::Function, T::Float64, ::Integer)

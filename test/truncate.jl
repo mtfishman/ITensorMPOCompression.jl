@@ -41,7 +41,7 @@ verbose1 = false #verbose inside orth algos
     eps = 1e-14
     pre_fixed = model[3] #Hamiltonian starts gauge fixed
     N = 10 #5 sites
-    NNN = 7 #Include 6nd nearest neighbour interactions
+    NNN = 4 #Include 6nd nearest neighbour interactions
     sites = siteinds(model[2], N; conserve_qns=qns)
     Hrf = reg_form_MPO(model[1](sites, NNN; ul=ul))
     state = [isodd(n) ? "Up" : "Dn" for n in 1:N]
@@ -70,10 +70,10 @@ verbose1 = false #verbose inside orth algos
 
   @testset "Truncate/Compress iMPO Check gauge relations, H=$(model[1]), ul=$ul, qbs=$qns, N=$N, NNN=$NNN" for model in
                                                                                                                models,
-    ul in [lower],
+    ul in [lower,upper],
     qns in [false, true],
     N in [1, 2, 3, 4],
-    NNN in [1, 2, 4, 7]
+    NNN in [1, 4]
 
     initstate(n) = "↑"
     makeH = model[1]

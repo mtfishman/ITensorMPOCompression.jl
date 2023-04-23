@@ -81,7 +81,7 @@ Ac blocking code:
 
 -Build reg_form Hamiltonians by default.
 -Take out support for upper.
-  Convert upper H's to lower durung the conversion to ref_form_MPO
+  Done: Convert upper H's to lower durung the conversion to ref_form_MPO
   Strip out lots of code.
 -WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
 -Start using 
