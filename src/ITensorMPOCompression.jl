@@ -241,9 +241,9 @@ end
 
 
 include("subtensor.jl")
+include("util.jl")
 include("reg_form.jl")
 include("blocking.jl")
-include("util.jl")
 include("gauge_fix.jl")
 include("hamiltonians.jl")
 include("hamiltonians_AutoMPO.jl")
