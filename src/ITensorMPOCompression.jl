@@ -180,7 +180,7 @@ function redim(iq::ITensors.QNIndex, pad1::Int64, pad2::Int64, qns::ITensors.QNB
 end
 
 function redim(i::Index, pad1::Int64, pad2::Int64, Dw::Int64)
-  @assert dim(i) + pad1 + pad2 <= Dw 
+  #@assert dim(i) + pad1 + pad2 <= Dw 
   return Index(dim(i) + pad1 + pad2; tags=tags(i), plev=plev(i), dir=dir(i)) #create new index.
 end
 

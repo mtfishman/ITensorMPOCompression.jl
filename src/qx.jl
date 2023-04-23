@@ -100,7 +100,7 @@ function insert_Q(Ŵrf::reg_form_Op, Q̂::ITensor, iq::Index, lr::orth_type)
   #
   #  Preserve b,c,d blocks and insert Q
   #
-  Wb = extract_blocks(Ŵrf, lr; b=true, c=true, d=true)
+  Wb = extract_blocks(Ŵrf, lr; b=true, c=true, d=true) #TODO do we need c here?
   set_𝐛̂𝐜̂_block!(Ŵrf⎖, Wb.𝐛̂, lr) #preserve b or c block from old W
   set_𝐝̂_block!(Ŵrf⎖, Wb.𝐝̂) #preserve d block from old W
   set_𝕀_block!(Ŵrf⎖, Wb.𝕀) #init I blocks from old W

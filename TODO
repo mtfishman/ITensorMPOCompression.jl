@@ -66,7 +66,7 @@ Improvements:
 -System for hamitonians make_Hubbard_AutoiMPO => Hubbard_Auto_iMPO
 -Use an infinite=true flag for iMPOs?
 -Clean up "where {Elt,N}" code.
--Follow Matts kwargs guidelines
+Done: -Follow Matts kwargs guidelines
 -Eliminate use of tags for finding indices.  Use the network structure instead.  Pass list if indices
   in function calls.  Use linkinds, commoninds, uniqueinds.
 -Fix Index Tag conventions sections of the docs.
@@ -80,6 +80,9 @@ Improvements:
 -One last cleanup: impo truncate
 -Subtensor check flux of inserted blocks.
 -Subtensor cleanup.
+-Make a separate ITensorsTestHamiltonians module
+-How to handle eps for is_gauge_fixed functions.
+-Split up reg_form_Op, reg_form_MPO and reg_form_iMPO
 
 
 Done: -Start using 

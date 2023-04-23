@@ -3,89 +3,41 @@ using ITensors
 using ITensorMPOCompression
 using Printf
 Base.show(io::IO, f::Float64) = @printf(io, "%1.7f", f)
-
-N = 10
+import ITensorMPOCompression: set_𝐀̂𝐜̂_block, insert_Q
+N = 5
 s = siteinds("S=1/2", N)
-H = make_Heisenberg_AutoMPO(s, 1)
-orthogonalize!(H; orth=right)
+H = reg_form_MPO(make_Heisenberg_AutoMPO(s, 1))
+ac_orthogonalize!(H,3) #move the ortho center to site 2 row vector on site 1 for now
 #
 #  Manually move the ortho center to site 2 so we can deal link order 2 MPOs for now
 #
-H[1], H[2] = orthogonalize!(H[1], H[2], lower; orth=left)
-H[2], H[3] = orthogonalize!(H[2], H[3], lower; orth=left)
-pprint(H)
+#pprint(H)
 
-n1, n2 = 2, 3
-@pprint(H[n1])
-Wl, Wr = H[n1], H[n2]
-il12 = commonindex(Wl, Wr)
-il = noncommonind(Wl, il12)
-# Vn1,qn1=getV(H[n1],V_offsets(matrix_state(lower,left)))
-# Vn2,qn2=getV(H[n2],V_offsets(matrix_state(lower,right)))
-# @pprint(Vn1)
-# @pprint(Vn2)
-# il12=commonindex(H[n1],H[n2])
-# ilv1,=inds(Vn1,tags=tags(il12))
-# ilv2,=inds(Vn2,tags=tags(il12))
-##il=noncommonind(Vn1,ilv1)
-# Vn2=replaceind(Vn2,ilv2,ilv1)
-# @show inds(Vn1) inds(Vn2)
+Wb2=extract_blocks(H[2],left;Ac=true)
+Wb3=extract_blocks(H[3],right;Ac=true)
+Wb3.𝐀̂𝐜̂=replaceind(Wb3.𝐀̂𝐜̂,Wb3.irAc,Wb2.icAc)
+pprint(Wb2.𝐀̂𝐜̂)
+pprint(Wb3.𝐀̂𝐜̂)
 
-U = ITensors.randomU(Float64, s[n1], s[n2])
-U = prime(U; plev=1, 1)
+U = ITensors.randomU(Float64, s[2], s[3])
+U = prime(U; plev=1)
+Udag = dag(prime(U))
+Phi = prime(((Wb2.𝐀̂𝐜̂ * Wb3.𝐀̂𝐜̂) * U) * Udag, -2; tags="Site")
+@assert order(Phi)==6
+U, ss, V, spec, iu, iv = svd(Phi, Wb2.irAc, s[2], s[2]'; utags="Link,l=2",vtags="Link,l=2", cutoff=1e-15)
+@show spec
+d=dim(s[1])
+U*=sqrt(d)
+ss/=sqrt(d)
 
-Udag = dag(prime(U, 1))
-Udag = prime(Udag; plev=2, 1)
+H[2],iqp=insert_Q(H[2],U,iu,left)
+H[3],iqp=insert_Q(H[3],ss*V,iv,right)
+pprint(H[2])
+pprint(H[3])
+@assert is_regular_form(H[2])
+@assert is_regular_form(H[3])
+gauge_fix!(H)
+@assert check_ortho(H[2],left)
+#pprint(H)
 
-Phi = prime(((Wl * Wr) * U) * Udag, -2; tags="Site")
-#Phi=prime(((Vn1*Vn2)*U)*Udag,-2,tags="Site")
-#Phi=Vn1*Vn2
-# @show dims(Phi) inds(Phi,tags="Link")
-# @show il
-U, ss, V = svd(Phi, il, s[n1], s[n1]'; cutoff=1e-15)
-@show diag(ss)
-# #@show inds(U)
-#@show sqrt(ss)
-U = U * sqrt(ss)
-U = replacetags(U, "v", "l=$n1")
-il2, = inds(U; tags="l=$n1")
-# @show inds(U)
-# @pprint(U)
-#scale=sqrt(ss[1,1])
-# scale=U[il=>1,il2=>1,s[n1]=>1,s[n1]'=>1]
-#U.*=scale
-# pprint(U)
-# for i in 1:4
-#     @show slice(U,il=>1,il2=>i)
-# end
-# #@show typeof(scale)
-# #@show slice(U,il=>1,il2=>1)*scale
-# #@show slice(U,il=>dim(il),il2=>dim(il2))
-
-L, Q = lq(U, il, s[n1], s[n1]'; rr_cutoff=1e-14)
-L = replacetags(L, "lq", "l=$n1")
-il2, = inds(L; tags="l=$n1")
-scale = L[il => 1, il2 => 1, s[n1] => 1, s[n1]' => 1]
-L ./= scale
-pprint(L)
-@show slice(L, il => 1, il2 => 1)
-for i in 5:dim(il2)
-  @show slice(L, il => dim(il), il2 => i)
-end
-
-# Q,L=ql(Phi,il,s[n1],s[n1]';rr_cutoff=1e-14)
-# Q=replacetags(Q,"ql","l=$n1")
-# il2,=inds(Q,tags="l=$n1")
-# pprint(Q)
-# for i in 1:dim(il2)
-#     @show slice(Q,il=>dim(il),il2=>i)
-# end
-# for i in 1:4
-#     @show slice(Q,il=>1,il2=>i)
-# end
-
-# # for i in 4:8
-# #     @show slice(L,il=>dim(il),il2=>i)
-# # end
-# #@show Q
 nothing

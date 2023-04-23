@@ -86,6 +86,21 @@ function ac_orthogonalize!(H::reg_form_MPO, lr::orth_type; kwargs...)
   end
   H.rlim = rng.stop + rng.step + 1
   H.llim = rng.stop + rng.step - 1
+  return
+end
+
+function ac_orthogonalize!(H::reg_form_MPO, n_ortho::Int64; kwargs...)
+  ac_orthogonalize!(H,right;kwargs...)
+  for n in 1:n_ortho-1
+    nn = n + 1
+    H[n], R, iqp = ac_qx(H[n], left;kwargs...)
+    H[nn] *= R
+    check(H[n])
+    check(H[nn])
+  end
+  H.rlim = n_ortho + 1
+  H.llim = n_ortho - 1
+  return 
 end
 
 function ac_orthogonalize!(H::MPO, lr::orth_type; kwargs...)
