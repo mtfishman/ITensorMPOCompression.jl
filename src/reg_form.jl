@@ -220,7 +220,8 @@ function reg_form_MPO(H::MPO, eps::Float64=1e-14)
     throw(ErrorException("MPO++(H::MPO), H must be in either lower or upper regular form"))
   end
   if (bl && bu)
-    #@pprint(H[1])
+    @pprint(H[1])
+    @assert false
   end
   ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
   ils, irs, d0, dN = add_edge_links!(H)
@@ -263,26 +264,20 @@ function check_ortho(H::reg_form_MPO, lr::orth_type, eps::Float64=default_eps)::
   return true
 end
 
-
-function Base.transpose(Hrf::reg_form_MPO)::reg_form_MPO
+function transpose(Hrf::reg_form_MPO)::reg_form_MPO
   Ws=reg_form_Op[]
   N=length(Hrf)
   for n in N:-1:1
-    W=Hrf[n].W
-    Wd=ITensors.data(W)
-    is=siteinds(Hrf[n])
-
     il=replacetags(Hrf[n].ileft,"l=$(n-1)","l=$(N-n+1)")
     ir=replacetags(Hrf[n].iright,"l=$n","l=$(N-n)")
-    #@show il ir
-    W1=ITensor(Wd,il,ir,is)
+    W1=replaceinds(Hrf[n].W,[Hrf[n].ileft,Hrf[n].iright],[il,ir])
     push!(Ws,reg_form_Op(W1,ir,il,flip(Hrf.ul)))
   end
   d0=replacetags(Hrf.dN,"l=$N","l=0")
   dN=replacetags(Hrf.d0,"l=0","l=$N")
-  
   return reg_form_MPO(Ws,Hrf.llim, Hrf.rlim, d0, dN, flip(Hrf.ul))
 end
+
 #-----------------------------------------------------------------------
 #
 #  Infinite lattice with unit cell
@@ -339,7 +334,8 @@ function reg_form_iMPO(H::InfiniteMPO, eps::Float64=1e-14)
     throw(ErrorException("MPO++(H::MPO), H must be in either lower or upper regular form"))
   end
   if (bl && bu)
-    #@pprint(H[1])
+    @pprint(H[1])
+    @assert false
   end
   ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
   return reg_form_iMPO(H, ul)
@@ -397,4 +393,22 @@ function is_regular_form(H::reg_form_iMPO, eps::Float64=default_eps)::Bool
     !is_regular_form(W, eps) && return false
   end
   return true
+end
+
+function transpose(Hrf::reg_form_iMPO)::reg_form_iMPO
+  Ws=reg_form_Op[]
+  N=length(Hrf)
+  for n in N:-1:1
+    il=replacetags(Hrf[n].ileft,"l=$(n-1)","l=$(N-n+1)")
+    ir=replacetags(Hrf[n].iright,"l=$n","l=$(N-n)")
+    if n==N
+      ir=replacetags(ir,"c=1,l=0","c=0,l=$N")
+    end
+    if n==1
+      il=replacetags(il,"c=0","c=1")
+    end
+    W1=replaceinds(Hrf[n].W,[Hrf[n].ileft,Hrf[n].iright],[il,ir])
+    push!(Ws,reg_form_Op(W1,ir,il,flip(Hrf.ul)))
+  end
+  return reg_form_iMPO(CelledVector(Ws),Hrf.llim, Hrf.rlim,false, flip(Hrf.ul))
 end

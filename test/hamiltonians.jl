@@ -221,15 +221,22 @@ end
     @test hasqns(H[1]) == qns
     verify_links(H)
   end
-
   
+  models = [
+    (make_transIsing_MPO, "S=1/2", true),
+    (make_transIsing_AutoMPO, "S=1/2", true),
+    (make_Heisenberg_AutoMPO, "S=1/2", true),
+    (make_Heisenberg_AutoMPO, "S=1", true),
+    (make_Hubbard_AutoMPO, "Electron", false),
+  ]
 
-  @testset "Convert upper to lower using lattice reverse idea" begin
+  @testset "Convert upper MPO to lower, H=$(model[1]), qns=$qns" for model in models, qns in [false,true]
     N,NNN=5,2
-    sites = siteinds("SpinHalf", N; conserve_qns=false)
-    Hu = reg_form_MPO(make_transIsing_MPO(sites, NNN;ul=upper))
-    Hl = transpose(Hu)
+    sites = siteinds(model[2], N; conserve_qns=qns)
+    Hu = reg_form_MPO(model[1](sites, NNN;ul=upper))
+    Hl = ITensorMPOCompression.transpose(Hu)
     @test is_regular_form(Hu)
+    
     @test is_regular_form(Hl)
     @test !check_ortho(Hu,left)
     @test !check_ortho(Hl,left)
@@ -243,13 +250,46 @@ end
 
     @test check_ortho(Hl,left)
     @test !check_ortho(Hu,left)
-    Hu1=transpose(Hl)
+    Hu1=ITensorMPOCompression.transpose(Hl)
     @test check_ortho(Hu1,right)
     Hl1=MPO(Hl)
     @test order(Hl1[1])==3
     @test order(Hl1[N])==3
     
   end
+
+  models = [
+    (make_transIsing_iMPO, "S=1/2", true),
+    (make_transIsing_AutoiMPO, "S=1/2", true),
+    (make_Heisenberg_AutoiMPO, "S=1/2", true),
+    (make_Heisenberg_AutoiMPO, "S=1", true),
+    (make_Hubbard_AutoiMPO, "Electron", false),
+  ]
+
+  @testset "Convert upper iMPO to lower H=$(model[1]), qns=$qns" for model in models, qns in [false,true], N in [1,2,3,4], NNN in [1,4]
+    initstate(n) = "↑"
+    sites = infsiteinds(model[2], N; initstate, conserve_qns=false)
+    Hu = reg_form_iMPO(model[1](sites, NNN;ul=upper))
+    Hl = ITensorMPOCompression.transpose(Hu)
+    @test Hu.ul==upper
+    @test is_regular_form(Hu)
+    @test Hl.ul==lower
+    @test is_regular_form(Hl)
+    @test !check_ortho(Hu,left)
+    @test !check_ortho(Hl,left)
+    @test !check_ortho(Hu,right)
+    @test !check_ortho(Hl,right)
+    
+    ac_orthogonalize!(Hl,left)
+
+    @test check_ortho(Hl,left)
+    @test !check_ortho(Hu,left)
+    Hu1=ITensorMPOCompression.transpose(Hl)
+    @test is_regular_form(Hu1)
+    @test check_ortho(Hu1,right)
+    
+  end
+
 end #Hamiltonians testset
 
 nothing
