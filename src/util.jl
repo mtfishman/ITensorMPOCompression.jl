@@ -143,6 +143,9 @@ function pprint(r::Index, W::ITensor, c::Index, eps::Float64=default_eps)
   return Base.print("\n")
 end
 
+pprint(Wrf::reg_form_Op)=pprint(Wrf.ileft,Wrf.W,Wrf.iright)
+
+
 @doc """
     pprint(H[,eps])
 

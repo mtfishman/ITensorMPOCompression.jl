@@ -70,7 +70,6 @@ function Base.show(io::IO, Wrf::reg_form_Op)
   return show(io, Wrf.W)
 end
 
-pprint(Wrf::reg_form_Op)=pprint(Wrf.ileft,Wrf.W,Wrf.iright)
 
 ITensors.order(Wrf::reg_form_Op) = order(Wrf.W)
 
@@ -220,7 +219,7 @@ function reg_form_MPO(H::MPO, eps::Float64=1e-14)
     throw(ErrorException("MPO++(H::MPO), H must be in either lower or upper regular form"))
   end
   if (bl && bu)
-    @pprint(H[1])
+    # @pprint(H[1])
     @assert false
   end
   ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
@@ -338,7 +337,7 @@ function reg_form_iMPO(H::InfiniteMPO, eps::Float64=1e-14)
     throw(ErrorException("MPO++(H::MPO), H must be in either lower or upper regular form"))
   end
   if (bl && bu)
-    @pprint(H[1])
+    # @pprint(H[1])
     @assert false
   end
   ul::reg_form = bl ? lower : upper #if both bl and bu are true then something is seriously wrong
