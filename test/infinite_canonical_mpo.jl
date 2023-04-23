@@ -49,37 +49,46 @@ function truncate(Hi::InfiniteMPO;kwargs...)::Tuple{InfiniteCanonicalMPO,bond_sp
     return InfiniteCanonicalMPO(HL,Ss,HR),ss
 end
 
-function check_ortho(H::InfiniteCanonicalMPO)::Bool
-    return check_ortho(H.AL,left) && check_ortho(H.AR,right)
-end
-function check_gauge(H::InfiniteCanonicalMPO)::Float64
-    eps2=0.0
-    for n in eachindex(H)
-        eps2+=norm(H.C[n - 1] * H.AR[n] - H.AL[n] * H.C[n])^2
-    end
-    return sqrt(eps2)
-end
+
 
 check_ortho(H::InfiniteMPO,lr::orth_type)=ITensorMPOCompression.check_ortho(reg_form_iMPO(H),lr)
 
-@testset "Create InfiniteCanonicalMPO from orthogonalize function" begin
+models = [
+    (Model"heisenbergNNN", "S=1/2"),
+    (Model"heisenbergNNN", "S=1"),
+    (Model"hubbardNNN", "Electron"),
+  ]
+
+@testset "Truncate/Compress InfiniteCanonicalMPO, H=$(model[1]), qbs=$qns, Ncell=$Ncell, NNN=$NNN" for model in models, qns in [false,true], Ncell in [1,2,3,4], NNN in [1,4,7]
+    eps=NNN*1e-14
     initstate(n) = isodd(n) ? "↑" : "↓"
-    Ncell,site,model,qns,NNN=2,"Electron",Model"hubbardNNN"(),false,4
-    model_kwargs = (NNN=NNN,)
-    s = infsiteinds(site, Ncell; initstate, conserve_qns=qns)
-    Hi = InfiniteMPO(model, s; model_kwargs...)
+    s = infsiteinds(model[2], Ncell; initstate, conserve_qns=qns)
+    Hi = InfiniteMPO(model[1](), s;NNN=NNN)
 
     Ho::InfiniteCanonicalMPO = orthogonalize(Hi) #Use default cutoff, C is non-diagonal
     @test check_ortho(Ho) #AL is left ortho && AR is right ortho
-    @test check_gauge(Ho) ≈ 0.0 atol = 1e-14 #ensure C[n - 1] * AR[n] - AL[n] * C[n]
+    @test check_gauge(Ho) ≈ 0.0 atol = eps #ensure C[n - 1] * AR[n] - AL[n] * C[n]
 
     Ht,BondSpectrums = truncate(Hi) #Use default cutoff,C is now diagonal
     @test check_ortho(Ht) #AL is left ortho && AR is right ortho
-    @test check_gauge(Ht) ≈ 0.0 atol = 1e-14 #ensure C[n - 1] * AR[n] - AL[n] * C[n]
-    @show BondSpectrums
+    @test check_gauge(Ht) ≈ 0.0 atol = eps #ensure C[n - 1] * AR[n] - AL[n] * C[n]
+    #@show BondSpectrums
 end
 
+@testset "Try a lattice with alternating S=1/2 and S=1 sites. iMPO. Qns=$qns, Ncell=$Ncell, NNN=$NNN" for qns in [false,true], Ncell in [1,2,3,4], NNN in [1,4,7]
+    eps=NNN*1e-14
+    initstate(n) = isodd(n) ? "Dn" : "Up"
+    si = infsiteinds(n->isodd(n) ? "S=1" : "S=1/2",Ncell; initstate, conserve_qns=qns)
+    Hi = InfiniteMPO(Model"heisenbergNNN"(), si;NNN=NNN)
 
+    Ho::InfiniteCanonicalMPO = orthogonalize(Hi) #Use default cutoff, C is non-diagonal
+    @test check_ortho(Ho) #AL is left ortho && AR is right ortho
+    @test check_gauge(Ho) ≈ 0.0 atol = eps #ensure C[n - 1] * AR[n] - AL[n] * C[n]
 
+    Ht,BondSpectrums = truncate(Hi) #Use default cutoff,C is now diagonal
+    @test check_ortho(Ht) #AL is left ortho && AR is right ortho
+    @test check_gauge(Ht) ≈ 0.0 atol = eps #ensure C[n - 1] * AR[n] - AL[n] * C[n]
+    #@show BondSpectrums
+end
 
-#end
+nothing

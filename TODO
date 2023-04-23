@@ -55,8 +55,6 @@ Improvements:
   W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
   at the NDTensors level.
 -Organize exports and imports.
--Subtensor check flux of inserted blocks.
--Subtensor cleanup.
 -subtensor  support W[il,ir]=op ?
 -better name for pbc? inf open_chain, boundary_conditions
 -Consider default rr_cutoff=1e-14?
@@ -79,7 +77,12 @@ Improvements:
   Strip out lots of code.
   After InfiniteCanonicalMPO implementation
 -WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
--Start using 
+-One last cleanup: impo truncate
+-Subtensor check flux of inserted blocks.
+-Subtensor cleanup.
+
+
+Done: -Start using 
     struct InfiniteCanonicalMPO <: AbstractInfiniteMPS
       AL::InfiniteMPO
       C::InfiniteMPO
