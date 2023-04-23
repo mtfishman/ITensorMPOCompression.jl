@@ -14,12 +14,8 @@ Directly coded build up of a transverse Ising model Hamiltonian with up to `NNN`
 - `J::Float64=1.0` : Nearest neighbour interaction strength.  Further neighbours decay like `J/(i-j)`..
 
 """
-function make_transIsing_MPO(sites, NNN::Int64; kwargs...)::MPO
+function make_transIsing_MPO(sites, NNN::Int64;ul=lower,J=1.0,hx=0.0,pbc=false, kwargs...)::MPO
   N = length(sites)
-  ul::reg_form = get(kwargs, :ul, lower)
-  J::Float64 = get(kwargs, :J, 1.0)
-  hx::Float64 = get(kwargs, :hx, 0.0)
-  pbc::Bool = get(kwargs, :pbc, false)
   Dw::Int64 = transIsing_Dw(NNN)
   use_qn::Bool = hasqns(sites[1])
   mpo = MPO(N)
@@ -195,8 +191,7 @@ function add_ops(W1::ITensor, W2::ITensor)::ITensor
   return W
 end
 
-function daisychain_links!(H::MPO; kwargs...)
-  pbc::Bool = get(kwargs, :pbc, false)
+function daisychain_links!(H::MPO; pbc=false)
   N = length(H)
   for n in 2:N
     if pbc
@@ -240,8 +235,7 @@ function addW!(sites, H, W)
   end
 end
 
-function make_2body_MPO(sites, NNN::Int64; kwargs...)
-  pbc::Bool = get(kwargs, :pbc, false)
+function make_2body_MPO(sites, NNN::Int64; pbc=false, Jprime=1.0, presummed=true, kwargs...)
   N = length(sites)
   H = MPO(N)
   if pbc
@@ -257,8 +251,8 @@ function make_2body_MPO(sites, NNN::Int64; kwargs...)
   end
 
   W = H[1]
-  if get(kwargs, :Jprime, 1.0) != 0.0
-    if get(kwargs, :presummed, true)
+  if Jprime != 0.0
+    if presummed
       W = add_ops(W, make_2body_sum(sites[1], l, r, NNN, ul; kwargs...))
     else
       for n in 1:NNN
@@ -271,8 +265,7 @@ function make_2body_MPO(sites, NNN::Int64; kwargs...)
   return H
 end
 
-function make_3body_MPO(sites, NNN::Int64; kwargs...)
-  pbc::Bool = get(kwargs, :pbc, false)
+function make_3body_MPO(sites, NNN::Int64; pbc=false, Jprime=1.0, presummed=true, J=1.0,  kwargs...)
   N = length(sites)
   H = MPO(N)
   if pbc
@@ -288,8 +281,8 @@ function make_3body_MPO(sites, NNN::Int64; kwargs...)
   end
 
   W = H[1]
-  if get(kwargs, :Jprime, 1.0) != 0.0
-    if get(kwargs, :presummed, true)
+  if Jprime != 0.0
+    if presummed
       W = add_ops(W, make_2body_sum(sites[1], l, r, NNN, ul; kwargs...))
     else
       for m in 1:NNN
@@ -298,7 +291,7 @@ function make_3body_MPO(sites, NNN::Int64; kwargs...)
     end
   end
 
-  if get(kwargs, :J, 1.0) != 0.0
+  if J != 0.0
     for n in 2:NNN
       for m in (n + 1):NNN
         W = add_ops(W, make_3body_op(sites[1], l, r, n, m, ul; kwargs...))
@@ -306,7 +299,7 @@ function make_3body_MPO(sites, NNN::Int64; kwargs...)
     end
   end
   addW!(sites, H, W)
-  daisychain_links!(H; kwargs...)
+  daisychain_links!(H; pbc=pbc)
   H.llim,H.rlim=-1,1
 
   return H
@@ -315,8 +308,7 @@ end
 #
 #  d-block = Hx*Sx
 #
-function make_1body_op(site::Index, r1::Index, c1::Index, ul::reg_form; kwargs...)::ITensor
-  hx::Float64 = get(kwargs, :hx, 0.0)
+function make_1body_op(site::Index, r1::Index, c1::Index, ul::reg_form; hx=0.0,  kwargs...)::ITensor
   Dw::Int64 = 2
   #d,n,space=parse_site(site)
   #use_qn=hasqns(site)
@@ -336,10 +328,9 @@ end
 #  J_1n * Z_1*Z_n
 #
 function make_2body_op(
-  site::Index, r1::Index, c1::Index, n::Int64, ul::reg_form; kwargs...
+  site::Index, r1::Index, c1::Index, n::Int64, ul::reg_form; Jprime=1.0, kwargs...
 )::ITensor
   @mpoc_assert n >= 1
-  Jprime::Float64 = get(kwargs, :Jprime, 1.0)
   Dw::Int64 = 2 + n
   #d,n,space=parse_site(site)
   #use_qn=hasqns(site)
@@ -369,10 +360,9 @@ function make_2body_op(
 end
 
 function make_2body_sum(
-  site::Index, r1::Index, c1::Index, NNN::Int64, ul::reg_form; kwargs...
+  site::Index, r1::Index, c1::Index, NNN::Int64, ul::reg_form;Jprime=1.0, kwargs...
 )::ITensor
   @mpoc_assert NNN >= 1
-  Jprime::Float64 = get(kwargs, :Jprime, 1.0)
   Dw::Int64 = 2 + NNN
   #d,n,space=parse_site(site)
   #use_qn=hasqns(site)
@@ -406,11 +396,10 @@ end
 #  J1n*Jnm * Z_1*Z_n*Z_m
 #
 function make_3body_op(
-  site::Index, r1::Index, c1::Index, n::Int64, m::Int64, ul::reg_form; kwargs...
+  site::Index, r1::Index, c1::Index, n::Int64, m::Int64, ul::reg_form; J=1.0, kwargs...
 )::ITensor
   @mpoc_assert n >= 1
   @mpoc_assert m > n
-  J::Float64 = get(kwargs, :J, 1.0)
   W = make_2body_op(site, r1, c1, m - 1, ul)
   #@pprint(W)
   r, c = inds(W; tags="Link")

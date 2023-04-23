@@ -51,7 +51,7 @@ end
 
 
 
-check_ortho(H::InfiniteMPO,lr::orth_type)=ITensorMPOCompression.check_ortho(reg_form_iMPO(H),lr)
+ITensorMPOCompression.check_ortho(H::InfiniteMPO,lr::orth_type)=ITensorMPOCompression.check_ortho(reg_form_iMPO(H),lr)
 
 models = [
     (Model"heisenbergNNN", "S=1/2"),

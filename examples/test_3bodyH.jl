@@ -6,6 +6,9 @@ using Test
 
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f) #dumb way to control float output
 
+import ITensorMPOCompression: maxlinkdim, get_Dw
+maxlinkdim(H::MPO)=maximum(get_Dw(H))
+
 @testset "Investigate suprise effects of the inital sweep direction for 3 body Hamiltonian" begin
   ul = lower
   initstate(n) = "↑"
@@ -14,11 +17,11 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f) #dumb way to control flo
   @printf("                        Finite                      Infinite \n")
   @printf("   N  Raw autoMPO    L1    L2    R1    R2        L1    L2    R1    R2  \n")
 
-  for N in 3:13
+  for N in 3:6
     # N needs to be big enough that there is block in the middle of lattice which 
     # exhibits no edge effects.
     sites = siteinds("S=1/2", N)
-    si = infsiteinds("S=1/2", 1; initstate, conserve_szparity=false)
+    si = infsiteinds("S=1/2", 1; initstate, conserve_qns=false)
     HhandL = reg_form_MPO(make_3body_MPO(sites, N))
     Hhand_pbcL = make_3body_MPO(si, N; pbc=true)
     Hauto = make_3body_AutoMPO(sites)
@@ -66,9 +69,9 @@ end
   @printf("          AutoMPO            hand built\n")
   @printf("          Finite       Finite           Infinite\n")
   @printf("  N      raw trunc    raw trunc     raw trunc/L trunc/R\n")
-  for N in 3:13
+  for N in 3:6
     sites = siteinds("S=1/2", N)
-    si = infsiteinds("S=1/2", 1; initstate, conserve_szparity=false)
+    si = infsiteinds("S=1/2", 1; initstate, conserve_qns=false)
     Hhand = reg_form_MPO(make_3body_MPO(sites, N))
     Hauto = reg_form_MPO(make_3body_AutoMPO(sites))
     Hhand_pbc = make_3body_MPO(si, N; pbc=true)

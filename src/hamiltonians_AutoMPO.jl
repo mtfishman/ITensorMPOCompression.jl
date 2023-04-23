@@ -10,9 +10,7 @@ The MPO is returned in lower regular form.
 # Keywords
 - `hx::Float64 = 0.0` : External magnetic field in `x` direction.
 """
-function make_3body_AutoMPO(sites; kwargs...)
-  hx::Float64 = get(kwargs, :hx, 0.0)
-
+function make_3body_AutoMPO(sites;hx=0.0, kwargs...)
   N = length(sites)
   os = OpSum()
   if hx != 0
@@ -30,8 +28,7 @@ function make_1body(os::OpSum, N::Int64, hx::Float64=0.0)::OpSum
   return os
 end
 
-function make_2body(os::OpSum, N::Int64; kwargs...)::OpSum
-  Jprime::Float64 = get(kwargs, :Jprime, 1.0)
+function make_2body(os::OpSum, N::Int64;Jprime=1.0, kwargs...)::OpSum
   if Jprime != 0.0
     for n in 1:N
       for m in (n + 1):N
@@ -47,8 +44,7 @@ function make_2body(os::OpSum, N::Int64; kwargs...)::OpSum
   return os
 end
 
-function make_3body(os::OpSum, N::Int64; kwargs...)::OpSum
-  J::Float64 = get(kwargs, :J, 1.0)
+function make_3body(os::OpSum, N::Int64; J=1.0, kwargs...)::OpSum
   if J != 0.0
     for k in 1:N
       for n in (k + 1):N
@@ -82,11 +78,8 @@ The MPO is returned in lower regular form.
 - `J::Float64 = 1.0` : Nearest neighbour interaction strength. Further neighbours decay like `J/(i-j)`..
 
 """
-function make_transIsing_AutoMPO(sites, NNN::Int64; kwargs...)::MPO
-  ul::reg_form = get(kwargs, :ul, lower)
-  J::Float64 = get(kwargs, :J, 1.0)
-  hx::Float64 = get(kwargs, :hx, 0.0)
-
+function make_transIsing_AutoMPO(sites, NNN::Int64; ul=lower, J=1.0, hx=0.0, kwargs...)::MPO
+ 
   do_field = hx != 0.0
   N = length(sites)
   ampo = OpSum()
@@ -128,12 +121,10 @@ The MPO is returned in lower regular form.
 
 """
 
-function make_Heisenberg_AutoMPO(sites, NNN::Int64; kwargs...)::MPO
-  ul::reg_form = get(kwargs, :ul, lower)
-  hz::Float64 = get(kwargs, :hz, 0.0)
-  J::Float64 = get(kwargs, :J, 1.0)
+function make_Heisenberg_AutoMPO(sites, NNN::Int64;ul=lower,hz=0.0,J=1.0, kwargs...)::MPO
   N = length(sites)
   @mpoc_assert(N >= NNN)
+  @mpoc_assert(J!=0.0)
   ampo = OpSum()
   for j in 1:N
     add!(ampo, hz, "Sz", j)
@@ -153,11 +144,7 @@ function make_Heisenberg_AutoMPO(sites, NNN::Int64; kwargs...)::MPO
   return H
 end
 
-function make_Hubbard_AutoMPO(sites, NNN::Int64; kwargs...)::MPO
-  ul::reg_form = get(kwargs, :ul, lower)
-  U::Float64 = get(kwargs, :U, 1.0)
-  t::Float64 = get(kwargs, :t, 1.0)
-  V::Float64 = get(kwargs, :V, 0.5)
+function make_Hubbard_AutoMPO(sites, NNN::Int64; ul=lower, U=1.0,t=1.0,V=0.5, kwargs...)::MPO
   N = length(sites)
   @mpoc_assert(N >= NNN)
   os = OpSum()
