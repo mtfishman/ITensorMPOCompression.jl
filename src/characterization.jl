@@ -255,6 +255,18 @@ function is_regular_form(H::AbstractMPS, ul::reg_form, eps::Float64=default_eps)
   return true
 end
 
+function is_regular_form(H::AbstractInfiniteMPS, ul::reg_form, eps::Float64=default_eps)::Bool
+  il = dag(linkind(H, 0))
+  for n in 1:length(H)
+    ir = linkind(H, n)
+    #@show il ir inds(H[n])
+    Wrf = reg_form_Op(H[n], il, ir, ul)
+    !is_regular_form(Wrf, eps) && return false
+    il = dag(ir)
+  end
+  return true
+end
+
 function detect_regular_form(H::AbstractMPS, eps::Float64=default_eps)::Tuple{Bool,Bool}
   return is_regular_form(H, lower, eps), is_regular_form(H, upper, eps)
 end
