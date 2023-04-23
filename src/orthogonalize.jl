@@ -74,18 +74,18 @@ true
 ```
 
 """
-function ac_orthogonalize!(H::reg_form_MPO, lr::orth_type; eps::Float64=1e-14, kwargs...)
-  gauge_fix!(H)
+function ac_orthogonalize!(H::reg_form_MPO, lr::orth_type; kwargs...)
+  gauge_fix!(H;kwargs...)
   rng = sweep(H, lr)
   for n in rng
     nn = n + rng.step
-    H[n], R, iqp = ac_qx(H[n], lr)
+    H[n], R, iqp = ac_qx(H[n], lr;kwargs...)
     H[nn] *= R
     check(H[n])
     check(H[nn])
   end
   H.rlim = rng.stop + rng.step + 1
-  return H.llim = rng.stop + rng.step - 1
+  H.llim = rng.stop + rng.step - 1
 end
 
 function ac_orthogonalize!(H::MPO, lr::orth_type; kwargs...)

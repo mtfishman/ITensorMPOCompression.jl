@@ -27,8 +27,8 @@ function is_gauge_fixed(Hrf::AbstractMPS, eps::Float64; kwargs...)::Bool
   return true
 end
 
-function gauge_fix!(H::reg_form_MPO)
-  if !is_gauge_fixed(H, 1e-14)
+function gauge_fix!(H::reg_form_MPO;eps=1e-14,kwargs...)
+  if !is_gauge_fixed(H, eps)
     tₙ = Vector{Float64}(undef, 1)
     for W in H
       tₙ = gauge_fix!(W, tₙ, left)
@@ -93,13 +93,13 @@ end
 #
 #  Infinite lattice with unit cell
 #
-function gauge_fix!(Hin::reg_form_iMPO)
+function gauge_fix!(Hin::reg_form_iMPO;eps=1e-14)
   if Hin.ul==upper
     H=ITensorMPOCompression.transpose(Hin)
   else
     H=Hin
   end
-  if !is_gauge_fixed(H, 1e-14)
+  if !is_gauge_fixed(H, eps)
     sₙ, tₙ = Solve_b0c0(H)
     for n in eachindex(H)
       gauge_fix!(H[n], sₙ[n - 1], sₙ[n], tₙ[n - 1], tₙ[n])
