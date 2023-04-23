@@ -9,7 +9,10 @@ function InfiniteCanonicalMPO(HL::reg_form_iMPO,C::CelledVector{ITensor},HR::reg
     return InfiniteCanonicalMPO(InfiniteMPO(HL),InfiniteMPO(C),InfiniteMPO(HR))
 end
 
-length(H::InfiniteCanonicalMPO)=length(H.C)
+Base.length(H::InfiniteCanonicalMPO)=length(H.C)
+ITensors.data(H::InfiniteCanonicalMPO)=H.AL
+ITensorInfiniteMPS.isreversed(::InfiniteCanonicalMPO)=false
+Base.getindex(H::InfiniteCanonicalMPO, n::Int64)=getindex(H.AL,n)
 
 function check_ortho(H::InfiniteCanonicalMPO)::Bool
     return check_ortho(H.AL,left) && check_ortho(H.AR,right)
