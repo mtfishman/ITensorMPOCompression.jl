@@ -155,6 +155,21 @@ function ITensors.replacetags(Wrf::reg_form_Op, tsold, tsnew)
   return Wrf
 end
 
+function ITensors.replaceind(Wrf::reg_form_Op, iold::Index, inew::Index)
+  W= replaceind(Wrf.W, iold, inew)
+  if Wrf.ileft==iold
+    ileft=inew
+    iright=Wrf.iright
+  elseif Wrf.iright==iold
+    ileft=Wrf.ileft
+    iright=inew
+  else
+    @assert false
+  end
+  return reg_form_Op(W,ileft,iright,Wrf.ul)
+end
+
+
 #-----------------------------------------------------------------------
 #
 #  Finite lattice with open BCs
