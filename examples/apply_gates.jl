@@ -2,42 +2,58 @@
 using ITensors
 using ITensorMPOCompression
 using Printf
-Base.show(io::IO, f::Float64) = @printf(io, "%1.7f", f)
-import ITensorMPOCompression: set_𝐀̂𝐜̂_block, insert_Q
-N = 5
+Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
+import ITensorMPOCompression: insert_Q, reg_form_Op
+
+function two_site_gate(s,n::Int64)
+  U = ITensors.randomU(Float64, s[n], s[n+1])
+  U = prime(U; plev=1)
+  Udag = dag(prime(U))
+  return U,Udag
+end
+
+function apply(U::ITensor,WL::reg_form_Op,WR::reg_form_Op,Udag::ITensor)
+  WbL=extract_blocks(WL,left;Ac=true)
+  WbR=extract_blocks(WR,right;Ac=true)
+  WbR.𝐀̂𝐜̂=replaceind(WbR.𝐀̂𝐜̂,WbR.irAc,WbL.icAc)
+  #@show inds(WbL.𝐀̂𝐜̂) inds(WbR.𝐀̂𝐜̂)
+  Phi = prime(((WbL.𝐀̂𝐜̂ * WbR.𝐀̂𝐜̂) * U) * Udag, -2; tags="Site")
+  #@show inds(Phi)
+  @assert order(Phi)==6
+  is=siteinds(WL)
+  U, ss, V, spec, iu, iv = svd(Phi, WbL.irAc, is...; utags=tags(WL.iright),vtags=tags(WR.ileft), cutoff=1e-15)
+  WL⎖,iqpl=insert_Q(WL,U,iu,left)
+  WR⎖,iqpr=insert_Q(WR,ss*V,iv,right)
+  WR⎖=replaceind(WR⎖,iqpr,iqpl)
+  check(WL⎖)
+  check(WR⎖)
+  
+  @assert is_regular_form(WL⎖)
+  @assert is_regular_form(WR⎖)
+  return WL⎖,WR⎖
+end
+
+function gate_sweep!(H::reg_form_MPO)
+  N=length(H)
+  for n in 1:N-1
+    U,Udag=two_site_gate(s,n)
+    H[n],H[n+1]=apply(U,H[n],H[n+1],Udag)
+  end
+end
+
+N,NNN = 5,2
 s = siteinds("S=1/2", N)
-H = reg_form_MPO(make_Heisenberg_AutoMPO(s, 1))
-ac_orthogonalize!(H,3) #move the ortho center to site 2 row vector on site 1 for now
-#
-#  Manually move the ortho center to site 2 so we can deal link order 2 MPOs for now
-#
-#pprint(H)
+H = reg_form_MPO(make_Heisenberg_AutoMPO(s, NNN))
+@assert is_gauge_fixed(H)
+ac_orthogonalize!(H,right) 
+@assert is_gauge_fixed(H)
 
-Wb2=extract_blocks(H[2],left;Ac=true)
-Wb3=extract_blocks(H[3],right;Ac=true)
-Wb3.𝐀̂𝐜̂=replaceind(Wb3.𝐀̂𝐜̂,Wb3.irAc,Wb2.icAc)
-pprint(Wb2.𝐀̂𝐜̂)
-pprint(Wb3.𝐀̂𝐜̂)
-
-U = ITensors.randomU(Float64, s[2], s[3])
-U = prime(U; plev=1)
-Udag = dag(prime(U))
-Phi = prime(((Wb2.𝐀̂𝐜̂ * Wb3.𝐀̂𝐜̂) * U) * Udag, -2; tags="Site")
-@assert order(Phi)==6
-U, ss, V, spec, iu, iv = svd(Phi, Wb2.irAc, s[2], s[2]'; utags="Link,l=2",vtags="Link,l=2", cutoff=1e-15)
-@show spec
-d=dim(s[1])
-U*=sqrt(d)
-ss/=sqrt(d)
-
-H[2],iqp=insert_Q(H[2],U,iu,left)
-H[3],iqp=insert_Q(H[3],ss*V,iv,right)
-pprint(H[2])
-pprint(H[3])
-@assert is_regular_form(H[2])
-@assert is_regular_form(H[3])
-gauge_fix!(H)
-@assert check_ortho(H[2],left)
-#pprint(H)
+gate_sweep!(H)
+# U,Udag=two_site_gate(s,2)
+# H[2],H[3]=apply(U,H[2],H[3],Udag)
+# #@assert check_ortho(H[2],left)
+pprint(H)
+ac_orthogonalize!(H,right)
+pprint(H)
 
 nothing
