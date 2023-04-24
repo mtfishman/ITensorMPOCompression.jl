@@ -8,7 +8,7 @@ function vector_o2(T::ITensor)
   return vector(T * dag(onehot(i1 => 1)))
 end
 
-function is_gauge_fixed(Wrf::reg_form_Op, eps::Float64; b=true, c=true)::Bool where {T}
+function is_gauge_fixed(Wrf::reg_form_Op; eps=1e-14, b=true, c=true,  kwargs...)::Bool where {T}
   Wb = extract_blocks(Wrf, left; c=c, b=b)
   nr, nc = dims(Wrf)
   if b && nr > 1
@@ -20,15 +20,15 @@ function is_gauge_fixed(Wrf::reg_form_Op, eps::Float64; b=true, c=true)::Bool wh
   return true
 end
 
-function is_gauge_fixed(Hrf::AbstractMPS, eps::Float64; kwargs...)::Bool
+function is_gauge_fixed(Hrf::AbstractMPS; kwargs...)::Bool
   for W in Hrf
-    !is_gauge_fixed(W, eps; kwargs...) && return false
+    !is_gauge_fixed(W; kwargs...) && return false
   end
   return true
 end
 
-function gauge_fix!(H::reg_form_MPO;eps=1e-14,kwargs...)
-  if !is_gauge_fixed(H, eps)
+function gauge_fix!(H::reg_form_MPO;kwargs...)
+  if !is_gauge_fixed(H;kwargs)
     tₙ = Vector{Float64}(undef, 1)
     for W in H
       tₙ = gauge_fix!(W, tₙ, left)
