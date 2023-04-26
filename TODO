@@ -82,7 +82,10 @@ Done: -Follow Matts kwargs guidelines
 -Subtensor cleanup.
 -Make a separate ITensorsTestHamiltonians module
 -How to handle eps for is_gauge_fixed functions.
--Split up reg_form_Op, reg_form_MPO and reg_form_iMPO
+Done: -Split up reg_form_Op, reg_form_MPO and reg_form_iMPO
+-Change flip to mirror?
+-Fix max(spectrum)  Base.max
+-Add the two site BH model to models lists.
 
 
 Done: -Start using 

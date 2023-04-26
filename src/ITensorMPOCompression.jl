@@ -240,9 +240,10 @@ function redim(i::Index, Dw::Int64, offset::Int64=0)
   return Index(Dw; tags=tags(i), plev=plev(i)) #create new index.
 end
 
-
 include("subtensor.jl")
-include("reg_form.jl")
+include("reg_form_Op.jl")
+include("reg_form_MPO.jl")
+include("reg_form_iMPO.jl")
 include("util.jl")
 include("blocking.jl")
 include("gauge_fix.jl")
