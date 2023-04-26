@@ -51,7 +51,7 @@ verbose1 = false #verbose inside orth algos
     bs = truncate!(Hrf, lr)
     @test is_regular_form(Hrf)
     @test check_ortho(Hrf, lr)
-    @test is_gauge_fixed(Hrf, eps) #Now everything should be fixed, unless NNN is big
+    @test is_gauge_fixed(Hrf) #Now everything should be fixed, unless NNN is big
     #
     #  Expectation value check.
     #

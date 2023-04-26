@@ -31,10 +31,10 @@ models = [
   E0 = inner(psi', H, psi)
 
   @test is_regular_form(Hrf)
-  @test pre_fixed == is_gauge_fixed(Hrf, eps)
+  @test pre_fixed == is_gauge_fixed(Hrf; eps=eps)
   gauge_fix!(Hrf)
   @test is_regular_form(Hrf)
-  @test is_gauge_fixed(Hrf, eps)
+  @test is_gauge_fixed(Hrf; eps=eps)
   He = MPO(Hrf)
   E1 = inner(psi', He, psi)
   @test E0 ≈ E1 atol = eps
@@ -71,13 +71,13 @@ import ITensorMPOCompression: check, extract_blocks, A0, b0, c0, vector_o2, MPO
   # Hsum0=InfiniteSum{MPO}(InfiniteMPO(Hrf),NNN)
   # E0=expect(ψ,Hsum0)
 
-  @test pre_fixed == is_gauge_fixed(Hrf, eps)
+  @test pre_fixed == is_gauge_fixed(Hrf; eps=eps)
   @test is_regular_form(Hrf)
   gauge_fix!(Hrf)
   Wb = extract_blocks(Hrf[1], left; all=true)
   @test norm(b0(Wb)) < eps
   @test norm(c0(Wb)) < eps
-  @test is_gauge_fixed(Hrf, eps)
+  @test is_gauge_fixed(Hrf; eps=eps)
   @test is_regular_form(Hrf)
 
   # Hsum1=InfiniteSum{MPO}(InfiniteMPO(Hrf),NNN)

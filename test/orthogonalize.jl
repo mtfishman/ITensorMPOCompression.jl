@@ -39,13 +39,13 @@ verbose1 = false #verbose inside orth algos
     #  Left->right sweep
     #
     lr = left
-    @test pre_fixed == is_gauge_fixed(Hrf, eps)
+    @test pre_fixed == is_gauge_fixed(Hrf)
     NNN >= 7 && ac_orthogonalize!(Hrf, right)
     ac_orthogonalize!(Hrf, left)
     @test is_regular_form(Hrf)
     @test check_ortho(Hrf, left)
     @test isortho(Hrf, left)
-    NNN < 7 && @test is_gauge_fixed(Hrf, eps) #Now everything should be fixed, unless NNN is big
+    NNN < 7 && @test is_gauge_fixed(Hrf) #Now everything should be fixed, unless NNN is big
     #
     #  Expectation value check.
     #
@@ -58,7 +58,7 @@ verbose1 = false #verbose inside orth algos
     @test is_regular_form(Hrf)
     @test check_ortho(Hrf, right)
     @test isortho(Hrf, right)
-    @test is_gauge_fixed(Hrf, eps) #Should still be gauge fixed
+    @test is_gauge_fixed(Hrf) #Should still be gauge fixed
     #
     # #  Expectation value check.
     # #
