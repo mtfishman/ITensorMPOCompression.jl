@@ -2315,8 +2315,8 @@ This form of
 \begin_inset Formula 
 \[
 \begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
-\hat{\boldsymbol{b}}^{\prime}+\boldsymbol{s}_{n}\hat{A} & \hat{A} & \boldsymbol{0}\\
-\hat{d}^{\prime}+\boldsymbol{s}_{n}\hat{\boldsymbol{c}}^{\prime} & \hat{\boldsymbol{c}}^{\prime}+\boldsymbol{t}_{n}\hat{\mathbb{I}} & \hat{\mathbb{I}}
+\hat{\boldsymbol{b}}^{\prime}+\hat{A}\boldsymbol{s}_{n} & \hat{A} & \boldsymbol{0}\\
+\hat{d}^{\prime}+\hat{\boldsymbol{c}}^{\prime}\boldsymbol{s}_{n} & \hat{\boldsymbol{c}}^{\prime}+\hat{\mathbb{I}}\boldsymbol{t}_{n} & \hat{\mathbb{I}}
 \end{bmatrix}=\begin{bmatrix}\hat{\mathbb{I}} & \boldsymbol{0} & 0\\
 \hat{\boldsymbol{b}}+\boldsymbol{s}_{n-1}\hat{\mathbb{I}} & \hat{A} & \boldsymbol{0}\\
 \hat{d}+\boldsymbol{t}_{n-1}\hat{\boldsymbol{b}} & \hat{\boldsymbol{c}}+\boldsymbol{t}_{n-1}\hat{A} & \hat{\mathbb{I}}
@@ -2328,7 +2328,7 @@ This form of
 from which we can read off the relations
 \begin_inset Formula 
 \[
-\hat{\boldsymbol{b}}^{\prime}=\hat{\boldsymbol{b}}+\boldsymbol{s}_{n-1}\hat{\mathbb{I}}-\boldsymbol{s}_{n}\hat{A}
+\hat{\boldsymbol{b}}^{\prime}=\hat{\boldsymbol{b}}+\boldsymbol{s}_{n-1}\hat{\mathbb{I}}-\hat{A}\boldsymbol{s}_{n}
 \]
 
 \end_inset
@@ -2336,7 +2336,7 @@ from which we can read off the relations
 
 \begin_inset Formula 
 \[
-\hat{\boldsymbol{c}}^{\prime}=\boldsymbol{t}_{n-1}\hat{A}+\hat{\boldsymbol{c}}-\boldsymbol{t}_{n}\hat{\mathbb{I}}.
+\hat{\boldsymbol{c}}^{\prime}=\hat{\boldsymbol{c}}-\hat{\mathbb{I}}\boldsymbol{t}_{n}+\boldsymbol{t}_{n-1}\hat{A}
 \]
 
 \end_inset
@@ -2347,7 +2347,75 @@ from which we can read off the relations
 \begin_layout Standard
 \begin_inset Formula 
 \[
-\hat{d}^{\prime}=\hat{d}+\boldsymbol{t}_{n-1}\hat{\boldsymbol{b}}-\boldsymbol{s}_{n}\hat{\boldsymbol{c}}^{\prime}
+\hat{d}^{\prime}=\hat{d}+\boldsymbol{t}_{n-1}\hat{\boldsymbol{b}}-\hat{\boldsymbol{c}}^{\prime}\boldsymbol{s}_{n}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Upper
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{bmatrix}\hat{\mathbb{I}} & \hat{\boldsymbol{b}}^{\prime} & \hat{d}^{\prime}\\
+\boldsymbol{0} & \hat{A} & \hat{\boldsymbol{c}}^{\prime}\\
+0 & \boldsymbol{0} & \hat{\mathbb{I}}
+\end{bmatrix}\begin{bmatrix}1 & \boldsymbol{\boldsymbol{s}_{n}} & 0\\
+\boldsymbol{0} & \mathbb{I} & \boldsymbol{t}_{n}\\
+0 & \boldsymbol{0} & 1
+\end{bmatrix}=\begin{bmatrix}1 & \boldsymbol{\boldsymbol{s}_{n-1}} & 0\\
+\boldsymbol{0} & \mathbb{I} & \boldsymbol{\boldsymbol{t}_{n-1}}\\
+0 & \boldsymbol{0} & 1
+\end{bmatrix}\begin{bmatrix}\hat{\mathbb{I}} & \hat{\boldsymbol{b}} & \hat{d}\\
+\boldsymbol{0} & \hat{A} & \hat{\boldsymbol{c}}\\
+0 & \boldsymbol{0} & \hat{\mathbb{I}}
+\end{bmatrix}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\begin{bmatrix}\hat{\mathbb{I}} & \hat{\boldsymbol{b}}^{\prime}+\hat{\mathbb{I}}\boldsymbol{\boldsymbol{s}_{n}} & \hat{d}^{\prime}+\hat{\boldsymbol{b}}^{\prime}\boldsymbol{t}_{n}\\
+\boldsymbol{0} & \hat{A} & \hat{\boldsymbol{c}}^{\prime}+\hat{A}\boldsymbol{t}_{n}\\
+0 & \boldsymbol{0} & \hat{\mathbb{I}}
+\end{bmatrix}=\begin{bmatrix}\hat{\mathbb{I}} & \hat{\boldsymbol{b}}+\boldsymbol{\boldsymbol{s}_{n-1}}\hat{A} & \hat{d}+\boldsymbol{\boldsymbol{s}_{n-1}}\hat{\boldsymbol{c}}\\
+\boldsymbol{0} & \hat{A} & \hat{\boldsymbol{c}}+\boldsymbol{t}_{n-1}\hat{\mathbb{I}}\\
+0 & \boldsymbol{0} & \hat{\mathbb{I}}
+\end{bmatrix}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\hat{\boldsymbol{b}}^{\prime}=\hat{\boldsymbol{b}}+\boldsymbol{\boldsymbol{s}_{n-1}}\hat{A}-\hat{\mathbb{I}}\boldsymbol{\boldsymbol{s}_{n}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\hat{\boldsymbol{c}}^{\prime}=\hat{\boldsymbol{c}}+\boldsymbol{t}_{n-1}\hat{\mathbb{I}}-\hat{A}\boldsymbol{t}_{n}
+\]
+
+\end_inset
+
+
+\begin_inset Formula 
+\[
+\hat{d}^{\prime}=\hat{d}+\boldsymbol{\boldsymbol{s}_{n-1}}\hat{\boldsymbol{c}}-\hat{\boldsymbol{b}}^{\prime}\boldsymbol{t}_{n}
 \]
 
 \end_inset
