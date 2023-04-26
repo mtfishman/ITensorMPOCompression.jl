@@ -49,8 +49,8 @@ function ITensorInfiniteMPS.translatecell(
   Base.setindex!(H::reg_form_iMPO, W::reg_form_Op, n::Integer) = setindex!(H.data, W, n)
   Base.copy(H::reg_form_iMPO) = reg_form_iMPO(copy(H.data), H.llim, H.rlim, H.reverse, H.ul)
   
-  function reg_form_iMPO(H::InfiniteMPO, eps::Float64=1e-14)
-    (bl, bu) = detect_regular_form(H, eps)
+  function reg_form_iMPO(H::InfiniteMPO;kwargs...)
+    (bl, bu) = detect_regular_form(H;kwargs...)
     if !(bl || bu)
       throw(ErrorException("MPO++(H::MPO), H must be in either lower or upper regular form"))
     end
@@ -102,16 +102,16 @@ function ITensorInfiniteMPS.translatecell(
   maxlinkdim(Hrf::reg_form_MPO)=maximum(get_Dw(Hrf))
   
   
-  function check_ortho(H::reg_form_iMPO, lr::orth_type, eps::Float64=default_eps)::Bool
+  function check_ortho(H::reg_form_iMPO, lr::orth_type;kwargs...)::Bool
     for n in sweep(H, lr) #skip the edge row/col opertors
-      !check_ortho(H[n], lr, eps) && return false
+      !check_ortho(H[n], lr;kwargs...) && return false
     end
     return true
   end
   
-  function is_regular_form(H::reg_form_iMPO, eps::Float64=default_eps)::Bool
+  function is_regular_form(H::reg_form_iMPO;kwargs...)::Bool
     for W in H
-      !is_regular_form(W, eps) && return false
+      !is_regular_form(W;kwargs...) && return false
     end
     return true
   end

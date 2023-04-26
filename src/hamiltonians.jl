@@ -430,7 +430,7 @@ function to_openbc(mpo::MPO)::MPO
 end
 
 function get_lr(mpo::MPO)::Tuple{ITensor,ITensor}
-  ul::reg_form = is_regular_form(mpo, lower, 1e-14) ? lower : upper
+  ul::reg_form = is_regular_form(mpo, lower) ? lower : upper
 
   N = length(mpo)
   W1 = mpo[1]

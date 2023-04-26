@@ -56,8 +56,8 @@ mutable struct reg_form_MPO <: AbstractMPS
     return ils, irs, d0, dN
   end
   
-  function reg_form_MPO(H::MPO, eps::Float64=1e-14)
-    (bl, bu) = detect_regular_form(H, eps)
+  function reg_form_MPO(H::MPO;kwargs...)
+    (bl, bu) = detect_regular_form(H;kwargs...)
     if !(bl || bu)
       throw(ErrorException("MPO++(H::MPO), H must be in either lower or upper regular form"))
     end
@@ -96,16 +96,16 @@ mutable struct reg_form_MPO <: AbstractMPS
     return get_Dw(MPO(H))
   end
   
-  function is_regular_form(H::reg_form_MPO, eps::Float64=default_eps)::Bool
+  function is_regular_form(H::reg_form_MPO;kwargs...)::Bool
     for W in H
-      !is_regular_form(W, eps) && return false
+      !is_regular_form(W;kwargs...) && return false
     end
     return true
   end
   
-  function check_ortho(H::reg_form_MPO, lr::orth_type, eps::Float64=default_eps)::Bool
+  function check_ortho(H::reg_form_MPO, lr::orth_type;kwargs...)::Bool
     for n in sweep(H, lr) #skip the edge row/col opertors
-      !check_ortho(H[n], lr, eps) && return false
+      !check_ortho(H[n], lr;kwargs...) && return false
     end
     return true
   end

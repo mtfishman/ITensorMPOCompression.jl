@@ -104,7 +104,7 @@ verbose1 = false #verbose inside orth algos
     @test isortho(HL, left)
     @test isortho(HR, right)
     @test check_ortho(HL, left)
-    @test check_ortho(HR, right, 1e-12)
+    @test check_ortho(HR, right)
     #
     #  Now test guage relations using the diagonal singular value matrices
     #  as the gauge transforms.

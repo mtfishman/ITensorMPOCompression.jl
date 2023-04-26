@@ -36,7 +36,7 @@ models = [
     W = H[n]
     @test is_regular_form(W)
     W1, X, lq = ac_qx(W, lr; cutoff=1e-14)
-    @test pre_fixed == check_ortho(W1, lr, eps)
+    @test pre_fixed == check_ortho(W1, lr;eps=eps)
   end
 end
 
