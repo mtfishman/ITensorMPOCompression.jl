@@ -4,7 +4,7 @@ using ITensors
 using ITensors.NDTensors
 using ITensorInfiniteMPS
 
-import ITensors: QNIndex, addqns, rq, AbstractMPS, isortho, orthocenter, Indices, linkind
+import ITensors: QNIndex, addqns, rq, AbstractMPS, isortho, orthocenter, Indices, linkind, data
 import ITensors.BlockSparseTensor,
   ITensors.DenseTensor, ITensors.DiagTensor, ITensors.tensor
 
@@ -50,7 +50,7 @@ export IndexRange, indices, range, ranges, getperm, permute, start
 #  New ac_qx
 #
 export reg_form_MPO, extract_blocks, is_gauge_fixed, gauge_fix!, ac_qx, ac_orthogonalize!
-export reg_form_iMPO, transpose, check, check_ortho, check_gauge
+export reg_form_iMPO, transpose, check, check_ortho, check_gauge, data
 export InfiniteCanonicalMPO
 
 macro mpoc_assert(ex)

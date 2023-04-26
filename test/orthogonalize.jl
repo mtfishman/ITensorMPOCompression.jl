@@ -108,7 +108,6 @@ verbose1 = false #verbose inside orth algos
     GL = ac_orthogonalize!(HL, left; verbose=verbose1)
     DwL = Base.max(get_Dw(HL)...)
     @test is_regular_form(HL)
-    @test isortho(HL, left)
     @test check_ortho(HL, left) #expensive does V_dagger*V=Id
     for n in 1:N
       @test norm(HL[n].W * GL[n] - GL[n - 1] * H0[n].W) ≈ 0.0 atol = eps
@@ -118,7 +117,6 @@ verbose1 = false #verbose inside orth algos
     GR = ac_orthogonalize!(HR, right; verbose=verbose1)
     DwR = Base.max(get_Dw(HR)...)
     @test is_regular_form(HR)
-    @test isortho(HR, right)
     @test check_ortho(HR, right) #expensive does V_dagger*V=Id
     for n in 1:N
       @test norm(GR[n - 1] * HR[n].W - H0[n].W * GR[n]) ≈ 0.0 atol = eps
@@ -127,7 +125,6 @@ verbose1 = false #verbose inside orth algos
     G = ac_orthogonalize!(HR1, right; verbose=verbose1)
     DwLR = Base.max(get_Dw(HR1)...)
     @test is_regular_form(HR1)
-    @test isortho(HR1, right)
     @test check_ortho(HR1, right) #expensive does V_dagger*V=Id
     for n in 1:N
       # D1=G[n-1]*HR1[n].W

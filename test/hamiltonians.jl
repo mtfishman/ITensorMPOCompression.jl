@@ -233,11 +233,16 @@ end
   @testset "Convert upper MPO to lower, H=$(model[1]), qns=$qns" for model in models, qns in [false,true]
     N,NNN=5,2
     sites = siteinds(model[2], N; conserve_qns=qns)
-    Hu = reg_form_MPO(model[1](sites, NNN;ul=upper))
-    Hl = ITensorMPOCompression.transpose(Hu)
+    Hu = reg_form_MPO(model[1](sites, NNN;ul=upper);honour_upper=true)
     @test is_regular_form(Hu)
+    @test Hu.ul==upper
     
+    Hl = ITensorMPOCompression.transpose(Hu)
+    @test Hu.ul==upper
+    @test is_regular_form(Hu)
+    @test Hl.ul==lower
     @test is_regular_form(Hl)
+
     @test !check_ortho(Hu,left)
     @test !check_ortho(Hl,left)
     @test !check_ortho(Hu,right)
@@ -248,10 +253,17 @@ end
 
     ac_orthogonalize!(Hl,left)
 
+    @test Hu.ul==upper
+    @test is_regular_form(Hu)
+    @test Hl.ul==lower
+    @test is_regular_form(Hl)
+
     @test check_ortho(Hl,left)
-    @test !check_ortho(Hu,left)
+    @test !check_ortho(Hu,left) 
+    @test !check_ortho(Hu,right) 
     Hu1=ITensorMPOCompression.transpose(Hl)
-    @test check_ortho(Hu1,right)
+    #@test check_ortho(Hu1,right)
+    @test check_ortho(Hu1,left)
     Hl1=MPO(Hl)
     @test order(Hl1[1])==3
     @test order(Hl1[N])==3
@@ -269,24 +281,30 @@ end
   @testset "Convert upper iMPO to lower H=$(model[1]), qns=$qns" for model in models, qns in [false,true], N in [1,2,3,4], NNN in [1,4]
     initstate(n) = "↑"
     sites = infsiteinds(model[2], N; initstate, conserve_qns=false)
-    Hu = reg_form_iMPO(model[1](sites, NNN;ul=upper))
+    Hu = reg_form_iMPO(model[1](sites, NNN;ul=upper);honour_upper=true)
+    @test is_regular_form(Hu)
+    @test Hu.ul==upper
+
     Hl = ITensorMPOCompression.transpose(Hu)
     @test Hu.ul==upper
     @test is_regular_form(Hu)
     @test Hl.ul==lower
-    @test is_regular_form(Hl)
+    @test is_regular_form(Hl;verbose=true)
     @test !check_ortho(Hu,left)
     @test !check_ortho(Hl,left)
     @test !check_ortho(Hu,right)
     @test !check_ortho(Hl,right)
     
     ac_orthogonalize!(Hl,left)
-
+    @test Hl.ul==lower
+    @test is_regular_form(Hl;verbose=true)
     @test check_ortho(Hl,left)
     @test !check_ortho(Hu,left)
+    @test !check_ortho(Hu,right)
     Hu1=ITensorMPOCompression.transpose(Hl)
+    @test Hu1.ul==upper
     @test is_regular_form(Hu1)
-    @test check_ortho(Hu1,right)
+    @test check_ortho(Hu1,left;verbose=true)
     
   end
 

@@ -211,8 +211,6 @@ function ac_orthogonalize!(H::reg_form_iMPO, lr::orth_type; verbose=false, kwarg
     end
     loop = eta > 1e-13 && niter < max_iter
   end
-  H.rlim = rng.stop + 1
-  H.llim = rng.stop - 1
   return Gs
 end
 

@@ -192,10 +192,10 @@ function ITensors.truncate!(
   #
   # Now check if H requires orthogonalization
   #
-  if isortho(H, lr)
-    @warn "truncate!(iMPO), iMPO is already orthogonalized, but the truncate algorithm needs the gauge transform tensors." *
-      "running orthongonalie!() again to get the gauge tranforms."
-  end
+  # if isortho(H, lr)
+  #   @warn "truncate!(iMPO), iMPO is already orthogonalized, but the truncate algorithm needs the gauge transform tensors." *
+  #     "running orthongonalie!() again to get the gauge tranforms."
+  # end
   ac_orthogonalize!(H, mirror(lr); cutoff=rr_cutoff, kwargs...)
   Hm = copy(H)
   Gs = ac_orthogonalize!(H, lr; cutoff=rr_cutoff, kwargs...)

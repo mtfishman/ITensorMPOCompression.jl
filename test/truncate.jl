@@ -81,8 +81,6 @@ verbose1 = false #verbose inside orth algos
     eps = qns ? 1e-14 * NNN : 3e-14 * NNN #dense and larger NNN both get more roundoff noise.
     si = infsiteinds(site_type, N; initstate, conserve_qns=qns)
     H0 = reg_form_iMPO(model[1](si, NNN; ul=ul))
-    H0.llim = -1
-    H0.rlim = 1
     @test is_regular_form(H0)
     Dw0 = Base.max(get_Dw(H0)...)
     #
@@ -101,8 +99,6 @@ verbose1 = false #verbose inside orth algos
 
     DwL = Base.max(get_Dw(HL)...)
     @test is_regular_form(HL)
-    @test isortho(HL, left)
-    @test isortho(HR, right)
     @test check_ortho(HL, left)
     @test check_ortho(HR, right)
     #
@@ -131,8 +127,6 @@ verbose1 = false #verbose inside orth algos
     )
     DwR = Base.max(get_Dw(HR)...)
     @test is_regular_form(HR)
-    @test isortho(HL, left)
-    @test isortho(HR, right)
     @test check_ortho(HL, left)
     @test check_ortho(HR, right)
     for n in 1:N
