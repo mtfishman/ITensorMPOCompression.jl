@@ -8,7 +8,7 @@ function vector_o2(T::ITensor)
   return vector(T * dag(onehot(i1 => 1)))
 end
 
-function is_gauge_fixed(Wrf::reg_form_Op; eps=1e-14, b=true, c=true,  kwargs...)::Bool where {T}
+function is_gauge_fixed(Wrf::reg_form_Op; eps=1e-14, b=true, c=true,  kwargs...)::Bool
   Wb = extract_blocks(Wrf, left; c=c, b=b)
   nr, nc = dims(Wrf)
   if b && nr > 1
@@ -164,15 +164,14 @@ function Solve_b0c0(Hrf::reg_form_iMPO)
   # @show b0s c0s 
   # display(A0s[1])
   s = Ms \ b0s
-  t = Base.transpose(Base.transpose(Mt) \ c0s)
+  t = Array(Base.transpose(Base.transpose(Mt) \ c0s))
   @assert norm(Ms * s - b0s) < 1e-15 * n
   @assert norm(Base.transpose(t * Mt) - c0s) < 1e-15 * n
-
+  @assert size(t,1)==1 #t ends up as a 1xN matrix becuase of all the transposing.
+ 
   ss = map(n -> s[irb[n]:(irb[n] + nr - 1)], 1:N)
-  ts = map(n -> t[irb[n]:(irb[n] + nr - 1)], 1:N)
-  cvs = CelledVector(ss)
-  cvt = CelledVector(ts)
-  return cvs, cvt
+  ts = map(n -> t[1,irb[n]:(irb[n] + nr - 1)], 1:N)
+  return CelledVector(ss), CelledVector(ts)
 end
 
 function gauge_fix!(
