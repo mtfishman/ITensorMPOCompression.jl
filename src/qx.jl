@@ -109,7 +109,7 @@ function insert_Q(Ŵrf::reg_form_Op, Q̂::ITensor, iq::Index, lr::orth_type)
   return Ŵrf⎖, iq⎖
 end
 
-function ac_qx(Ŵrf::reg_form_Op, lr::orth_type; qprime=false, verbose=false, kwargs...)
+function ac_qx(Ŵrf::reg_form_Op, lr::orth_type; qprime=false, verbose=false, cutoff=1e-14, kwargs...)
   @checkflux(Ŵrf.W)
   Wb = extract_blocks(Ŵrf, lr; Ac=true)
   ilf_Ac = llur(Ŵrf, lr) ? Wb.icAc : Wb.irAc
@@ -118,12 +118,12 @@ function ac_qx(Ŵrf::reg_form_Op, lr::orth_type; qprime=false, verbose=false, kw
   if lr == left
     Qinds = noncommoninds(Wb.𝐀̂𝐜̂, ilf_Ac)
     Q̂, R, iq, p = qr(
-      Wb.𝐀̂𝐜̂, Qinds; verbose=verbose, positive=true, cutoff=1e-14, tags=tags(ilf)
+      Wb.𝐀̂𝐜̂, Qinds; verbose=verbose, positive=true, atol=cutoff, tags=tags(ilf)
     )
   else
     Rinds = ilf_Ac
     R, Q̂, iq, p = lq(
-      Wb.𝐀̂𝐜̂, Rinds; verbose=verbose, positive=true, cutoff=1e-14, tags=tags(ilf)
+      Wb.𝐀̂𝐜̂, Rinds; verbose=verbose, positive=true, atol=cutoff, tags=tags(ilf)
     )
   end
   @checkflux(Q̂)
