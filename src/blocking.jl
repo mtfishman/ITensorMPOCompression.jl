@@ -284,19 +284,19 @@ function build_R⎖(R::ITensor, iqx::Index, ilf::Index)::Tuple{ITensor,Index}
   return RL_prime, dag(im)
 end
 
-function my_similar(::DenseTensor{ElT,N}, inds...) where {ElT,N}
+function my_similar(::DenseTensor, inds...) 
   return ITensor(inds...)
 end
 
-function my_similar(::BlockSparseTensor{ElT,N}, inds...) where {ElT,N}
+function my_similar(::BlockSparseTensor, inds...)
   return ITensor(inds...)
 end
 
-function my_similar(::DiagTensor{ElT,N}, inds...) where {ElT,N}
+function my_similar(::DiagTensor, inds...) 
   return diagITensor(inds...)
 end
 
-function my_similar(::DiagBlockSparseTensor{ElT,N}, inds...) where {ElT,N}
+function my_similar(::DiagBlockSparseTensor, inds...) 
   return diagITensor(inds...)
 end
 

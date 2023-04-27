@@ -54,31 +54,35 @@ Improvements:
 -assign!() is still inefficient.  We need a way to do
   W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
   at the NDTensors level.
-Done -Organize exports and imports.
--subtensor  support W[il,ir]=op ?
 -better name for pbc? inf open_chain, boundary_conditions
-Done: -Consider default rr_cutoff=1e-14?
-Done: -Refactor out all the link fixing and PBC code for MPO making functions.
 -iMPO truncate fails with a trivial 2x2 hamiltonian.
 
 -Support Ncell>1 in InfinitSum{MPO}(InfiniteMPO)  constructor.
-Done: -Search for TODO items and get them on this list.
-Done: -System for hamitonians Hubbard_AutoiMPO => Hubbard_Auto_iMPO
 -Use an infinite=true flag for iMPOs?
--Clean up "where {Elt,N}" code.
--Eliminate use of tags for finding indices.  Use the network structure instead.  Pass list if indices
   in function calls.  Use linkinds, commoninds, uniqueinds.
 -Fix Index Tag conventions sections of the docs.
 -Fix emprical observations section of the tech notes.
 
 -Not Easy?: WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
 -One last cleanup: impo truncate
--Subtensor check flux of inserted blocks.
 -Subtensor cleanup.
+  Clean up "where {Elt,N}" code.
+  check flux of inserted blocks.
+  support W[il,ir]=op ?
+
+-Add the two site BH model to models lists.
+
+
+Done: -Organize exports and imports.
+Done: -Consider default rr_cutoff=1e-14?
+Done: -Refactor out all the link fixing and PBC code for MPO making functions.
+Done: -Search for TODO items and get them on this list.
+Done: -System for hamitonians Hubbard_AutoiMPO => Hubbard_Auto_iMPO
+Done: -Clean up "where {Elt,N}" code.
+Done: -Eliminate use of tags for finding indices.  Use the network structure instead.  Pass list if indices
 Done: -Move Hamiltonians into testing
 Done: -Change flip to mirror?
 Done: -Fix max(spectrum)  Base.max
--Add the two site BH model to models lists.
 Done: -Fix ITensorMPOCompression.transpose
 Done: -less use of parse_links.  
   Still need it in translatecell.
@@ -109,7 +113,7 @@ Done: -Start using
   -Follow Matts kwargs guidelines
 
 
-InfiniteCanonicalMPO Plan:
+Done: InfiniteCanonicalMPO Plan:
   -Write a usage case for orthgonalization:
     Hi = InfiniteMPO(model, s; model_kwargs...)
     Ho = orthogonalize!(Hi) returns InfiniteCanonicalMPO

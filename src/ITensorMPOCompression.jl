@@ -123,7 +123,7 @@ function assign!(W::ITensor, op::ITensor, ivs::IndexVal...)
   return assign!(W, tensor(op), ivs...)
 end
 
-function assign!(W::ITensor, op::DenseTensor{ElT,N}, ivs::IndexVal...) where {ElT,N}
+function assign!(W::ITensor, op::DenseTensor, ivs::IndexVal...)
   iss = inds(op)
   for s in eachindval(iss)
     s2 = [x.second for x in s]
@@ -131,7 +131,7 @@ function assign!(W::ITensor, op::DenseTensor{ElT,N}, ivs::IndexVal...) where {El
   end
 end
 
-function assign!(W::ITensor, op::BlockSparseTensor{ElT,N}, ivs::IndexVal...) where {ElT,N}
+function assign!(W::ITensor, op::BlockSparseTensor, ivs::IndexVal...) 
   iss = inds(op)
   for b in eachnzblock(op)
     isv = [iss[i] => b[i] for i in 1:length(b)]
