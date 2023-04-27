@@ -71,7 +71,7 @@ I 0 0 0 0
 ```
 """
 
-function equal_edge_blocks(i1::ITensors.QNIndex, i2::ITensors.QNIndex)::Bool
+function equal_edge_blocks(i1::QNIndex, i2::QNIndex)::Bool
   qns1, qns2 = space(i1), space(i2)
   qn11, qn1n = qns1[1], qns1[nblocks(qns1)]
   qn21, qn2n = qns2[1], qns2[nblocks(qns2)]

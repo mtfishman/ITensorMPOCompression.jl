@@ -112,7 +112,7 @@ function truncate(
   return Ŵrf, R, spectrum
 end
 
-function ITensors.truncate!(
+function truncate!(
   H::reg_form_MPO, lr::orth_type; eps=1e-14, kwargs...
 )::bond_spectrums
   #Two sweeps are essential for avoiding rectangular R in site truncate.
@@ -186,7 +186,7 @@ site  Ns   max(s)     min(s)    Entropy  Tr. Error
 
 ```
 """
-function ITensors.truncate!(
+function truncate!(
   H::reg_form_iMPO, lr::orth_type; rr_cutoff=1e-14, kwargs...
 )::Tuple{CelledVector{ITensor},bond_spectrums,Any}
   #@printf "---- start compress ----\n"
@@ -206,7 +206,7 @@ function ITensors.truncate!(
   return truncate!(H, Hm, Gs, lr; kwargs...)
 end
 
-function ITensors.truncate!(
+function truncate!(
   H::reg_form_iMPO, Hm::reg_form_iMPO, Gs::CelledVector{ITensor}, lr::orth_type; kwargs...
 )::Tuple{CelledVector{ITensor},bond_spectrums,Any}
   gauge_fix!(H)
@@ -288,6 +288,6 @@ end
 #  Make sure indices are ordered and then convert to a matrix
 #
 function NDTensors.matrix(il::Index, T::ITensor, ir::Index)
-  T1 = ITensors.permute(T, il, ir; allow_alias=true)
+  T1 = permute(T, il, ir; allow_alias=true)
   return matrix(T1)
 end

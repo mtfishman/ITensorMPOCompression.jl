@@ -215,7 +215,7 @@ function daisychain_links!(H::MPO; pbc=false)
   end
 
   if !pbc
-    H = ITensorMPOCompression.to_openbc(H) #contract with l* and *r at the edges.
+    H = to_openbc(H) #contract with l* and *r at the edges.
   end
 end
 

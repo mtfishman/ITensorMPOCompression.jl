@@ -1,6 +1,3 @@
-import ITensors: dim, dims, DenseTensor, eachindval, eachval, getindex, setindex!
-import NDTensors: getperm, permute, BlockDim, blockstart, blockend
-#import ITensorMPOCompression: redim
 import Base.range
 
 struct IndexRange
@@ -362,7 +359,7 @@ function permute(indsT::T, irs::IndexRange...) where {T<:(Tuple{Vararg{T,N}} whe
   if !isperm(p)
     @show p ispec inot indsT isort
   end
-  return permute(isort_sub, p), permute((ranges(irs)..., ranges(inot)...), p)
+  return NDTensors.permute(isort_sub, p), NDTensors.permute((ranges(irs)..., ranges(inot)...), p)
 end
 #
 #  Use NDTensors T[3:4,1:3,1:6...] syntax to extract the subtensor.
@@ -417,7 +414,7 @@ function set_subtensor_ND(T::ITensor, A::ITensor, irs::IndexRange...)
   ireqA = Tuple(noncommoninds(inds(A), inotT)) #Get the requested indices for a
   inotA = Tuple(noncommoninds(inds(A), ireqA))
   p=getperm(inotA,ntuple(n -> inotT[n], length(inotT)))
-  inotA_sorted=permute(inotA,p)
+  inotA_sorted=NDTensors.permute(inotA,p)
   if length(ireqT) != length(ireqA) || inotA_sorted != inotT
     @show inotA inotT ireqT ireqA inotA != inotT length(ireqT) length(ireqA)
     @error(
@@ -427,10 +424,10 @@ function set_subtensor_ND(T::ITensor, A::ITensor, irs::IndexRange...)
   end
   isortT = ireqT..., inotT... #all indices sorted so user specified ones are first.
   p = getperm(inds(T), ntuple(n -> isortT[n], length(isortT))) # find p such that isort[p]==inds(T)
-  rsortT = permute((ranges(irs)..., ranges(inotT)...), p) #sorted ranges for T
+  rsortT = NDTensors.permute((ranges(irs)..., ranges(inotT)...), p) #sorted ranges for T
   ireqAp = permute_tagplev(ireqA, ireqT) #match based on tags & plev, NOT IDs since dims are different.
-  isortA = permute((ireqAp..., inotA...), p) #inotA is the same inotT, using inotA here for a less confusing read.
-  Ap = ITensors.permute(A, isortA...; allow_alias=true)
+  isortA = NDTensors.permute((ireqAp..., inotA...), p) #inotA is the same inotT, using inotA here for a less confusing read.
+  Ap = permute(A, isortA...; allow_alias=true)
   return tensor(T)[rsortT...] = tensor(Ap)
 end
 function set_subtensor_ND(T::ITensor, v::Number, irs::IndexRange...)

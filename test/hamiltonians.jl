@@ -240,7 +240,7 @@ end
     @test is_regular_form(Hu)
     @test Hu.ul==upper
     
-    Hl = ITensorMPOCompression.transpose(Hu)
+    Hl = transpose(Hu)
     @test Hu.ul==upper
     @test is_regular_form(Hu)
     @test Hl.ul==lower
@@ -264,7 +264,7 @@ end
     @test check_ortho(Hl,left)
     @test !check_ortho(Hu,left) 
     @test !check_ortho(Hu,right) 
-    Hu1=ITensorMPOCompression.transpose(Hl)
+    Hu1=transpose(Hl)
     #@test check_ortho(Hu1,right)
     @test check_ortho(Hu1,left)
     Hl1=MPO(Hl)
@@ -288,7 +288,7 @@ end
     @test is_regular_form(Hu)
     @test Hu.ul==upper
 
-    Hl = ITensorMPOCompression.transpose(Hu)
+    Hl = transpose(Hu)
     @test Hu.ul==upper
     @test is_regular_form(Hu)
     @test Hl.ul==lower
@@ -304,7 +304,7 @@ end
     @test check_ortho(Hl,left)
     @test !check_ortho(Hu,left)
     @test !check_ortho(Hu,right)
-    Hu1=ITensorMPOCompression.transpose(Hl)
+    Hu1=transpose(Hl)
     @test Hu1.ul==upper
     @test is_regular_form(Hu1)
     @test check_ortho(Hu1,left;verbose=true)

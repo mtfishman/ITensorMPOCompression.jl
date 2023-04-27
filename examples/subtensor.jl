@@ -17,7 +17,7 @@ function get_subtensor_I(T::ITensor, irs::IndexRange...)
   iso = is..., iothers...
   p = getperm(inds(T), ntuple(n -> iso[n], length(iso)))
   is_sub = redim(irs) #get re-dimensied Indices
-  iso_subp = ITensorMPOCompression.permute((is_sub..., iothers...), p)
+  iso_subp = permute((is_sub..., iothers...), p)
 
   T_sub = ITensor(eltype(T), iso_subp)
   for (i1, i) in zip(eachindval(is_sub), eachindval(irs))

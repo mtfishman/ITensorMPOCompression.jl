@@ -71,7 +71,7 @@ Improvements:
 -Fix Index Tag conventions sections of the docs.
 -Fix emprical observations section of the tech notes.
 
--WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
+-Not Easy?: WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
 -One last cleanup: impo truncate
 -Subtensor check flux of inserted blocks.
 -Subtensor cleanup.
@@ -79,7 +79,8 @@ Done: -Move Hamiltonians into testing
 -Change flip to mirror?
 -Fix max(spectrum)  Base.max
 -Add the two site BH model to models lists.
--Fix ITensorMPOCompression.transpose
+Done: -Fix ITensorMPOCompression.transpose
+-less use of parse_links
 
 Done: -Follow Matts kwargs guidelines
 Done: -Take out support for upper.

@@ -241,11 +241,11 @@ function pprint(H::reg_form_MPO, eps::Float64=default_eps)
   end
 end
 
-function get_directions(psi::ITensors.AbstractMPS)
+function get_directions(psi::AbstractMPS)
   return map(n -> dir(inds(psi[n]; tags="Link,l=$n")[1]), 1:(length(psi) - 1))
 end
 
-function show_directions(psi::ITensors.AbstractMPS)
+function show_directions(psi::AbstractMPS)
   dirs = get_directions(psi)
   n = 1
   for d in dirs

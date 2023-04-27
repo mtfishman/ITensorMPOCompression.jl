@@ -26,13 +26,13 @@ end
     translator::Function, Wrf::reg_form_Op, n::Integer
   )
     new_inds = ITensorInfiniteMPS.translatecell(translator, inds(Wrf), n)
-    W = ITensors.setinds(Wrf.W, new_inds)
+    W = setinds(Wrf.W, new_inds)
     ileft, iright = parse_links(W)
     return reg_form_Op(W, ileft, iright, Wrf.ul)
 end
   
 
-  ITensors.data(H::reg_form_iMPO) = H.data
+  data(H::reg_form_iMPO) = H.data
   
   function Ws(H::reg_form_iMPO)
     return map(n -> H[n].W, 1:length(H))
@@ -109,7 +109,8 @@ end
   maxlinkdim(Hrf::reg_form_iMPO)=maximum(get_Dw(Hrf))
   maxlinkdim(Hrf::reg_form_MPO)=maximum(get_Dw(Hrf))
   
-  
+  check_ortho(H::InfiniteMPO,lr::orth_type)=check_ortho(reg_form_iMPO(H),lr)
+
   function check_ortho(H::reg_form_iMPO, lr::orth_type;kwargs...)::Bool
     for n in sweep(H, lr) #skip the edge row/col opertors
       !check_ortho(H[n], lr;kwargs...) && return false

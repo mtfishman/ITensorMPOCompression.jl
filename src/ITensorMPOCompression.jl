@@ -1,20 +1,24 @@
 module ITensorMPOCompression
 
 using ITensors
-using ITensors.NDTensors
+using NDTensors
 using ITensorInfiniteMPS
 
-import ITensors: QNIndex, addqns, rq, AbstractMPS, isortho, orthocenter, Indices, linkind, data
-import ITensors.BlockSparseTensor,
-  ITensors.DenseTensor, ITensors.DiagTensor, ITensors.tensor
+import ITensors: addqns, isortho, orthocenter, setinds , linkind, data, permute, checkflux
+import ITensors: dim, dims, trivial_space, eachindval, eachval, getindex, setindex!
+import ITensors: truncate!
+
+import ITensors: QNIndex, QNBlocks, Indices, AbstractMPS, DenseTensor, BlockSparseTensor,DiagTensor, tensor
+
+import NDTensors: getperm, BlockDim, blockstart, blockend
+  
 
 import ITensorInfiniteMPS: AbstractInfiniteMPS, translatecell
 import Base: similar, reverse, transpose
  
 
-export block_qx #qx related
 export slice, assign!  #operator handling
-export getV, setV, growRL, V_offsets #blocking related
+export growRL #blocking related
 export my_similar
 # lots of characterization functions
 export reg_form, orth_type, upper, lower, left, right, mirror, flip
@@ -45,7 +49,7 @@ export bond_spectrums
 export orthogonalize!, truncate, truncate! #the punchline
 export @pprint, pprint, @mpoc_assert, show_directions
 #  subtebsor related
-export IndexRange, indices, range, ranges, getperm, permute, start
+export IndexRange, indices, range, ranges, getperm, start
 #
 #  New ac_qx
 #
@@ -61,7 +65,7 @@ function mpoc_checkflux(::Union{DenseTensor,DiagTensor})
   # No-op
 end
 function mpoc_checkflux(T::Union{BlockSparseTensor,DiagBlockSparseTensor})
-  return ITensors.checkflux(T)
+  return checkflux(T)
 end
 
 macro checkflux(T)
@@ -172,14 +176,14 @@ end
 # Use the sample qns argument get the correct blocks for padding.
 # Ability to split blocks is not needed, therefore not supported.
 #
-function redim(iq::ITensors.QNIndex, pad1::Int64, pad2::Int64, qns::ITensors.QNBlocks)
+function redim(iq::QNIndex, pad1::Int64, pad2::Int64, qns::QNBlocks)
   @assert pad1 == blockdim(qns[1]) #Splitting blocks not supported
   @assert pad2 == blockdim(qns[end]) #Splitting blocks not supported
   qnsp = [qns[1], space(iq)..., qns[end]] #creat the new space
   return Index(qnsp; tags=tags(iq), plev=plev(iq), dir=dir(iq)) #create new index.
 end
 
-function redim(i::Index, pad1::Int64, pad2::Int64, Dw::Int64)
+function redim(i::Index, pad1::Int64, pad2::Int64, ::Int64)
   #@assert dim(i) + pad1 + pad2 <= Dw 
   return Index(dim(i) + pad1 + pad2; tags=tags(i), plev=plev(i), dir=dir(i)) #create new index.
 end
@@ -188,12 +192,12 @@ end
 #  Build a reduced QN space from offset->Dw+offset, possibly splitting QNBlocks at the
 #  begining and end of the space.
 #
-function redim(iq::ITensors.QNIndex, Dw::Int64, offset::Int64)
+function redim(iq::QNIndex, Dw::Int64, offset::Int64)
   # println("---------------------")
   # @show iq Dw offset
   @assert dim(iq) - offset >= Dw 
   qns=copy(space(iq))
-  qns1=ITensors.QNBlocks()
+  qns1=QNBlocks()
   
   is=1
   for i in 0:length(qns) #starting at 0 quickly dispenses with the offset==0 case.
@@ -236,7 +240,7 @@ function redim(iq::ITensors.QNIndex, Dw::Int64, offset::Int64)
   return Index(qns1; tags=tags(iq), plev=plev(iq), dir=dir(iq)) #create new index.
 end
 
-function redim(i::Index, Dw::Int64, offset::Int64=0)
+function redim(i::Index, Dw::Int64, ::Int64)
   return Index(Dw; tags=tags(i), plev=plev(i)) #create new index.
 end
 

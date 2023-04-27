@@ -39,10 +39,10 @@ mutable struct reg_form_MPO <: AbstractMPS
 
   function add_edge_links!(H::MPO)
     N = length(H)
-    irs = map(n -> ITensors.linkind(H, n), 1:(N - 1)) #right facing index, which can be thought of as a column index
+    irs = map(n -> linkind(H, n), 1:(N - 1)) #right facing index, which can be thought of as a column index
     ils = dag.(irs) #left facing index, or row index.
   
-    ts = ITensors.trivial_space(irs[1])
+    ts = trivial_space(irs[1])
     T = eltype(H[1])
     il0 = Index(ts; tags="Link,l=0", dir=dir(dag(irs[1])))
     ilN = Index(ts; tags="Link,l=$N", dir=dir(irs[1]))
@@ -93,7 +93,7 @@ mutable struct reg_form_MPO <: AbstractMPS
     return H
   end
   
-  ITensors.data(H::reg_form_MPO) = H.data
+  data(H::reg_form_MPO) = H.data
   
   function Ws(H::reg_form_MPO)
     return map(n -> H[n].W, 1:length(H))
