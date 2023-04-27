@@ -62,6 +62,21 @@ function make_3body(os::OpSum, N::Int64; J=1.0, kwargs...)::OpSum
   return os
 end
 
+function to_upper!(H::ITensors.AbstractMPS)
+  N = length(H)
+  l, r = parse_links(H[1])
+  G = G_transpose(r, reverse(r))
+  H[1] = H[1] * G
+  for n in 2:(N - 1)
+    H[n] = dag(G) * H[n]
+    l, r = parse_links(H[n])
+    G = G_transpose(r, reverse(r))
+    H[n] = H[n] * G
+  end
+  return H[N] = dag(G) * H[N]
+end
+
+
 @doc """
 make_transIsing_AutoMPO(sites,NNN;kwargs...)
 

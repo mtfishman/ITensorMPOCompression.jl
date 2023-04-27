@@ -7,6 +7,9 @@ using Printf
 
 include("hamiltonians/hamiltonians.jl")
 
+import ITensorMPOCompression: gauge_fix!, is_gauge_fixed, ac_orthogonalize!
+
+
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
 
 verbose = false #verbose at the outer test level

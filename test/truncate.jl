@@ -8,7 +8,8 @@ using Profile
 
 include("hamiltonians/hamiltonians.jl")
 
-#using ITensorMPOCompression: orthogonalize!,truncate!
+#import ITensorMPOCompression: 
+
 using NDTensors: Diag, BlockSparse, tensor
 #brute force method to control the default float display format.
 Base.show(io::IO, f::Float64) = @printf(io, "%1.1e", f)

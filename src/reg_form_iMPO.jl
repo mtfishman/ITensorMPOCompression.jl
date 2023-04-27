@@ -10,7 +10,7 @@ mutable struct reg_form_iMPO <: AbstractInfiniteMPS
     N = length(H)
     data = CelledVector{reg_form_Op}(undef, N)
     for n in eachindex(H)
-      il, ir = parse_links(H[n])
+      il, ir = commonind(H[n],H[n-1]),commonind(H[n],H[n+1])
       data[n] = reg_form_Op(H[n], il, ir, ul)
     end
     return new(data, false, ul)

@@ -5,6 +5,8 @@ using Test
 using Revise, Printf, SparseArrays
 include("hamiltonians/hamiltonians.jl")
 
+import ITensorMPOCompression: gauge_fix!, is_gauge_fixed, reg_form_iMPO
+
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
 
 models = [

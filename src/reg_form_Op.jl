@@ -66,11 +66,6 @@ ITensors.order(Wrf::reg_form_Op) = order(Wrf.W)
 
 ITensors.inds(Wrf::reg_form_Op;kwargs...) = inds(Wrf.W;kwargs...)
 
-function ITensors.setinds(Wrf::reg_form_Op, is)::reg_form_Op
-    ITensors.setinds(Wrf.W, is)
-    Wrf.ileft, Wrf.iright = parse_links(Wrf.W, left)
-    return Wrf
-end
 ITensors.siteinds(Wrf::reg_form_Op) = noncommoninds(Wrf.W, Wrf.ileft, Wrf.iright)
 ITensors.linkinds(Wrf::reg_form_Op) = Wrf.ileft, Wrf.iright
 ITensors.linkinds(Wrf::reg_form_Op, lr::orth_type) = backward(Wrf, lr), forward(Wrf, lr)

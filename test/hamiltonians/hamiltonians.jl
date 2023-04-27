@@ -1,3 +1,4 @@
+import ITensorMPOCompression: parse_links, parse_site, G_transpose
 
 @doc """
     make_transIsing_MPO(sites,NNN;kwargs...)

@@ -54,7 +54,7 @@ Improvements:
 -assign!() is still inefficient.  We need a way to do
   W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
   at the NDTensors level.
--Organize exports and imports.
+Done -Organize exports and imports.
 -subtensor  support W[il,ir]=op ?
 -better name for pbc? inf open_chain, boundary_conditions
 -Consider default rr_cutoff=1e-14?
@@ -80,7 +80,8 @@ Done: -Change flip to mirror?
 Done: -Fix max(spectrum)  Base.max
 -Add the two site BH model to models lists.
 Done: -Fix ITensorMPOCompression.transpose
--less use of parse_links
+Done: -less use of parse_links.  
+  Still need it in translatecell.
 
 Done: -Follow Matts kwargs guidelines
 Done: -Take out support for upper.

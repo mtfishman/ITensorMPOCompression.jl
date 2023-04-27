@@ -5,6 +5,8 @@ using Printf
 
 include("hamiltonians/hamiltonians.jl")
 
+import ITensorMPOCompression: sweep, ac_qx
+
 #using Printf
 #Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)
 #println("-----------Start--------------")
