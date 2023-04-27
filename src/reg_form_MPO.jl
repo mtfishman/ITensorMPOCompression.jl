@@ -128,7 +128,7 @@ mutable struct reg_form_MPO <: AbstractMPS
   function Base.transpose(Hrf::reg_form_MPO)::reg_form_MPO
     Ws=copy(data(Hrf))
     N=length(Hrf)
-    ul1=flip(Hrf.ul)
+    ul1=mirror(Hrf.ul)
     for n in 1:N-1
       ir=Ws[n].iright
       G = G_transpose(ir, reverse(ir))

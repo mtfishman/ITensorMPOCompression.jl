@@ -76,7 +76,7 @@ Improvements:
 -Subtensor check flux of inserted blocks.
 -Subtensor cleanup.
 Done: -Move Hamiltonians into testing
--Change flip to mirror?
+Done: -Change flip to mirror?
 -Fix max(spectrum)  Base.max
 -Add the two site BH model to models lists.
 Done: -Fix ITensorMPOCompression.transpose

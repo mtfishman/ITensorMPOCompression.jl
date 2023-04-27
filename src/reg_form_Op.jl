@@ -114,7 +114,7 @@ is_regular_form(Wrf::reg_form_Op;kwargs...)::Bool =
 
 function is_regular_form(Wrf::reg_form_Op, ul::reg_form;eps=default_eps,verbose=false)::Bool
     ul_cache = Wrf.ul
-    Wrf.ul = flip(ul)
+    Wrf.ul = mirror(ul)
     Wb = extract_blocks(Wrf, left; b=true, c=true, d=true)
     is = siteinds(Wrf)
     𝕀 = delta(is) #We need to make our own, can't trust Wb.𝕀 is ul is wrong.

@@ -6,7 +6,7 @@ using Revise, Printf
 include("hamiltonians/hamiltonians.jl")
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
 
-import ITensorMPOCompression: flip
+import ITensorMPOCompression: mirror
 
 
 
@@ -84,7 +84,7 @@ end
   H = reg_form_MPO(make_Hubbard_AutoMPO(sites, NNN; ul=ul);honour_upper=true)
   for W in H
     @test is_regular_form(W, ul;eps=eps)
-    @test dim(W.ileft) == 1 || dim(W.iright) == 1 || !is_regular_form(W, flip(ul);eps=eps)
+    @test dim(W.ileft) == 1 || dim(W.iright) == 1 || !is_regular_form(W, mirror(ul);eps=eps)
   end
 end
 

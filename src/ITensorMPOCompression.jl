@@ -18,8 +18,6 @@ import Base: similar, reverse, transpose
  
 
 export slice, assign!  #operator handling
-export growRL #blocking related
-export my_similar
 # lots of characterization functions
 export reg_form, orth_type, upper, lower, left, right, mirror, flip
 export parse_links,
@@ -103,7 +101,7 @@ function mirror(lr::orth_type)::orth_type
   return ret
 end
 
-flip(ul::reg_form) = ul == lower ? upper : lower
+mirror(ul::reg_form) = ul == lower ? upper : lower
 
 bond_spectrums = Vector{Spectrum}
 
