@@ -31,7 +31,7 @@ Features:
 Bugs:
 Done: -Fix:   iMPO After left orth sweep, 3 iterations Dw reduced from 1 to 4
 -2-body Hamiltonian in trancate fail.
--Truncate iMPO make_transIsing_iMPO NNN=4 has a gauge problem.
+-Truncate iMPO transIsing_iMPO NNN=4 has a gauge problem.
   Maybe just need 2 more orth sweeps (Auto iMPO is fine)
 
 Improvements requiring changes to other modules:
@@ -63,7 +63,7 @@ Done: -Refactor out all the link fixing and PBC code for MPO making functions.
 
 -Support Ncell>1 in InfinitSum{MPO}(InfiniteMPO)  constructor.
 Done: -Search for TODO items and get them on this list.
--System for hamitonians make_Hubbard_AutoiMPO => Hubbard_Auto_iMPO
+Done: -System for hamitonians Hubbard_AutoiMPO => Hubbard_Auto_iMPO
 -Use an infinite=true flag for iMPOs?
 -Clean up "where {Elt,N}" code.
 -Eliminate use of tags for finding indices.  Use the network structure instead.  Pass list if indices
@@ -130,7 +130,7 @@ No: -iMPO truncate user HL,HR instead of H,Hm ?
 Done: -Remove the bail out block in truncate(MPO)?
 Done: -More usage of replacetags(reg_form_OP,...)
 Done: -Get rid of the old redim functions
-Done: -test_3body should do better on Dw for inf lattice.
+Done: -test_three_body should do better on Dw for inf lattice.
 Done: -Get rid of getV1 and setV1.  i.e. make all order(W)==4 by adding dummy indices.
 Done: -Move code into compression module.
 Done: -DO if inside gauge_fix 
@@ -178,7 +178,7 @@ Ac blocking code:
   Done:   Same Op_with_links il,ir,ul
     -Ask Matt if he is already doing this?
   Done:   -Do QR pivot PR first.
-Fixed: -Incomplete block transfer: truncate (make_transIsing_MPO,upper,"S=1/2"),
+Fixed: -Incomplete block transfer: truncate (transIsing_MPO,upper,"S=1/2"),
 Done: -Replace RL with X in bock_qx.
 Done: -refactor gauge fix in Block QX
 Done: -Clean up getM()
@@ -246,14 +246,14 @@ Done: -Does block_qx really need to know n?
   R gets transferred in f/forward direction
 Done: -Implement @show for bond_spectrum 
 Done: -Clean up the whole parse links mess to handle iMPOs
-Done: -Support make_transIsing_iMPO
+Done: -Support transIsing_iMPO
 Done: -For the make hamiltonian functions put ul,hx,J into kwargs
   This will tie in with using the Model("model_name") framework Matt is using.
 Done: -Review all examples.  Add iMPO example.
 Can't do (for now: -Reproduce 30 site example from Parker paper.
   I estimate Dw>>1000 for N=30.  They must be building H_hand more efficiently.
   Anyway for N=9 we get Dw=206 which truncates nicely to Dw=9, takes about a minute just to build up H though!
-Done:  Need to build H-3body from scratch.
+Done:  Need to build H-three_body from scratch.
 Done:  Need code for W_1 + W_2
 Done: -Try using cutoff instead of truncate=false for autoMPO
 Done: -Clean up iMPO truncate code.
@@ -332,9 +332,9 @@ Plan:
   Test with QN's (new area for me)
   50% Refactor the code.  A lot of things can be simplified once there are lots of unit tests in place.
   Done: Figure how to disable 100's of asserts for production mode usage.  
-  Done: Incoroprate make_Ham functions into module
+  Done: Incoroprate Ham functions into module
   Done: Organize exports
-  90% Add examples to docs (needs make_Ham functions)
+  90% Add examples to docs (needs Ham functions)
   
 
 Matts emails:

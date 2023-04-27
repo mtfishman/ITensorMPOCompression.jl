@@ -5,7 +5,7 @@ Ncell = 1; #One site per unit cell
 NNN = 5; #Include up to 7th nearest neighbour interactions
 initstate(n) = "↑"
 sites = infsiteinds("S=1/2", 1; initstate, conserve_szparity=false)
-H = make_transIsing_iMPO(sites, 5);
+H = transIsing_iMPO(sites, 5);
 H0 = copy(H);
 orthogonalize!(H; orth=right, rr_cutoff=1e-15);
 Dw1 = get_Dw(H)[1];

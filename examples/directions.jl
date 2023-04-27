@@ -11,7 +11,7 @@ println("MPS with ortho center on site 5")
 orthogonalize!(psi, 5)
 show_directions(psi)
 
-H = make_transIsing_AutoMPO(sites, 1);
+H = transIsing_AutoMPO(sites, 1);
 println("MPO as constructed from AutoMPO")
 show_directions(H)
 println("MPO ortho=left (orth center on site 10)")

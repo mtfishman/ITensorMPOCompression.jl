@@ -13,7 +13,7 @@ import ITensorMPOCompression: transpose
 # using Printf
 # Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f)
 
-function make_random_qindex(d::Int64, nq::Int64)::Index
+function random_qindex(d::Int64, nq::Int64)::Index
   qns = Pair{QN,Int64}[]
   for n in 1:nq
     append!(qns, [QN() => rand(1:d)])
@@ -40,7 +40,7 @@ end
     #
     #  Use autoMPO to make H
     #
-    Hauto = make_transIsing_AutoMPO(sites, NNN; model_kwargs...)
+    Hauto = transIsing_AutoMPO(sites, NNN; model_kwargs...)
     Eauto, psi = fast_GS(Hauto, sites)
     @test Eauto ≈ Eexpected atol = eps
     Eauto1 = inner(psi', Hauto, psi)
@@ -49,7 +49,7 @@ end
     #
     #  Make H directly ... should be lower triangular
     #
-    Hdirect = make_transIsing_MPO(sites, NNN; model_kwargs...) #defaults to lower reg form
+    Hdirect = transIsing_MPO(sites, NNN; model_kwargs...) #defaults to lower reg form
     #@show Hauto[1] Hdirect[1]
     @test order(Hdirect[1]) == 3
     @test inner(psi', Hdirect, psi) ≈ Eexpected atol = eps
@@ -63,7 +63,7 @@ end
     for offset in 0:2
       for d in 1:5
         for nq in 1:5
-          il = make_random_qindex(d, nq)
+          il = random_qindex(d, nq)
           Dw = dim(il)
           if Dw > 1 + offset
             ilr = redim(il, Dw - offset - 1, offset)
@@ -74,7 +74,7 @@ end
     end #for offset
   end #@testset
 
-  makeHs = [make_transIsing_AutoMPO, make_transIsing_MPO, make_Heisenberg_AutoMPO]
+  makeHs = [transIsing_AutoMPO, transIsing_MPO, Heisenberg_AutoMPO]
   @testset "Auto MPO Ising Ham with Sz blocking" for makeH in makeHs
     N = 5
     eps = 4e-14 #this is right at the lower limit for passing the tests.
@@ -104,8 +104,8 @@ end
     NNN = 2
 
     sites = siteinds("SpinHalf", N; conserve_qns=true)
-    Hauto = make_transIsing_AutoMPO(sites, NNN)
-    Hhand = make_transIsing_MPO(sites, NNN)
+    Hauto = transIsing_AutoMPO(sites, NNN)
+    Hhand = transIsing_MPO(sites, NNN)
     for (Wauto, Whand) in zip(Hauto, Hhand)
       for ia in inds(Wauto)
         ih = filterinds(Whand; tags=tags(ia), plev=plev(ia))[1]
@@ -117,8 +117,8 @@ end
   @testset "Parker eq. 34 3-body Hamiltonian" begin
     N = 15
     sites = siteinds("SpinHalf", N; conserve_qns=false)
-    Hnot = make_3body_AutoMPO(sites; cutoff=-1.0) #No truncation inside autoMPO
-    H = make_3body_AutoMPO(sites; cutoff=1e-15) #Truncated by autoMPO
+    Hnot = three_body_AutoMPO(sites; cutoff=-1.0) #No truncation inside autoMPO
+    H = three_body_AutoMPO(sites; cutoff=1e-15) #Truncated by autoMPO
     psi = randomMPS(sites)
     Enot = inner(psi', Hnot, psi)
     E = inner(psi', H, psi)
@@ -179,7 +179,7 @@ end
     initstate(n) = "↑"
     site_type = "S=1/2"
     si = infsiteinds(site_type, Ncell; initstate, conserve_qns=qns)
-    H = make_transIsing_AutoiMPO(si, NNN; ul=lower)
+    H = transIsing_AutoiMPO(si, NNN; ul=lower)
     @test length(H) == Ncell
     Dws = get_Dw(H)
     @test all(y -> y == Dws[1], Dws)
@@ -187,10 +187,10 @@ end
   end
 
   makeHs = [
-    (make_transIsing_MPO, "S=1/2"),
-    (make_transIsing_AutoMPO, "S=1/2"),
-    (make_Heisenberg_AutoMPO, "S=1/2"),
-    (make_Hubbard_AutoMPO, "Electron"),
+    (transIsing_MPO, "S=1/2"),
+    (transIsing_AutoMPO, "S=1/2"),
+    (Heisenberg_AutoMPO, "S=1/2"),
+    (Hubbard_AutoMPO, "Electron"),
   ]
 
   @testset "Reg for H=$(makeH[1]), ul=$ul, qns=$qns" for makeH in makeHs,
@@ -206,10 +206,10 @@ end
   end
 
   makeHs = [
-    (make_transIsing_iMPO, "S=1/2"),
-    (make_transIsing_AutoiMPO, "S=1/2"),
-    (make_Heisenberg_AutoiMPO, "S=1/2"),
-    (make_Hubbard_AutoiMPO, "Electron"),
+    (transIsing_iMPO, "S=1/2"),
+    (transIsing_AutoiMPO, "S=1/2"),
+    (Heisenberg_AutoiMPO, "S=1/2"),
+    (Hubbard_AutoiMPO, "Electron"),
   ]
 
   @testset "Reg for H=$(makeH[1]), ul=$ul, qns=$qns" for makeH in makeHs,
@@ -226,11 +226,11 @@ end
   end
   
   models = [
-    (make_transIsing_MPO, "S=1/2", true),
-    (make_transIsing_AutoMPO, "S=1/2", true),
-    (make_Heisenberg_AutoMPO, "S=1/2", true),
-    (make_Heisenberg_AutoMPO, "S=1", true),
-    (make_Hubbard_AutoMPO, "Electron", false),
+    (transIsing_MPO, "S=1/2", true),
+    (transIsing_AutoMPO, "S=1/2", true),
+    (Heisenberg_AutoMPO, "S=1/2", true),
+    (Heisenberg_AutoMPO, "S=1", true),
+    (Hubbard_AutoMPO, "Electron", false),
   ]
 
   @testset "Convert upper MPO to lower, H=$(model[1]), qns=$qns" for model in models, qns in [false,true]
@@ -274,11 +274,11 @@ end
   end
 
   models = [
-    (make_transIsing_iMPO, "S=1/2", true),
-    (make_transIsing_AutoiMPO, "S=1/2", true),
-    (make_Heisenberg_AutoiMPO, "S=1/2", true),
-    (make_Heisenberg_AutoiMPO, "S=1", true),
-    (make_Hubbard_AutoiMPO, "Electron", false),
+    (transIsing_iMPO, "S=1/2", true),
+    (transIsing_AutoiMPO, "S=1/2", true),
+    (Heisenberg_AutoiMPO, "S=1/2", true),
+    (Heisenberg_AutoiMPO, "S=1", true),
+    (Hubbard_AutoiMPO, "Electron", false),
   ]
 
   @testset "Convert upper iMPO to lower H=$(model[1]), qns=$qns" for model in models, qns in [false,true], N in [1,2,3,4], NNN in [1,4]

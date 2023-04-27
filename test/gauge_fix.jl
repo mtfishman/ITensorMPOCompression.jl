@@ -10,11 +10,11 @@ import ITensorMPOCompression: gauge_fix!, is_gauge_fixed, reg_form_iMPO
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
 
 models = [
-  [make_transIsing_MPO, "S=1/2", true],
-  [make_transIsing_AutoMPO, "S=1/2", true],
-  [make_Heisenberg_AutoMPO, "S=1/2", true],
-  [make_Heisenberg_AutoMPO, "S=1", true],
-  [make_Hubbard_AutoMPO, "Electron", false],
+  [transIsing_MPO, "S=1/2", true],
+  [transIsing_AutoMPO, "S=1/2", true],
+  [Heisenberg_AutoMPO, "S=1/2", true],
+  [Heisenberg_AutoMPO, "S=1", true],
+  [Hubbard_AutoMPO, "Electron", false],
 ]
 
 @testset "Gauge fix finite $(model[1]), qns=$qns, ul=$ul" for model in models,
@@ -45,11 +45,11 @@ models = [
 end
 
 models = [
-  (make_transIsing_iMPO, "S=1/2", true),
-  (make_transIsing_AutoiMPO, "S=1/2", true),
-  (make_Heisenberg_AutoiMPO, "S=1/2", true),
-  (make_Heisenberg_AutoiMPO, "S=1", true),
-  (make_Hubbard_AutoiMPO, "Electron", false),
+  (transIsing_iMPO, "S=1/2", true),
+  (transIsing_AutoiMPO, "S=1/2", true),
+  (Heisenberg_AutoiMPO, "S=1/2", true),
+  (Heisenberg_AutoiMPO, "S=1", true),
+  (Hubbard_AutoiMPO, "Electron", false),
 ]
 
 import ITensorMPOCompression: check, extract_blocks, A0, b0, c0, vector_o2, MPO

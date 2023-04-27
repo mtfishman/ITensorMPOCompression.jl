@@ -28,11 +28,11 @@ verbose1 = false #verbose inside orth algos
 
 @testset verbose = verbose "Truncate/Compress" begin
   models = [
-    [make_transIsing_MPO, "S=1/2", true],
-    [make_transIsing_AutoMPO, "S=1/2", true],
-    [make_Heisenberg_AutoMPO, "S=1/2", true],
-    [make_Heisenberg_AutoMPO, "S=1", true],
-    [make_Hubbard_AutoMPO, "Electron", false],
+    [transIsing_MPO, "S=1/2", true],
+    [transIsing_AutoMPO, "S=1/2", true],
+    [Heisenberg_AutoMPO, "S=1/2", true],
+    [Heisenberg_AutoMPO, "S=1", true],
+    [Hubbard_AutoMPO, "Electron", false],
   ]
 
   @testset "Truncate/Compress MPO $(model[1]), qns=$qns, ul=$ul, lr=$lr" for model in
@@ -64,11 +64,11 @@ verbose1 = false #verbose inside orth algos
 
  
   models = [
-    (make_transIsing_iMPO, "S=1/2"),
-    (make_transIsing_AutoiMPO, "S=1/2"),
-    (make_Heisenberg_AutoiMPO, "S=1/2"),
-    (make_Heisenberg_AutoiMPO, "S=1"),
-    (make_Hubbard_AutoiMPO, "Electron"),
+    (transIsing_iMPO, "S=1/2"),
+    (transIsing_AutoiMPO, "S=1/2"),
+    (Heisenberg_AutoiMPO, "S=1/2"),
+    (Heisenberg_AutoiMPO, "S=1"),
+    (Hubbard_AutoiMPO, "Electron"),
   ]
 
   #
@@ -150,7 +150,7 @@ verbose1 = false #verbose inside orth algos
   #     hx= qns ? 0.0 : 0.5 
 
   #     sites = siteinds("SpinHalf", N;conserve_qns=qns)
-  #     H=make_transIsing_MPO(sites,NNN;hx=hx)
+  #     H=transIsing_MPO(sites,NNN;hx=hx)
 
   #     E0,psi0=fast_GS(H,sites)
   #     truncate!(H;verbose=verbose1,orth=left)
@@ -166,7 +166,7 @@ verbose1 = false #verbose inside orth algos
   #     @test overlap ≈ 1.0 atol = eps
 
   #     hx=0.0
-  #     H=make_Heisenberg_AutoMPO(sites,NNN;hx=hx)
+  #     H=Heisenberg_AutoMPO(sites,NNN;hx=hx)
   #     E0,psi0=fast_GS(H,sites)
 
   #     truncate!(H;verbose=verbose1,orth=right)
@@ -190,7 +190,7 @@ verbose1 = false #verbose inside orth algos
   #     end
   #     for N in [6,8,10,12,18,20,40,80]
   #         sites = siteinds("SpinHalf", N)
-  #         H=make_transIsing_MPO(sites,NNN;hx=0.5)
+  #         H=transIsing_MPO(sites,NNN;hx=0.5)
   #         specs=truncate!(H;verbose=verbose1,cutoff=1e-10)
   #         imid::Int64=div(N,2)
   #         max_1  =specs[1   ].eigs[1]
@@ -211,8 +211,8 @@ verbose1 = false #verbose inside orth algos
   #     NNN=4
   #     eps=1e-14
   #     sites = siteinds(n->isodd(n) ? "S=1/2" : "S=1",N; conserve_qns=qns)
-  #     Ha=make_transIsing_AutoMPO(sites,NNN)
-  #     H=make_transIsing_MPO(sites,NNN)
+  #     Ha=transIsing_AutoMPO(sites,NNN)
+  #     H=transIsing_MPO(sites,NNN)
   #     #@show get_Dw(H)
   #     state=[isodd(n) ? "Up" : "Dn" for n=1:N]
   #     psi=randomMPS(sites,state)
@@ -267,7 +267,7 @@ verbose1 = false #verbose inside orth algos
   #     #
   #     for  NNN in [2,4,6], N in [3] #3 site unit cell fails inside ITensorInfiniteMPS for qns=true.
   #         si = infsiteinds(n->isodd(n) ? "S=1" : "S=1/2",N; initstate, conserve_qns=qns)
-  #         H0=make_transIsing_iMPO(si,NNN;ul=ul)
+  #         H0=transIsing_iMPO(si,NNN;ul=ul)
   #         @test is_regular_form(H0)
   #         Dw0=Base.max(get_Dw(H0)...)
   #         #
@@ -316,7 +316,7 @@ verbose1 = false #verbose inside orth algos
   #         for n in 1:N
   #             ψ[n] = randomITensor(inds(ψ[n]))
   #         end
-  #         H0=make_transIsing_iMPO(si,NNN;ul=ul)
+  #         H0=transIsing_iMPO(si,NNN;ul=ul)
   #         H0.llim=-1
   #         H0.rlim=1
   #         Hsum0=InfiniteSum{MPO}(H0,NNN)
@@ -361,9 +361,9 @@ verbose1 = false #verbose inside orth algos
   #     for N in 3:15
   #         NNN=N-1#div(N,2)
   #         sites = siteinds("SpinHalf", N;conserve_qns=qns)
-  #         Hauto=make_transIsing_AutoMPO(sites,NNN;ul=ul) 
+  #         Hauto=transIsing_AutoMPO(sites,NNN;ul=ul) 
   #         Dw_auto=get_Dw(Hauto)
-  #         Hr=make_transIsing_MPO(sites,NNN;ul=ul) 
+  #         Hr=transIsing_MPO(sites,NNN;ul=ul) 
   #         truncate!(Hr;verbose=verbose1) #sweep left to right
   #         delta_Dw=sum(get_Dw(Hr)-Dw_auto)
   #         @test delta_Dw<=0
@@ -386,8 +386,8 @@ verbose1 = false #verbose inside orth algos
   #     eps=1e-15
   #         for N in [6,10,16,20,24]
   #             sites = siteinds("SpinHalf", N;conserve_qns=false)
-  #             Hnot=make_3body_AutoMPO(sites;cutoff=-1.0) #No truncation inside autoMPO
-  #             H=make_3body_AutoMPO(sites) #Truncated by autoMPO
+  #             Hnot=three_body_AutoMPO(sites;cutoff=-1.0) #No truncation inside autoMPO
+  #             H=three_body_AutoMPO(sites) #Truncated by autoMPO
   #             #@show get_Dw(Hnot)
   #             Dw_auto = get_Dw(H)
   #             psi=randomMPS(sites)

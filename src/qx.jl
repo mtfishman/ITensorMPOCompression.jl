@@ -34,7 +34,7 @@ julia>sites = siteinds("S=1/2",N);
 #
 #  Make a Hamiltonian directly, i.e. not using autoMPO
 #
-julia>H=make_transIsing_MPO(sites,NNN);
+julia>H=transIsing_MPO(sites,NNN);
 #
 #  Use pprint to see the structure for site #2. I = unit operator and S = any 
 #  other operator

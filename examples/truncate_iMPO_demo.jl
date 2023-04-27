@@ -1,7 +1,7 @@
 using ITensors, ITensorMPOCompression, ITensorInfiniteMPS
 initstate(n) = "↑"
 sites = infsiteinds("S=1/2", 1; initstate, conserve_szparity=false)
-H = make_transIsing_iMPO(sites, 7);
+H = transIsing_iMPO(sites, 7);
 is_lower_regular_form(H) == true
 H0 = copy(H)
 Ss, spectrum = truncate!(H; rr_cutoff=1e-15, cutoff=1e-15)

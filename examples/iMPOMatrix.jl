@@ -92,7 +92,7 @@ end
 
   #ψ = InfMPS(s, initstate) 
   # ψf = MPS(sf, finitstate) 
-  # Ha=make_Heisenberg_AutoMPO(sf,NNN)
+  # Ha=Heisenberg_AutoMPO(sf,NNN)
   Hi = InfiniteMPO(model, s; model_kwargs...)
   ITensors.checkflux(Hi[1])
   # Hs=InfiniteSum{MPO}(model, s;model_kwargs...)

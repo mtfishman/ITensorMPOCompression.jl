@@ -12,11 +12,11 @@ import ITensorMPOCompression: sweep, ac_qx
 #println("-----------Start--------------")
 
 models = [
-  [make_transIsing_MPO, "S=1/2", true],
-  [make_transIsing_AutoMPO, "S=1/2", true],
-  [make_Heisenberg_AutoMPO, "S=1/2", true],
-  [make_Heisenberg_AutoMPO, "S=1", true],
-  [make_Hubbard_AutoMPO, "Electron", false],
+  [transIsing_MPO, "S=1/2", true],
+  [transIsing_AutoMPO, "S=1/2", true],
+  [Heisenberg_AutoMPO, "S=1/2", true],
+  [Heisenberg_AutoMPO, "S=1", true],
+  [Hubbard_AutoMPO, "Electron", false],
 ]
 
 @testset "Ac Block respecting QX decomposition $(model[1]), qns=$qns, ul=$ul, lr=$lr" for model in
@@ -54,7 +54,7 @@ end
   #
   #  use lower tri MPO to get some zero pivots for QL and RQ.
   #
-  H = make_transIsing_MPO(sites, NNN; model_kwargs...)
+  H = transIsing_MPO(sites, NNN; model_kwargs...)
   W = H[2]
   r, c = parse_links(W)
 
@@ -66,7 +66,7 @@ end
   #  use upper tri MPO to get some zero pivots for LQ and QR.
   #
   model_kwargs = (hx=0.5, ul=upper)
-  H = make_transIsing_MPO(sites, NNN; model_kwargs...)
+  H = transIsing_MPO(sites, NNN; model_kwargs...)
   W = H[2]
   r, c = parse_links(W)
 

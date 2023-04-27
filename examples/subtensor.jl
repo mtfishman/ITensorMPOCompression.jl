@@ -77,11 +77,11 @@ end
 end
 
 models = [
-  [make_transIsing_MPO, "S=1/2", true],
-  [make_transIsing_AutoMPO, "S=1/2", true],
-  [make_Heisenberg_AutoMPO, "S=1/2", true],
-  [make_Heisenberg_AutoMPO, "S=1", true],
-  [make_Hubbard_AutoMPO, "Electron", false],
+  [transIsing_MPO, "S=1/2", true],
+  [transIsing_AutoMPO, "S=1/2", true],
+  [Heisenberg_AutoMPO, "S=1/2", true],
+  [Heisenberg_AutoMPO, "S=1", true],
+  [Hubbard_AutoMPO, "Electron", false],
 ]
 
 @testset "subtensor with block sparse storage$(model[1]), qns=$qns, ul=$ul" for model in

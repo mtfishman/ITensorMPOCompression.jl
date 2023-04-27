@@ -25,7 +25,7 @@ julia> sites = siteinds("S=1/2",N);
 # This makes H directly, bypassing autoMPO.  (AutoMPO is too smart for this
 # demo, it makes maximally reduced MPOs right out of the box!)
 #
-julia> H=make_transIsing_MPO(sites,NNN);
+julia> H=transIsing_MPO(sites,NNN);
 #
 #  Make sure we have a regular form or orhtogonalize! won't work.
 #
@@ -146,7 +146,7 @@ julia> sites = infsiteinds("S=1/2", 1;initstate, conserve_szparity=false)
 # This makes H directly, bypassing autoMPO.  (AutoMPO is too smart for this
 # demo, it makes maximally reduced MPOs right out of the box!)
 #
-julia> H=make_transIsing_MPO(sites,NNN);
+julia> H=transIsing_MPO(sites,NNN);
 julia> get_Dw(H)
 1-element Vector{Int64}:
  17

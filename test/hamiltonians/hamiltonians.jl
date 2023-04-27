@@ -1,7 +1,7 @@
 import ITensorMPOCompression: parse_links, parse_site, G_transpose
 
 @doc """
-    make_transIsing_MPO(sites,NNN;kwargs...)
+    transIsing_MPO(sites,NNN;kwargs...)
  
 Directly coded build up of a transverse Ising model Hamiltonian with up to `NNN` neighbour
 2-body interactions.  The interactions are hard coded to decay like `J/(i-j)`. between sites `i` and `j`.
@@ -15,7 +15,7 @@ Directly coded build up of a transverse Ising model Hamiltonian with up to `NNN`
 - `J::Float64=1.0` : Nearest neighbour interaction strength.  Further neighbours decay like `J/(i-j)`..
 
 """
-function make_transIsing_MPO(sites, NNN::Int64;ul=lower,J=1.0,hx=0.0,pbc=false, kwargs...)::MPO
+function transIsing_MPO(sites, NNN::Int64;ul=lower,J=1.0,hx=0.0,pbc=false, kwargs...)::MPO
   N = length(sites)
   Dw::Int64 = transIsing_Dw(NNN)
   use_qn::Bool = hasqns(sites[1])
@@ -23,12 +23,12 @@ function make_transIsing_MPO(sites, NNN::Int64;ul=lower,J=1.0,hx=0.0,pbc=false, 
   io = ul == lower ? ITensors.Out : ITensors.In
 
   if pbc
-    prev_link = make_Ising_index(Dw, "Link,c=0,l=$(N)", use_qn, io)
+    prev_link = Ising_index(Dw, "Link,c=0,l=$(N)", use_qn, io)
   else
-    prev_link = make_Ising_index(Dw, "Link,l=0", use_qn, io)
+    prev_link = Ising_index(Dw, "Link,l=0", use_qn, io)
   end
   for n in 1:N
-    mpo[n] = make_transIsing_op(sites[n], prev_link, NNN, J, hx, ul, pbc)
+    mpo[n] = transIsing_op(sites[n], prev_link, NNN, J, hx, ul, pbc)
     prev_link = filterinds(mpo[n]; tags="Link,l=$n")[1]
   end
   if pbc
@@ -50,7 +50,7 @@ function transIsing_Dw(NNN::Int64)::Int64
   return 2 + NNN * (NNN + 1) / 2
 end
 
-function make_Ising_index(Dw::Int64, tags::String, use_qn::Bool, dir)
+function Ising_index(Dw::Int64, tags::String, use_qn::Bool, dir)
   if (use_qn)
     if tags[1:4] == "Link"
       qns = fill(QN("Sz", 0) => 1, Dw)
@@ -68,7 +68,7 @@ end
 # NNN = Number of Neighbours, for example
 #    NNN=1 corresponds to nearest neighbour
 #    NNN=2 corresponds to nearest and next nearest neighbour
-function make_transIsing_op(
+function transIsing_op(
   site::Index,
   prev_link::Index,
   NNN::Int64,
@@ -84,7 +84,7 @@ function make_transIsing_op(
   use_qn = hasqns(site)
 
   r = dag(prev_link)
-  c = make_Ising_index(Dw, "Link,l=$n", use_qn, dir(prev_link))
+  c = Ising_index(Dw, "Link,l=$n", use_qn, dir(prev_link))
   if pbc
     c = addtags(c, "c=1")
   end
@@ -236,7 +236,7 @@ function addW!(sites, H, W)
   end
 end
 
-function make_2body_MPO(sites, NNN::Int64; pbc=false, Jprime=1.0, presummed=true, kwargs...)
+function two_body_MPO(sites, NNN::Int64; pbc=false, Jprime=1.0, presummed=true, kwargs...)
   N = length(sites)
   H = MPO(N)
   if pbc
@@ -245,19 +245,19 @@ function make_2body_MPO(sites, NNN::Int64; pbc=false, Jprime=1.0, presummed=true
     l, r = Index(1, "Link,l=0"), Index(1, "Link,l=1")
   end
   ul = lower
-  H[1] = make_1body_op(sites[1], l, r, ul; kwargs...)
+  H[1] = one_body_op(sites[1], l, r, ul; kwargs...)
 
   for n in 2:N
-    H[n] = make_1body_op(sites[n], l, r, ul; kwargs...)
+    H[n] = one_body_op(sites[n], l, r, ul; kwargs...)
   end
 
   W = H[1]
   if Jprime != 0.0
     if presummed
-      W = add_ops(W, make_2body_sum(sites[1], l, r, NNN, ul; kwargs...))
+      W = add_ops(W, two_body_sum(sites[1], l, r, NNN, ul; kwargs...))
     else
       for n in 1:NNN
-        W = add_ops(W, make_2body_op(sites[1], l, r, n, ul; kwargs...))
+        W = add_ops(W, two_body_op(sites[1], l, r, n, ul; kwargs...))
       end
     end
   end
@@ -266,7 +266,7 @@ function make_2body_MPO(sites, NNN::Int64; pbc=false, Jprime=1.0, presummed=true
   return H
 end
 
-function make_3body_MPO(sites, NNN::Int64; pbc=false, Jprime=1.0, presummed=true, J=1.0,  kwargs...)
+function three_body_MPO(sites, NNN::Int64; pbc=false, Jprime=1.0, presummed=true, J=1.0,  kwargs...)
   N = length(sites)
   H = MPO(N)
   if pbc
@@ -275,19 +275,19 @@ function make_3body_MPO(sites, NNN::Int64; pbc=false, Jprime=1.0, presummed=true
     l, r = Index(1, "Link,l=0"), Index(1, "Link,l=1")
   end
   ul = lower
-  H[1] = make_1body_op(sites[1], l, r, ul; kwargs...)
+  H[1] = one_body_op(sites[1], l, r, ul; kwargs...)
 
   for n in 2:N
-    H[n] = make_1body_op(sites[n], l, r, ul; kwargs...)
+    H[n] = one_body_op(sites[n], l, r, ul; kwargs...)
   end
 
   W = H[1]
   if Jprime != 0.0
     if presummed
-      W = add_ops(W, make_2body_sum(sites[1], l, r, NNN, ul; kwargs...))
+      W = add_ops(W, two_body_sum(sites[1], l, r, NNN, ul; kwargs...))
     else
       for m in 1:NNN
-        W = add_ops(W, make_2body_op(sites[1], l, r, m, ul; kwargs...))
+        W = add_ops(W, two_body_op(sites[1], l, r, m, ul; kwargs...))
       end
     end
   end
@@ -295,7 +295,7 @@ function make_3body_MPO(sites, NNN::Int64; pbc=false, Jprime=1.0, presummed=true
   if J != 0.0
     for n in 2:NNN
       for m in (n + 1):NNN
-        W = add_ops(W, make_3body_op(sites[1], l, r, n, m, ul; kwargs...))
+        W = add_ops(W, three_body_op(sites[1], l, r, n, m, ul; kwargs...))
       end
     end
   end
@@ -309,7 +309,7 @@ end
 #
 #  d-block = Hx*Sx
 #
-function make_1body_op(site::Index, r1::Index, c1::Index, ul::reg_form; hx=0.0,  kwargs...)::ITensor
+function one_body_op(site::Index, r1::Index, c1::Index, ul::reg_form; hx=0.0,  kwargs...)::ITensor
   Dw::Int64 = 2
   #d,n,space=parse_site(site)
   #use_qn=hasqns(site)
@@ -328,7 +328,7 @@ end
 #
 #  J_1n * Z_1*Z_n
 #
-function make_2body_op(
+function two_body_op(
   site::Index, r1::Index, c1::Index, n::Int64, ul::reg_form; Jprime=1.0, kwargs...
 )::ITensor
   @mpoc_assert n >= 1
@@ -360,7 +360,7 @@ function make_2body_op(
   return W
 end
 
-function make_2body_sum(
+function two_body_sum(
   site::Index, r1::Index, c1::Index, NNN::Int64, ul::reg_form;Jprime=1.0, kwargs...
 )::ITensor
   @mpoc_assert NNN >= 1
@@ -396,12 +396,12 @@ end
 #
 #  J1n*Jnm * Z_1*Z_n*Z_m
 #
-function make_3body_op(
+function three_body_op(
   site::Index, r1::Index, c1::Index, n::Int64, m::Int64, ul::reg_form; J=1.0, kwargs...
 )::ITensor
   @mpoc_assert n >= 1
   @mpoc_assert m > n
-  W = make_2body_op(site, r1, c1, m - 1, ul)
+  W = two_body_op(site, r1, c1, m - 1, ul)
   #@pprint(W)
   r, c = inds(W; tags="Link")
   Dw = dim(r)

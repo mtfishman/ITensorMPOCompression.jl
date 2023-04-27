@@ -182,11 +182,11 @@ MPOs for various models.  Right now we have four Hamiltonians available
 The autoMPO MPOs come pre-truncated so they are not as useful for testing truncation. The automated truncation in AutoMPO can **partially** disabled by providing the the keyword argument `cutoff=-1.0` which gets passed down in the svd/truncate call used when building the MPO
 
 ```@docs
-make_transIsing_MPO
-make_transIsing_AutoMPO
-make_Heisenberg_AutoMPO
-make_3body_MPO
-make_transIsing_iMPO
+transIsing_MPO
+transIsing_AutoMPO
+Heisenberg_AutoMPO
+three_body_MPO
+transIsing_iMPO
 
 
 ```

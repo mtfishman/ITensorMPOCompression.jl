@@ -43,7 +43,7 @@ end
 
 N,NNN = 5,2
 s = siteinds("S=1/2", N)
-H = reg_form_MPO(make_Heisenberg_AutoMPO(s, NNN))
+H = reg_form_MPO(Heisenberg_AutoMPO(s, NNN))
 @assert is_gauge_fixed(H)
 ac_orthogonalize!(H,right) 
 @assert is_gauge_fixed(H)

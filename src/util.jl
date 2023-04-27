@@ -172,7 +172,7 @@ julia> using ITensorMPOCompression
 julia> N=10; #10 sites
 julia> NNN=7; #Include up to 7th nearest neighbour interactions
 julia> sites = siteinds("S=1/2",N);
-julia> H=make_transIsing_MPO(sites,NNN);
+julia> H=transIsing_MPO(sites,NNN);
 julia> pprint(H)
 n    Dw1  Dw2   d   Reg.  Orth.  Tri.
                     Form  Form   Form

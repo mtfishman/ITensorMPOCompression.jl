@@ -4998,7 +4998,7 @@ J_{n}\hat{Z} & 0 & 0 & 0 & \cdots & 0\\
 0 & 0 & \hat{\mathbb{I}} & 0 & \cdots & 0\\
 \vdots & \vdots & \vdots & \vdots & \ddots\\
 0 & 0 & 0 & 0 & \hat{Z} & \hat{\mathbb{I}}
-\end{bmatrix}\label{eq:2body-n}
+\end{bmatrix}\label{eq:two_body-n}
 \end{equation}
 
 \end_inset
@@ -8970,7 +8970,7 @@ The one site operator structure for the 3 body interaction like
 \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \ddots & 0 & 0 & 0\\
 0 & 0 & 0 & 0 & 0 & 0 & 0 & \hat{𝕀} & 0 & 0\\
 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & K\hat{Z} & \hat{𝕀}
-\end{bmatrix}\label{eq:3bodyterm}
+\end{bmatrix}\label{eq:three_bodyterm}
 \end{equation}
 
 \end_inset
@@ -8979,7 +8979,7 @@ which is similar to eq.
  
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "eq:2body-n"
+reference "eq:two_body-n"
 plural "false"
 caps "false"
 noprefix "false"
@@ -9006,7 +9006,7 @@ noprefix "false"
  for 3 body interactions
 \begin_inset Formula 
 \begin{equation}
-\sum_{n=1}^{NNN-1}K\hat{Z}_{0}\hat{Z}_{n}\hat{Z}_{m}=\sum_{n=1}^{NNN-1}\hat{W}_{0nm}=?\label{eq:3bodysum}
+\sum_{n=1}^{NNN-1}K\hat{Z}_{0}\hat{Z}_{n}\hat{Z}_{m}=\sum_{n=1}^{NNN-1}\hat{W}_{0nm}=?\label{eq:three_bodysum}
 \end{equation}
 
 \end_inset
@@ -9026,7 +9026,7 @@ noprefix "false"
  to sum 
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "eq:3bodyterm"
+reference "eq:three_bodyterm"
 plural "false"
 caps "false"
 noprefix "false"
@@ -9036,7 +9036,7 @@ noprefix "false"
  as defined by 
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "eq:3bodysum"
+reference "eq:three_bodysum"
 plural "false"
 caps "false"
 noprefix "false"
@@ -9075,7 +9075,7 @@ literal "false"
  
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "eq:3bodysum"
+reference "eq:three_bodysum"
 plural "false"
 caps "false"
 noprefix "false"
@@ -9124,7 +9124,7 @@ noprefix "false"
  and 
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "eq:3bodyterm"
+reference "eq:three_bodyterm"
 plural "false"
 caps "false"
 noprefix "false"
@@ -10408,7 +10408,7 @@ Tr.
 \begin_layout Plain Layout
 \begin_inset CommandInset label
 LatexCommand label
-name "tab:3body-Dw-results"
+name "tab:three_body-Dw-results"
 
 \end_inset
 
@@ -10448,7 +10448,7 @@ literal "false"
 From table 
 \begin_inset CommandInset ref
 LatexCommand ref
-reference "tab:3body-Dw-results"
+reference "tab:three_body-Dw-results"
 plural "false"
 caps "false"
 noprefix "false"

@@ -18,11 +18,11 @@ verbose1 = false #verbose inside orth algos
 @testset verbose = verbose "Orthogonalize" begin
 
   models = [
-    [make_transIsing_MPO, "S=1/2", true],
-    [make_transIsing_AutoMPO, "S=1/2", true],
-    [make_Heisenberg_AutoMPO, "S=1/2", true],
-    [make_Heisenberg_AutoMPO, "S=1", true],
-    [make_Hubbard_AutoMPO, "Electron", false],
+    [transIsing_MPO, "S=1/2", true],
+    [transIsing_AutoMPO, "S=1/2", true],
+    [Heisenberg_AutoMPO, "S=1/2", true],
+    [Heisenberg_AutoMPO, "S=1", true],
+    [Hubbard_AutoMPO, "Electron", false],
   ]
 
   @testset "Ac/Ab block respecting decomposition $(model[1]), qns=$qns, ul=$ul" for model in
@@ -81,19 +81,19 @@ verbose1 = false #verbose inside orth algos
 
   #   N = 2 * NNN + 4
   #   sites = siteinds("S=1/2", N; conserve_qns=qns)
-  #   Hhand = reg_form_MPO(make_transIsing_MPO(sites, NNN; ul=ul))
-  #   Hauto = make_transIsing_AutoMPO(sites, NNN; ul=ul)
+  #   Hhand = reg_form_MPO(transIsing_MPO(sites, NNN; ul=ul))
+  #   Hauto = transIsing_AutoMPO(sites, NNN; ul=ul)
   #   ac_orthogonalize!(Hhand, right)
   #   ac_orthogonalize!(Hhand, left)
   #   @test get_Dw(Hhand) == get_Dw(Hauto)
   # end
 
   models = [
-    (make_transIsing_iMPO, "S=1/2"),
-    (make_transIsing_AutoiMPO, "S=1/2"),
-    (make_Heisenberg_AutoiMPO, "S=1/2"),
-    (make_Heisenberg_AutoiMPO, "S=1"),
-    (make_Hubbard_AutoiMPO, "Electron"),
+    (transIsing_iMPO, "S=1/2"),
+    (transIsing_AutoiMPO, "S=1/2"),
+    (Heisenberg_AutoiMPO, "S=1/2"),
+    (Heisenberg_AutoiMPO, "S=1"),
+    (Hubbard_AutoiMPO, "Electron"),
   ]
 
   #

@@ -25,9 +25,9 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f)
   eps = 1e-14
   ms = matrix_state(ul, lr)
   si = infsiteinds("Electron", N; initstate, conserve_qns=qns)
-  H0 = make_Hubbard_AutoiMPO(si, NNN; ul=ul)
+  H0 = Hubbard_AutoiMPO(si, NNN; ul=ul)
   # si = infsiteinds("S=1/2", N; initstate, conserve_qns=false)
-  # H0=make_Heisenberg_AutoiMPO(si,NNN;ul=ul)
+  # H0=Heisenberg_AutoiMPO(si,NNN;ul=ul)
   if lr == left
     HL = copy(H0)
     orthogonalize!(HL, ul; orth=mirror(lr), rr_cutoff=rr_cutoff, max_sweeps=1)

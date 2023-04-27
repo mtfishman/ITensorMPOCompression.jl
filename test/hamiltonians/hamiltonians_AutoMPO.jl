@@ -1,6 +1,6 @@
 
 @doc """
-make_3body_AutoMPO(sites;kwargs...)
+three_body_AutoMPO(sites;kwargs...)
 
 Use `ITensor.autoMPO` to reproduce the 3 body Hamiltonian defined in eq. 34 of the Parker paper. 
 The MPO is returned in lower regular form.
@@ -10,25 +10,25 @@ The MPO is returned in lower regular form.
 # Keywords
 - `hx::Float64 = 0.0` : External magnetic field in `x` direction.
 """
-function make_3body_AutoMPO(sites;hx=0.0, kwargs...)
+function three_body_AutoMPO(sites;hx=0.0, kwargs...)
   N = length(sites)
   os = OpSum()
   if hx != 0
-    os = make_1body(os, N, hx)
+    os = one_body(os, N, hx)
   end
-  os = make_2body(os, N; kwargs...)
-  os = make_3body(os, N; kwargs...)
+  os = two_body(os, N; kwargs...)
+  os = three_body(os, N; kwargs...)
   return MPO(os, sites; kwargs...)
 end
 
-function make_1body(os::OpSum, N::Int64, hx::Float64=0.0)::OpSum
+function one_body(os::OpSum, N::Int64, hx::Float64=0.0)::OpSum
   for n in 1:N
     add!(os, hx, "Sx", n)
   end
   return os
 end
 
-function make_2body(os::OpSum, N::Int64;Jprime=1.0, kwargs...)::OpSum
+function two_body(os::OpSum, N::Int64;Jprime=1.0, kwargs...)::OpSum
   if Jprime != 0.0
     for n in 1:N
       for m in (n + 1):N
@@ -44,7 +44,7 @@ function make_2body(os::OpSum, N::Int64;Jprime=1.0, kwargs...)::OpSum
   return os
 end
 
-function make_3body(os::OpSum, N::Int64; J=1.0, kwargs...)::OpSum
+function three_body(os::OpSum, N::Int64; J=1.0, kwargs...)::OpSum
   if J != 0.0
     for k in 1:N
       for n in (k + 1):N
@@ -78,7 +78,7 @@ end
 
 
 @doc """
-make_transIsing_AutoMPO(sites,NNN;kwargs...)
+transIsing_AutoMPO(sites,NNN;kwargs...)
 
 Use `ITensor.autoMPO` to build up a transverse Ising model Hamiltonian with up to `NNN` neighbour 2-body 
 interactions.  The interactions are hard coded to decay like `J/(i-j)`. between sites `i` and `j`.
@@ -93,7 +93,7 @@ The MPO is returned in lower regular form.
 - `J::Float64 = 1.0` : Nearest neighbour interaction strength. Further neighbours decay like `J/(i-j)`..
 
 """
-function make_transIsing_AutoMPO(sites, NNN::Int64; ul=lower, J=1.0, hx=0.0, kwargs...)::MPO
+function transIsing_AutoMPO(sites, NNN::Int64; ul=lower, J=1.0, hx=0.0, kwargs...)::MPO
  
   do_field = hx != 0.0
   N = length(sites)
@@ -115,12 +115,12 @@ function make_transIsing_AutoMPO(sites, NNN::Int64; ul=lower, J=1.0, hx=0.0, kwa
   end
   return H
 end
-function make_2body_AutoMPO(sites, NNN::Int64; kwargs...)
-  return make_transIsing_AutoMPO(sites, NNN; kwargs...)
+function two_body_AutoMPO(sites, NNN::Int64; kwargs...)
+  return transIsing_AutoMPO(sites, NNN; kwargs...)
 end
 
 @doc """
-make_Heisenberg_AutoMPO(sites,NNN;kwargs...)
+Heisenberg_AutoMPO(sites,NNN;kwargs...)
 
 Use `ITensor.autoMPO` to build up a Heisenberg model Hamiltonian with up to `NNN` neighbour
 2-body interactions.  The interactions are hard coded to decay like `J/(i-j)`. between sites `i` and `j`.
@@ -136,7 +136,7 @@ The MPO is returned in lower regular form.
 
 """
 
-function make_Heisenberg_AutoMPO(sites, NNN::Int64;ul=lower,hz=0.0,J=1.0, kwargs...)::MPO
+function Heisenberg_AutoMPO(sites, NNN::Int64;ul=lower,hz=0.0,J=1.0, kwargs...)::MPO
   N = length(sites)
   @mpoc_assert(N >= NNN)
   @mpoc_assert(J!=0.0)
@@ -159,7 +159,7 @@ function make_Heisenberg_AutoMPO(sites, NNN::Int64;ul=lower,hz=0.0,J=1.0, kwargs
   return H
 end
 
-function make_Hubbard_AutoMPO(sites, NNN::Int64; ul=lower, U=1.0,t=1.0,V=0.5, kwargs...)::MPO
+function Hubbard_AutoMPO(sites, NNN::Int64; ul=lower, U=1.0,t=1.0,V=0.5, kwargs...)::MPO
   N = length(sites)
   @mpoc_assert(N >= NNN)
   os = OpSum()

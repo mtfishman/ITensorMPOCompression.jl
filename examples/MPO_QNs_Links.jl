@@ -1,5 +1,5 @@
 using ITensors
-function make_Heisenberg_AutoMPO(sites, NNN::Int64=1)::MPO
+function Heisenberg_AutoMPO(sites, NNN::Int64=1)::MPO
   N = length(sites)
   @mpoc_assert(N >= NNN)
   ampo = OpSum()
@@ -13,7 +13,7 @@ function make_Heisenberg_AutoMPO(sites, NNN::Int64=1)::MPO
   end
   return MPO(ampo, sites)
 end
-function make_transIsing_AutoMPO(sites, NNN::Int64=1)::MPO
+function transIsing_AutoMPO(sites, NNN::Int64=1)::MPO
   N = length(sites)
   @mpoc_assert(N > NNN)
   ampo = OpSum()
@@ -28,7 +28,7 @@ end
 
 N = 10
 sites = siteinds("SpinHalf", N; conserve_qns=true)
-H = make_transIsing_AutoMPO(sites, 2)
+H = transIsing_AutoMPO(sites, 2)
 @show inds(H[4])[2] #show any interior link
-H = make_Heisenberg_AutoMPO(sites, 2)
+H = Heisenberg_AutoMPO(sites, 2)
 @show inds(H[4])[2] #show any interior link

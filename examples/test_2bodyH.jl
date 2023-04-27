@@ -22,9 +22,9 @@ Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f) #dumb way to control flo
     NNNd = NNN > 15 ? 1 : NNN #don't bother with the dumb version for largeish NNN
     sites = siteinds("S=1/2", N)
     si = infsiteinds("S=1/2", 1; initstate, conserve_szparity=false)
-    HdumbL = make_2body_MPO(sites, NNNd; Jprime=1.0, presummed=false)
+    HdumbL = two_body_MPO(sites, NNNd; Jprime=1.0, presummed=false)
     @show get_Dw(HdumbL)
-    #Hdumb_pbc=make_2body_MPO(si,NNN;Jprime=1.0,presummed=false,pbc=true)
+    #Hdumb_pbc=two_body_MPO(si,NNN;Jprime=1.0,presummed=false,pbc=true)
     #Hdumb_infL=InfiniteMPO([Hdumb_pbc[1]])
     #@show inds(Hdumb_infL[1])
     #@mpoc_assert false
@@ -67,11 +67,11 @@ end
 #         NNNd= NNN>15 ? 1 : NNN #don't bother with the dumb version for largeish NNN
 #         sites = siteinds("S=1/2",N);
 #         si = infsiteinds("S=1/2", 1; initstate, conserve_szparity=false)
-#         Hpres=make_2body_MPO(sites,NNN;presummed=true)
-#         Hdumb=make_2body_MPO(sites,NNNd;presummed=false)
-#         Hauto=make_2body_AutoMPO(sites,NNN)
-#         Hpres_pbc=make_2body_MPO(si,NNN;presummed=true,pbc=true)
-#         Hdumb_pbc=make_2body_MPO(si,NNN;presummed=false,pbc=true)
+#         Hpres=two_body_MPO(sites,NNN;presummed=true)
+#         Hdumb=two_body_MPO(sites,NNNd;presummed=false)
+#         Hauto=two_body_AutoMPO(sites,NNN)
+#         Hpres_pbc=two_body_MPO(si,NNN;presummed=true,pbc=true)
+#         Hdumb_pbc=two_body_MPO(si,NNN;presummed=false,pbc=true)
 #         # Hpres_inf=InfiniteMPO([Hpres_pbc[1]])
 #         # Hdumb_inf=InfiniteMPO([Hdumb_pbc[1]])
 #     #     Dw_ps_raw,Dw_ds_raw,Dw_auto_raw=maxlinkdim(Hpres),maxlinkdim(Hdumb),maxlinkdim(Hauto)

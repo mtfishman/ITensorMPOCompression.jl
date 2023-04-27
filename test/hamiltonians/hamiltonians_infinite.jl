@@ -34,7 +34,7 @@ function InfiniteSum{MPO}(impo::InfiniteMPO, NNN::Int64)
 end
 
 @doc """
-    make_transIsing_iMPO(sites,NNN;kwargs...)
+    transIsing_iMPO(sites,NNN;kwargs...)
  
 Infinite lattice of a transverse Ising model Hamiltonian with up to `NNN` neighbour 2-body 
 interactions.  The interactions are hard coded to decay like `J/(i-j)`. between sites `i` and `j`.
@@ -49,8 +49,8 @@ One unit cell of the iMPO is stored, but `CelledVector` indexing allows code to 
 - `J::Float64=1.0` : Nearest neighbour interaction strength.  Further neighbours decay like `J/(i-j)`..
 
 """
-function make_transIsing_iMPO(sites, NNN::Int64; kwargs...)
-  mpo = make_transIsing_MPO(sites, NNN; pbc=true, kwargs...)
+function transIsing_iMPO(sites, NNN::Int64; kwargs...)
+  mpo = transIsing_MPO(sites, NNN; pbc=true, kwargs...)
   return InfiniteMPO(mpo.data)
 end
 
@@ -74,18 +74,18 @@ function daisychain_links!(H::MPO, n::Int64)
   return H[Ncell] = replaceind(H[Ncell], iN, i0)
 end
 
-function make_transIsing_AutoiMPO(isites, NNN::Int64; kwargs...)
-  return make_AutoiMPO(make_transIsing_AutoMPO, isites, NNN; kwargs...)
+function transIsing_AutoiMPO(isites, NNN::Int64; kwargs...)
+  return AutoiMPO(transIsing_AutoMPO, isites, NNN; kwargs...)
 end
 
-function make_Heisenberg_AutoiMPO(isites, NNN::Int64; kwargs...)
-  return make_AutoiMPO(make_Heisenberg_AutoMPO, isites, NNN; kwargs...)
+function Heisenberg_AutoiMPO(isites, NNN::Int64; kwargs...)
+  return AutoiMPO(Heisenberg_AutoMPO, isites, NNN; kwargs...)
 end
-function make_Hubbard_AutoiMPO(isites, NNN::Int64; kwargs...)
-  return make_AutoiMPO(make_Hubbard_AutoMPO, isites, NNN; kwargs...)
+function Hubbard_AutoiMPO(isites, NNN::Int64; kwargs...)
+  return AutoiMPO(Hubbard_AutoMPO, isites, NNN; kwargs...)
 end
 
-function make_AutoiMPO(MakeH::Function, isites, NNN::Int64; kwargs...)
+function AutoiMPO(MakeH::Function, isites, NNN::Int64; kwargs...)
   #
   # Make a finte lattice MPO large enough that there are no edge effects for Ncell sites in the center.
   #
