@@ -76,15 +76,12 @@ mutable struct reg_form_MPO <: AbstractMPS
     if ul==upper && !honour_upper
       Hrf=transpose(Hrf)
     end
-    check(Hrf;honour_upper=honour_upper)
+    check(Hrf)
     return Hrf
   end
 
-  function check(Hrf::reg_form_MPO;honour_upper=false)
+  function check(Hrf::reg_form_MPO)
     check.(Hrf)
-    if !honour_upper
-      @mpoc_assert Hrf.ul==lower
-    end
   end
   
   

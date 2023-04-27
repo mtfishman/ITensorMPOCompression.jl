@@ -216,7 +216,8 @@ function set_𝐜̂_block!(Wrf::reg_form_Op, 𝐜̂::ITensor)
 end
 
 function set_𝐛̂𝐜̂_block!(Wrf::reg_form_Op, 𝐛̂𝐜̂::ITensor, lr::orth_type)
-  if llur(Wrf, lr)
+  @mpoc_assert Wrf.ul==lower
+  if lr==left
     set_𝐛̂_block!(Wrf, 𝐛̂𝐜̂)
   else
     set_𝐜̂_block!(Wrf, 𝐛̂𝐜̂)
@@ -237,9 +238,10 @@ function set_𝕀_block!(Wrf::reg_form_Op, 𝕀::ITensor)
 end
 
 function set_𝐀̂𝐜̂_block(Wrf::reg_form_Op, 𝐀̂𝐜̂::ITensor, lr::orth_type)
+  @mpoc_assert Wrf.ul==lower
   check(Wrf)
   i1, i2, n1, n2 = swap_ul(Wrf)
-  if llur(Wrf, lr) #lower left/upper right
+  if lr==left #lower left/upper right
     min1 = Base.min(n1, 2)
     Wrf.W[i1 => min1:n1, i2 => 2:(n2 - 1)] = 𝐀̂𝐜̂
   else #lower right/upper left
@@ -255,7 +257,7 @@ function set_𝐜̂_block!(::reg_form_Op, ::Nothing) end
 # 
 #  Given R, build R⎖ such that lr=left  R=M*R⎖, lr=right R=R⎖*M
 #
-function build_R⎖(R::ITensor, iqx::Index, ilf::Index, ul::reg_form)::Tuple{ITensor,Index}
+function build_R⎖(R::ITensor, iqx::Index, ilf::Index)::Tuple{ITensor,Index}
   @mpoc_assert order(R) == 2
   @mpoc_assert hasinds(R, iqx, ilf)
   @mpoc_assert dim(iqx) == dim(ilf) #make sure RL is square
@@ -270,13 +272,8 @@ function build_R⎖(R::ITensor, iqx::Index, ilf::Index, ul::reg_form)::Tuple{ITe
   #
   #  Copy over the perimeter of RL.
   #
-  if ul == upper
-    R⎖[im => 1:1, ilf => 1:Dw] = R[iqx => 1:1, ilf => 1:Dw] #first row
-    R⎖[im => 2:Dw, ilf => Dw:Dw] = R[iqx => 2:Dw, ilf => Dw:Dw] #last col
-  else
-    R⎖[im => Dw:Dw, ilf => 2:Dw] = R[iqx => Dw:Dw, ilf => 2:Dw] #last row
-    R⎖[im => 1:Dw, ilf => 1:1] = R[iqx => 1:Dw, ilf => 1:1] #first col
-  end
+  R⎖[im => Dw:Dw, ilf => 2:Dw] = R[iqx => Dw:Dw, ilf => 2:Dw] #last row
+  R⎖[im => 1:Dw, ilf => 1:1] = R[iqx => 1:Dw, ilf => 1:1] #first col
   @checkflux(R⎖)
   #
   #  Fix up index tags and primes.

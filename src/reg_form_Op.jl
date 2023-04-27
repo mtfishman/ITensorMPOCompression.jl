@@ -34,13 +34,19 @@ function check(Wrf::reg_form_Op)
     end
 end
 
+function reg_form_Op(ElT::Type{<:Number},il::Index,ir::Index,is)
+    Ŵ = ITensor(ElT(0.0), il, ir, is)
+    return reg_form_Op(Ŵ, il, ir, lower)
+end
+
 #  Extract a subtensor
 function Base.getindex(Wrf::reg_form_Op, rleft::UnitRange, rright::UnitRange)
-return Wrf.W[Wrf.ileft => rleft, Wrf.iright => rright]
+    return Wrf.W[Wrf.ileft => rleft, Wrf.iright => rright]
 end
 #
 #  Support some ITensors/Base functions
 #
+Base.eltype(Wrf::reg_form_Op)=eltype(Wrf.W)
 ITensors.dims(Wrf::reg_form_Op) = dim(Wrf.ileft), dim(Wrf.iright)
 Base.getindex(Wrf::reg_form_Op, lr::orth_type) = lr == left ? Wrf.ileft : Wrf.iright
 function Base.setindex!(Wrf::reg_form_Op, il::Index, lr::orth_type)

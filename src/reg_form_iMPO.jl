@@ -40,7 +40,7 @@ end
   
   Base.length(H::reg_form_iMPO) = length(H.data)
   function Base.reverse(H::reg_form_iMPO)
-    return reg_form_iMPO(Base.reverse(H.data), H.llim, H.rlim, H.reverse, H.ul)
+    return reg_form_iMPO(Base.reverse(H.data),H.reverse, H.ul)
   end
   Base.iterate(H::reg_form_iMPO, args...) = iterate(H.data, args...)
   Base.getindex(H::reg_form_iMPO, n::Integer) = getindex(H.data, n)
@@ -61,49 +61,46 @@ end
     if ul==upper && !honour_upper
       Hrf=transpose(Hrf)
     end
-    check(Hrf;honour_upper=honour_upper)
+    check(Hrf)
     return Hrf
   end
   
   #same as reg_form_MPO version
-  function check(Hrf::reg_form_iMPO;honour_upper=false)
+  function check(Hrf::reg_form_iMPO)
     check.(Hrf)
-    if !honour_upper
-      @mpoc_assert Hrf.ul==lower
-    end
   end
 
   function ITensorInfiniteMPS.InfiniteMPO(Hrf::reg_form_iMPO)::InfiniteMPO
     return InfiniteMPO(Ws(Hrf))
   end
   
-  function to_openbc(Hrf::reg_form_iMPO)::reg_form_iMPO
-    N = length(Hrf)
-    if N > 1
-      l, r = get_lr(Hrf)
-      Hrf[1].W = l * prime(Hrf[1].W, Hrf[1].ileft)
-      Hrf[N].W = prime(Hrf[N].W, Hrf[N].iright) * r
-      @mpoc_assert length(inds(Hrf[1].W; tags="Link")) == 1
-      @mpoc_assert length(inds(Hrf[N].W; tags="Link")) == 1
-    end
-    return Hrf
-  end
+  # function to_openbc(Hrf::reg_form_iMPO)::reg_form_iMPO
+  #   N = length(Hrf)
+  #   if N > 1
+  #     l, r = get_lr(Hrf)
+  #     Hrf[1].W = l * prime(Hrf[1].W, Hrf[1].ileft)
+  #     Hrf[N].W = prime(Hrf[N].W, Hrf[N].iright) * r
+  #     @mpoc_assert length(inds(Hrf[1].W; tags="Link")) == 1
+  #     @mpoc_assert length(inds(Hrf[N].W; tags="Link")) == 1
+  #   end
+  #   return Hrf
+  # end
   
-  function get_lr(Hrf::reg_form_iMPO)::Tuple{ITensor,ITensor}
-    N = length(Hrf)
-    llink, rlink = linkinds(Hrf[1])
-    l = ITensor(0.0, dag(llink'))
-    r = ITensor(0.0, dag(rlink'))
-    if Hrf.ul == lower
-      l[llink' => dim(llink)] = 1.0
-      r[rlink' => 1] = 1.0
-    else
-      l[llink' => 1] = 1.0
-      r[rlink' => dim(rlink)] = 1.0
-    end
+  # function get_lr(Hrf::reg_form_iMPO)::Tuple{ITensor,ITensor}
+  #   N = length(Hrf)
+  #   llink, rlink = linkinds(Hrf[1])
+  #   l = ITensor(0.0, dag(llink'))
+  #   r = ITensor(0.0, dag(rlink'))
+  #   if Hrf.ul == lower
+  #     l[llink' => dim(llink)] = 1.0
+  #     r[rlink' => 1] = 1.0
+  #   else
+  #     l[llink' => 1] = 1.0
+  #     r[rlink' => dim(rlink)] = 1.0
+  #   end
   
-    return l, r
-  end
+  #   return l, r
+  # end
   
   function get_Dw(Hrf::reg_form_iMPO)
     return map(n -> dim(Hrf[n].iright), eachindex(Hrf))

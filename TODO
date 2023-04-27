@@ -86,6 +86,11 @@ Done: -Split up reg_form_Op, reg_form_MPO and reg_form_iMPO
 -Change flip to mirror?
 -Fix max(spectrum)  Base.max
 -Add the two site BH model to models lists.
+-qx.jl  one step:
+  Ŵ = ITensor(0.0, ileft, iright, siteinds(Ŵrf))
+  Ŵrf⎖ = reg_form_Op(Ŵ, ileft, iright, Ŵrf.ul)
+to
+  Ŵrf⎖ = reg_form_Op(ileft, iright, siteinds(Ŵrf)) #default to lower.
 
 
 Done: -Start using 
