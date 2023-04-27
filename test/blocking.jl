@@ -12,7 +12,7 @@ import ITensorMPOCompression: flip
   NNN = 2 #Include 2nd nearest neighbour interactions
   sites = siteinds("Electron", N; conserve_qns=qns)
   d = dim(inds(sites[1])[1])
-  H = reg_form_MPO(make_Hubbard_AutoMPO(sites, NNN; ul=ul))
+  H = reg_form_MPO(make_Hubbard_AutoMPO(sites, NNN; ul=ul);honour_upper=true)
 
   lr = ul == lower ? left : right
 
@@ -77,10 +77,10 @@ end
   N = 5 #5 sites
   NNN = 2 #Include 2nd nearest neighbour interactions
   sites = siteinds("Electron", N; conserve_qns=qns)
-  H = reg_form_MPO(make_Hubbard_AutoMPO(sites, NNN; ul=ul))
+  H = reg_form_MPO(make_Hubbard_AutoMPO(sites, NNN; ul=ul);honour_upper=true)
   for W in H
-    @test is_regular_form(W, ul, eps)
-    @test dim(W.ileft) == 1 || dim(W.iright) == 1 || !is_regular_form(W, flip(ul), eps)
+    @test is_regular_form(W, ul;eps=eps)
+    @test dim(W.ileft) == 1 || dim(W.iright) == 1 || !is_regular_form(W, flip(ul);eps=eps)
   end
 end
 

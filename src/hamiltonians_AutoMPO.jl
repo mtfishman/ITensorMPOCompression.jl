@@ -185,22 +185,6 @@ function G_transpose(i::Index, iu::Index)
   return G
 end
 
-# function to_upper(W::ITensor)
-#     l,r=parse_links(W)
-#     lu=reverse(l)
-#     ru=reverse(r)
-#     Gl=G_transpose(l,lu)
-#     Gr=G_transpose(r,ru)
-#     if dim(l)==1
-#         Wt=W*Gr
-#     elseif dim(r)==1
-#         Wt=Gl*W
-#     else
-#         Wt=Gl*W*Gr
-#     end
-#    return Wt
-# end
-
 function to_upper!(H::AbstractMPS)
   N = length(H)
   l, r = parse_links(H[1])

@@ -71,6 +71,7 @@ true
 function truncate(
   Ŵrf::reg_form_Op, lr::orth_type; kwargs...
 )::Tuple{reg_form_Op,ITensor,Spectrum}
+  @mpoc_assert Ŵrf.ul==lower
   ilf = forward(Ŵrf, lr)
   #   l=n-1   l=n        l=n-1  l=n  l=n
   #   ------W----   -->  -----Q-----R-----
@@ -89,7 +90,7 @@ function truncate(
   #  l=n'    l=n           l=n'   m      l=n
   #  ------R----   --->   -----M------R'----
   #  iqx'    ilf           iqx'   im     ilf
-  R⎖, im = build_R⎖(R, iqx, ilf, Ŵrf.ul) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
+  R⎖, im = build_R⎖(R, iqx, ilf) #left M[lq,im] RL_prime[im,c] - right RL_prime[r,im] M[im,lq]
   #  
   #  svd decomp M. 
   #    
@@ -192,10 +193,10 @@ function ITensors.truncate!(
   #
   # Now check if H requires orthogonalization
   #
-  if isortho(H, lr)
-    @warn "truncate!(iMPO), iMPO is already orthogonalized, but the truncate algorithm needs the gauge transform tensors." *
-      "running orthongonalie!() again to get the gauge tranforms."
-  end
+  # if isortho(H, lr)
+  #   @warn "truncate!(iMPO), iMPO is already orthogonalized, but the truncate algorithm needs the gauge transform tensors." *
+  #     "running orthongonalie!() again to get the gauge tranforms."
+  # end
   ac_orthogonalize!(H, mirror(lr); cutoff=rr_cutoff, kwargs...)
   Hm = copy(H)
   Gs = ac_orthogonalize!(H, lr; cutoff=rr_cutoff, kwargs...)

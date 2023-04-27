@@ -86,6 +86,7 @@ end
 
 
 function insert_Q(Ŵrf::reg_form_Op, Q̂::ITensor, iq::Index, lr::orth_type)
+  @mpoc_assert Ŵrf.ul==lower
   #
   #  Create new index by growing iq.
   #
@@ -95,8 +96,7 @@ function insert_Q(Ŵrf::reg_form_Op, Q̂::ITensor, iq::Index, lr::orth_type)
   #
   #  Create a new reg form tensor
   #
-  Ŵ = ITensor(0.0, ileft, iright, siteinds(Ŵrf))
-  Ŵrf⎖ = reg_form_Op(Ŵ, ileft, iright, Ŵrf.ul)
+  Ŵrf⎖ = reg_form_Op(eltype(Ŵrf), ileft, iright,siteinds(Ŵrf))
   #
   #  Preserve b,c,d blocks and insert Q
   #
@@ -110,9 +110,10 @@ function insert_Q(Ŵrf::reg_form_Op, Q̂::ITensor, iq::Index, lr::orth_type)
 end
 
 function ac_qx(Ŵrf::reg_form_Op, lr::orth_type; qprime=false, verbose=false, cutoff=1e-14, kwargs...)
+  @mpoc_assert Ŵrf.ul==lower
   @checkflux(Ŵrf.W)
   Wb = extract_blocks(Ŵrf, lr; Ac=true)
-  ilf_Ac = llur(Ŵrf, lr) ? Wb.icAc : Wb.irAc
+  ilf_Ac = lr==left ? Wb.icAc : Wb.irAc
   ilf = forward(Ŵrf, lr) #Backward and forward indices.
   @checkflux(Wb.𝐀̂𝐜̂)
   if lr == left

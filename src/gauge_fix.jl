@@ -43,6 +43,7 @@ function gauge_fix!(H::reg_form_MPO;kwargs...)
 end
 
 function gauge_fix!(W::reg_form_Op, tₙ₋₁::Vector{Float64}, lr::orth_type)
+  @assert W.ul==lower
   @assert is_regular_form(W)
   Wb = extract_blocks(W, lr; all=true, fix_inds=true)
   𝕀, 𝐀̂, 𝐛̂, 𝐜̂, 𝐝̂ = Wb.𝕀, Wb.𝐀̂, Wb.𝐛̂, Wb.𝐜̂, Wb.𝐝̂ #for readability below.
@@ -52,7 +53,7 @@ function gauge_fix!(W::reg_form_Op, tₙ₋₁::Vector{Float64}, lr::orth_type)
   #  Make in ITensor with suitable indices from the 𝒕ₙ₋₁ vector.
   #
   if nb > 1
-    ibd, ibb = llur(W, lr) ? (Wb.ird, Wb.irb) : (Wb.icd, Wb.icb)
+    ibd, ibb =lr==left ? (Wb.ird, Wb.irb) : (Wb.icd, Wb.icb)
     𝒕ₙ₋₁ = ITensor(tₙ₋₁, dag(ibb), ibd)
   end
   𝐜̂⎖ = nothing
@@ -71,18 +72,8 @@ function gauge_fix!(W::reg_form_Op, tₙ₋₁::Vector{Float64}, lr::orth_type)
     𝐜̂⎖ = 𝐜̂ + 𝒕ₙ₋₁ * 𝐀̂ - 𝒕ₙ * 𝕀
     𝐝̂⎖ = 𝐝̂ + 𝒕ₙ₋₁ * 𝐛̂
   end
-  @assert is_regular_form(W)
-
   set_𝐝̂_block!(W, 𝐝̂⎖)
-  @assert is_regular_form(W)
-
-  if !isnothing(𝐜̂⎖)
-    if llur(W, lr)
-      set_𝐜̂_block!(W, 𝐜̂⎖)
-    else
-      set_𝐛̂_block!(W, 𝐜̂⎖)
-    end
-  end
+  set_𝐛̂𝐜̂_block!(W, 𝐜̂⎖,mirror(lr))
   @assert is_regular_form(W)
 
   # 𝒕ₙ is always a 1xN tensor so we need to remove that dim==1 index in order for vector(𝒕ₙ) to work.
@@ -93,19 +84,14 @@ end
 #
 #  Infinite lattice with unit cell
 #
-function gauge_fix!(Hin::reg_form_iMPO;kwargs...)
-  if Hin.ul==upper
-    H=ITensorMPOCompression.transpose(Hin)
-  else
-    H=Hin
-  end
+function gauge_fix!(H::reg_form_iMPO;kwargs...)
+  @mpoc_assert H.ul==lower
   if !is_gauge_fixed(H;kwargs...)
     sₙ, tₙ = Solve_b0c0(H)
     for n in eachindex(H)
       gauge_fix!(H[n], sₙ[n - 1], sₙ[n], tₙ[n - 1], tₙ[n])
     end
   end
-  Hin=H
 end
 
 function ITensorInfiniteMPS.translatecell(::Function, T::Float64, ::Integer)

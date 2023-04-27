@@ -4,7 +4,7 @@ using ITensors
 using ITensors.NDTensors
 using ITensorInfiniteMPS
 
-import ITensors: QNIndex, addqns, rq, AbstractMPS, isortho, orthocenter, Indices, linkind
+import ITensors: QNIndex, addqns, rq, AbstractMPS, isortho, orthocenter, Indices, linkind, data
 import ITensors.BlockSparseTensor,
   ITensors.DenseTensor, ITensors.DiagTensor, ITensors.tensor
 
@@ -50,7 +50,7 @@ export IndexRange, indices, range, ranges, getperm, permute, start
 #  New ac_qx
 #
 export reg_form_MPO, extract_blocks, is_gauge_fixed, gauge_fix!, ac_qx, ac_orthogonalize!
-export reg_form_iMPO, transpose, check, check_ortho, check_gauge
+export reg_form_iMPO, transpose, check, check_ortho, check_gauge, data
 export InfiniteCanonicalMPO
 
 macro mpoc_assert(ex)
@@ -240,9 +240,10 @@ function redim(i::Index, Dw::Int64, offset::Int64=0)
   return Index(Dw; tags=tags(i), plev=plev(i)) #create new index.
 end
 
-
 include("subtensor.jl")
-include("reg_form.jl")
+include("reg_form_Op.jl")
+include("reg_form_MPO.jl")
+include("reg_form_iMPO.jl")
 include("util.jl")
 include("blocking.jl")
 include("gauge_fix.jl")
