@@ -13,6 +13,8 @@ IndexRange(ir::irPair{T}) where {T} = IndexRange(ir.first, ir.second)
 IndexRange(ir::IndexRange) = IndexRange(ir.index, ir.range)
 
 start(ir::IndexRange) = range(ir).start
+starts(irs::Tuple{Vararg{UnitRange{Int64}}}) = map((ir) -> ir.start, irs)
+
 range(ir::IndexRange) = ir.range
 range(i::Index) = 1:dim(i)
 ranges(irs::Tuple) = ntuple(i -> range(irs[i]), Val(length(irs)))
@@ -22,6 +24,7 @@ indranges(ips::Tuple{Vararg{irPairU}}) = map((ip) -> IndexRange(ip), ips)
 dim(ir::IndexRange) = dim(range(ir))
 dim(r::UnitRange{Int64}) = r.stop - r.start + 1
 dims(irs::Tuple{Vararg{IndexRange}}) = map((ir) -> dim(ir), irs)
+
 redim(ip::irPair) = redim(IndexRange(ip))
 redim(ir::IndexRange) = redim(ir.index, dim(ir), start(ir) - 1)
 redim(irs::Tuple{Vararg{IndexRange}}) = map((ir) -> redim(ir), irs)
@@ -72,112 +75,65 @@ end
 #  the range r will in general start at some index start(r) >1.  This function
 #  counts how many QN blocks are between 1 and start(r)
 #
-function get_offset_block_count(in::QNIndex, r::UnitRange{Int64})
-  # @show in r
-  rs = r.start - 1
-  if rs == 0
-    return 0, 0
-  end
-  @mpoc_assert rs > 0
-  nb = 0
-  qns = space(in)
-  for n in eachindex(qns)
-    rs -= qns[n].second #dim of space
-    nb += 1 #increment block counts
-    if rs == 0
-      break
-    elseif rs < 0
-      nb -= 1
-      #@show "mid block slice" 
-      #@show qns[n] rs nb
-      # @error("Slicing mid block is not supported yet.")
-    end
-  end
-  #@show nb rs
-  return nb, rs
-end
+# function get_offset_block_count(in::QNIndex, r::UnitRange{Int64})
+#   # @show in r
+#   rs = r.start - 1
+#   if rs == 0
+#     return 0, 0
+#   end
+#   @mpoc_assert rs > 0
+#   nb = 0
+#   qns = space(in)
+#   for n in eachindex(qns)
+#     rs -= qns[n].second #dim of space
+#     nb += 1 #increment block counts
+#     if rs == 0
+#       break
+#     elseif rs < 0
+#       nb -= 1
+#       #@show "mid block slice" 
+#       #@show qns[n] rs nb
+#       # @error("Slicing mid block is not supported yet.")
+#     end
+#   end
+#   #@show nb rs
+#   return nb, rs
+# end
 
-using StaticArrays
-function get_offset_block_counts(
-  inds::NTuple{N,IndsT}, rs::UnitRange{Int64}...
-) where {N,IndsT}
-  # @show inds rs
-  dbs = StaticArrays.MVector{N,UInt}(undef)
-  shifts = StaticArrays.MVector{N,Int}(undef)
-  for i in eachindex(inds)
-    dbi, shift = get_offset_block_count(inds[i], rs[i])
-    dbs[i] = dbi
-    shifts[i] = shift
-  end
-  return Block{N}(dbs), shifts
-end
+#using StaticArrays
+# function get_offset_block_counts(
+#   inds::NTuple{N,IndsT}, rs::UnitRange{Int64}...
+# ) where {N,IndsT}
+#   # @show inds rs
+#   dbs = StaticArrays.MVector{N,UInt}(undef)
+#   shifts = StaticArrays.MVector{N,Int}(undef)
+#   for i in eachindex(inds)
+#     dbi, shift = get_offset_block_count(inds[i], rs[i])
+#     dbs[i] = dbi
+#     shifts[i] = shift
+#   end
+#   return Block{N}(dbs), shifts
+# end
 
 function get_subtensor(
   T::BlockSparseTensor{ElT,N}, new_inds, rs::UnitRange{Int64}...
 ) where {ElT,N}
   Ds = Vector{DenseTensor{ElT,N}}()
   bs = Vector{Block{N}}()
-  #@show rs
-  dbs, = get_offset_block_counts(inds(T), rs...)
-  # for tb in eachnzblock(T)
-  #   blockT = blockview(T, tb)
 
-  #   if in_range(blockstart(T, tb), blockend(T, tb), rs...) #&& !isnothing(blockT)
-  #     # @show "inrange"
-  #     # @show tb blockT blockstart(T,tb) blockend(T,tb) 
-  #     iT = blockstart(T, tb)
-  #     #iT=ntuple(i->iT[i]+rs[i].start-1,N)
-  #     #iA=ntuple(i->iA[i]+dbs_ci[i],N)
-
-  #     index_within_block, tb1 = blockindex(T, Tuple(iT)...)
-  #     #@show index_within_block tb1
-  #     dT = [blockend(T, tb)...] - [index_within_block...] + fill(1, N)
-  #     rs1 = ntuple(i -> index_within_block[i]:(index_within_block[i] + dT[i] - iT[i]), N)
-  #     if isnothing(blockT)
-  #       @show iT dT rs1 blockT T
-  #     end
-  #     push!(Ds, blockT[rs1...])
-  #     bc = CartesianIndex(tb) - CartesianIndex(dbs)
-  #     push!(bs, bc)
-  #   end
-  # end
-
-  # Ds = Vector{DenseTensor{ElT,N}}()
-  # bs = Vector{Block{N}}()
-  # dbs,=get_offset_block_counts(inds(T),rs...)
-  for (jj, b) in enumerate(eachnzblock(T))
-      #TODO use index_within_block,tb=blockindex(T,Tuple(iT)...)
+  for b in eachnzblock(T)
       blockT = blockview(T, b)
       if in_range(blockstart(T,b),blockend(T,b),rs...)# && !isnothing(blockT)
-          #println("----------------------------------")
           rs1=fix_ranges(blockstart(T,b),blockend(T,b),rs...)
-          #@show "In of range" b dims(blockT) rs rs1 NDTensors.blockstart(T,b)
+          _,tb1=blockindex(T,starts(rs)...)
+          tb1=CartesianIndex(ntuple(i->tb1[i]-1,N))
           push!(Ds,blockT[rs1...])
-          index_within_block,tb1=blockindex(T,Tuple(blockstart(T,b))...)
-          bc=CartesianIndex(b)-CartesianIndex(dbs)
-          # db=CartesianIndex(blockend(T,b))-CartesianIndex(blockstart(T,b))
-          # b2=CartesianIndex(tb1)-db
-          # if bc!=b2
-          #     @show CartesianIndex(b) CartesianIndex(dbs) db bc b2 index_within_block tb1 blockstart(T,b) blockend(T,b)
-          # end
-          #bc=CartesianIndex(b)-b2
-
-          b=bc #Decrement block numbers by the number of skipped blocks.
-          push!(bs,b)
+          push!(bs,CartesianIndex(b)-tb1)
       end
   end
   if length(Ds) == 0
     return BlockSparseTensor(new_inds)
   end
-  #@show bs
-  #
-  #  JR: All attempts at building the new indices here at the NDTensors level failed.
-  #  The only thing I could make work was to pass the new indices down from the ITensors
-  #  level and use those. 
-  #
-  #@show bs[1] inds(T) new_inds space(new_inds[1]) Block(bs[1][1])
-  #bd=blockdim(new_inds[1],bs[1][1])
-  #@show bs rs new_inds
   T_sub = BlockSparseTensor(ElT, undef, bs, new_inds)
   for ib in eachindex(Ds)
     blockT_sub = bs[ib]
@@ -220,81 +176,52 @@ end
 function set_subtensor(
   T::BlockSparseTensor{ElT,N}, A::BlockSparseTensor{ElT,N}, rs::UnitRange{Int64}...
 ) where {ElT,N}
-  #    @mpoc_assert nzblocks(T)==nzblocks(A)
-  # dbs,shifts=get_offset_block_counts(inds(T),rs...)
-  # dbs_ci=CartesianIndex(dbs)
   insert = false
-  #rsa=ntuple(i->rs[i].start-dbs_ci[i]:rs[i].stop-dbs_ci[i],N)
   rsa = ntuple(i -> 1:dim(inds(A)[i]), N)
-  #@show rs dbs_ci rsa 
-  #@show inds(A) inds(T)
   for ab in eachnzblock(A)
-    #@show CartesianIndex(dbs) CartesianIndex(ab)
     blockA = blockview(A, ab)
-    #@show ab blockA blockstart(A,ab) blockend(A,ab) 
-
     if in_range(blockstart(A, ab), blockend(A, ab), rsa...)
       iA = blockstart(A, ab)
       iT = ntuple(i -> iA[i] + rs[i].start - 1, N)
-      #iA=ntuple(i->iA[i]+dbs_ci[i],N)
-      #@show "inrange"
       index_within_block, tb = blockindex(T, Tuple(iT)...)
       blockT = blockview(T, tb)
-      #@show iA iT index_within_block tb blockT
       if blockT == nothing
         insertblock!(T, tb)
         blockT = blockview(T, tb)
-        #@show "insert missing block" 
-        #@show iA iT ab tb blockA blockT
         insert = true
-        # index_within_block,tb=blockindex(T,Tuple(it)...)
-        # @show index_within_block tb 
       end
-
-      # rs1=fix_ranges(blockrange(T,tb),blockrange(A,ab),rs...)
-      # @show rs1
       dA = [dims(blockA)...]
       dT = [blockend(T, tb)...] - [index_within_block...] + fill(1, N)
       rs1 = ntuple(
         i -> index_within_block[i]:(index_within_block[i] + Base.min(dA[i], dT[i]) - 1), N
       )
-      #@show rs1 dA dT 
       if length(findall(dA .> dT)) == 0
         blockT[rs1...] = blockA #Dense assignment for each block
-      #@show blockT 
       else
         rsa1 = ntuple(i -> (rsa[i].start):(rsa[i].start + Base.min(dA[i], dT[i]) - 1), N)
-        #@show rsa1 blockA[rsa1...]
         blockT[rs1...] = blockA[rsa1...] #partial block Dense assignment for each block
         @error "Incomplete bloc transfer."
         @assert false
-        #@show blockT 
       end
     end
-    # @show "-----block-------------"
   end
-  if insert
-    #@show "blocks inserted"
-    #@assert false
-  end
-  #@show "---------------------------------"
 end
+
+
 function set_subtensor(
   T::DiagBlockSparseTensor{ElT,N}, A::DiagBlockSparseTensor{ElT,N}, rs::UnitRange{Int64}...
 ) where {ElT,N}
-  dbs, = get_offset_block_counts(inds(T), rs...)
-  dbs_ci = CartesianIndex(dbs)
-  rsa = ntuple(i -> (rs[i].start - dbs_ci[i]):(rs[i].stop - dbs_ci[i]), N)
+  _,tb1=blockindex(T,starts(rs)...)
+  tb1=CartesianIndex(ntuple(i->tb1[i]-1,N))
+  rsa = ntuple(i -> (rs[i].start - tb1[i]):(rs[i].stop - tb1[i]), N)
   for ab in eachnzblock(A)
     if in_range(blockstart(A, ab), blockend(A, ab), rsa...)
       it = blockstart(A, ab)
-      it = ntuple(i -> it[i] + dbs_ci[i], N)
-      index_within_block, tb = blockindex(T, Tuple(it)...)
+      it = ntuple(i -> it[i] + tb1[i], N)
+      _, tb = blockindex(T, Tuple(it)...)
       blockT = blockview(T, tb)
       blockA = blockview(A, ab)
       rs1 = fix_ranges(blockrange(T, tb), blockrange(A, ab), rs...)
-      #@show rs1 ab tb  
-
       blockT[rs1...] = blockA #Diag assignment for each block
     end
   end
