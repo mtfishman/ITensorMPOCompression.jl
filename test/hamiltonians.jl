@@ -8,7 +8,7 @@ using Test
 include("hamiltonians/hamiltonians.jl")
 
 
-import ITensorMPOCompression: transpose
+import ITensorMPOCompression: transpose, reg_form_iMPO, ac_orthogonalize!, redim
 
 # using Printf
 # Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f)

@@ -25,3 +25,17 @@ function check_gauge(H::InfiniteCanonicalMPO)::Float64
     end
     return sqrt(eps2)
 end
+
+function orthogonalize(Hi::InfiniteMPO;kwargs...)::InfiniteCanonicalMPO
+    HL=reg_form_iMPO(Hi) #not HL yet, but will be after two ortho calls.
+    ac_orthogonalize!(HL, right; kwargs...)
+    HR = copy(HL)
+    Gs = ac_orthogonalize!(HL,left; kwargs...)
+    return InfiniteCanonicalMPO(HL,Gs,HR)
+end
+
+function truncate(Hi::InfiniteMPO;kwargs...)::Tuple{InfiniteCanonicalMPO,bond_spectrums}
+    HL=reg_form_iMPO(Hi) #not HL yet, but will be after two ortho calls.
+    Ss, ss, HR = truncate!(HL, left)
+    return InfiniteCanonicalMPO(HL,Ss,HR),ss
+end

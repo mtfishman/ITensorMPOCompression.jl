@@ -6,6 +6,7 @@ using Revise, Printf
 include("hamiltonians/hamiltonians.jl")
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
 
+import ITensorMPOCompression: extract_blocks
 
 
 @testset "Extract blocks qns=$qns, ul=$ul" for qns in [false, true], ul in [lower, upper]

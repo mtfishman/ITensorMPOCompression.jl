@@ -6,7 +6,7 @@ using ITensorInfiniteMPS
 
 import ITensors: addqns, isortho, orthocenter, setinds , linkind, data, permute, checkflux
 import ITensors: dim, dims, trivial_space, eachindval, eachval, getindex, setindex!
-import ITensors: truncate!
+import ITensors: truncate!, truncate, orthogonalize
 
 import ITensors: QNIndex, QNBlocks, Indices, AbstractMPS, DenseTensor, BlockSparseTensor,DiagTensor, tensor
 

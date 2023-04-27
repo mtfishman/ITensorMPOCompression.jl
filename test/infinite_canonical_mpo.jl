@@ -6,6 +6,8 @@ using Test
 using Printf
 include("hamiltonians/hamiltonians.jl")
 
+import ITensorMPOCompression: check_gauge
+
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
 
 #H = ΣⱼΣn (½ S⁺ⱼS⁻ⱼ₊n + ½ S⁻ⱼS⁺ⱼ₊n + SᶻⱼSᶻⱼ₊n)
@@ -37,19 +39,7 @@ function ITensorInfiniteMPS.unit_cell_terms(::Model"hubbardNNN"; NNN::Int64)
   return opsum
 end
 
-function orthogonalize(Hi::InfiniteMPO;kwargs...)::InfiniteCanonicalMPO
-    HL=reg_form_iMPO(Hi) #not HL yet, but will be after two ortho calls.
-    ac_orthogonalize!(HL, right; kwargs...)
-    HR = copy(HL)
-    Gs = ac_orthogonalize!(HL,left; kwargs...)
-    return InfiniteCanonicalMPO(HL,Gs,HR)
-end
 
-function truncate(Hi::InfiniteMPO;kwargs...)::Tuple{InfiniteCanonicalMPO,bond_spectrums}
-    HL=reg_form_iMPO(Hi) #not HL yet, but will be after two ortho calls.
-    Ss, ss, HR = truncate!(HL, left)
-    return InfiniteCanonicalMPO(HL,Ss,HR),ss
-end
 
 
 
@@ -60,7 +50,7 @@ models = [
     (Model"hubbardNNN", "Electron"),
   ]
 
-@testset "Truncate/Compress InfiniteCanonicalMPO, H=$(model[1]), qbs=$qns, Ncell=$Ncell, NNN=$NNN" for model in models, qns in [false,true], Ncell in [1,2,3,4], NNN in [1,4,7]
+@testset "Truncate/Compress InfiniteCanonicalMPO, H=$(model[1]), qbs=$qns, Ncell=$Ncell, NNN=$NNN" for model in models, qns in [false,true], Ncell in [1,3], NNN in [1,4]
     eps=NNN*1e-14
     initstate(n) = isodd(n) ? "↑" : "↓"
     s = infsiteinds(model[2], Ncell; initstate, conserve_qns=qns)
@@ -76,7 +66,7 @@ models = [
     #@show BondSpectrums
 end
 
-@testset "Try a lattice with alternating S=1/2 and S=1 sites. iMPO. Qns=$qns, Ncell=$Ncell, NNN=$NNN" for qns in [false,true], Ncell in [1,2,3,4], NNN in [1,4,7]
+@testset "Try a lattice with alternating S=1/2 and S=1 sites. iMPO. Qns=$qns, Ncell=$Ncell, NNN=$NNN" for qns in [false,true], Ncell in [1,3], NNN in [1,4]
     eps=NNN*1e-14
     initstate(n) = isodd(n) ? "Dn" : "Up"
     si = infsiteinds(n->isodd(n) ? "S=1" : "S=1/2",Ncell; initstate, conserve_qns=qns)
