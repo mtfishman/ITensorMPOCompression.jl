@@ -35,7 +35,6 @@ function orthogonalize(Hi::InfiniteMPO;kwargs...)::InfiniteCanonicalMPO
 end
 
 function truncate(Hi::InfiniteMPO;kwargs...)::Tuple{InfiniteCanonicalMPO,bond_spectrums}
-    HL=reg_form_iMPO(Hi) #not HL yet, but will be after two ortho calls.
-    Ss, ss, HR = truncate!(HL, left)
+    HL, HR, Ss, ss = truncate!(reg_form_iMPO(Hi))
     return InfiniteCanonicalMPO(HL,Ss,HR),ss
 end

@@ -64,7 +64,7 @@ Improvements:
 -Fix emprical observations section of the tech notes.
 
 -Not Easy?: WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
--One last cleanup: impo truncate
+Done: -One last cleanup: impo truncate
 -Subtensor cleanup.
   Clean up "where {Elt,N}" code.
   check flux of inserted blocks.

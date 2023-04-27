@@ -187,77 +187,34 @@ site  Ns   max(s)     min(s)    Entropy  Tr. Error
 ```
 """
 function truncate!(
-  H::reg_form_iMPO, lr::orth_type; rr_cutoff=1e-14, kwargs...
-)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
-  #@printf "---- start compress ----\n"
+  H::reg_form_iMPO; rr_cutoff=1e-14, kwargs...
+)::Tuple{reg_form_iMPO,reg_form_iMPO,Any,bond_spectrums}
   #
-  # Now check if H requires orthogonalization
+  #  Orthogonalize and get the gauge transforms between HL and HR
   #
-  # if isortho(H, lr)
-  #   @warn "truncate!(iMPO), iMPO is already orthogonalized, but the truncate algorithm needs the gauge transform tensors." *
-  #     "running orthongonalie!() again to get the gauge tranforms."
-  # end
-  ac_orthogonalize!(H, mirror(lr); cutoff=rr_cutoff, kwargs...)
-  Hm = copy(H)
-  Gs = ac_orthogonalize!(H, lr; cutoff=rr_cutoff, kwargs...)
-  # @show get_Dw(Hm)
-  # @show get_Dw(H)
-  
-  return truncate!(H, Hm, Gs, lr; kwargs...)
-end
-
-function truncate!(
-  H::reg_form_iMPO, Hm::reg_form_iMPO, Gs::CelledVector{ITensor}, lr::orth_type; kwargs...
-)::Tuple{CelledVector{ITensor},bond_spectrums,Any}
-  gauge_fix!(H)
-
-  N = length(H)
+  HR=copy(H)
+  ac_orthogonalize!(HR, left; cutoff=rr_cutoff, kwargs...)
+  HL = copy(HR)
+  Gs = ac_orthogonalize!(HR, right; cutoff=rr_cutoff, kwargs...)
+  #
+  #  Now compress and gauge transforms and apply the similarity transform to HL and HR.
+  #
+  N = length(HL)
   ss = bond_spectrums(undef, N)
   Ss = CelledVector{ITensor}(undef, N)
   for n in 1:N
-    #prime the right index of G so that indices can be distinguished.
-    #Ideally orthogonalize!() would spit out Gs that are already like this.
-    igl = commonind(Gs[n], H[n].W)
-    igr = noncommonind(Gs[n], igl)
-    Gs[n] = replaceind(Gs[n], igr, prime(igr))
-    #iln=linkind(H,n) #Link between Hn amd Hn+1
-    iln = H[n].iright
-    #           
-    #  -----G[n-1]-----HR[n]-----   ==    -----HL[n]-----G[n]-----  
-    #
-    if lr == left
-      @assert igl == iln
-      # println("-----------------Left----------------------")
-      igl = iln #right link of Hn is the left link of Gn
-      U, Sp, V, spectrum = truncate(Gs[n], dag(igl); kwargs...)
-      check(H[n])
-
-      H[n] *= U
-      H[n + 1] *= dag(U)
-      Hm[n] *= dag(V)
-      Hm[n + 1] *= V
-      check(H[n])
-      check(Hm[n])
-    else
-      # println("-----------------Right----------------------")
-      igl = noncommonind(Gs[n], iln) #left link of Hn+1 is the right link Gn
-      U, Sp, V, spectrum = truncate(Gs[n], igl; kwargs...)
-      check(H[n])
-      H[n] *= dag(V)
-      H[n + 1] *= V
-      Hm[n] *= U
-      Hm[n + 1] *= dag(U)
-      check(H[n])
-      check(Hm[n])
-    end
-
-    Ss[n] = Sp
-    ss[n] = spectrum
+    #prime the right index of G so that indices can be distinguished when N==1.
+    Gs[n] = prime(Gs[n],HR[n+1].ileft)
+    U, Ss[n], V, ss[n] = truncateG(Gs[n], dag(HL[n].iright) ; kwargs...)
+    HL[n] *= U
+    HL[n + 1] *= dag(U)
+    HR[n] *= dag(V)
+    HR[n + 1] *= V
   end
-  return Ss, ss, Hm
+  return HL, HR, Ss, ss 
 end
 
-function truncate(G::ITensor, igl::Index; kwargs...)
+function truncateG(G::ITensor, igl::Index; kwargs...)
   @mpoc_assert order(G) == 2
   igr = noncommonind(G, igl)
   @mpoc_assert tags(igl) != tags(igr) || plev(igl) != plev(igr) #Make sure subtensr can distinguish igl and igr
