@@ -57,12 +57,12 @@ Improvements:
 Done -Organize exports and imports.
 -subtensor  support W[il,ir]=op ?
 -better name for pbc? inf open_chain, boundary_conditions
--Consider default rr_cutoff=1e-14?
--Refactor out all the link fixing and PBC code for MPO making functions.
+Done: -Consider default rr_cutoff=1e-14?
+Done: -Refactor out all the link fixing and PBC code for MPO making functions.
 -iMPO truncate fails with a trivial 2x2 hamiltonian.
 
 -Support Ncell>1 in InfinitSum{MPO}(InfiniteMPO)  constructor.
--Search for TODO items and get them on this list.
+Done: -Search for TODO items and get them on this list.
 -System for hamitonians make_Hubbard_AutoiMPO => Hubbard_Auto_iMPO
 -Use an infinite=true flag for iMPOs?
 -Clean up "where {Elt,N}" code.
