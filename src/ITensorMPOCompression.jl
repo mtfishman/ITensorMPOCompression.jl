@@ -105,13 +105,13 @@ mirror(ul::reg_form) = ul == lower ? upper : lower
 
 bond_spectrums = Vector{Spectrum}
 
-function max(s::Spectrum)::Float64
+function Base.max(s::Spectrum)::Float64
   return sqrt(eigs(s)[1])
 end
-function min(s::Spectrum)::Float64
+function Base.min(s::Spectrum)::Float64
   return sqrt(eigs(s)[end])
 end
-function max(ss::bond_spectrums)::Float64
+function Base.max(ss::bond_spectrums)::Float64
   ret = max(ss[1])
   for n in 2:length(ss)
     ms = max(ss[n])
@@ -122,7 +122,7 @@ function max(ss::bond_spectrums)::Float64
   return ret
 end
 
-function min(ss::bond_spectrums)::Float64
+function Base.min(ss::bond_spectrums)::Float64
   ret = min(ss[1])
   for n in 2:length(ss)
     ms = min(ss[n])

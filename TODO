@@ -77,7 +77,7 @@ Improvements:
 -Subtensor cleanup.
 Done: -Move Hamiltonians into testing
 Done: -Change flip to mirror?
--Fix max(spectrum)  Base.max
+Done: -Fix max(spectrum)  Base.max
 -Add the two site BH model to models lists.
 Done: -Fix ITensorMPOCompression.transpose
 -less use of parse_links
