@@ -5,6 +5,9 @@ using ITensorMPOCompression
 using Revise
 using Test
 
+include("hamiltonians/hamiltonians.jl")
+
+
 import ITensorMPOCompression: redim
 
 # using Printf

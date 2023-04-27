@@ -6,6 +6,8 @@ using Test
 using Printf
 using Profile
 
+include("hamiltonians/hamiltonians.jl")
+
 #using ITensorMPOCompression: orthogonalize!,truncate!
 using NDTensors: Diag, BlockSparse, tensor
 #brute force method to control the default float display format.

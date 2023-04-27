@@ -2,9 +2,13 @@ using ITensors
 using ITensorMPOCompression
 using Test
 using Revise, Printf
+
+include("hamiltonians/hamiltonians.jl")
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
 
 import ITensorMPOCompression: flip
+
+
 
 @testset "Extract blocks qns=$qns, ul=$ul" for qns in [false, true], ul in [lower, upper]
   eps = 1e-15

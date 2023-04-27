@@ -168,33 +168,5 @@ function make_Hubbard_AutoMPO(sites, NNN::Int64; ul=lower, U=1.0,t=1.0,V=0.5, kw
   return H
 end
 
-function reverse(i::QNIndex)
-  return Index(Base.reverse(space(i)); dir=dir(i), tags=tags(i), plev=plev(i))
-end
-function reverse(i::Index)
-  return Index(space(i); tags=tags(i), plev=plev(i))
-end
 
-function G_transpose(i::Index, iu::Index)
-  D = dim(i)
-  @mpoc_assert D == dim(iu)
-  G = ITensor(0.0, dag(i), iu)
-  for n in 1:D
-    G[i => n, iu => D + 1 - n] = 1.0
-  end
-  return G
-end
 
-function to_upper!(H::AbstractMPS)
-  N = length(H)
-  l, r = parse_links(H[1])
-  G = G_transpose(r, reverse(r))
-  H[1] = H[1] * G
-  for n in 2:(N - 1)
-    H[n] = dag(G) * H[n]
-    l, r = parse_links(H[n])
-    G = G_transpose(r, reverse(r))
-    H[n] = H[n] * G
-  end
-  return H[N] = dag(G) * H[N]
-end

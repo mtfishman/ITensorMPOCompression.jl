@@ -24,20 +24,20 @@ export is_lower_regular_form, is_upper_regular_form
 export detect_upper_lower, is_upper_lower, sweep
 export isortho, check_ortho
 # Hamiltonian related
-export make_transIsing_MPO,
-  make_Heisenberg_AutoMPO, make_transIsing_AutoMPO, to_openbc, get_lr
-export make_transIsing_iMPO, make_2body_AutoMPO, make_Hubbard_AutoMPO, make_Heisenberg_MPO
-export fast_GS,
-  make_3body_MPO,
-  make_1body_op,
-  make_2body_op,
-  make_3body_op,
-  add_ops,
-  make_3body_AutoMPO,
-  make_2body_sum,
-  make_2body_MPO
-export make_transIsing_AutoiMPO, make_Heisenberg_AutoiMPO, make_Hubbard_AutoiMPO
-export to_upper!, make_AutoiMPO
+# export make_transIsing_MPO,
+#   make_Heisenberg_AutoMPO, make_transIsing_AutoMPO, to_openbc, get_lr
+# export make_transIsing_iMPO, make_2body_AutoMPO, make_Hubbard_AutoMPO, make_Heisenberg_MPO
+# export fast_GS,
+#   make_3body_MPO,
+#   make_1body_op,
+#   make_2body_op,
+#   make_3body_op,
+#   add_ops,
+#   make_3body_AutoMPO,
+#   make_2body_sum,
+#   make_2body_MPO
+# export make_transIsing_AutoiMPO, make_Heisenberg_AutoiMPO, make_Hubbard_AutoiMPO , make_AutoiMPO
+export to_upper!
 # MPO and bond spectrum
 export get_Dw, maxlinkdim, min, max
 export bond_spectrums
@@ -240,6 +240,38 @@ function redim(i::Index, Dw::Int64, offset::Int64=0)
   return Index(Dw; tags=tags(i), plev=plev(i)) #create new index.
 end
 
+function Base.reverse(i::QNIndex)
+  return Index(Base.reverse(space(i)); dir=dir(i), tags=tags(i), plev=plev(i))
+end
+function Base.reverse(i::Index)
+  return Index(space(i); tags=tags(i), plev=plev(i))
+end
+
+function to_upper!(H::AbstractMPS)
+  N = length(H)
+  l, r = parse_links(H[1])
+  G = G_transpose(r, reverse(r))
+  H[1] = H[1] * G
+  for n in 2:(N - 1)
+    H[n] = dag(G) * H[n]
+    l, r = parse_links(H[n])
+    G = G_transpose(r, reverse(r))
+    H[n] = H[n] * G
+  end
+  return H[N] = dag(G) * H[N]
+end
+
+function G_transpose(i::Index, iu::Index)
+  D = dim(i)
+  @mpoc_assert D == dim(iu)
+  G = ITensor(0.0, dag(i), iu)
+  for n in 1:D
+    G[i => n, iu => D + 1 - n] = 1.0
+  end
+  return G
+end
+
+
 include("subtensor.jl")
 include("reg_form_Op.jl")
 include("reg_form_MPO.jl")
@@ -247,9 +279,6 @@ include("reg_form_iMPO.jl")
 include("util.jl")
 include("blocking.jl")
 include("gauge_fix.jl")
-include("hamiltonians.jl")
-include("hamiltonians_AutoMPO.jl")
-include("hamiltonians_infinite.jl")
 include("qx.jl")
 include("characterization.jl")
 include("orthogonalize.jl")

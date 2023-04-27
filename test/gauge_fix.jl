@@ -3,6 +3,8 @@ using ITensorMPOCompression
 using ITensorInfiniteMPS
 using Test
 using Revise, Printf, SparseArrays
+include("hamiltonians/hamiltonians.jl")
+
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
 
 models = [

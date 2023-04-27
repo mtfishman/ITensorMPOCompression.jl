@@ -4,6 +4,9 @@ using ITensorInfiniteMPS
 using Revise
 using Test
 using Printf
+
+include("hamiltonians/hamiltonians.jl")
+
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
 
 verbose = false #verbose at the outer test level

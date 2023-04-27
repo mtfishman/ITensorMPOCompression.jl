@@ -1,4 +1,4 @@
-
+import ITensorInfiniteMPS: InfiniteSum, InfiniteMPO
 #
 #  impo can be an Ncell==1 uniform iMPO.  But if the interaction extends out NNN neightbours
 #  then the infinite sum needs to hold h=l*W^1*W^2...W^(NNN)*W^(NNN+1)*r with the standard capping

@@ -75,10 +75,11 @@ Improvements:
 -One last cleanup: impo truncate
 -Subtensor check flux of inserted blocks.
 -Subtensor cleanup.
--Move Hamiltonians into testing
+Done: -Move Hamiltonians into testing
 -Change flip to mirror?
 -Fix max(spectrum)  Base.max
 -Add the two site BH model to models lists.
+-Fix ITensorMPOCompression.transpose
 
 Done: -Follow Matts kwargs guidelines
 Done: -Take out support for upper.

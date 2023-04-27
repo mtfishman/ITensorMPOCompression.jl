@@ -37,7 +37,7 @@ function make_transIsing_MPO(sites, NNN::Int64;ul=lower,J=1.0,hx=0.0,pbc=false, 
     mpo[N] = replaceind(mpo[N], in, i0)
   end
   if !pbc
-    mpo = ITensorMPOCompression.to_openbc(mpo) #contract with l* and *r at the edges.
+    mpo = to_openbc(mpo) #contract with l* and *r at the edges.
   end
   return mpo
 end
@@ -145,7 +145,7 @@ end
 #         | d1+d2 c1 c2 I |
 # χ
 #
-function add_ops(i1::QNIndex,i2::QNIndex)
+function add_ops(i1::ITensors.QNIndex,i2::ITensors.QNIndex)
   qns=[space(i1)[1:end-1]...,space(i2)[2:end]...]
   return Index(qns,tags=tags(l1),plev=plev(i1),dir=dir(i1))
 end
@@ -461,3 +461,7 @@ function fast_GS(H::MPO, sites, nsweeps::Int64=5)::Tuple{Float64,MPS}
   E, psi = dmrg(H, psi0, sweeps; outputlevel=0)
   return E, psi
 end
+
+
+include("hamiltonians_AutoMPO.jl")
+include("hamiltonians_infinite.jl")
