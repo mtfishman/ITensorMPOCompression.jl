@@ -14,10 +14,14 @@ IndexRange(ir::IndexRange) = IndexRange(ir.index, ir.range)
 
 start(ir::IndexRange) = range(ir).start
 starts(irs::Tuple{Vararg{UnitRange{Int64}}}) = map((ir) -> ir.start, irs)
+stops(irs::Tuple{Vararg{UnitRange{Int64}}}) = map((ir) -> ir.stop, irs)
+starts(irs::SVector{N,UnitRange{Int64}}) where {N} = map((ir) -> ir.start, irs)
+stops(irs::SVector{N,UnitRange{Int64}}) where {N} = map((ir) -> ir.stop, irs)
 
 range(ir::IndexRange) = ir.range
 range(i::Index) = 1:dim(i)
 ranges(irs::Tuple) = ntuple(i -> range(irs[i]), Val(length(irs)))
+ranges(starts::SVector{N,Int64},stops::SVector{N,Int64}) where {N} = map(i -> starts[i]:stops[i], 1:N)
 indices(irs::Tuple{Vararg{IndexRange}}) = map((ir) -> ir.index, irs)
 indranges(ips::Tuple{Vararg{irPairU}}) = map((ip) -> IndexRange(ip), ips)
 
@@ -54,66 +58,15 @@ function in_range(
   return ret
 end
 
-function fix_ranges(
-  dest_block_start::NTuple{N,Int64},
-  dest_block_end::NTuple{N,Int64},
-  rs::UnitRange{Int64}...,
-) where {N}
-  rs1 = Vector{UnitRange{Int64}}(undef, N)
-  @assert length(rs) == N
-  #@show b ds rs
-  for i in eachindex(rs1)
-    @assert dest_block_start[i] <= rs[i].stop || dest_block_end[i] >= rs[i].start #in range?
-    istart = Base.max(dest_block_start[i], rs[i].start)
-    istop = Base.min(dest_block_end[i], rs[i].stop)
-    rs1[i] = (istart - dest_block_start[i] + 1):(istop - dest_block_start[i] + 1)
-  end
-  #@show rs1
-  return Tuple(rs1)
-end
-#
-#  the range r will in general start at some index start(r) >1.  This function
-#  counts how many QN blocks are between 1 and start(r)
-#
-# function get_offset_block_count(in::QNIndex, r::UnitRange{Int64})
-#   # @show in r
-#   rs = r.start - 1
-#   if rs == 0
-#     return 0, 0
-#   end
-#   @mpoc_assert rs > 0
-#   nb = 0
-#   qns = space(in)
-#   for n in eachindex(qns)
-#     rs -= qns[n].second #dim of space
-#     nb += 1 #increment block counts
-#     if rs == 0
-#       break
-#     elseif rs < 0
-#       nb -= 1
-#       #@show "mid block slice" 
-#       #@show qns[n] rs nb
-#       # @error("Slicing mid block is not supported yet.")
-#     end
-#   end
-#   #@show nb rs
-#   return nb, rs
-# end
+using StaticArrays
 
-#using StaticArrays
-# function get_offset_block_counts(
-#   inds::NTuple{N,IndsT}, rs::UnitRange{Int64}...
-# ) where {N,IndsT}
-#   # @show inds rs
-#   dbs = StaticArrays.MVector{N,UInt}(undef)
-#   shifts = StaticArrays.MVector{N,Int}(undef)
-#   for i in eachindex(inds)
-#     dbi, shift = get_offset_block_count(inds[i], rs[i])
-#     dbs[i] = dbi
-#     shifts[i] = shift
-#   end
-#   return Block{N}(dbs), shifts
-# end
+function fix_ranges(
+  dest_block_start::SVector{N,Int64},
+  dest_block_end::SVector{N,Int64},
+  rs::SVector{N,UnitRange{Int64}}
+) where {N}
+  return ranges(max.(0,starts(rs)-dest_block_start).+1,min.(dest_block_end,stops(rs))-dest_block_start.+1)
+end
 
 function get_subtensor(
   T::BlockSparseTensor{ElT,N}, new_inds, rs::UnitRange{Int64}...
@@ -124,7 +77,7 @@ function get_subtensor(
   for b in eachnzblock(T)
       blockT = blockview(T, b)
       if in_range(blockstart(T,b),blockend(T,b),rs...)# && !isnothing(blockT)
-          rs1=fix_ranges(blockstart(T,b),blockend(T,b),rs...)
+          rs1=fix_ranges(SVector(blockstart(T,b)),SVector(blockend(T,b)),SVector(rs))
           _,tb1=blockindex(T,starts(rs)...)
           tb1=CartesianIndex(ntuple(i->tb1[i]-1,N))
           push!(Ds,blockT[rs1...])
