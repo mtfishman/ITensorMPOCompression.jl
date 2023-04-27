@@ -66,31 +66,33 @@ Improvements:
 -System for hamitonians make_Hubbard_AutoiMPO => Hubbard_Auto_iMPO
 -Use an infinite=true flag for iMPOs?
 -Clean up "where {Elt,N}" code.
-Done: -Follow Matts kwargs guidelines
 -Eliminate use of tags for finding indices.  Use the network structure instead.  Pass list if indices
   in function calls.  Use linkinds, commoninds, uniqueinds.
 -Fix Index Tag conventions sections of the docs.
 -Fix emprical observations section of the tech notes.
 
--Take out support for upper.
-  Done: Convert upper H's to lower durung the conversion to ref_form_MPO
-  Strip out lots of code.
-  After InfiniteCanonicalMPO implementation
 -WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
 -One last cleanup: impo truncate
 -Subtensor check flux of inserted blocks.
 -Subtensor cleanup.
--Make a separate ITensorsTestHamiltonians module
--How to handle eps for is_gauge_fixed functions.
-Done: -Split up reg_form_Op, reg_form_MPO and reg_form_iMPO
+-Move Hamiltonians into testing
 -Change flip to mirror?
 -Fix max(spectrum)  Base.max
 -Add the two site BH model to models lists.
--qx.jl  one step:
-  Ŵ = ITensor(0.0, ileft, iright, siteinds(Ŵrf))
-  Ŵrf⎖ = reg_form_Op(Ŵ, ileft, iright, Ŵrf.ul)
-to
-  Ŵrf⎖ = reg_form_Op(ileft, iright, siteinds(Ŵrf)) #default to lower.
+
+Done: -Follow Matts kwargs guidelines
+Done: -Take out support for upper.
+  Done: Convert upper H's to lower durung the conversion to ref_form_MPO
+  Strip out lots of code.
+  After InfiniteCanonicalMPO implementation
+Done: -How to handle eps for is_gauge_fixed functions.
+Done: -Split up reg_form_Op, reg_form_MPO and reg_form_iMPO
+No:  -Make a separate ITensorsTestHamiltonians module
+Done:: -qx.jl  one step:
+      Ŵ = ITensor(0.0, ileft, iright, siteinds(Ŵrf))
+      Ŵrf⎖ = reg_form_Op(Ŵ, ileft, iright, Ŵrf.ul)
+    to
+      Ŵrf⎖ = reg_form_Op(ileft, iright, siteinds(Ŵrf)) #default to lower.
 
 
 Done: -Start using 
