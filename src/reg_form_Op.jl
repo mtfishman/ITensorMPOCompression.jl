@@ -31,6 +31,7 @@ function check(Wrf::reg_form_Op)
     if hasqns(Wrf.W)
         @mpoc_assert dir(Wrf.W, Wrf.ileft) == dir(Wrf.ileft)
         @mpoc_assert dir(Wrf.W, Wrf.iright) == dir(Wrf.iright)
+        @checkflux(Wrf.W)
     end
 end
 
