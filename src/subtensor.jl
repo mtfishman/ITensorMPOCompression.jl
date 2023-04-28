@@ -1,3 +1,4 @@
+using StaticArrays
 import Base.range
 
 struct IndexRange
@@ -47,18 +48,12 @@ end
 function in_range(
   block_start::NTuple{N,Int64}, block_end::NTuple{N,Int64}, rs::UnitRange{Int64}...
 ) where {N}
-  ret = true
   for i in eachindex(rs)
-    if block_start[i] > rs[i].stop || block_end[i] < rs[i].start
-      ret = false
-      #@show "out of range" block_start block_end rs
-      break
-    end
+     (block_start[i] > rs[i].stop || block_end[i] < rs[i].start)  &&  return false
   end
-  return ret
+  return true
 end
 
-using StaticArrays
 
 function fix_ranges(
   dest_block_start::SVector{N,Int64},
@@ -93,37 +88,6 @@ function get_subtensor(
     blockview(T_sub, blockT_sub) .= Ds[ib]
   end
   return T_sub
-end
-
-function blockrange(
-  T::Tensor{<:Number,N}, tb::Block{N}
-)::NTuple{N,UnitRange{Int64}} where {N}
-  bs = blockstart(T, tb)
-  be = blockend(T, tb)
-  return ntuple(i -> bs[i]:be[i], N)
-end
-
-function fix_ranges(
-  dest_range::NTuple{N,UnitRange{Int64}},
-  src_range::NTuple{N,UnitRange{Int64}},
-  rs::UnitRange{Int64}...,
-) where {N}
-  rs1 = Vector{UnitRange{Int64}}(undef, N)
-  @assert length(rs) == N
-  #@show rs dest_range src_range
-  for i in eachindex(rs1)
-    @assert dest_range[i].start <= rs[i].stop || dest_range[i].stop >= rs[i].start #in range?
-    @assert src_range[i].start <= rs[i].stop || src_range[i].stop >= rs[i].start #in range?
-    ds_start = Base.max(dest_range[i].start, src_range[i].start)
-    dsrc = src_range[i].stop - src_range[i].start
-    istart = Base.max(ds_start, rs[i].start) - dest_range[i].start + 1
-    #istop=Base.min(ds_end,rs[i].stop)
-    #@show i ds_start  dsrc istart
-    rs1[i] = istart:(istart + dsrc)
-    #@show rs1[i]
-  end
-  #@show rs1
-  return Tuple(rs1)
 end
 
 function set_subtensor(
@@ -174,7 +138,7 @@ function set_subtensor(
       _, tb = blockindex(T, Tuple(it)...)
       blockT = blockview(T, tb)
       blockA = blockview(A, ab)
-      rs1 = fix_ranges(blockrange(T, tb), blockrange(A, ab), rs...)
+      rs1 = fix_ranges(SVector(blockstart(T,b)),SVector(blockend(T,b)),SVector(rs))
       blockT[rs1...] = blockA #Diag assignment for each block
     end
   end
