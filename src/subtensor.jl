@@ -90,59 +90,44 @@ function get_subtensor(
   return T_sub
 end
 
+#
+#  The code for diag and non-diag is the same.  Use Union to capture this.
+#  Not sure how to trap cross assignemnts like: DiagBlockSparseTensor[] = BlockSparseTensor[]
+#
 function set_subtensor(
-  T::BlockSparseTensor{ElT,N}, A::BlockSparseTensor{ElT,N}, rs::UnitRange{Int64}...
+  T::Union{BlockSparseTensor{ElT,N},DiagBlockSparseTensor{ElT,N}}, A::Union{BlockSparseTensor{ElT,N},DiagBlockSparseTensor{ElT,N}}, rs::UnitRange{Int64}...
 ) where {ElT,N}
-  insert = false
-  rsa = ntuple(i -> 1:dim(inds(A)[i]), N)
+
   for ab in eachnzblock(A)
     blockA = blockview(A, ab)
-    if in_range(blockstart(A, ab), blockend(A, ab), rsa...)
-      iA = blockstart(A, ab)
-      iT = ntuple(i -> iA[i] + rs[i].start - 1, N)
-      index_within_block, tb = blockindex(T, Tuple(iT)...)
+    iT=SVector(blockstart(A, ab))+SVector(starts(rs)).-1
+    index_within_Tblock, tb = blockindex(T, iT...)
+    #
+    #  Get a blockView.  Insert a new block if we have to.
+    #
+    blockT = blockview(T, tb)
+    if isnothing(blockT)
+      insertblock!(T, tb)
       blockT = blockview(T, tb)
-      if blockT == nothing
-        insertblock!(T, tb)
-        blockT = blockview(T, tb)
-        insert = true
-      end
-      dA = [dims(blockA)...]
-      dT = [blockend(T, tb)...] - [index_within_block...] + fill(1, N)
-      rs1 = ntuple(
-        i -> index_within_block[i]:(index_within_block[i] + Base.min(dA[i], dT[i]) - 1), N
-      )
-      if length(findall(dA .> dT)) == 0
-        blockT[rs1...] = blockA #Dense assignment for each block
-      else
-        rsa1 = ntuple(i -> (rsa[i].start):(rsa[i].start + Base.min(dA[i], dT[i]) - 1), N)
-        blockT[rs1...] = blockA[rsa1...] #partial block Dense assignment for each block
-        @error "Incomplete bloc transfer."
-        @assert false
-      end
     end
-  end
+    
+    siwb=SVector(index_within_Tblock)
+    dA=SVector(dims(blockA))
+    dT=SVector(blockend(T, tb))-siwb.+1
+    if all(dA.<=dT) #All of blockA fits inside blockT
+      rs1=ranges(siwb,siwb+dA.-1)
+      blockT[rs1...] = blockA #Dense assignment for each block
+    else
+      # rsa = ntuple(i -> 1:dim(inds(A)[i]), N)
+      # rs1=ranges(siwb,siwb+min.(dA,dT).-1)
+      # rsa1 = ntuple(i -> (rsa[i].start):(rsa[i].start + Base.min(dA[i], dT[i]) - 1), N)
+      # blockT[rs1...] = blockA[rsa1...] #partial block Dense assignment for each block
+      @error "Subtensor assign, Incomplete bloc transfer is not supported."
+      @assert false
+    end
+  end # for for ab in eachnzblock(A)
 end
 
-
-function set_subtensor(
-  T::DiagBlockSparseTensor{ElT,N}, A::DiagBlockSparseTensor{ElT,N}, rs::UnitRange{Int64}...
-) where {ElT,N}
-  _,tb1=blockindex(T,starts(rs)...)
-  tb1=CartesianIndex(ntuple(i->tb1[i]-1,N))
-  rsa = ntuple(i -> (rs[i].start - tb1[i]):(rs[i].stop - tb1[i]), N)
-  for ab in eachnzblock(A)
-    if in_range(blockstart(A, ab), blockend(A, ab), rsa...)
-      it = blockstart(A, ab)
-      it = ntuple(i -> it[i] + tb1[i], N)
-      _, tb = blockindex(T, Tuple(it)...)
-      blockT = blockview(T, tb)
-      blockA = blockview(A, ab)
-      rs1 = fix_ranges(SVector(blockstart(T,tb)),SVector(blockend(T,tb)),SVector(rs))
-      blockT[rs1...] = blockA #Diag assignment for each block
-    end
-  end
-end
 
 function set_subtensor(
   T::DiagTensor{ElT}, A::DiagTensor{ElT}, rs::UnitRange{Int64}...
@@ -274,14 +259,14 @@ function set_subtensor_ND(T::ITensor, A::ITensor, irs::IndexRange...)
   Ap = permute(A, isortA...; allow_alias=true)
   return tensor(T)[rsortT...] = tensor(Ap)
 end
-function set_subtensor_ND(T::ITensor, v::Number, irs::IndexRange...)
-  ireqT = indices(irs) #indices caller requested ranges for
-  inotT = Tuple(noncommoninds(inds(T), ireqT)) #indices not requested by caller
-  isortT = ireqT..., inotT... #all indices sorted so user specified ones are first.
-  p = getperm(inds(T), ntuple(n -> isortT[n], length(isortT))) # find p such that isort[p]==inds(T)
-  rsortT = permute((ranges(irs)..., ranges(inotT)...), p) #sorted ranges for T
-  return tensor(T)[rsortT...] .= v
-end
+# function set_subtensor_ND(T::ITensor, v::Number, irs::IndexRange...)
+#   ireqT = indices(irs) #indices caller requested ranges for
+#   inotT = Tuple(noncommoninds(inds(T), ireqT)) #indices not requested by caller
+#   isortT = ireqT..., inotT... #all indices sorted so user specified ones are first.
+#   p = getperm(inds(T), ntuple(n -> isortT[n], length(isortT))) # find p such that isort[p]==inds(T)
+#   rsortT = permute((ranges(irs)..., ranges(inotT)...), p) #sorted ranges for T
+#   return tensor(T)[rsortT...] .= v
+# end
 
 getindex(T::ITensor, irs::Vararg{IndexRange,N}) where {N} = get_subtensor_ND(T, irs...)
 function getindex(T::ITensor, irs::Vararg{irPairU,N}) where {N}
@@ -293,9 +278,9 @@ end
 function setindex!(T::ITensor, A::ITensor, irs::Vararg{irPairU,N}) where {N}
   return set_subtensor_ND(T, A, indranges(irs)...)
 end
-function setindex!(T::ITensor, v::Number, irs::Vararg{IndexRange,N}) where {N}
-  return set_subtensor_ND(T, v, irs...)
-end
-function setindex!(T::ITensor, v::Number, irs::Vararg{irPairU,N}) where {N}
-  return set_subtensor_ND(T, v, indranges(irs)...)
-end
+# function setindex!(T::ITensor, v::Number, irs::Vararg{IndexRange,N}) where {N}
+#   return set_subtensor_ND(T, v, irs...)
+# end
+# function setindex!(T::ITensor, v::Number, irs::Vararg{irPairU,N}) where {N}
+#   return set_subtensor_ND(T, v, indranges(irs)...)
+# end
