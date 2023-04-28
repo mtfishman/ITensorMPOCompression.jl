@@ -1,19 +1,6 @@
 Issue:
-  Resolved: How to handle ortho center for N=1 unit cell iMPOs?
-    -InfiniteMPO using llim=b-1,rlim=b+1 for b=orthcenter(H) fails when N=1, because 
-    left/right/unorth all become indistinguishable.
   Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
-  Rip out direct code for upper?  
-    Do Hu->HL by either:
-      1) Transpose each W. Might move data in ram ?
-      2) Reverse order in lattice -l0-W_1-l1-W_2-l2- ... lN-1-WN-lN -> lN-WN-lN-1-WN-1-......
-          This transposes each W without moving any data. 
 
-Questions:
-  Yes -Is there use for a moving orthogonality center in MPOs? Yes see Matts email March/14/2023
-  No: -Do we need to support multiple truncate sweeps for iMPOs?
-  -Should orthognalize!(iMPO) spit out primed Gs?
-  	
   
 More tests:
 -vumps GS example with timing for uncomp./comp.
@@ -22,22 +9,34 @@ More tests:
 -Try apply gate.
   Reg form gets destroyed as expected.  Doing UvS -->  lq(U), I can see the reg form in L
   but the bottom right I op is hiding as a liner combination of S ops.
--Test with Julia 1.7 and 1.8
 
 Features:
 -Put some content in Readme.md
 -make truncate, and orthogonalize that work on copies.
 
-Bugs:
-Done: -Fix:   iMPO After left orth sweep, 3 iterations Dw reduced from 1 to 4
--2-body Hamiltonian in trancate fail.
--Truncate iMPO transIsing_iMPO NNN=4 has a gauge problem.
-  Maybe just need 2 more orth sweeps (Auto iMPO is fine)
+Improvements:
+-assign!() is still inefficient.  We need a way to do
+  W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
+  at the NDTensors level.
+-better name for pbc? inf open_chain, boundary_conditions
+-iMPO truncate fails with a trivial 2x2 hamiltonian.
 
-Improvements requiring changes to other modules:
--Save regular_form upper/lower/irreg/unknown in the MPO struct so we never have to call
- detect_regular_form.
-   This requires a mod to ITensors MPO struct
+-Support Ncell>1 in InfinitSum{MPO}(InfiniteMPO)  constructor.
+-Use an infinite=true flag for iMPOs?
+-Fix Index Tag conventions sections of the docs.
+-Fix emprical observations section of the tech notes.
+
+-Not Easy?: WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
+
+-Subtensor
+  -Clean up "where {Elt,N}" code.
+  -check flux of inserted blocks.
+  -support W[il,ir]=op ?
+  -Check that spaces are compatable
+  -getindex[] returns a view
+
+-Add the two site BH model to models lists.
+
 ITensorInfiniteMPS:
   -Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
   -Bug report for ITensorInfiniteMPS crash in Hx SzSz model
@@ -50,29 +49,28 @@ ITensorInfiniteMPS:
     -Change Hx flag to just h.
 
 
-Improvements:
--assign!() is still inefficient.  We need a way to do
-  W[r=>1,c=>1]=op where order(op)==2 and order(W)==4
-  at the NDTensors level.
--better name for pbc? inf open_chain, boundary_conditions
--iMPO truncate fails with a trivial 2x2 hamiltonian.
 
--Support Ncell>1 in InfinitSum{MPO}(InfiniteMPO)  constructor.
--Use an infinite=true flag for iMPOs?
-  in function calls.  Use linkinds, commoninds, uniqueinds.
--Fix Index Tag conventions sections of the docs.
--Fix emprical observations section of the tech notes.
+Old:
+Done: -Test with Julia 1.7 and 1.8
 
--Not Easy?: WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
+Resolved: How to handle ortho center for N=1 unit cell iMPOs?
+  -InfiniteMPO using llim=b-1,rlim=b+1 for b=orthcenter(H) fails when N=1, because 
+  left/right/unorth all become indistinguishable.
+Done: Rip out direct code for upper?  
+  Do Hu->HL by either:
+    1) Transpose each W. Might move data in ram ?
+    2) Reverse order in lattice -l0-W_1-l1-W_2-l2- ... lN-1-WN-lN -> lN-WN-lN-1-WN-1-......
+        This transposes each W without moving any data. 
+No: -Do we need to support multiple truncate sweeps for iMPOs?
+Done: using reg_form_MPO wrapper internally.
+   -Save regular_form upper/lower/irreg/unknown in the MPO struct so we never have to call
+    detect_regular_form.
 Done: -One last cleanup: impo truncate
--Subtensor cleanup.
-  Clean up "where {Elt,N}" code.
-  check flux of inserted blocks.
-  support W[il,ir]=op ?
-
--Add the two site BH model to models lists.
-
-
+Done: -Subtensor cleanup.
+Fixed:   iMPO After left orth sweep, 3 iterations Dw reduced from 1 to 4
+    -2-body Hamiltonian in trancate fail.
+Fixed: -Truncate iMPO transIsing_iMPO NNN=4 has a gauge problem.
+  Maybe just need 2 more orth sweeps (Auto iMPO is fine)
 Done: -Organize exports and imports.
 Done: -Consider default rr_cutoff=1e-14?
 Done: -Refactor out all the link fixing and PBC code for MPO making functions.
@@ -86,7 +84,6 @@ Done: -Fix max(spectrum)  Base.max
 Done: -Fix ITensorMPOCompression.transpose
 Done: -less use of parse_links.  
   Still need it in translatecell.
-
 Done: -Follow Matts kwargs guidelines
 Done: -Take out support for upper.
   Done: Convert upper H's to lower durung the conversion to ref_form_MPO
@@ -100,8 +97,6 @@ Done:: -qx.jl  one step:
       Ŵrf⎖ = reg_form_Op(Ŵ, ileft, iright, Ŵrf.ul)
     to
       Ŵrf⎖ = reg_form_Op(ileft, iright, siteinds(Ŵrf)) #default to lower.
-
-
 Done: -Start using 
     struct InfiniteCanonicalMPO <: AbstractInfiniteMPS
       AL::InfiniteMPO
@@ -111,8 +106,6 @@ Done: -Start using
   -How to coordintae with reg_form_MPOs?
   -Build reg_form Hamiltonians by default.
   -Follow Matts kwargs guidelines
-
-
 Done: InfiniteCanonicalMPO Plan:
   -Write a usage case for orthgonalization:
     Hi = InfiniteMPO(model, s; model_kwargs...)
@@ -120,9 +113,6 @@ Done: InfiniteCanonicalMPO Plan:
     @test check_ortho(Ho)
 
     similar for truncation
-       
-
-Old:
 NO: -Go over all the Problems in VScode.  Are they real?
   Not seeing any now.  Did formatting fix this?
 Done: -format
