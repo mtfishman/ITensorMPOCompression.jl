@@ -119,12 +119,10 @@ function Solve_b0c0(Hrf::reg_form_iMPO)
     ir += size(A_0, 1)
     ic += size(A_0, 2)
   end
-
   @assert nr == nc
   n = nr
   N = length(A0s)
   Ms, Mt = spzeros(n, n), spzeros(n, n)
-  ib, ib = 1, 1
   for n in eachindex(A0s)
     nr, nc = size(A0s[n])
     ir, ic = irb[n], icb[n]
@@ -133,28 +131,22 @@ function Solve_b0c0(Hrf::reg_form_iMPO)
     #
     sparseA0 = sparse(A0s[n])
     droptol!(sparseA0, 1e-15)
-    Ms[irb[n]:(irb[n] + nr - 1), icb[n]:(icb[n] + nc - 1)] = sparseA0
-    Mt[irb[n]:(irb[n] + nr - 1), icb[n]:(icb[n] + nc - 1)] = sparse(LinearAlgebra.I, nr, nc)
+    Id=sparse(LinearAlgebra.I, nr, nc)
+    Ms[ir:(ir + nr - 1), ic:(ic + nc - 1)] = sparseA0
+    Mt[ir:(ir + nr - 1), ic:(ic + nc - 1)] = Id
     if n == 1
-      Ms[irb[n]:(irb[n] + nr - 1), icb[N]:(icb[N] + nc - 1)] -= sparse(
-        LinearAlgebra.I, nr, nc
-      )
-      Mt[irb[n]:(irb[n] + nr - 1), icb[N]:(icb[N] + nc - 1)] -= sparseA0
+      Ms[ir:(ir + nr - 1), icb[N]:(icb[N] + nc - 1)] -= Id
+      Mt[ir:(ir + nr - 1), icb[N]:(icb[N] + nc - 1)] -= sparseA0
     else
-      Ms[irb[n]:(irb[n] + nr - 1), icb[n - 1]:(icb[n] - 1)] -= sparse(
-        LinearAlgebra.I, nr, nc
-      )
-      Mt[irb[n]:(irb[n] + nr - 1), icb[n - 1]:(icb[n] - 1)] -= sparseA0
+      Ms[ir:(ir + nr - 1), icb[n - 1]:(ic - 1)] -= Id
+      Mt[ir:(ir + nr - 1), icb[n - 1]:(ic - 1)] -= sparseA0
     end
   end
-  # @show b0s c0s 
-  # display(A0s[1])
   s = Ms \ b0s
   t = Array(Base.transpose(Base.transpose(Mt) \ c0s))
   @assert norm(Ms * s - b0s) < 1e-15 * n
   @assert norm(Base.transpose(t * Mt) - c0s) < 1e-15 * n
   @assert size(t,1)==1 #t ends up as a 1xN matrix becuase of all the transposing.
- 
   ss = map(n -> s[irb[n]:(irb[n] + nr - 1)], 1:N)
   ts = map(n -> t[1,irb[n]:(irb[n] + nr - 1)], 1:N)
   return CelledVector(ss), CelledVector(ts)
@@ -175,7 +167,6 @@ function gauge_fix!(
   𝒕ₙ = ITensor(tₙ, Wb.irc, Wb.icc)
   𝒔ₙ₋₁ = ITensor(sₙ₋₁, Wb.irb, Wb.icb)
   𝒔ₙ = ITensor(sₙ, Wb.icb, dag(Wb.icA))
-  #@show sₙ₋₁ sₙ tₙ₋₁ tₙ
   𝐛̂⎖ = 𝐛̂ + 𝒔ₙ₋₁ * 𝕀 - 𝐀̂ * 𝒔ₙ
   𝐜̂⎖ = 𝐜̂ - 𝒕ₙ * 𝕀 + 𝒕ₙ₋₁ * 𝐀̂
   𝐝̂⎖ = 𝐝̂ + 𝒕ₙ₋₁ * 𝐛̂ - 𝒔ₙ * 𝐜̂⎖
