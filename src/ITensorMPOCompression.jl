@@ -238,10 +238,10 @@ end
 
 include("subtensor.jl")
 include("reg_form_Op.jl")
+include("blocking.jl")
 include("reg_form_MPO.jl")
 include("reg_form_iMPO.jl")
 include("util.jl")
-include("blocking.jl")
 include("gauge_fix.jl")
 include("qx.jl")
 include("characterization.jl")
