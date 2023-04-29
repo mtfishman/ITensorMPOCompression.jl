@@ -2,7 +2,6 @@ module ITensorMPOCompression
 
 using ITensors
 using NDTensors
-using ITensorInfiniteMPS
 
 import ITensors: addqns, isortho, orthocenter, setinds , linkind, data, permute, checkflux
 import ITensors: dim, dims, trivial_space, eachindval, eachval, getindex, setindex!
@@ -13,7 +12,6 @@ import ITensors: QNIndex, QNBlocks, Indices, AbstractMPS, DenseTensor, BlockSpar
 import NDTensors: getperm, BlockDim, blockstart, blockend
   
 
-import ITensorInfiniteMPS: AbstractInfiniteMPS, translatecell
 import Base: similar, reverse, transpose
  
 # reg_form and orth_type values and functions
@@ -28,7 +26,7 @@ export orthogonalize!, truncate, truncate!
 # Display helpers
 export @pprint, pprint, show_directions
 # Wrapped MPO types
-export reg_form_MPO, InfiniteCanonicalMPO
+export reg_form_MPO
 
 macro mpoc_assert(ex)
   esc(:($Base.@assert $ex))
@@ -240,13 +238,11 @@ include("subtensor.jl")
 include("reg_form_Op.jl")
 include("blocking.jl")
 include("reg_form_MPO.jl")
-include("reg_form_iMPO.jl")
 include("util.jl")
 include("gauge_fix.jl")
 include("qx.jl")
 include("characterization.jl")
 include("orthogonalize.jl")
 include("truncate.jl")
-include("infinite_canonical_mpo.jl")
 
 end

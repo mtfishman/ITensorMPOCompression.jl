@@ -1,6 +1,5 @@
 using ITensors
 using ITensorMPOCompression
-using ITensorInfiniteMPS
 
 using Printf
 using Test

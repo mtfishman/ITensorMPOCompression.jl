@@ -1,14 +1,11 @@
 using ITensors
 using ITensorMPOCompression
-using ITensorInfiniteMPS
 using Revise
 using Test
 using Printf
 using Profile
 
 include("hamiltonians/hamiltonians.jl")
-
-import ITensorMPOCompression: reg_form_iMPO
 
 using NDTensors: Diag, BlockSparse, tensor
 #brute force method to control the default float display format.
@@ -35,93 +32,35 @@ verbose1 = false #verbose inside orth algos
     [Hubbard_AutoMPO, "Electron", false],
   ]
 
-  # @testset "Truncate/Compress MPO $(model[1]), qns=$qns, ul=$ul, lr=$lr" for model in
-  #                                                                            models,
-  #   qns in [false, true],
-  #   ul in [lower, upper],
-  #   lr in [left, right]
+  @testset "Truncate/Compress MPO $(model[1]), qns=$qns, ul=$ul, lr=$lr" for model in
+                                                                             models,
+    qns in [false, true],
+    ul in [lower, upper],
+    lr in [left, right]
 
-  #   eps = 1e-14
-  #   pre_fixed = model[3] #Hamiltonian starts gauge fixed
-  #   N = 10 #5 sites
-  #   NNN = 4 #Include 6nd nearest neighbour interactions
-  #   sites = siteinds(model[2], N; conserve_qns=qns)
-  #   Hrf = reg_form_MPO(model[1](sites, NNN; ul=ul))
-  #   state = [isodd(n) ? "Up" : "Dn" for n in 1:N]
-  #   psi = randomMPS(sites, state)
-  #   E0 = inner(psi', MPO(Hrf), psi)
+    eps = 1e-14
+    pre_fixed = model[3] #Hamiltonian starts gauge fixed
+    N = 10 #5 sites
+    NNN = 4 #Include 6nd nearest neighbour interactions
+    sites = siteinds(model[2], N; conserve_qns=qns)
+    Hrf = reg_form_MPO(model[1](sites, NNN; ul=ul))
+    state = [isodd(n) ? "Up" : "Dn" for n in 1:N]
+    psi = randomMPS(sites, state)
+    E0 = inner(psi', MPO(Hrf), psi)
 
-  #   bs = truncate!(Hrf, lr)
-  #   @test is_regular_form(Hrf)
-  #   @test check_ortho(Hrf, lr)
-  #   @test is_gauge_fixed(Hrf) #Now everything should be fixed, unless NNN is big
-  #   #
-  #   #  Expectation value check.
-  #   #
-  #   E1 = inner(psi', MPO(Hrf), psi)
-  #   @test E0 ≈ E1 atol = eps
-  # end
+    bs = truncate!(Hrf, lr)
+    @test is_regular_form(Hrf)
+    @test check_ortho(Hrf, lr)
+    @test is_gauge_fixed(Hrf) #Now everything should be fixed, unless NNN is big
+    #
+    #  Expectation value check.
+    #
+    E1 = inner(psi', MPO(Hrf), psi)
+    @test E0 ≈ E1 atol = eps
+  end
 
  
-  models = [
-    (transIsing_iMPO, "S=1/2"),
-    (transIsing_AutoiMPO, "S=1/2"),
-    (Heisenberg_AutoiMPO, "S=1/2"),
-    (Heisenberg_AutoiMPO, "S=1"),
-    (Hubbard_AutoiMPO, "Electron"),
-  ]
-
-  #
-  #  This now gets test in infinite_canonical_mpo.jl
-  #
-  @testset "Truncate/Compress iMPO Check gauge relations, H=$(model[1]), ul=$ul, qbs=$qns, N=$N, NNN=$NNN" for model in
-                                                                                                               models,
-    ul in [lower,upper],
-    qns in [false,true],
-    N in [1,2],
-    NNN in [1,4]
-
-    initstate(n) = "↑"
-    makeH = model[1]
-    site_type = model[2]
-    eps = qns ? 1e-14 * NNN : 3e-14 * NNN #dense and larger NNN both get more roundoff noise.
-    si = infsiteinds(site_type, N; initstate, conserve_qns=qns)
-    H0 = reg_form_iMPO(model[1](si, NNN; ul=ul))
-    @test is_regular_form(H0)
-    Dw0 = Base.max(get_Dw(H0)...)
-    #
-    #  Do truncate outputting left ortho Hamiltonian
-    #
-    HL, HR, Ss, ss  = truncate!(H0; verbose=verbose1)
-    #@show Ss ss
-    @test typeof(storage(Ss[1])) == (
-      if qns
-        NDTensors.DiagBlockSparse{Float64,Vector{Float64},2}
-      else
-        Diag{Float64,Vector{Float64}}
-      end
-    )
-
-    DwL = Base.max(get_Dw(HL)...)
-    @test is_regular_form(HL)
-    @test check_ortho(HL, left)
-    @test check_ortho(HR, right)
-    #
-    #  Now test guage relations using the diagonal singular value matrices
-    #  as the gauge transforms.
-    #
-    for n in 1:N
-      # @show inds(Ss[n-1]) inds(HR[n].W,tags="Link") inds(Ss[n]) inds(HL[n].W,tags="Link") 
-      D1 = Ss[n - 1] * HR[n].W
-      @assert order(D1) == 4
-      D2 = HL[n].W * Ss[n]
-      @assert order(D2) == 4
-      @test norm(Ss[n - 1] * HR[n].W - HL[n].W * Ss[n]) ≈ 0.0 atol = eps
-    end
-    if verbose
-      @printf " %4i %4i   %4i   %4i  %4i \n" N NNN Dw0 DwL DwR
-    end
-  end
+  
 
   # @testset "Test ground states" for qns in [false,true]
   #     eps=3e-13
@@ -245,7 +184,7 @@ verbose1 = false #verbose inside orth algos
   #     #  This one is tricky to set for QNs=true up due to QN flux constraints.
   #     #  An Ncell=3 with S={1/2,1,1/2} seems to work. 
   #     #
-  #     for  NNN in [2,4,6], N in [3] #3 site unit cell fails inside ITensorInfiniteMPS for qns=true.
+  #     for  NNN in [2,4,6], N in [3] #
   #         si = infsiteinds(n->isodd(n) ? "S=1" : "S=1/2",N; initstate, conserve_qns=qns)
   #         H0=transIsing_iMPO(si,NNN;ul=ul)
   #         @test is_regular_form(H0)

@@ -1,6 +1,5 @@
 using ITensors
 using ITensorMPOCompression
-using ITensorInfiniteMPS
 using Revise
 using Test
 using Printf
@@ -88,58 +87,5 @@ verbose1 = false #verbose inside orth algos
   #   @test get_Dw(Hhand) == get_Dw(Hauto)
   # end
 
-  models = [
-    (transIsing_iMPO, "S=1/2"),
-    (transIsing_AutoiMPO, "S=1/2"),
-    (Heisenberg_AutoiMPO, "S=1/2"),
-    (Heisenberg_AutoiMPO, "S=1"),
-    (Hubbard_AutoiMPO, "Electron"),
-  ]
-
-  #
-  #  This now gets test in infinite_canonical_mpo.jl
-  #
-  # @testset "Orthogonalize iMPO Check gauge relations, H=$(model[1]), ul=$ul, qbs=$qns, N=$N, NNN=$NNN" for model in
-  #                                                                                                          models,
-  #   ul in [lower,upper],
-  #   qns in [false, true],
-  #   N in [1, 3],
-  #   NNN in [1, 4]
-
-  #   eps = NNN * 1e-14
-  #   initstate(n) = "↑"
-  #   si = infsiteinds(model[2], N; initstate, conserve_qns=qns)
-  #   H0 = reg_form_iMPO(model[1](si, NNN; ul=ul))
-  #   HL = copy(H0)
-  #   @test is_regular_form(HL)
-  #   GL = ac_orthogonalize!(HL, left; verbose=verbose1)
-  #   DwL = Base.max(get_Dw(HL)...)
-  #   @test is_regular_form(HL)
-  #   @test check_ortho(HL, left) #expensive does V_dagger*V=Id
-  #   for n in 1:N
-  #     @test norm(HL[n].W * GL[n] - GL[n - 1] * H0[n].W) ≈ 0.0 atol = eps
-  #   end
-
-  #   HR = copy(H0)
-  #   GR = ac_orthogonalize!(HR, right; verbose=verbose1)
-  #   DwR = Base.max(get_Dw(HR)...)
-  #   @test is_regular_form(HR)
-  #   @test check_ortho(HR, right) #expensive does V_dagger*V=Id
-  #   for n in 1:N
-  #     @test norm(GR[n - 1] * HR[n].W - H0[n].W * GR[n]) ≈ 0.0 atol = eps
-  #   end
-  #   HR1 = copy(HL)
-  #   G = ac_orthogonalize!(HR1, right; verbose=verbose1)
-  #   DwLR = Base.max(get_Dw(HR1)...)
-  #   @test is_regular_form(HR1)
-  #   @test check_ortho(HR1, right) #expensive does V_dagger*V=Id
-  #   for n in 1:N
-  #     # D1=G[n-1]*HR1[n].W
-  #     # @assert order(D1)==4
-  #     # D2=HL[n].W*G[n]
-  #     # @assert order(D2)==4
-  #     @test norm(G[n - 1] * HR1[n].W - HL[n].W * G[n]) ≈ 0.0 atol = eps
-  #   end
-  # end
-end
+  end
 nothing

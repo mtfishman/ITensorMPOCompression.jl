@@ -1,6 +1,5 @@
 
 using ITensors
-using ITensorInfiniteMPS
 using ITensorMPOCompression
 using Revise
 using Test
@@ -8,7 +7,7 @@ using Test
 include("hamiltonians/hamiltonians.jl")
 
 
-import ITensorMPOCompression: transpose, reg_form_iMPO, ac_orthogonalize!, redim
+import ITensorMPOCompression: transpose, ac_orthogonalize!, redim
 
 # using Printf
 # Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f)
@@ -148,43 +147,7 @@ end
     @test id(il) == id(ir)
   end
 
-  function verify_links(H::InfiniteMPO)
-    Ncell = length(H)
-    @test order(H[1]) == 4
-    @test hastags(H[1], "Link,c=0,l=$Ncell")
-    @test hastags(H[1], "Link,c=1,l=1")
-    @test hastags(H[1], "Site,c=1,n=1")
-    for n in 2:Ncell
-      @test order(H[n]) == 4
-      @test hastags(H[n], "Link,c=1,l=$(n-1)")
-      @test hastags(H[n], "Link,c=1,l=$n")
-      @test hastags(H[n], "Site,c=1,n=$n")
-      il, = inds(H[n - 1]; tags="Link,c=1,l=$(n-1)")
-      ir, = inds(H[n]; tags="Link,c=1,l=$(n-1)")
-      @test id(il) == id(ir)
-    end
-    il, = inds(H[1]; tags="Link,c=0,l=$Ncell")
-    ir, = inds(H[Ncell]; tags="Link,c=1,l=$Ncell")
-    @test id(il) == id(ir)
-    @test order(H[Ncell]) == 4
-  end
-
-  @testset "Production of iMPOs from AutoMPO, Ncell=$Ncell, NNN=$NNN, qns=$qns" for qns in
-                                                                                    [
-      false, true
-    ],
-    Ncell in [1, 2, 3, 4],
-    NNN in [1, 2, 3, 4, 5]
-
-    initstate(n) = "↑"
-    site_type = "S=1/2"
-    si = infsiteinds(site_type, Ncell; initstate, conserve_qns=qns)
-    H = transIsing_AutoiMPO(si, NNN; ul=lower)
-    @test length(H) == Ncell
-    Dws = get_Dw(H)
-    @test all(y -> y == Dws[1], Dws)
-    verify_links(H)
-  end
+  
 
   makeHs = [
     (transIsing_MPO, "S=1/2"),
@@ -205,25 +168,7 @@ end
     verify_links(H)
   end
 
-  makeHs = [
-    (transIsing_iMPO, "S=1/2"),
-    (transIsing_AutoiMPO, "S=1/2"),
-    (Heisenberg_AutoiMPO, "S=1/2"),
-    (Hubbard_AutoiMPO, "Electron"),
-  ]
-
-  @testset "Reg for H=$(makeH[1]), ul=$ul, qns=$qns" for makeH in makeHs,
-    qns in [false, true],
-    ul in [lower, upper],
-    Ncell in 1:5
-
-    initstate(n) = "↑"
-    sites = infsiteinds(makeH[2], Ncell; initstate, conserve_qns=qns)
-    H = makeH[1](sites, 2; ul=ul)
-    @test is_regular_form(H, ul)
-    @test hasqns(H[1]) == qns
-    verify_links(H)
-  end
+  
   
   models = [
     (transIsing_MPO, "S=1/2", true),
@@ -273,43 +218,7 @@ end
     
   end
 
-  models = [
-    (transIsing_iMPO, "S=1/2", true),
-    (transIsing_AutoiMPO, "S=1/2", true),
-    (Heisenberg_AutoiMPO, "S=1/2", true),
-    (Heisenberg_AutoiMPO, "S=1", true),
-    (Hubbard_AutoiMPO, "Electron", false),
-  ]
-
-  @testset "Convert upper iMPO to lower H=$(model[1]), qns=$qns" for model in models, qns in [false,true], N in [1,2,3,4], NNN in [1,4]
-    initstate(n) = "↑"
-    sites = infsiteinds(model[2], N; initstate, conserve_qns=false)
-    Hu = reg_form_iMPO(model[1](sites, NNN;ul=upper);honour_upper=true)
-    @test is_regular_form(Hu)
-    @test Hu.ul==upper
-
-    Hl = transpose(Hu)
-    @test Hu.ul==upper
-    @test is_regular_form(Hu)
-    @test Hl.ul==lower
-    @test is_regular_form(Hl;verbose=true)
-    @test !check_ortho(Hu,left)
-    @test !check_ortho(Hl,left)
-    @test !check_ortho(Hu,right)
-    @test !check_ortho(Hl,right)
-    
-    ac_orthogonalize!(Hl,left)
-    @test Hl.ul==lower
-    @test is_regular_form(Hl;verbose=true)
-    @test check_ortho(Hl,left)
-    @test !check_ortho(Hu,left)
-    @test !check_ortho(Hu,right)
-    Hu1=transpose(Hl)
-    @test Hu1.ul==upper
-    @test is_regular_form(Hu1)
-    @test check_ortho(Hu1,left;verbose=true)
-    
-  end
+  
 
 end #Hamiltonians testset
 

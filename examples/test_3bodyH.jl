@@ -1,6 +1,5 @@
 using ITensors
 using ITensorMPOCompression
-using ITensorInfiniteMPS
 using Printf
 using Test
 
@@ -25,11 +24,9 @@ maxlinkdim(H::MPO)=maximum(get_Dw(H))
     HhandL = reg_form_MPO(three_body_MPO(sites, N))
     Hhand_pbcL = three_body_MPO(si, N; pbc=true)
     Hauto = three_body_AutoMPO(sites)
-    Hhand_infL = reg_form_iMPO(InfiniteMPO([Hhand_pbcL[1]]))
     Dw_raw, Dw_auto = maxlinkdim(Hhand_infL), maxlinkdim(Hauto)
     HhandR = reg_form_MPO(three_body_MPO(sites, N))
-    Hhand_infR = reg_form_iMPO(InfiniteMPO([Hhand_pbcL[1]]))
-
+    
     ac_orthogonalize!(HhandL,left; verbose=verbose, rr_cutoff=1e-14)
     ac_orthogonalize!(HhandR,right; verbose=verbose, rr_cutoff=1e-14)
     ac_orthogonalize!(Hhand_infL,left; verbose=verbose, rr_cutoff=1e-14)
@@ -75,7 +72,6 @@ end
     Hhand = reg_form_MPO(three_body_MPO(sites, N))
     Hauto = reg_form_MPO(three_body_AutoMPO(sites))
     Hhand_pbc = three_body_MPO(si, N; pbc=true)
-    Hhand_inf = reg_form_iMPO(InfiniteMPO([Hhand_pbc[1]]))
     
     Dw_hand_raw, Dw_auto_raw, Dw_handinf_raw = maxlinkdim(Hhand), maxlinkdim(Hauto), maxlinkdim(Hhand_inf)
     ss_hand = truncate!(Hhand,left; cutoff=1e-15, rr_cutoff=1e-15)

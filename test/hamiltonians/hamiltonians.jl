@@ -465,4 +465,3 @@ end
 
 
 include("hamiltonians_AutoMPO.jl")
-include("hamiltonians_infinite.jl")

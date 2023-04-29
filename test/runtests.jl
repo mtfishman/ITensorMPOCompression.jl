@@ -11,7 +11,6 @@ using Revise
     "hamiltonians.jl",
     "orthogonalize.jl",
     "truncate.jl",
-    "infinite_canonical_mpo.jl"
   ]
     print("$filename: ")
     @time include(filename)
