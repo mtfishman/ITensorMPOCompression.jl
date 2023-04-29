@@ -115,12 +115,8 @@ function extract_blocks(
   end
   nr, nc = dim(ir), dim(ic)
   @assert nr > 1 || nc > 1
-  if all #does not include Ac
+  if all || fix_inds #does not include Ac
     A = b = c = d = I = true
-  end
-  if fix_inds && !d
-    @warn "extract_blocks: fix_inds requires d=true."
-    d = true
   end
   if !llur(Wrf, lr) && swap_bc #not lower-left or upper-right
     b, c = c, b #swap flags
