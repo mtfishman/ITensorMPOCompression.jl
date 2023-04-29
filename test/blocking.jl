@@ -1,12 +1,14 @@
 using ITensors
 using ITensorMPOCompression
+using ITensorInfiniteMPS
+
 using Test
 using Revise, Printf
 
 include("hamiltonians/hamiltonians.jl")
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
 
-import ITensorMPOCompression: extract_blocks
+import ITensorMPOCompression: extract_blocks, regform_blocks, reg_form_iMPO
 
 
 @testset "Extract blocks qns=$qns, ul=$ul" for qns in [false, true], ul in [lower, upper]
@@ -72,6 +74,81 @@ import ITensorMPOCompression: extract_blocks
   end
   @test norm(array(Wb.𝐕̂) - array(Wrf[2:nr, 2:nc])) < eps
 end
+
+@testset "Extract blocks MPO with fix_inds=true ul=$ul" for ul in [lower, upper]
+
+  N = 5 #5 sites
+  NNN = 2 #Include 2nd nearest neighbour interactions
+  sites = siteinds("Electron", N; conserve_qns=false)
+  d = dim(inds(sites[1])[1])
+  H = reg_form_MPO(Hubbard_AutoMPO(sites, NNN; ul=ul);honour_upper=true)
+
+  lr = ul == lower ? left : right
+
+  Wrf = H[1]
+  Wb = extract_blocks(Wrf, lr; fix_inds=true)
+  if lr==left
+    @test hasinds(Wb.𝐜̂,Wb.irc,Wb.icc)
+    @test hasinds(Wb.𝐝̂,Wb.ird,Wb.icd)
+    @test Wb.ird==Wb.irc
+  else
+    @test hasinds(Wb.𝐛̂,Wb.irb,Wb.icb)
+    @test hasinds(Wb.𝐝̂,Wb.ird,Wb.icd)
+    @test Wb.icd==Wb.icb
+  end
+  Wrf = H[N]
+  Wb = extract_blocks(Wrf, lr; fix_inds=true)
+  if lr==right
+    @test hasinds(Wb.𝐜̂,Wb.irc,Wb.icc)
+    @test hasinds(Wb.𝐝̂,Wb.ird,Wb.icd)
+    @test Wb.ird==Wb.irc
+  else
+    @test hasinds(Wb.𝐛̂,Wb.irb,Wb.icb)
+    @test hasinds(Wb.𝐝̂,Wb.ird,Wb.icd)
+    @test Wb.icd==Wb.icb
+  end
+
+  Wrf = H[2]
+  Wb = extract_blocks(Wrf, lr; fix_inds=true)
+  @test hasinds(Wb.𝐀̂,Wb.irA,Wb.icA)
+  @test hasinds(Wb.𝐛̂,Wb.irb,Wb.icb)
+  @test hasinds(Wb.𝐜̂,Wb.irc,Wb.icc)
+  @test hasinds(Wb.𝐝̂,Wb.ird,Wb.icd)
+  @test Wb.ird==Wb.irc
+  @test Wb.icd==Wb.icb
+  @test Wb.irA==Wb.irb
+end
+
+function test_links(Wb1::regform_blocks,Wb2::regform_blocks)
+  @test hasinds(Wb1.𝐀̂,Wb1.irA,Wb1.icA)
+  @test hasinds(Wb1.𝐛̂,Wb1.irb,Wb1.icb)
+  @test hasinds(Wb1.𝐜̂,Wb1.irc,Wb1.icc)
+  @test hasinds(Wb1.𝐝̂,Wb1.ird,Wb1.icd)
+  @test Wb1.ird==Wb1.irc
+  @test Wb1.icd==Wb1.icb
+  @test Wb1.irA==Wb1.irb
+  @test Wb1.icA==Wb1.icc
+  @test id(Wb1.icA)==id(Wb2.irA)
+  @test dir(Wb1.icA)==dir(dag(Wb2.irA))
+end
+
+@testset "Extract blocks iMPO N=$N, qns=$qns with fix_inds=true ul=$ul" for N in [1,4], qns in [false,true], ul in [lower]
+  initstate(n) = "↑"
+  NNN = 2 #Include 2nd nearest neighbour interactions
+  sites = infsiteinds("Electron", N;initstate, conserve_qns=qns)
+  H = reg_form_iMPO(Hubbard_AutoiMPO(sites, NNN; ul=ul);honour_upper=true)
+
+  lr = ul == lower ? left : right
+
+  Wbs=extract_blocks(H,lr;fix_inds=true)
+  for n in 1:N-1
+    test_links(Wbs[n],Wbs[n+1])
+  end
+  test_links(Wbs[N],Wbs[1])
+
+ 
+end
+
 
 @testset "Detect regular form qns=$qns, ul=$ul" for qns in [false, true],
   ul in [lower, upper]

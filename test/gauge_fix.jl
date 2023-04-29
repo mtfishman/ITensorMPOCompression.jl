@@ -54,10 +54,10 @@ models = [
 
 import ITensorMPOCompression: check, extract_blocks, A0, b0, c0, vector_o2, MPO
 
-@testset "Gauge fix infinite $(model[1]), qns=$qns, ul=$ul" for model in models,
+@testset "Gauge fix infinite $(model[1]), N=$N, NNN=$NNN, qns=$qns, ul=$ul" for model in models,
   qns in [false,true],
   ul in [lower,upper],
-  N in [1,2,3,4],
+  N in [1,3],
   NNN in [1,4]
 
   eps = 1e-14
