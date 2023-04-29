@@ -37,6 +37,32 @@ end
   function Ws(H::reg_form_iMPO)
     return map(n -> H[n].W, 1:length(H))
   end
+
+  function fix_inds(Wb1::regform_blocks,Wb2::regform_blocks)
+    Wb1.𝐝̂=replaceind(Wb1.𝐝̂, Wb1.icd, settags(dag(Wb2.ird),tags(Wb1.icd)))
+    Wb1.icd=settags(dag(Wb2.ird),tags(Wb1.icd))
+    Wb1.𝐀̂=replaceind(Wb1.𝐀̂, Wb1.icA, settags(dag(Wb2.irA),tags(Wb1.icA)))
+    Wb1.icA=settags(dag(Wb2.irA),tags(Wb1.icA))
+
+    Wb1.𝐜̂=replaceind(Wb1.𝐜̂, Wb1.icc, Wb1.icA)
+    Wb1.icc=Wb1.icA
+    Wb1.𝐜̂=replaceind(Wb1.𝐜̂, Wb1.irc, Wb1.ird)
+    Wb1.irc=Wb1.ird
+    Wb1.𝐛̂=replaceind(Wb1.𝐛̂, Wb1.irb, Wb1.irA)
+    Wb1.irb=Wb1.irA
+    Wb1.𝐛̂=replaceind(Wb1.𝐛̂, Wb1.icb, Wb1.icd)
+    Wb1.icb=Wb1.icd
+  end
+
+  function extract_blocks(H::reg_form_iMPO,lr::orth_type;kwargs...)
+    Wbs=extract_blocks.(H,lr;kwargs...)
+    N=length(Wbs)
+    for n in 1:N-1
+      fix_inds(Wbs[n],Wbs[n+1])
+    end
+    fix_inds(Wbs[N],Wbs[1])
+    return Wbs
+  end
   
   Base.length(H::reg_form_iMPO) = length(H.data)
   function Base.reverse(H::reg_form_iMPO)
