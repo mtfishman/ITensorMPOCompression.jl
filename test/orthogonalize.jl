@@ -6,7 +6,7 @@ using Printf
 
 include("hamiltonians/hamiltonians.jl")
 
-import ITensorMPOCompression: gauge_fix!, is_gauge_fixed, ac_orthogonalize!
+import ITensorMPOCompression: gauge_fix!, is_gauge_fixed, orthogonalize!
 
 
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
@@ -45,8 +45,8 @@ verbose1 = false #verbose inside orth algos
     #
     lr = left
     @test pre_fixed == is_gauge_fixed(Hrf)
-    NNN >= 7 && ac_orthogonalize!(Hrf, right)
-    ac_orthogonalize!(Hrf, left)
+    NNN >= 7 && orthogonalize!(Hrf, right)
+    orthogonalize!(Hrf, left)
     @test is_regular_form(Hrf)
     @test check_ortho(Hrf, left)
     @test isortho(Hrf, left)
@@ -59,7 +59,7 @@ verbose1 = false #verbose inside orth algos
     #
     #  Right->left sweep
     #
-    ac_orthogonalize!(Hrf, right)
+    orthogonalize!(Hrf, right)
     @test is_regular_form(Hrf)
     @test check_ortho(Hrf, right)
     @test isortho(Hrf, right)
@@ -82,8 +82,8 @@ verbose1 = false #verbose inside orth algos
   #   sites = siteinds("S=1/2", N; conserve_qns=qns)
   #   Hhand = reg_form_MPO(transIsing_MPO(sites, NNN; ul=ul))
   #   Hauto = transIsing_AutoMPO(sites, NNN; ul=ul)
-  #   ac_orthogonalize!(Hhand, right)
-  #   ac_orthogonalize!(Hhand, left)
+  #   orthogonalize!(Hhand, right)
+  #   orthogonalize!(Hhand, left)
   #   @test get_Dw(Hhand) == get_Dw(Hauto)
   # end
 

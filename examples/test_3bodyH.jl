@@ -27,17 +27,17 @@ maxlinkdim(H::MPO)=maximum(get_Dw(H))
     Dw_raw, Dw_auto = maxlinkdim(Hhand_infL), maxlinkdim(Hauto)
     HhandR = reg_form_MPO(three_body_MPO(sites, N))
     
-    ac_orthogonalize!(HhandL,left; verbose=verbose, rr_cutoff=1e-14)
-    ac_orthogonalize!(HhandR,right; verbose=verbose, rr_cutoff=1e-14)
-    ac_orthogonalize!(Hhand_infL,left; verbose=verbose, rr_cutoff=1e-14)
-    ac_orthogonalize!(Hhand_infR,right; verbose=verbose, rr_cutoff=1e-14)
+    orthogonalize!(HhandL,left; verbose=verbose, rr_cutoff=1e-14)
+    orthogonalize!(HhandR,right; verbose=verbose, rr_cutoff=1e-14)
+    orthogonalize!(Hhand_infL,left; verbose=verbose, rr_cutoff=1e-14)
+    orthogonalize!(Hhand_infR,right; verbose=verbose, rr_cutoff=1e-14)
     Dw1_L, Dw1_R, Dw1i_L, Dw1i_R = maxlinkdim(HhandL),
     maxlinkdim(HhandR), maxlinkdim(Hhand_infL),
     maxlinkdim(Hhand_infR)
-    ac_orthogonalize!(HhandL,right; verbose=verbose, rr_cutoff=1e-14)
-    ac_orthogonalize!(HhandR,left; verbose=verbose, rr_cutoff=1e-14)
-    ac_orthogonalize!(Hhand_infL,right; verbose=verbose, rr_cutoff=1e-14)
-    ac_orthogonalize!(Hhand_infR,left; verbose=verbose, rr_cutoff=1e-14)
+    orthogonalize!(HhandL,right; verbose=verbose, rr_cutoff=1e-14)
+    orthogonalize!(HhandR,left; verbose=verbose, rr_cutoff=1e-14)
+    orthogonalize!(Hhand_infL,right; verbose=verbose, rr_cutoff=1e-14)
+    orthogonalize!(Hhand_infR,left; verbose=verbose, rr_cutoff=1e-14)
     Dw2_L, Dw2_R, Dw2i_L, Dw2i_R = maxlinkdim(HhandL),
     maxlinkdim(HhandR), maxlinkdim(Hhand_infL),
     maxlinkdim(Hhand_infR)

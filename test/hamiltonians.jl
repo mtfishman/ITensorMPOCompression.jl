@@ -7,7 +7,7 @@ using Test
 include("hamiltonians/hamiltonians.jl")
 
 
-import ITensorMPOCompression: transpose, ac_orthogonalize!, redim
+import ITensorMPOCompression: transpose, orthogonalize!, redim
 
 # using Printf
 # Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f)
@@ -199,7 +199,7 @@ end
     @test order(Hl1[1])==3
     @test order(Hl1[N])==3
 
-    ac_orthogonalize!(Hl,left)
+    orthogonalize!(Hl,left)
 
     @test Hu.ul==upper
     @test is_regular_form(Hu)

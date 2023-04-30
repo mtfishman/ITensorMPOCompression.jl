@@ -117,8 +117,8 @@ function truncate!(
 )::bond_spectrums
   #Two sweeps are essential for avoiding rectangular R in site truncate.
   if !isortho(H)
-    ac_orthogonalize!(H, lr; eps=eps, kwargs...)
-    ac_orthogonalize!(H, mirror(lr); eps=eps, kwargs...)
+    orthogonalize!(H, lr; eps=eps, kwargs...)
+    orthogonalize!(H, mirror(lr); eps=eps, kwargs...)
   end
   gauge_fix!(H)
   ss = bond_spectrums(undef, 0)

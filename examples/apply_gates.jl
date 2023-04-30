@@ -45,7 +45,7 @@ N,NNN = 5,2
 s = siteinds("S=1/2", N)
 H = reg_form_MPO(Heisenberg_AutoMPO(s, NNN))
 @assert is_gauge_fixed(H)
-ac_orthogonalize!(H,right) 
+orthogonalize!(H,right) 
 @assert is_gauge_fixed(H)
 
 gate_sweep!(H)
@@ -53,7 +53,7 @@ gate_sweep!(H)
 # H[2],H[3]=apply(U,H[2],H[3],Udag)
 # #@assert check_ortho(H[2],left)
 pprint(H)
-ac_orthogonalize!(H,right)
+orthogonalize!(H,right)
 pprint(H)
 
 nothing

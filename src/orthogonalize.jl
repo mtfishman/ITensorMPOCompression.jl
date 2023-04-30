@@ -74,7 +74,7 @@ true
 ```
 
 """
-function ac_orthogonalize!(H::reg_form_MPO, lr::orth_type; kwargs...)
+function orthogonalize!(H::reg_form_MPO, lr::orth_type; kwargs...)
   gauge_fix!(H;kwargs...)
   rng = sweep(H, lr)
   for n in rng
@@ -89,8 +89,8 @@ function ac_orthogonalize!(H::reg_form_MPO, lr::orth_type; kwargs...)
   return
 end
 
-function ac_orthogonalize!(H::reg_form_MPO, n_ortho::Int64; kwargs...)
-  ac_orthogonalize!(H,right;kwargs...)
+function orthogonalize!(H::reg_form_MPO, n_ortho::Int64; kwargs...)
+  orthogonalize!(H,right;kwargs...)
   for n in 1:n_ortho-1
     nn = n + 1
     H[n], R, iqp = ac_qx(H[n], left;kwargs...)
@@ -103,8 +103,8 @@ function ac_orthogonalize!(H::reg_form_MPO, n_ortho::Int64; kwargs...)
   return 
 end
 
-function ac_orthogonalize!(H::MPO, lr::orth_type; kwargs...)
+function orthogonalize!(H::MPO, lr::orth_type; kwargs...)
   Hrf = reg_form_MPO(H)
-  ac_orthogonalize!(Hrf, lr; kwargs)
+  orthogonalize!(Hrf, lr; kwargs)
   return MPO(Hrf)
 end
