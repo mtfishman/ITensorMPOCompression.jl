@@ -19,7 +19,7 @@ export upper, lower, left, right, mirror, flip
 # lots of characterization functions
 export is_regular_form, isortho, check_ortho
 # MPO bond dimensions and bond spectrum
-export get_Dw, maxlinkdim, min, max
+export get_Dw, min, max
 export bond_spectrums
 # primary operations
 export orthogonalize!, truncate, truncate!

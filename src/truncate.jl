@@ -133,10 +133,3 @@ function truncate!(
   H.llim = rng.stop + rng.step - 1
   return ss
 end
-#
-#  Make sure indices are ordered and then convert to a matrix
-#
-# function NDTensors.matrix(il::Index, T::ITensor, ir::Index)
-#   T1 = permute(T, il, ir; allow_alias=true)
-#   return matrix(T1)
-# end

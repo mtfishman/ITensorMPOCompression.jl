@@ -179,7 +179,7 @@ function get_subtensor_wrapper(
   return ITensor(get_subtensor(T, new_inds, rs...))
 end
 
-function permute(indsT::T, irs::IndexRange...) where {T<:(Tuple{Vararg{T,N}} where {N,T})}
+function ITensors.permute(indsT::T, irs::IndexRange...) where {T<:(Tuple{Vararg{T,N}} where {N,T})}
   ispec = indices(irs) #indices caller specified ranges for
   inot = Tuple(noncommoninds(indsT, ispec)) #indices not specified by caller
   isort = ispec..., inot... #all indices sorted so user specified ones are first.
