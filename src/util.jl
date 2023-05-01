@@ -156,7 +156,6 @@ Display the structure of an MPO, one line for each lattice site. For each site t
 - d   : dimension of the local Hilbert space
 - Reg. Form  : U=upper, L=lower, D=diagonal, No = Not reg. form.
 - Orth. Form : L=left, R=right, M=not orthogonal, B=both left and right.
-- Tri. Form  : U=upper triangular, L=lower triangular, F=full (not triangular), D=diagonal, R=row, C=column
 
 Be careful when reading the L symbols. L stands for Left in the Orth. column but is stands 
 for Lower in the other two columns.
@@ -218,21 +217,13 @@ n    Dw1  Dw2   d   Reg.  Orth.  Tri.
 ```
 """
 function pprint(H::MPO, eps::Float64=default_eps)
-  N = length(H)
-  println("  n    Dw1  Dw2   d   Reg.  Orth.  Tri.")
-  println("                      Form  Form   Form")
-
-  for n in 1:N
-    Dw1, Dw2, d, l, u, lr, lt, ut = get_traits(H[n], eps)
-    #println(" $n    $Dw1    $Dw2    $d    $l$u     $lr   $lt$ut")
-    @printf "%4i %4i %4i %4i    %s%s     %s     %s%s\n" n Dw1 Dw2 d l u lr lt ut
-  end
+  pprint(reg_form_MPO(copy(H)),eps)
 end
 
 function pprint(H::reg_form_MPO, eps::Float64=default_eps)
   N = length(H)
-  println("  n    Dw1  Dw2   d   Reg.  Orth.  Tri.")
-  println("                      Form  Form   Form")
+  println("  n    Dw1  Dw2   d   Reg.  Orth.")
+  println("                      Form  Form ")
 
   for n in 1:N
     Dw1, Dw2, d, l, u, lr = get_traits(H[n], eps)

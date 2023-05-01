@@ -136,17 +136,8 @@ function sweep(H::AbstractMPS, lr::orth_type)::StepRange{Int64,Int64}
   return lr == left ? (1:1:(N - 1)) : (N:-1:2)
 end
 
-#
-#  Handles direction only.  For iMPOs we include the last site in the unit cell.
-#
-function sweep(H::AbstractInfiniteMPS, lr::orth_type)::StepRange{Int64,Int64}
-  N = length(H)
-  return lr == left ? (1:1:N) : (N:-1:1)
-end
 
-function linkind(M::AbstractInfiniteMPS, j::Integer)
-  return commonind(M[j], M[j + 1])
-end
+
 
 #----------------------------------------------------------------------------
 #
@@ -178,7 +169,7 @@ Test if anMPO is in `lr` orthogonal (canonical) form by checking the cached orth
 
 Returns `true` if the MPO is in `lr` orthogonal (canonical) form.  This is a fast operation and should be safe to use in time critical production code.  The one exception is for iMPO with Ncell=1, where currently the ortho center does not distinguis between left/right or un-orthognal states.
 """
-function isortho(H::AbstractMPS, lr::orth_type)::Bool
+function ITensors.isortho(H::AbstractMPS, lr::orth_type)::Bool
   io = false
   # if length(H)==1
   #     io=check_ortho(H,lr) #Expensive!!
@@ -255,17 +246,6 @@ function is_regular_form(H::AbstractMPS, ul::reg_form;kwargs...)::Bool
   return true
 end
 
-function is_regular_form(H::AbstractInfiniteMPS, ul::reg_form;kwargs...)::Bool
-  il = dag(linkind(H, 0))
-  for n in 1:length(H)
-    ir = linkind(H, n)
-    #@show il ir inds(H[n])
-    Wrf = reg_form_Op(H[n], il, ir, ul)
-    !is_regular_form(Wrf;kwargs...) && return false
-    il = dag(ir)
-  end
-  return true
-end
 
 function detect_regular_form(H::AbstractMPS;kwargs...)::Tuple{Bool,Bool}
   return is_regular_form(H, lower;kwargs...), is_regular_form(H, upper;kwargs...)
@@ -281,21 +261,13 @@ function get_Dw(H::MPO)::Vector{Int64}
   return Dws
 end
 
-function get_Dw(H::InfiniteMPO)::Vector{Int64}
-  N = length(H)
-  Dws = Vector{Int64}(undef, N)
-  for n in 1:N
-    l = commonind(H[n], H[n + 1])
-    Dws[n] = dim(l)
-  end
-  return Dws
-end
+
 
 function get_traits(W::reg_form_Op, eps::Float64)
   r, c = W.ileft, W.iright
   d, n, space = parse_site(W.W)
   Dw1, Dw2 = dim(r), dim(c)
-  bl, bu = detect_regular_form(W, eps)
+  bl, bu = detect_regular_form(W;eps=eps)
   l = bl ? 'L' : ' '
   u = bu ? 'U' : ' '
   if bl && bu
@@ -307,8 +279,8 @@ function get_traits(W::reg_form_Op, eps::Float64)
   end
 
   tri = bl ? lower : upper
-  is__left = check_ortho(W, left, eps)
-  is_right = check_ortho(W, right, eps)
+  is__left = check_ortho(W, left; eps=eps)
+  is_right = check_ortho(W, right; eps=eps)
   if is__left && is_right
     lr = 'B'
   elseif is__left && !is_right

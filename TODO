@@ -11,7 +11,7 @@ More tests:
   but the bottom right I op is hiding as a liner combination of S ops.
 
 Features:
--Put some content in Readme.md
+Done: -Put some content in Readme.md
 -make truncate, and orthogonalize that work on copies.
 
 Improvements:

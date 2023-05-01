@@ -1,13 +1,12 @@
 using ITensors
 using ITensorMPOCompression
-using ITensorInfiniteMPS
 using Revise
 using Test
 using Printf
 
 include("hamiltonians/hamiltonians.jl")
 
-import ITensorMPOCompression: gauge_fix!, is_gauge_fixed, ac_orthogonalize!
+import ITensorMPOCompression: gauge_fix!, is_gauge_fixed
 
 
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
@@ -46,8 +45,8 @@ verbose1 = false #verbose inside orth algos
     #
     lr = left
     @test pre_fixed == is_gauge_fixed(Hrf)
-    NNN >= 7 && ac_orthogonalize!(Hrf, right)
-    ac_orthogonalize!(Hrf, left)
+    NNN >= 7 && orthogonalize!(Hrf, right)
+    orthogonalize!(Hrf, left)
     @test is_regular_form(Hrf)
     @test check_ortho(Hrf, left)
     @test isortho(Hrf, left)
@@ -60,7 +59,7 @@ verbose1 = false #verbose inside orth algos
     #
     #  Right->left sweep
     #
-    ac_orthogonalize!(Hrf, right)
+    orthogonalize!(Hrf, right)
     @test is_regular_form(Hrf)
     @test check_ortho(Hrf, right)
     @test isortho(Hrf, right)
@@ -72,74 +71,64 @@ verbose1 = false #verbose inside orth algos
     @test E0 ≈ E2 atol = eps
   end
 
-  # @testset "Compare Dws for Ac orthogonalized hand built MPO, vs Auto MPO, NNN=$NNN, ul=$ul, qns=$qns" for NNN in
-  #                                                                                                          [
-  #     1, 5, 8, 12
-  #   ],
-  #   ul in [lower, upper],
-  #   qns in [false, true]
+  @testset "Ortho center options" for 
 
-  #   N = 2 * NNN + 4
-  #   sites = siteinds("S=1/2", N; conserve_qns=qns)
-  #   Hhand = reg_form_MPO(transIsing_MPO(sites, NNN; ul=ul))
-  #   Hauto = transIsing_AutoMPO(sites, NNN; ul=ul)
-  #   ac_orthogonalize!(Hhand, right)
-  #   ac_orthogonalize!(Hhand, left)
-  #   @test get_Dw(Hhand) == get_Dw(Hauto)
-  # end
+    N = 10 #5 sites
+    NNN = 4 #Include 4th nearest neighbour interactions
+    sites = siteinds("Electron", N; conserve_qns=false)
+    H=Hubbard_AutoMPO(sites, NNN)
+    
+    for j=1:N
+      Hj=copy(H)
+      @test !check_ortho(Hj,left)
+      @test !check_ortho(Hj,right)
+      @test !isortho(Hj,left)
+      @test !isortho(Hj,right)
+      orthogonalize!(Hj,j)
+      for j1 in 1:j-1
+        @test check_ortho(Hj[j1],left,lower)
+        @test !check_ortho(Hj[j1],right,lower)
+      end
+      for j1 in j+1:N
+        @test !check_ortho(Hj[j1],left,lower)
+        @test check_ortho(Hj[j1],right,lower)
+      end
+    end
+    orthogonalize!(H,left)
+    for j=1:N
+      Hj=copy(H)
+      @test check_ortho(Hj,left)
+      @test !check_ortho(Hj,right)
+      @test isortho(Hj,left)
+      @test !isortho(Hj,right)
+      orthogonalize!(Hj,j)
+      for j1 in 1:j-1
+        @test check_ortho(Hj[j1],left,lower)
+        @test !check_ortho(Hj[j1],right,lower)
+      end
+      for j1 in j+1:N
+        @test !check_ortho(Hj[j1],left,lower)
+        @test check_ortho(Hj[j1],right,lower)
+      end
+    end
+  end
 
-  models = [
-    (transIsing_iMPO, "S=1/2"),
-    (transIsing_AutoiMPO, "S=1/2"),
-    (Heisenberg_AutoiMPO, "S=1/2"),
-    (Heisenberg_AutoiMPO, "S=1"),
-    (Hubbard_AutoiMPO, "Electron"),
-  ]
 
-  #
-  #  This now gets test in infinite_canonical_mpo.jl
-  #
-  # @testset "Orthogonalize iMPO Check gauge relations, H=$(model[1]), ul=$ul, qbs=$qns, N=$N, NNN=$NNN" for model in
-  #                                                                                                          models,
-  #   ul in [lower,upper],
-  #   qns in [false, true],
-  #   N in [1, 3],
-  #   NNN in [1, 4]
+  @testset "Compare Dws for Ac orthogonalized hand built MPO, vs Auto MPO, NNN=$NNN, ul=$ul, qns=$qns" for NNN in
+                                                                                                           [
+      1, 5, 8, 12
+    ],
+    ul in [lower, upper],
+    qns in [false, true]
 
-  #   eps = NNN * 1e-14
-  #   initstate(n) = "↑"
-  #   si = infsiteinds(model[2], N; initstate, conserve_qns=qns)
-  #   H0 = reg_form_iMPO(model[1](si, NNN; ul=ul))
-  #   HL = copy(H0)
-  #   @test is_regular_form(HL)
-  #   GL = ac_orthogonalize!(HL, left; verbose=verbose1)
-  #   DwL = Base.max(get_Dw(HL)...)
-  #   @test is_regular_form(HL)
-  #   @test check_ortho(HL, left) #expensive does V_dagger*V=Id
-  #   for n in 1:N
-  #     @test norm(HL[n].W * GL[n] - GL[n - 1] * H0[n].W) ≈ 0.0 atol = eps
-  #   end
+    N = 2 * NNN + 4
+    sites = siteinds("S=1/2", N; conserve_qns=qns)
+    Hhand = reg_form_MPO(transIsing_MPO(sites, NNN; ul=ul))
+    Hauto = transIsing_AutoMPO(sites, NNN; ul=ul)
+    orthogonalize!(Hhand, right)
+    orthogonalize!(Hhand, left)
+    @test get_Dw(Hhand) == get_Dw(Hauto)
+  end
 
-  #   HR = copy(H0)
-  #   GR = ac_orthogonalize!(HR, right; verbose=verbose1)
-  #   DwR = Base.max(get_Dw(HR)...)
-  #   @test is_regular_form(HR)
-  #   @test check_ortho(HR, right) #expensive does V_dagger*V=Id
-  #   for n in 1:N
-  #     @test norm(GR[n - 1] * HR[n].W - H0[n].W * GR[n]) ≈ 0.0 atol = eps
-  #   end
-  #   HR1 = copy(HL)
-  #   G = ac_orthogonalize!(HR1, right; verbose=verbose1)
-  #   DwLR = Base.max(get_Dw(HR1)...)
-  #   @test is_regular_form(HR1)
-  #   @test check_ortho(HR1, right) #expensive does V_dagger*V=Id
-  #   for n in 1:N
-  #     # D1=G[n-1]*HR1[n].W
-  #     # @assert order(D1)==4
-  #     # D2=HL[n].W*G[n]
-  #     # @assert order(D2)==4
-  #     @test norm(G[n - 1] * HR1[n].W - HL[n].W * G[n]) ≈ 0.0 atol = eps
-  #   end
-  # end
 end
 nothing

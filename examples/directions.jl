@@ -1,4 +1,5 @@
 using ITensors, ITensorMPOCompression
+include("../test/hamiltonians/hamiltonians.jl")
 
 N = 10
 sites = siteinds("S=1/2", N; conserve_qns=true)
@@ -15,8 +16,8 @@ H = transIsing_AutoMPO(sites, 1);
 println("MPO as constructed from AutoMPO")
 show_directions(H)
 println("MPO ortho=left (orth center on site 10)")
-orthogonalize!(H; orth=left)
+orthogonalize!(H,left)
 show_directions(H)
 println("MPO ortho=right (orth center on site 1)")
-orthogonalize!(H; orth=right)
+orthogonalize!(H,right)
 show_directions(H)

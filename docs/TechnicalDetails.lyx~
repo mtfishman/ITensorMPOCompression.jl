@@ -4414,8 +4414,8 @@ and now
 
 \end_inset
 
-But we can demarcate the unit cell any place we want, moving the square
- brackets one tensor to the left we have
+But we can demarcate the unit cell any place we want.
+ Moving the square brackets one tensor to the left we have
 \begin_inset Formula 
 \[
 =\cdots\left[R_{0}^{N}\hat{Q}_{0}^{1}R_{0}^{1}\hat{Q}_{0}^{2}R_{0}^{2}\cdots R_{0}^{(N-1)}\hat{Q}_{0}^{N}\right]\cdots

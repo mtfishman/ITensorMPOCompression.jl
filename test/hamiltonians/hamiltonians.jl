@@ -1,4 +1,4 @@
-import ITensorMPOCompression: parse_links, parse_site, G_transpose, @mpoc_assert, reg_form, assign!
+import ITensorMPOCompression: parse_links, parse_site, G_transpose, @mpoc_assert, reg_form, assign!, slice, redim
 
 @doc """
     transIsing_MPO(sites,NNN;kwargs...)
@@ -313,7 +313,7 @@ function one_body_op(site::Index, r1::Index, c1::Index, ul::reg_form; hx=0.0,  k
   Dw::Int64 = 2
   #d,n,space=parse_site(site)
   #use_qn=hasqns(site)
-  r, c = redim(r1, Dw), redim(c1, Dw)
+  r, c = redim(r1, Dw,0), redim(c1, Dw,0)
   is = dag(site) #site seem to have the wrong direction!
   W = ITensor(0.0, r, c, is, dag(is'))
   Id = op(is, "Id")
@@ -335,7 +335,7 @@ function two_body_op(
   Dw::Int64 = 2 + n
   #d,n,space=parse_site(site)
   #use_qn=hasqns(site)
-  r, c = redim(r1, Dw), redim(c1, Dw)
+  r, c = redim(r1, Dw,0), redim(c1, Dw,0)
 
   is = dag(site) #site seem to have the wrong direction!
   W = ITensor(0.0, r, c, is, dag(is'))
@@ -367,7 +367,7 @@ function two_body_sum(
   Dw::Int64 = 2 + NNN
   #d,n,space=parse_site(site)
   #use_qn=hasqns(site)
-  r, c = redim(r1, Dw), redim(c1, Dw)
+  r, c = redim(r1, Dw,0), redim(c1, Dw,0)
 
   is = dag(site) #site seem to have the wrong direction!
   W = ITensor(0.0, r, c, is, dag(is'))
@@ -465,4 +465,3 @@ end
 
 
 include("hamiltonians_AutoMPO.jl")
-include("hamiltonians_infinite.jl")
