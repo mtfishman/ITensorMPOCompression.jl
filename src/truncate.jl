@@ -79,6 +79,10 @@ function truncate(
   Q̂, R, iqx = ac_qx(Ŵrf, lr; qprime=true, kwargs...) #left Q[r,qx], R[qx,c] - right R[r,qx] Q[qx,c]
   @checkflux(Q̂.W)
   @checkflux(R)
+  if dim(ilf)>dim(iqx)
+    @warn "Truncate bail out, dim(ilf)=$(dim(ilf)), dim(iqx)=$(dim(iqx))"
+    return  noprime(Q̂), noprime(R), Spectrum(nothing,0.0)
+  end
   @mpoc_assert dim(ilf) == dim(iqx) #Rectanuglar not allowed
   #
   #  Factor RL=M*L' (left/lower) = L'*M (right/lower) = M*R' (left/upper) = R'*M (right/upper)
