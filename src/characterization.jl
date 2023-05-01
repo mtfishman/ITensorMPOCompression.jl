@@ -267,7 +267,7 @@ function get_traits(W::reg_form_Op, eps::Float64)
   r, c = W.ileft, W.iright
   d, n, space = parse_site(W.W)
   Dw1, Dw2 = dim(r), dim(c)
-  bl, bu = detect_regular_form(W, eps)
+  bl, bu = detect_regular_form(W;eps=eps)
   l = bl ? 'L' : ' '
   u = bu ? 'U' : ' '
   if bl && bu
@@ -279,8 +279,8 @@ function get_traits(W::reg_form_Op, eps::Float64)
   end
 
   tri = bl ? lower : upper
-  is__left = check_ortho(W, left, eps)
-  is_right = check_ortho(W, right, eps)
+  is__left = check_ortho(W, left; eps=eps)
+  is_right = check_ortho(W, right; eps=eps)
   if is__left && is_right
     lr = 'B'
   elseif is__left && !is_right
