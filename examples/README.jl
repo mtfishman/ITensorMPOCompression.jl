@@ -14,6 +14,9 @@
 #'
 #'   Support for compression of infinite lattice MPOs (iMPOs) is in the ITensorInfiniteMPS package
 #'   which can be found [here](https://github.com/ITensor/ITensorInfiniteMPS.jl).
+#'
+#'   Technical notes on what this package does can be founs [here](https://github.com/JanReimers/ITensorMPOCompression.jl/blob/main/docs/TechnicalDetails.pdf)
+#'
 
 #' ## Installation
 #'

@@ -179,464 +179,6 @@ literal "false"
 \end_layout
 
 \begin_layout Subsection
-ITensor considerations
-\end_layout
-
-\begin_layout Standard
-The indexing methodology used in the 
-\family typewriter
-ITensor
-\family default
- libraries (C++ and Julia) relieves the user from worrying about index order
- and as a result even the ordering for matrix multiplication.
- For example accessing a tensor element
-\family roman
-\series medium
-\shape up
-\size normal
-\emph off
-\bar no
-\strikeout off
-\xout off
-\uuline off
-\uwave off
-\noun off
-\color none
- 
-\family typewriter
-\series default
-\shape default
-\size default
-\emph default
-\bar default
-\strikeout default
-\xout default
-\uuline default
-\uwave default
-\noun default
-\color inherit
-W[i=>3,j=>4]
-\family default
- is identical to 
-\family typewriter
-W[j=>4,i=>3]
-\family default
-.
- So in effect transposing an order 2 
-\family typewriter
-ITensor
-\family default
- is a no-op.
- It then follows that defining an order 2 
-\family typewriter
-ITensor
-\family default
- as being either upper or lower triangular is also meaningless.
- We can say it is triangular but not upper or lower.
- 
-\end_layout
-
-\begin_layout Standard
-In order to proceed we need some sort of convention for index ordering.
- A typical operator-valued matrix, 
-\begin_inset Formula $\hat{W}$
-\end_inset
-
-, that appears on site 
-\begin_inset Formula $n=1$
-\end_inset
-
- in a 1D MPO lattice will have four indexes with tags that look like:
-\end_layout
-
-\begin_layout Enumerate
-A left link index: 
-\emph on
-Link,l=0
-\end_layout
-
-\begin_layout Enumerate
-A right link index: 
-\emph on
-Link,l=1
-\end_layout
-
-\begin_layout Enumerate
-An upward pointing site index: 
-\emph on
-Site,SpinHalf,n=1
-\end_layout
-
-\begin_layout Enumerate
-A primed version of the site index.
-\end_layout
-
-\begin_layout Standard
-1&2 are virtual or internal indices, and 3&4 are the physical indices.
- When writing code we will think of 
-\begin_inset Formula $\hat{W}$
-\end_inset
-
- as an order 2 operator valued matrix (OVM) where the
-\emph on
- l=0
-\emph default
- index is the row index, and the 
-\emph on
-l=1
-\emph default
- index is for columns.
- With this definition we can define 
-\begin_inset Formula $\hat{W}$
-\end_inset
-
- as upper or lower triangular.
-\end_layout
-
-\begin_layout Standard
-Ideally the 
-\family typewriter
-ITensor
-\family default
- index abstractions will allow us to make the vast majority of the code
- independent of upper/lower and left/right canonical forms.
- However initially this may not be the case because we are adopting a pragmatic
- strategy of simply getting something working with a large array of unit
- tests.
- After that we can start refactoring to simplify the code while constantly
- checking the unit tests to make sure nothing gets broken in the process.
- The same argument applies to run time optimization.
-\end_layout
-
-\begin_layout Subsection
-Index tag conventions
-\end_layout
-
-\begin_layout Standard
-The ordering of indices inside an 
-\family typewriter
-ITensor
-\family default
- object is arbitrary, and therefore of no use in identifying indices.
- The code relies solely on tags and tag conventions for identifying and
- matching indices.
- The conventions in table 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "tab:ITensor-tag-conventions"
-plural "false"
-caps "false"
-noprefix "false"
-
-\end_inset
-
- are used extensively in the code:
-\begin_inset Float table
-wide false
-sideways false
-status open
-
-\begin_layout Plain Layout
-
-\end_layout
-
-\begin_layout Plain Layout
-\begin_inset Tabular
-<lyxtabular version="3" rows="6" columns="3">
-<features tabularvalignment="middle">
-<column alignment="center" valignment="top">
-<column alignment="center" valignment="top" width="6cm">
-<column alignment="center" valignment="top" width="5cm">
-<row>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-tag text
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Interpret ion
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Comments
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-
-\emph on
-Link, l=
-\emph default
-[site number]
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-internal link to neighbouring site
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-For site 
-\begin_inset Formula $n$
-\end_inset
-
- the left link has tag 
-\emph on
-l=$
-\emph default
-
-\begin_inset Formula $(n-1)$
-\end_inset
-
-, and the right link is
-\emph on
- l=$
-\emph default
-
-\begin_inset Formula $n$
-\end_inset
-
- 
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-
-\emph on
-Site,
-\emph default
-[site type]
-\emph on
-,n=
-\emph default
-[site number]
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-physical/site index for a site
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-the site type is not interpreted
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-
-\emph on
-Link,qx
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-internal link between 
-\begin_inset Formula $Q$
-\end_inset
-
- and 
-\begin_inset Formula $R$
-\end_inset
-
- for 
-\begin_inset Formula $QR$
-\end_inset
-
- decomposition
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Same for 
-\begin_inset Formula $RQ$
-\end_inset
-
-, 
-\begin_inset Formula $QL$
-\end_inset
-
- and 
-\begin_inset Formula $LQ$
-\end_inset
-
- decompositions
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-
-\emph on
-Link,u
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-internal link between 
-\begin_inset Formula $U$
-\end_inset
-
- and 
-\begin_inset Formula $s$
-\end_inset
-
- for SVD decomposition
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-
-\emph on
-Link,v
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-internal link between 
-\begin_inset Formula $s$
-\end_inset
-
- and 
-\begin_inset Formula $V$
-\end_inset
-
- for SVD decomposition
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-
-\end_layout
-
-\end_inset
-</cell>
-</row>
-</lyxtabular>
-
-\end_inset
-
-
-\begin_inset Caption Standard
-
-\begin_layout Plain Layout
-
-\family typewriter
-\begin_inset CommandInset label
-LatexCommand label
-name "tab:ITensor-tag-conventions"
-
-\end_inset
-
-ITensor
-\family default
- tag conventions assumed in the MPO compression code
-\end_layout
-
-\end_inset
-
-
-\end_layout
-
-\end_inset
-
-
-\family typewriter
-ITensor
-\family default
- follows these conventions when creating site sets and MPOs.
- If you are creating your own site types or generating your own MPOs then
- please keep these conventions in mind.
-\end_layout
-
-\begin_layout Subsection
 Definition of regular form
 \end_layout
 
@@ -2177,8 +1719,8 @@ literal "false"
  block of the regular form.
  This has a number of advantages that will be enumerated below, with a trade-off
  in the form of slightly increased complexity in the algorithm.
- In particular we first gauge transform the MPO prior to performing Ac-block
- respecting orthogonalization step.
+ In particular we must first gauge transform the MPO prior to performing
+ Ac-block respecting orthogonalization step.
  It turns out that we will need to do this gauge fix for compression of
  iMPOs anyway, so the trade-off becomes inconsequential.
 \end_layout
@@ -2581,12 +2123,16 @@ We can use column pivoting QR decomposition:
 \begin_inset Formula $A=QRp^{-1}$
 \end_inset
 
- so 
+ so we see that 
 \begin_inset Formula $R$
 \end_inset
 
- gets scrambled and is non-triangular which precludes using column pivoting
- QR decomposition when using the V-block method
+ gets scrambled by 
+\begin_inset Formula $p^{-1}$
+\end_inset
+
+ and is non-triangular, which precludes using column pivoting QR decomposition
+ when using the V-block method
 \end_layout
 
 \begin_layout Enumerate
@@ -2598,7 +2144,7 @@ ITensor
  using block-sparse tensors.
  As a result there is no guarantee then tensors will appear triangular after
  QR decomposition.
- This is a non issue for Ac-block method, but can cause serious problem
+ This is a non issue for Ac-block method, but can cause serious problems
  when using the V-block method.
 \end_layout
 
@@ -3870,7 +3416,7 @@ where
 \end_inset
 
  is the size of the repeating unit cell.
- Becuase of these constraints we need to solve two systems of equations
+ Because of these constraints we need to solve two systems of equations
  covering the whole unit cell.
  
 \end_layout
@@ -3925,7 +3471,15 @@ which can be solved for
 \begin_inset Formula $A_{0}-\mathsf{𝕀}$
 \end_inset
 
- is guaranteed to be non singular.
+ is guaranteed
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Parker2019"
+literal "false"
+
+\end_inset
+
+ to be non singular.
  
 \end_layout
 
@@ -4232,7 +3786,7 @@ or
 
 \end_inset
 
-
+Obviously we should use a sparse system solver for this problem.
 \end_layout
 
 \begin_layout Subsection
@@ -4240,9 +3794,7 @@ QR Orthogonalization
 \end_layout
 
 \begin_layout Standard
-There are three algorithms for this, going from simplest and least reliable
- to the most complex and most reliable.
- In this section we describe the iterated QR orthogonalization scheme.
+In this section we describe the iterated QR orthogonalization scheme.
  This idea was first introduced for MPS networks
 \begin_inset CommandInset citation
 LatexCommand cite
