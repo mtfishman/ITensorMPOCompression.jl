@@ -74,7 +74,7 @@ true
 ```
 
 """
-function orthogonalize!(H::reg_form_MPO, lr::orth_type; kwargs...)
+function ITensors.orthogonalize!(H::reg_form_MPO, lr::orth_type; kwargs...)
   gauge_fix!(H;kwargs...)
   rng = sweep(H, lr)
   for n in rng
@@ -89,22 +89,42 @@ function orthogonalize!(H::reg_form_MPO, lr::orth_type; kwargs...)
   return
 end
 
-function orthogonalize!(H::reg_form_MPO, n_ortho::Int64; kwargs...)
-  orthogonalize!(H,right;kwargs...)
-  for n in 1:n_ortho-1
-    nn = n + 1
+function ITensors.orthogonalize!(H::reg_form_MPO, j::Int64; kwargs...)
+  if !isortho(H)
+    orthogonalize!(H,right;kwargs...)
+  end
+  oc=orthocenter(H)
+  rng= oc<=j ? (oc:1:j-1) : (oc-1:-1:j)
+  for n in rng
+    nn = n + rng.step
     H[n], R, iqp = ac_qx(H[n], left;kwargs...)
     H[nn] *= R
     check(H[n])
     check(H[nn])
   end
-  H.rlim = n_ortho + 1
-  H.llim = n_ortho - 1
+  H.rlim = j + 1
+  H.llim = j - 1
   return 
 end
 
-function orthogonalize!(H::MPO, lr::orth_type; kwargs...)
+function ITensors.orthogonalize!(H::MPO, lr::orth_type; kwargs...)
   Hrf = reg_form_MPO(H)
   orthogonalize!(Hrf, lr; kwargs)
-  return MPO(Hrf)
+  copy!(H,Hrf)
+end
+
+function copy!(H::MPO,Hrf::reg_form_MPO)
+    for n in eachindex(H)
+      H[n]=Hrf[n].W
+    end
+    N = length(Hrf)
+    H[1]*=dag(Hrf.d0)
+    H[N]*=dag(Hrf.dN)
+    H.llim,H.rlim=Hrf.llim,Hrf.rlim
+end
+
+function ITensors.orthogonalize!(H::MPO, j::Int64; kwargs...)
+  Hrf = reg_form_MPO(H)
+  orthogonalize!(Hrf, j; kwargs)
+  copy!(H,Hrf)
 end

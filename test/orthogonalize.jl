@@ -6,7 +6,7 @@ using Printf
 
 include("hamiltonians/hamiltonians.jl")
 
-import ITensorMPOCompression: gauge_fix!, is_gauge_fixed, orthogonalize!
+import ITensorMPOCompression: gauge_fix!, is_gauge_fixed
 
 
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
@@ -71,21 +71,64 @@ verbose1 = false #verbose inside orth algos
     @test E0 ≈ E2 atol = eps
   end
 
-  # @testset "Compare Dws for Ac orthogonalized hand built MPO, vs Auto MPO, NNN=$NNN, ul=$ul, qns=$qns" for NNN in
-  #                                                                                                          [
-  #     1, 5, 8, 12
-  #   ],
-  #   ul in [lower, upper],
-  #   qns in [false, true]
+  @testset "Ortho center options" for 
 
-  #   N = 2 * NNN + 4
-  #   sites = siteinds("S=1/2", N; conserve_qns=qns)
-  #   Hhand = reg_form_MPO(transIsing_MPO(sites, NNN; ul=ul))
-  #   Hauto = transIsing_AutoMPO(sites, NNN; ul=ul)
-  #   orthogonalize!(Hhand, right)
-  #   orthogonalize!(Hhand, left)
-  #   @test get_Dw(Hhand) == get_Dw(Hauto)
-  # end
-
+    N = 10 #5 sites
+    NNN = 4 #Include 4th nearest neighbour interactions
+    sites = siteinds("Electron", N; conserve_qns=false)
+    H=Hubbard_AutoMPO(sites, NNN)
+    
+    for j=1:N
+      Hj=copy(H)
+      @test !check_ortho(Hj,left)
+      @test !check_ortho(Hj,right)
+      @test !isortho(Hj,left)
+      @test !isortho(Hj,right)
+      orthogonalize!(Hj,j)
+      for j1 in 1:j-1
+        @test check_ortho(Hj[j1],left,lower)
+        @test !check_ortho(Hj[j1],right,lower)
+      end
+      for j1 in j+1:N
+        @test !check_ortho(Hj[j1],left,lower)
+        @test check_ortho(Hj[j1],right,lower)
+      end
+    end
+    orthogonalize!(H,left)
+    for j=1:N
+      Hj=copy(H)
+      @test check_ortho(Hj,left)
+      @test !check_ortho(Hj,right)
+      @test isortho(Hj,left)
+      @test !isortho(Hj,right)
+      orthogonalize!(Hj,j)
+      for j1 in 1:j-1
+        @test check_ortho(Hj[j1],left,lower)
+        @test !check_ortho(Hj[j1],right,lower)
+      end
+      for j1 in j+1:N
+        @test !check_ortho(Hj[j1],left,lower)
+        @test check_ortho(Hj[j1],right,lower)
+      end
+    end
   end
+
+
+  @testset "Compare Dws for Ac orthogonalized hand built MPO, vs Auto MPO, NNN=$NNN, ul=$ul, qns=$qns" for NNN in
+                                                                                                           [
+      1, 5, 8, 12
+    ],
+    ul in [lower, upper],
+    qns in [false, true]
+
+    N = 2 * NNN + 4
+    sites = siteinds("S=1/2", N; conserve_qns=qns)
+    Hhand = reg_form_MPO(transIsing_MPO(sites, NNN; ul=ul))
+    Hauto = transIsing_AutoMPO(sites, NNN; ul=ul)
+    orthogonalize!(Hhand, right)
+    orthogonalize!(Hhand, left)
+    @test get_Dw(Hhand) == get_Dw(Hauto)
+  end
+
+end
 nothing

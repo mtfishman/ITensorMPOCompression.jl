@@ -113,6 +113,7 @@ function transIsing_AutoMPO(sites, NNN::Int64; ul=lower, J=1.0, hx=0.0, kwargs..
   if ul == upper
     to_upper!(H)
   end
+  H.llim,H.rlim=-1,1
   return H
 end
 function two_body_AutoMPO(sites, NNN::Int64; kwargs...)
@@ -156,6 +157,7 @@ function Heisenberg_AutoMPO(sites, NNN::Int64;ul=lower,hz=0.0,J=1.0, kwargs...):
   if ul == upper
     to_upper!(H)
   end
+  H.llim,H.rlim=-1,1
   return H
 end
 
@@ -180,6 +182,7 @@ function Hubbard_AutoMPO(sites, NNN::Int64; ul=lower, U=1.0,t=1.0,V=0.5, kwargs.
   if ul == upper
     to_upper!(H)
   end
+  H.llim,H.rlim=-1,1
   return H
 end
 

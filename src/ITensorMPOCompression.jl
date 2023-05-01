@@ -5,7 +5,7 @@ using NDTensors
 
 import ITensors: addqns, isortho, orthocenter, setinds , linkind, data, permute, checkflux
 import ITensors: dim, dims, trivial_space, eachindval, eachval, getindex, setindex!
-import ITensors: truncate!, truncate, orthogonalize
+import ITensors: truncate!, truncate, orthogonalize, orthogonalize!
 
 import ITensors: QNIndex, QNBlocks, Indices, AbstractMPS, DenseTensor, BlockSparseTensor,DiagTensor, tensor
 
@@ -22,7 +22,7 @@ export is_regular_form, isortho, check_ortho
 export get_Dw, min, max
 export bond_spectrums
 # primary operations
-export orthogonalize!, truncate, truncate!
+#export orthogonalize!, truncate, truncate!
 # Display helpers
 export @pprint, pprint, show_directions
 # Wrapped MPO types
