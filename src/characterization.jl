@@ -169,7 +169,7 @@ Test if anMPO is in `lr` orthogonal (canonical) form by checking the cached orth
 
 Returns `true` if the MPO is in `lr` orthogonal (canonical) form.  This is a fast operation and should be safe to use in time critical production code.  The one exception is for iMPO with Ncell=1, where currently the ortho center does not distinguis between left/right or un-orthognal states.
 """
-function isortho(H::AbstractMPS, lr::orth_type)::Bool
+function ITensors.isortho(H::AbstractMPS, lr::orth_type)::Bool
   io = false
   # if length(H)==1
   #     io=check_ortho(H,lr) #Expensive!!
