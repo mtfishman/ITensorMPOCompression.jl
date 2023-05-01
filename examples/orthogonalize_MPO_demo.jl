@@ -12,6 +12,6 @@ orthogonalize!(H,1)
 pprint(H[2])
 get_Dw(H)
 is_regular_form(H,lower) == true
-isortho(H, left) == true #looks at cached ortho center limits
-check_ortho(H,left) == true #Does the more expensive V*V_dagger==Id contraction and test
+isortho(H, right) == true #looks at cached ortho center limits
+check_ortho(H,right) == true #Does the more expensive V*V_dagger==Id contraction and test
 pprint(H)
