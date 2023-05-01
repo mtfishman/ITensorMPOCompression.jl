@@ -23,8 +23,8 @@ Improvements:
 
 -Support Ncell>1 in InfinitSum{MPO}(InfiniteMPO)  constructor.
 -Use an infinite=true flag for iMPOs?
--Fix Index Tag conventions sections of the docs.
--Fix emprical observations section of the tech notes.
+Done: -Fix Index Tag conventions sections of the docs.
+Done: -Fix emprical observations section of the tech notes.
 
 -Not Easy?: WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
 
