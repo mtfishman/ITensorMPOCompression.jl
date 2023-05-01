@@ -116,13 +116,11 @@ function truncate(
   return Ŵrf, R, spectrum
 end
 
-function truncate!(
-  H::reg_form_MPO, lr::orth_type; eps=1e-14, kwargs...
-)::bond_spectrums
+function truncate!(H::reg_form_MPO, lr::orth_type; kwargs...)::bond_spectrums
   #Two sweeps are essential for avoiding rectangular R in site truncate.
   if !isortho(H)
-    orthogonalize!(H, lr; eps=eps, kwargs...)
-    orthogonalize!(H, mirror(lr); eps=eps, kwargs...)
+    orthogonalize!(H, lr; kwargs...)
+    orthogonalize!(H, mirror(lr); kwargs...)
   end
   gauge_fix!(H)
   ss = bond_spectrums(undef, 0)
@@ -137,3 +135,11 @@ function truncate!(
   H.llim = rng.stop + rng.step - 1
   return ss
 end
+
+function truncate!(H::MPO, lr::orth_type; kwargs...)::bond_spectrums
+  Hrf = reg_form_MPO(H)
+  ss=truncate!(Hrf, lr; kwargs...)
+  copy!(H,Hrf)
+  return ss
+end
+
