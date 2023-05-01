@@ -1,44 +1,45 @@
 
 @doc """
-    truncate!(H::MPO)
+    truncate!(H::MPO,lr::orth_type)
 
 Compress an MPO using block respecting SVD techniques as described in 
 > *Daniel E. Parker, Xiangyu Cao, and Michael P. Zaletel Phys. Rev. B 102, 035147*
 
 # Arguments
-- `H` MPO for decomposition. If `H` is not already in the correct canonical form for compression, it will automatically be put into the correct form prior to compression.
+- `H::MPO` : Matrix Product Operator to be truncated. 
+  If `H` is not already in the correct canonical form for compression, it will automatically be put 
+    into the correct form prior to compression.
+- `lr::orth_type` : Choose `left` or `right` orthgonal/canoncial form for the output.
 
 # Keywords
-- `orth::orth_type = left` : choose `left` or `right` canonical form for the final output. 
-- `cutoff::Float64 = 0.0` : Using a `cutoff` allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy. 
-- `maxdim::Int64` : If the number of singular values exceeds `maxdim`, only the largest `maxdim` will be retained.
-- `mindim::Int64` : At least `mindim` singular values will be retained, even if some fall below the cutoff
+- `cutoff::Float64 = 1e-15` : The `cutoff` allows the SVD algorithm to truncate as many states as possible while still ensuring a certain accuracy. 
+
+# Returns 
+- `Vector{Spectrum}`, one `Spectrum' for each bond on the lattice.
 
 # Example
 ```julia
 julia> using ITensors
 julia> using ITensorMPOCompression
+include("../test/hamiltonians/hamiltonians.jl")
 julia> N=10; #10 sites
 julia> NNN=7; #Include up to 7th nearest neighbour interactions
 julia> sites = siteinds("S=1/2",N);
-#
-# This makes H directly, bypassing autoMPO.  (AutoMPO is too smart for this
-# demo, it makes maximally reduced MPOs right out of the box!)
-#
 julia> H=transIsing_MPO(sites,NNN);
 #
 #  Make sure we have a regular form or truncate! won't work.
 #
 julia> is_lower_regular_form(H)==true
 true
-
+julia> @show get_Dw(H)
+get_Dw(H) = [30, 30, 30, 30, 30, 30, 30, 30, 30]
 #
-#  Now we can truncate with defaults of left orthogonal cutoff=1e-14.
 #  truncate! returns the spectrum of singular values at each bond.  The largest
 #  singular values are remaining well under control.  i.e. no sign of divergences.
 #
-julia> @show truncate!(H);
-site  Ns   max(s)     min(s)    Entropy  Tr. Error
+julia> @show truncate!(H,left);
+spectrums = 
+Bond  Ns   max(s)     min(s)    Entropy  Tr. Error
    1    1  0.30739   3.07e-01   0.22292  0.00e+00
    2    2  0.35392   3.49e-02   0.26838  0.00e+00
    3    3  0.37473   2.06e-02   0.29133  0.00e+00
@@ -68,6 +69,14 @@ true
 
 ```
 """
+function truncate!(H::MPO, lr::orth_type; kwargs...)::bond_spectrums
+  Hrf = reg_form_MPO(H)
+  ss=truncate!(Hrf, lr; kwargs...)
+  copy!(H,Hrf)
+  return ss
+end
+
+
 function truncate(
   Ŵrf::reg_form_Op, lr::orth_type; kwargs...
 )::Tuple{reg_form_Op,ITensor,Spectrum}
@@ -136,10 +145,4 @@ function truncate!(H::reg_form_MPO, lr::orth_type; kwargs...)::bond_spectrums
   return ss
 end
 
-function truncate!(H::MPO, lr::orth_type; kwargs...)::bond_spectrums
-  Hrf = reg_form_MPO(H)
-  ss=truncate!(Hrf, lr; kwargs...)
-  copy!(H,Hrf)
-  return ss
-end
 

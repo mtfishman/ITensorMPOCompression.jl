@@ -110,6 +110,26 @@ backward(Wrf::reg_form_Op, lr::orth_type) = Wrf[lr]
 #
 #  Detection of upper/lower regular form
 #
+@doc """
+    detect_regular_form(W[,eps])::Tuple{Bool,Bool}
+    
+Inspect the structure of an operator-valued matrix W to see if it satisfies the regular form 
+conditions as specified in Section III, definition 3 of
+> *Daniel E. Parker, Xiangyu Cao, and Michael P. Zaletel Phys. Rev. B 102, 035147*
+
+# Arguments
+- `W::ITensor` : operator-valued matrix to be characterized. W is expected to have 2 "Site" indices and 1 or 2 "Link" indices
+
+@ Keywords
+- `eps::Float64 = 1e-14` : operators inside W with norm(W[i,j])<eps are assumed to be zero.
+
+# Returns a Tuple containing
+- `reg_lower::Bool` Indicates W is in lower regular form.
+- `reg_upper::Bool` Indicates W is in upper regular form.
+The function returns two Bools in order to handle cases where W is not in regular form, returning 
+(false,false) and W is in a special pseudo diagonal regular form, returning (true,true).
+    
+"""
 detect_regular_form(Wrf::reg_form_Op;kwargs...)::Tuple{Bool,Bool} =
     is_regular_form(Wrf, lower;kwargs...), is_regular_form(Wrf, upper;kwargs...)
 

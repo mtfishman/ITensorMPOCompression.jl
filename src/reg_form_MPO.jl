@@ -130,6 +130,21 @@ end
     return true
   end
   
+  @doc """
+  check_ortho(H,lr)::Bool
+
+  Test if all sites in an MPO statisfty the condition for `lr` orthogonal (canonical) form.
+
+  # Arguments
+  - `H:MPO` : MPO to be characterized.
+  - `lr::orth_type` : choose `left` or `right` orthogonality condition to test for.
+
+  # Keywrds
+  - `eps::Float64 = 1e-14` : operators inside H with norm(W[i,j])<eps are assumed to be zero.
+
+  Returns `true` if the MPO is in `lr` orthogonal (canonical) form.  This is an expensive operation which scales as N*Dw^3 which should mostly be used only for unit testing code or in debug mode.  In production code use isortho which looks at the cached ortho state.
+
+  """
   check_ortho(H::MPO, lr::orth_type;kwargs...)=check_ortho(reg_form_MPO(copy(H)), lr;kwargs...)
   
   function check_ortho(H::reg_form_MPO, lr::orth_type;kwargs...)::Bool

@@ -9,6 +9,7 @@ NNN = 7; #Include up to 7th nearest neighbour interactions
 sites = siteinds("S=1/2", N);
 H = transIsing_MPO(sites, NNN);
 is_regular_form(H,lower) == true
+@show get_Dw(H)
 spectrums = truncate!(H,left)
 pprint(H[5])
 @show get_Dw(H)

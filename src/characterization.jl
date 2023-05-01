@@ -143,21 +143,6 @@ end
 #
 #  Detection of canonical (orthogonal) forms
 #
-
-@doc """
-check_ortho(H,lr[,eps])::Bool
-
-Test if all sites in an MPO statisfty the condition for `lr` orthogonal (canonical) form.
-
-# Arguments
-- `H:MPO` : MPO to be characterized.
-- `lr::orth_type` : choose `left` or `right` orthogonality condition to test for.
-- `eps::Float64 = 1e-14` : operators inside H with norm(W[i,j])<eps are assumed to be zero.
-
-Returns `true` if the MPO is in `lr` orthogonal (canonical) form.  This is an expensive operation which scales as N*Dw^3 which should mostly be used only for unit testing code or in debug mode.  In production code use isortho which looks at the cached ortho state.
-
-"""
-
 @doc """
 isortho(H,lr)::Bool
 
@@ -200,38 +185,42 @@ end
 #      We must therefore test for both and return true if either one is true. 
 #
 
-@doc """
-    detect_regular_form(W[,eps])::Tuple{Bool,Bool}
-    
-Inspect the structure of an operator-valued matrix W to see if it satisfies the regular form 
-conditions as specified in Section III, definition 3 of
-> *Daniel E. Parker, Xiangyu Cao, and Michael P. Zaletel Phys. Rev. B 102, 035147*
-
-# Arguments
-- `W::ITensor` : operator-valued matrix to be characterized. W is expected to have 2 "Site" indices and 1 or 2 "Link" indices
-- `eps::Float64 = 1e-14` : operators inside W with norm(W[i,j])<eps are assumed to be zero.
-
-# Returns a Tuple containing
-- `reg_lower::Bool` Indicates W is in lower regular form.
-- `reg_upper::Bool` Indicates W is in upper regular form.
-The function returns two Bools in order to handle cases where W is not in regular form, returning 
-(false,false) and W is in a special pseudo diagonal regular form, returning (true,true).
-    
-"""
 
 @doc """
-    detect_regular_form(H[,eps])::Tuple{Bool,Bool}
+    detect_regular_form(H)::Tuple{Bool,Bool}
     
 Inspect the structure of an MPO `H` to see if it satisfies the regular form conditions.
 
 # Arguments
 - `H::MPO` : MPO to be characterized.
+
+# Keywords
 - `eps::Float64 = 1e-14` : operators inside `W` with norm(W[i,j])<eps are assumed to be zero.
 
 # Returns a Tuple containing
 - `reg_lower::Bool` Indicates all sites in `H` are in lower regular form.
 - `reg_upper::Bool` Indicates all sites in `H` are in upper regular form.
 The function returns two Bools in order to handle cases where `H` is not regular form, returning (`false`,`false`) and `H` is in a special pseudo-diagonal regular form, returning (`true`,`true`).
+    
+"""
+function detect_regular_form(H::AbstractMPS;kwargs...)::Tuple{Bool,Bool}
+  return is_regular_form(H, lower;kwargs...), is_regular_form(H, upper;kwargs...)
+end
+
+@doc """
+is_regular_form(H::MPO,ul::reg_form)::Bool
+    
+Inspect the structure of an MPO `H` to see if it satisfies the `lower/upper` regular form conditions.
+
+# Arguments
+- `H::MPO` : MPO to be characterized.
+- `ul::reg_form` : Select whether to test for `lower` or `upper` regular form.
+
+# Keywords
+- `eps::Float64 = 1e-14` : operators inside `W` with norm(W[i,j])<eps are assumed to be zero.
+
+# Returns
+- `regular::Bool` Indicates all sites in `H` are in `ul` regular form.
     
 """
 function is_regular_form(H::AbstractMPS, ul::reg_form;kwargs...)::Bool
@@ -247,9 +236,6 @@ function is_regular_form(H::AbstractMPS, ul::reg_form;kwargs...)::Bool
 end
 
 
-function detect_regular_form(H::AbstractMPS;kwargs...)::Tuple{Bool,Bool}
-  return is_regular_form(H, lower;kwargs...), is_regular_form(H, upper;kwargs...)
-end
 
 function get_Dw(H::MPO)::Vector{Int64}
   N = length(H)

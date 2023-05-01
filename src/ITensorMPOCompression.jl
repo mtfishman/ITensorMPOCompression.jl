@@ -17,7 +17,7 @@ import Base: similar, reverse, transpose
 # reg_form and orth_type values and functions
 export upper, lower, left, right, mirror, flip
 # lots of characterization functions
-export is_regular_form, isortho, check_ortho
+export is_regular_form, isortho, check_ortho, detect_regular_form
 # MPO bond dimensions and bond spectrum
 export get_Dw, min, max
 export bond_spectrums
@@ -45,7 +45,7 @@ end
 
 default_eps = 1e-14 #for characterization routines, floats abs()<default_eps are considered to be zero.
 
-"""
+@doc """
     @enum reg_form  upper lower
     
 Indicates that an MPO or operator-valued matrix has either an `upper` or `lower` regular form.
@@ -54,7 +54,7 @@ See also [`detect_regular_form`](@ref) and related functions
 """
 @enum reg_form upper lower
 
-"""
+@doc """
     @enum orth_type left right
 
 Indicates that an MPO matrix satisfies the conditions for `left` or `right` canonical form     
