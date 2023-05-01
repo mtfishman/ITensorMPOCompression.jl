@@ -92,6 +92,14 @@ function ITensors.replaceind(Wrf::reg_form_Op, iold::Index, inew::Index)
     return reg_form_Op(W,ileft,iright,Wrf.ul)
 end
 
+function ITensors.noprime(Wrf::reg_form_Op)
+    Wrf.W = noprime(Wrf.W)
+    Wrf.ileft = noprime(Wrf.ileft)
+    Wrf.iright = noprime(Wrf.iright)
+    return Wrf
+end
+
+
 #
 #  Backward and forward indices for a given ortho direction.  Sweep direction is opposite
 #  to the ortho direction.  Hence the mirror in forward case.
