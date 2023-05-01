@@ -218,15 +218,7 @@ n    Dw1  Dw2   d   Reg.  Orth.  Tri.
 ```
 """
 function pprint(H::MPO, eps::Float64=default_eps)
-  N = length(H)
-  println("  n    Dw1  Dw2   d   Reg.  Orth.  Tri.")
-  println("                      Form  Form   Form")
-
-  for n in 1:N
-    Dw1, Dw2, d, l, u, lr, lt, ut = get_traits(H[n], eps)
-    #println(" $n    $Dw1    $Dw2    $d    $l$u     $lr   $lt$ut")
-    @printf "%4i %4i %4i %4i    %s%s     %s     %s%s\n" n Dw1 Dw2 d l u lr lt ut
-  end
+  pprint(reg_form_MPO(copy(H)),eps)
 end
 
 function pprint(H::reg_form_MPO, eps::Float64=default_eps)

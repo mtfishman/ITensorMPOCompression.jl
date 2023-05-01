@@ -118,6 +118,8 @@ mutable struct reg_form_MPO <: AbstractMPS
     return true
   end
   
+  check_ortho(H::MPO, lr::orth_type;kwargs...)=check_ortho(reg_form_MPO(copy(H)), lr;kwargs...)
+  
   function check_ortho(H::reg_form_MPO, lr::orth_type;kwargs...)::Bool
     for n in sweep(H, lr) #skip the edge row/col opertors
       !check_ortho(H[n], lr;kwargs...) && return false

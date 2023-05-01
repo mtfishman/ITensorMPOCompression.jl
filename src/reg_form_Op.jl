@@ -145,6 +145,19 @@ end
 #
 #  Contract V blocks to test orthogonality.
 #
+function check_ortho(W::ITensor, lr::orth_type, ul::reg_form;kwargs...)
+    il,ir=parse_links(W)
+    if order(W)==3
+        T=eltype(W)
+        if dim(il)==1
+            W*=onehot(T, il => 1)
+        else
+            W*=onehot(T, ir => 1)
+        end
+    end
+    return check_ortho(reg_form_Op(W,il,ir,ul),lr;kwargs...)
+end
+
 function check_ortho(Wrf::reg_form_Op, lr::orth_type; eps=default_eps, verbose=false)::Bool
     Wb = extract_blocks(Wrf, lr; V=true)
     DwDw = dim(Wb.irV) * dim(Wb.icV)
