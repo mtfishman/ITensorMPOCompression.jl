@@ -93,7 +93,7 @@ The MPO is returned in lower regular form.
 - `J::Float64 = 1.0` : Nearest neighbour interaction strength. Further neighbours decay like `J/(i-j)`..
 
 """
-function transIsing_AutoMPO(sites, NNN::Int64; ul=lower, J=1.0, hx=0.0, kwargs...)::MPO
+function transIsing_AutoMPO(sites, NNN::Int64; ul=lower, J=1.0, hx=0.0, nexp=1,kwargs...)::MPO
  
   do_field = hx != 0.0
   N = length(sites)
@@ -104,7 +104,7 @@ function transIsing_AutoMPO(sites, NNN::Int64; ul=lower, J=1.0, hx=0.0, kwargs..
     end
   end
   for dj in 1:NNN
-    f = J / dj
+    f = J / dj^nexp
     for j in 1:(N - dj)
       add!(ampo, f, "Sz", j, "Sz", j + dj)
     end
