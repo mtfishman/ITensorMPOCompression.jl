@@ -113,18 +113,9 @@ function ITensors.orthogonalize!(H::MPO, lr::orth_type; kwargs...)
   copy!(H,Hrf)
 end
 
-function copy!(H::MPO,Hrf::reg_form_MPO)
-    for n in eachindex(H)
-      H[n]=Hrf[n].W
-    end
-    N = length(Hrf)
-    H[1]*=dag(Hrf.d0)
-    H[N]*=dag(Hrf.dN)
-    H.llim,H.rlim=Hrf.llim,Hrf.rlim
-end
 
 function ITensors.orthogonalize!(H::MPO, j::Int64; kwargs...)
   Hrf = reg_form_MPO(H)
-  orthogonalize!(Hrf, j; kwargs)
+  orthogonalize!(Hrf, j; kwargs...)
   copy!(H,Hrf)
 end

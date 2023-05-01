@@ -90,8 +90,20 @@ mutable struct reg_form_MPO <: AbstractMPS
     H = MPO(Ws(Hrf))
     H[1] *= dag(Hrf.d0)
     H[N] *= dag(Hrf.dN)
+    H.llim,H.rlim=Hrf.llim,Hrf.rlim
     return H
   end
+
+  function copy!(H::MPO,Hrf::reg_form_MPO)
+    for n in eachindex(H)
+      H[n]=Hrf[n].W
+    end
+    N = length(Hrf)
+    H[1]*=dag(Hrf.d0)
+    H[N]*=dag(Hrf.dN)
+    H.llim,H.rlim=Hrf.llim,Hrf.rlim
+end
+
   
   data(H::reg_form_MPO) = H.data
   
