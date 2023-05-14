@@ -130,12 +130,42 @@ function assign!(W::ITensor, op::DenseTensor, ivs::IndexVal...)
 end
 
 function assign!(W::ITensor, op::BlockSparseTensor, ivs::IndexVal...) 
+  # @show typeof(storage(W))
+  if isempty(W)
+    iss = inds(op)
+    for b in eachnzblock(op)
+      isv = [iss[i] => b[i] for i in 1:length(b)]
+      W[ivs..., isv...] = op[b][1] #not sure why we need [1] here
+    end
+  else
+    assign!(tensor(W),op,ivs...)
+  end
+    
+end
+
+function assign!(Wt::BlockSparseTensor, op::BlockSparseTensor, ivs::IndexVal...) 
+  N=ndims(Wt)
+  # @show nzblocks(Wt)
   iss = inds(op)
   for b in eachnzblock(op)
-    isv = [iss[i] => b[i] for i in 1:length(b)]
-    W[ivs..., isv...] = op[b][1] #not sure why we need [1] here
+    bs= NDTensors.blockstart(op,b)
+    isv = [iss[i] => bs[i] for i in 1:length(b)]
+    is=(ivs..., isv...)
+    p = NDTensors.getperm(inds(Wt), ntuple(n -> ind(@inbounds is[n]), Val(N)))
+    Is=NDTensors.permute(ntuple(n -> val(@inbounds is[n]), Val(N)), p)
+    _, wb=blockindex(Wt, Is...)
+    # @show bs isv is Is wb 
+    blockW = blockview(Wt, wb)
+    if isnothing(blockW)
+      insertblock!(Wt, wb)
+      blockW = blockview(Wt, wb)
+    end
+    # @show blockW blockview(op,b)
+    blockW.= blockview(op,b)
+   
   end
 end
+
 
 """
     function redim(i::Index,Dw::Int64)::Index
