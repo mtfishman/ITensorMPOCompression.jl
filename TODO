@@ -1,18 +1,8 @@
-Issue:
-  Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
-
-  
-More tests:
--vumps GS example with timing for uncomp./comp.
-  vumps works on InfiniteMPOMatrix or InfiniteSum{MPO}, but compression needs InfinitMPO
-  So they are "disconnected" for now.
--Try apply gate.
-  Reg form gets destroyed as expected.  Doing UvS -->  lq(U), I can see the reg form in L
-  but the bottom right I op is hiding as a liner combination of S ops.
-
 Features:
-Done: -Put some content in Readme.md
 -make truncate, and orthogonalize that work on copies.
+-Support Ncell>1 in InfinitSum{MPO}(InfiniteMPO)  constructor.
+-Use an infinite=true flag for iMPOs?
+-Add the two site BH model to models lists.
 
 Improvements:
 -assign!() is still inefficient.  We need a way to do
@@ -20,11 +10,8 @@ Improvements:
   at the NDTensors level.
 -better name for pbc? inf open_chain, boundary_conditions
 -iMPO truncate fails with a trivial 2x2 hamiltonian.
-
--Support Ncell>1 in InfinitSum{MPO}(InfiniteMPO)  constructor.
--Use an infinite=true flag for iMPOs?
-Done: -Fix Index Tag conventions sections of the docs.
-Done: -Fix emprical observations section of the tech notes.
+-refactor extract_blocks for work with reg_form_Ops
+-Gauge fix. Solve s1=A2*A3*A4..AN*A1*s1-A2*A3*A4..AN*b1 - A2*A3*A4..AN-1*b4 .....
 
 -Not Easy?: WARNING: using SparseArrays.permute in module ITensorMPOCompression conflicts with an existing identifier.
 
@@ -34,23 +21,28 @@ Done: -Fix emprical observations section of the tech notes.
   -support W[il,ir]=op ?
   -Check that spaces are compatable
   -getindex[] returns a view
+  -Clean up emptyITensor if statement.  Get poly dispatch working
 
--Add the two site BH model to models lists.
 
 ITensorInfiniteMPS:
-  -Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
-  -Bug report for ITensorInfiniteMPS crash in Hx SzSz model
-    -Try and fix the bug
-  -Look at InfinitSum{ITensor}
-  -Understand factor of 2*J*Xn*Xn+1 in Model("ising")
-  -Make a Model("ising_NNN") for arbitrary NNN interactions.
-  -Make a table of Ncell for sites, and length(mpo) nsites(His) so we can figure what the rules are.
-  -Add support for swapxz flag in trans-ising Hamiltonian
-    -Change Hx flag to just h.
-
+  Done: -Need code for <ψ|iMPO|ψ> sowe can check <ψ|...LWLinv LWLinv LWLinv...|ψ>=<ψ|...WWWWW...|ψ>
+  Done: -VUMPS for iMPO
+  -Profile vumps iMPO
+  -left/right environment for non-tri MPOs (post compression).  More inversions
+  -return el/er from vumps.  Makes no sense for InfiniteSum{} versions?.
+  -iMPO analysis for 1) ops on diag 2) unit on diag
+  -Do L/R environments one QN link-block at a time?
+    Do we need corner I's for every link block?
+    Maybe when D id big this becomes irrelevant.
+  -Fix L[1] and R[Dw], they are not self consistent right now.
+    Just need to subtract e(I| in the test?
+  Done: -Fix if N=1 stuff in tdvp_iteration_sequential tdvp_iteration_parallel
 
 
 Old:
+Done: -Fix Index Tag conventions sections of the docs.
+Done: -Fix emprical observations section of the tech notes.
+Done: -Put some content in Readme.md
 Done: -Test with Julia 1.7 and 1.8
 
 Resolved: How to handle ortho center for N=1 unit cell iMPOs?
@@ -388,3 +380,7 @@ julia --sysimage /home/janr/.julia/sysimages/sys_itensors.so
 open("/home/janr/prof1.txt", "w") do s
            Profile.print(IOContext(s, :displaysize => (24, 500)),format=:flat)
        end
+
+
+However, because quantification is not
+necessary for the application of motion correction,
