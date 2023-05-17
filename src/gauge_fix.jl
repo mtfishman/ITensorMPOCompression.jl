@@ -8,7 +8,7 @@ function vector_o2(T::ITensor)
 end
 
 function is_gauge_fixed(Wrf::reg_form_Op; eps=1e-14, b=true, c=true,  kwargs...)::Bool
-  Wb = extract_blocks1(Wrf, left; c=c, b=b)
+  Wb = extract_blocks(Wrf, left; c=c, b=b)
   nr, nc = dims(Wrf)
   if b && nr > 1
     !(norm(b0(Wb)) < eps) && return false
@@ -45,7 +45,7 @@ function gauge_fix!(W::reg_form_Op, tₙ₋₁::Vector{Float64}, lr::orth_type)
   @assert W.ul==lower
   @assert is_regular_form(W)
   
-  Wb1 = extract_blocks1(W, lr; Abcd=true, fix_inds=true, swap_bc=true)
+  Wb1 = extract_blocks(W, lr; Abcd=true, fix_inds=true, swap_bc=true)
   𝕀, 𝐀̂, 𝐛̂, 𝐜̂, 𝐝̂ = Wb1.𝕀, Wb1.𝐀̂, Wb1.𝐛̂, Wb1.𝐜̂, Wb1.𝐝̂ #for readability below.
   nr, nc = dims(W)
   nb, nf = lr == left ? (nr, nc) : (nc, nr)

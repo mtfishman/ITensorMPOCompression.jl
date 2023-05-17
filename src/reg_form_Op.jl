@@ -162,7 +162,7 @@ is_regular_form(Wrf::reg_form_Op;kwargs...)::Bool =
 function is_regular_form(Wrf::reg_form_Op, ul::reg_form;eps=default_eps,verbose=false)::Bool
     ul_cache = Wrf.ul
     Wrf.ul = mirror(ul)
-    Wb = extract_blocks1(Wrf, left; b=true, c=true, d=true)
+    Wb = extract_blocks(Wrf, left; b=true, c=true, d=true)
     is = siteinds(Wrf)
     𝕀 = delta(is) #We need to make our own, can't trust Wb.𝕀 is ul is wrong.
     dh = dim(is[1])
@@ -210,7 +210,7 @@ function check_ortho(W::ITensor, lr::orth_type, ul::reg_form;kwargs...)
 end
 
 function check_ortho(Wrf::reg_form_Op, lr::orth_type; eps=default_eps, verbose=false)::Bool
-    Wb = extract_blocks1(Wrf, lr; V=true)
+    Wb = extract_blocks(Wrf, lr; V=true)
     𝐕̂=Wb.𝐕̂.W
     # pprint(Wrf.W)
     # pprint(𝐕̂)

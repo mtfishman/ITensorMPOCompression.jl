@@ -100,7 +100,7 @@ function insert_Q(Ŵrf::reg_form_Op, Q̂::ITensor, iq::Index, lr::orth_type)
   #
   #  Preserve b,c,d blocks and insert Q
   #
-  Wb1 = extract_blocks1(Ŵrf, lr; b=true, c=true, d=true) 
+  Wb1 = extract_blocks(Ŵrf, lr; b=true, c=true, d=true) 
   set_𝐛̂𝐜̂_block!(Ŵrf⎖, Wb1, lr) #preserve b or c block from old W
   set_𝐝̂_block!(Ŵrf⎖, Wb1.𝐝̂) #preserve d block from old W
   set_𝕀_block!(Ŵrf⎖, Wb1.𝕀) #init I blocks from old W
@@ -112,7 +112,7 @@ end
 function ac_qx(Ŵrf::reg_form_Op, lr::orth_type; qprime=false, verbose=false, cutoff=1e-14, kwargs...)
   @mpoc_assert Ŵrf.ul==lower
   @checkflux(Ŵrf.W)
-  Wb = extract_blocks1(Ŵrf, lr; Ac=true)
+  Wb = extract_blocks(Ŵrf, lr; Ac=true)
   𝐀̂𝐜̂=Wb.𝐀̂𝐜̂
   ilf_Ac =forward(𝐀̂𝐜̂,lr)
   ilf = forward(Ŵrf, lr) #Backward and forward indices.

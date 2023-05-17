@@ -2,66 +2,14 @@
 #-------------------------------------------------------------------------------
 #
 #  Blocking functions
-#
-#
-#  Decisions: 1) Use ilf,ilb==forward,backward  or ir,ic=row,column ?
-#             2) extract_blocks gets everything.  Should it defer to get_bc_block for b and c?
-#   may best to define W as
 #               ul=lower         ul=upper
 #                1 0 0           1 b d
-#     lr=left    b A 0           0 A c
+#                b A 0           0 A c
 #                d c I           0 0 I
 #
-#                1 0 0           1 c d
-#     lr=right   c A 0           0 A b
-#                d b I           0 0 I
-#
-#  Use kwargs in extract_blocks so caller can choose what they need. Default is c only
+#  Structure to hold all blocks as reg_form_Ops so we don't need to store in indices separately.
 #
 mutable struct regform_blocks
-  𝕀::Union{ITensor,Nothing}
-  𝐀̂::Union{ITensor,Nothing}
-  𝐀̂𝐜̂::Union{ITensor,Nothing}
-  𝐕̂::Union{ITensor,Nothing}
-  𝐛̂::Union{ITensor,Nothing}
-  𝐜̂::Union{ITensor,Nothing}
-  𝐝̂::Union{ITensor,Nothing}
-  irA::Union{Index,Nothing}
-  icA::Union{Index,Nothing}
-  irAc::Union{Index,Nothing}
-  icAc::Union{Index,Nothing}
-  irV::Union{Index,Nothing}
-  icV::Union{Index,Nothing}
-  irb::Union{Index,Nothing}
-  icb::Union{Index,Nothing}
-  irc::Union{Index,Nothing}
-  icc::Union{Index,Nothing}
-  ird::Union{Index,Nothing}
-  icd::Union{Index,Nothing}
-  function regform_blocks()
-    return new(
-      nothing,
-      nothing,
-      nothing,
-      nothing,
-      nothing,
-      nothing,
-      nothing,
-      nothing,
-      nothing,
-      nothing,
-      nothing,
-      nothing,
-      nothing,
-      nothing,
-      nothing,
-      nothing,
-      nothing,
-      nothing,
-    )
-  end
-end
-mutable struct regform_blocks1
   𝕀::Union{ITensor}
   𝐀̂::Union{reg_form_Op,Nothing}
   𝐛̂::Union{reg_form_Op,Nothing}
@@ -70,11 +18,6 @@ mutable struct regform_blocks1
   𝐀̂𝐜̂::Union{reg_form_Op,Nothing}
   𝐕̂::Union{reg_form_Op,Nothing}
 end
-
-d(Wb::regform_blocks)::Float64 = scalar(Wb.𝕀 * dag(Wb.𝕀))
-b0(Wb::regform_blocks)::ITensor = Wb.𝐛̂ * dag(Wb.𝕀) / d(Wb)
-c0(Wb::regform_blocks)::ITensor = Wb.𝐜̂ * dag(Wb.𝕀) / d(Wb)
-A0(Wb::regform_blocks)::ITensor = Wb.𝐀̂ * dag(Wb.𝕀) / d(Wb)
 
 #
 #  Transpose inds for upper, no-op for lower
@@ -94,123 +37,12 @@ function swap_ul(Wrf::reg_form_Op)
   end
 end
 # lower left or upper right
-llur(ul::reg_form, lr::orth_type) = lr == left && ul == lower || lr == right && ul == upper
-llur(W::reg_form_Op, lr::orth_type) = llur(W.ul, lr)
+llur(ul::reg_form, lr::orth_type)::Bool = lr == left && ul == lower || lr == right && ul == upper
+llur(W::reg_form_Op, lr::orth_type)::Bool = llur(W.ul, lr)
 
 #  Use recognizably distinct UTF symbols for operators, and op valued vectors and matrices: 
 #  𝐀̂ 𝐛̂ 𝐜̂ 𝐝̂ 𝐕̂ 
-
 function extract_blocks(
-  Wrf::reg_form_Op,
-  lr::orth_type;
-  all=false,
-  c=false,
-  b=false,
-  d=false,
-  A=false,
-  Ac=false,
-  V=false,
-  I=true,
-  fix_inds=false,
-  swap_bc=true,
-)::regform_blocks
-  check(Wrf)
-  @assert plev(Wrf.ileft) == 0
-  @assert plev(Wrf.iright) == 0
-  W = Wrf.W
-  ir, ic = linkinds(Wrf)
-  if Wrf.ul == upper
-    ir, ic = ic, ir #transpose
-  end
-  nr, nc = dim(ir), dim(ic)
-  @assert nr > 1 || nc > 1
-  if all || fix_inds #does not include Ac
-    A = b = c = d = I = true
-  end
-  if !llur(Wrf, lr) && swap_bc #not lower-left or upper-right
-    b, c = c, b #swap flags
-  end
-
-  A = A && (nr > 1 && nc > 1)
-  b = b && nr > 1
-  c = c && nc > 1
-
-  Wb = regform_blocks()
-  I && (Wb.𝕀 = nr > 1 ? slice(W, ir => 1, ic => 1) : slice(W, ir => 1, ic => nc))
-
-  if A
-    Wb.𝐀̂ = W[ir => 2:(nr - 1), ic => 2:(nc - 1)]
-    Wb.irA, = inds(Wb.𝐀̂; tags=tags(ir))
-    Wb.icA, = inds(Wb.𝐀̂; tags=tags(ic))
-  end
-  if Ac
-    if llur(Wrf, lr)
-      Wb.𝐀̂𝐜̂ = nr > 1 ? W[ir => 2:nr, ic => 2:(nc - 1)] : W[ir => 1:1, ic => 2:(nc - 1)]
-    else
-      Wb.𝐀̂𝐜̂ =
-        nc > 1 ? W[ir => 2:(nr - 1), ic => 1:(nc - 1)] : W[ir => 2:(nr - 1), ic => 1:1]
-    end
-    Wb.irAc, = inds(Wb.𝐀̂𝐜̂; tags=tags(ir))
-    Wb.icAc, = inds(Wb.𝐀̂𝐜̂; tags=tags(ic))
-  end
-  if V
-    i1, i2, n1, n2 = swap_ul(Wrf)
-    if llur(Wrf, lr) #lower left/upper right
-      min1 = Base.min(n1, 2)
-      min2 = Base.min(n2, 2)
-      Wb.𝐕̂ = W[i1 => min1:n1, i2 => min2:n2] #Bottom right corner
-    else #lower right/upper left
-      max1 = Base.max(n1 - 1, 1)
-      max2 = Base.max(n2 - 1, 1)
-      Wb.𝐕̂ = W[i1 => 1:max1, i2 => 1:max2] #top left corner
-    end
-    Wb.irV, = inds(Wb.𝐕̂; tags=tags(ir))
-    Wb.icV, = inds(Wb.𝐕̂; tags=tags(ic))
-  end
-  if b
-    Wb.𝐛̂ = W[ir => 2:(nr - 1), ic => 1:1]
-    Wb.irb, = inds(Wb.𝐛̂; tags=tags(ir))
-    Wb.icb, = inds(Wb.𝐛̂; tags=tags(ic))
-  end
-  if c
-    Wb.𝐜̂ = W[ir => nr:nr, ic => 2:(nc - 1)]
-    Wb.irc, = inds(Wb.𝐜̂; tags=tags(ir))
-    Wb.icc, = inds(Wb.𝐜̂; tags=tags(ic))
-  end
-  if d
-    Wb.𝐝̂ = nr > 1 ? W[ir => nr:nr, ic => 1:1] : W[ir => 1:1, ic => 1:1]
-    Wb.ird, = inds(Wb.𝐝̂; tags=tags(ir))
-    Wb.icd, = inds(Wb.𝐝̂; tags=tags(ic))
-  end
-
-  if fix_inds
-    if !isnothing(Wb.𝐜̂)
-      Wb.𝐜̂ = replaceind(Wb.𝐜̂, Wb.irc, Wb.ird)
-      Wb.irc = Wb.ird
-    end
-    if !isnothing(Wb.𝐛̂)
-      Wb.𝐛̂ = replaceind(Wb.𝐛̂, Wb.icb, Wb.icd)
-      Wb.icb = Wb.icd
-    end
-    if !isnothing(Wb.𝐀̂)
-      Wb.𝐀̂ = replaceinds(Wb.𝐀̂, [Wb.irA, Wb.icA], [Wb.irb, Wb.icc])
-      Wb.irA, Wb.icA = Wb.irb, Wb.icc
-    end
-  end
-  if !llur(Wrf, lr) && swap_bc #not lower-left or upper-right
-    Wb.𝐛̂, Wb.𝐜̂ = Wb.𝐜̂, Wb.𝐛̂
-    Wb.irb, Wb.irc = Wb.irc, Wb.irb
-    Wb.icb, Wb.icc = Wb.icc, Wb.icb
-  end
-  if !isnothing(Wb.𝐀̂)
-    @assert hasinds(Wb.𝐀̂, Wb.irA, Wb.icA)
-  end
-  return Wb
-end
-
-
-
-function extract_blocks1(
   Wrf::reg_form_Op,
   lr::orth_type;
   Abcd=false,
@@ -222,7 +54,7 @@ function extract_blocks1(
   V=false,
   fix_inds=false,
   swap_bc=false,
-)::regform_blocks1
+)::regform_blocks
   check(Wrf)
   @assert plev(Wrf.ileft) == 0
   @assert plev(Wrf.iright) == 0
@@ -293,13 +125,13 @@ function extract_blocks1(
     # Wb.irb, Wb.irc = Wb.irc, Wb.irb
     # Wb.icb, Wb.icc = Wb.icc, Wb.icb
   end
-  return regform_blocks1(𝕀,𝐀̂,𝐛̂,𝐜̂,𝐝̂,𝐀̂𝐜̂,𝐕̂)
+  return regform_blocks(𝕀,𝐀̂,𝐛̂,𝐜̂,𝐝̂,𝐀̂𝐜̂,𝐕̂)
 end
 
-d(Wb::regform_blocks1)::Float64 = scalar(Wb.𝕀 * dag(Wb.𝕀))
-b0(Wb::regform_blocks1)::ITensor = Wb.𝐛̂.W * dag(Wb.𝕀) / d(Wb)
-c0(Wb::regform_blocks1)::ITensor = Wb.𝐜̂.W * dag(Wb.𝕀) / d(Wb)
-A0(Wb::regform_blocks1)::ITensor = Wb.𝐀̂.W * dag(Wb.𝕀) / d(Wb)
+d(Wb::regform_blocks)::Float64 = scalar(Wb.𝕀 * dag(Wb.𝕀))
+b0(Wb::regform_blocks)::ITensor = Wb.𝐛̂.W * dag(Wb.𝕀) / d(Wb)
+c0(Wb::regform_blocks)::ITensor = Wb.𝐜̂.W * dag(Wb.𝕀) / d(Wb)
+A0(Wb::regform_blocks)::ITensor = Wb.𝐀̂.W * dag(Wb.𝕀) / d(Wb)
 
 
 function set_𝐛̂_block!(Wrf::reg_form_Op, 𝐛̂::ITensor)
@@ -342,7 +174,7 @@ function set_𝐜̂_block!(Wrf::reg_form_Op, 𝐜̂::reg_form_Op)
   return Wrf.W[i1 => n1:n1, i2 => 2:(n2 - 1)] = 𝐜̂.W
 end
 
-function set_𝐛̂𝐜̂_block!(Wrf::reg_form_Op, Wb::regform_blocks1, lr::orth_type)
+function set_𝐛̂𝐜̂_block!(Wrf::reg_form_Op, Wb::regform_blocks, lr::orth_type)
   @mpoc_assert Wrf.ul==lower
   if lr==left
     set_𝐛̂_block!(Wrf, Wb.𝐛̂)

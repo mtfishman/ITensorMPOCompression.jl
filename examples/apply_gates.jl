@@ -13,8 +13,8 @@ function two_site_gate(s,n::Int64)
 end
 
 function apply(U::ITensor,WL::reg_form_Op,WR::reg_form_Op,Udag::ITensor)
-  WbL=extract_blocks1(WL,left;Ac=true)
-  WbR=extract_blocks1(WR,right;Ac=true)
+  WbL=extract_blocks(WL,left;Ac=true)
+  WbR=extract_blocks(WR,right;Ac=true)
   WbR.𝐀̂𝐜̂=replaceind(WbR.𝐀̂𝐜̂,WbR.𝐀̂𝐜̂.ileft,WbL.𝐀̂𝐜̂.iright)
   #@show inds(WbL.𝐀̂𝐜̂) inds(WbR.𝐀̂𝐜̂)
   Phi = prime(((WbL.𝐀̂𝐜̂.W * WbR.𝐀̂𝐜̂.W) * U) * Udag, -2; tags="Site")

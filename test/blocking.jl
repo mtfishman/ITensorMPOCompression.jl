@@ -7,7 +7,7 @@ using Revise, Printf
 include("hamiltonians/hamiltonians.jl")
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
 
-import ITensorMPOCompression: extract_blocks, regform_blocks, extract_blocks1, regform_blocks1, check
+import ITensorMPOCompression: extract_blocks, regform_blocks, check
 
 
 @testset "Extract blocks qns=$qns, ul=$ul" for qns in [false, true], ul in [lower, upper]
@@ -23,7 +23,7 @@ import ITensorMPOCompression: extract_blocks, regform_blocks, extract_blocks1, r
   Wrf = H[1]
   nr, nc = dims(Wrf)
   #pprint(Wrf.W)
-  Wb = extract_blocks1(Wrf, lr; Abcd=true, V=true)
+  Wb = extract_blocks(Wrf, lr; Abcd=true, V=true)
   @test norm(matrix(Wb.𝕀) - 1.0 * Matrix(LinearAlgebra.I, d, d)) < eps
   @test isnothing(Wb.𝐀̂)
   if ul == lower
@@ -39,7 +39,7 @@ import ITensorMPOCompression: extract_blocks, regform_blocks, extract_blocks1, r
 
   Wrf = H[N]
   nr, nc = dims(Wrf)
-  Wb = extract_blocks1(Wrf, lr; Abcd=true, V=true, fix_inds=true)
+  Wb = extract_blocks(Wrf, lr; Abcd=true, V=true, fix_inds=true)
   @test norm(matrix(Wb.𝕀) - 1.0 * Matrix(LinearAlgebra.I, d, d)) < eps
   @test isnothing(Wb.𝐀̂)
   if ul == lower
@@ -55,7 +55,7 @@ import ITensorMPOCompression: extract_blocks, regform_blocks, extract_blocks1, r
 
   Wrf = H[2]
   nr, nc = dims(Wrf)
-  Wb = extract_blocks1(Wrf, lr; Abcd=true, V=true, fix_inds=true, Ac=true)
+  Wb = extract_blocks(Wrf, lr; Abcd=true, V=true, fix_inds=true, Ac=true)
   if ul == lower
     @test norm(matrix(Wb.𝕀) - 1.0 * Matrix(LinearAlgebra.I, d, d)) < eps
     @test norm(array(Wb.𝐝̂) - array(Wrf[nr:nr, 1:1])) < eps
@@ -85,7 +85,7 @@ end
   lr = ul == lower ? left : right
 
   Wrf = H[1]
-  Wb = extract_blocks1(Wrf, lr; Abcd=true,fix_inds=true)
+  Wb = extract_blocks(Wrf, lr; Abcd=true,fix_inds=true)
   if ul==lower
     check(Wb.𝐜̂)
     check(Wb.𝐝̂)
@@ -98,7 +98,7 @@ end
     @test Wb.𝐝̂.ileft==Wb.𝐛̂.ileft
   end
   Wrf = H[N]
-  Wb = extract_blocks1(Wrf, lr; Abcd=true,fix_inds=true)
+  Wb = extract_blocks(Wrf, lr; Abcd=true,fix_inds=true)
   if  ul==upper
     check(Wb.𝐜̂)
     check(Wb.𝐝̂)
@@ -112,7 +112,7 @@ end
   end
 
   Wrf = H[2]
-  Wb = extract_blocks1(Wrf, lr; Abcd=true,fix_inds=true)
+  Wb = extract_blocks(Wrf, lr; Abcd=true,fix_inds=true)
   check(Wb.𝐀̂)
   check(Wb.𝐛̂)
   check(Wb.𝐜̂)
