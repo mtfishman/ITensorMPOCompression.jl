@@ -61,6 +61,15 @@ mutable struct regform_blocks
     )
   end
 end
+mutable struct regform_blocks1
+  𝕀::Union{ITensor}
+  𝐀̂::Union{reg_form_Op,Nothing}
+  𝐛̂::Union{reg_form_Op,Nothing}
+  𝐜̂::Union{reg_form_Op,Nothing}
+  𝐝̂::Union{reg_form_Op,Nothing}
+  𝐀̂𝐜̂::Union{reg_form_Op,Nothing}
+  𝐕̂::Union{reg_form_Op,Nothing}
+end
 
 d(Wb::regform_blocks)::Float64 = scalar(Wb.𝕀 * dag(Wb.𝕀))
 b0(Wb::regform_blocks)::ITensor = Wb.𝐛̂ * dag(Wb.𝕀) / d(Wb)
@@ -199,6 +208,100 @@ function extract_blocks(
   return Wb
 end
 
+
+
+function extract_blocks1(
+  Wrf::reg_form_Op,
+  lr::orth_type;
+  Abcd=false,
+  c=false,
+  b=false,
+  d=false,
+  A=false,
+  Ac=false,
+  V=false,
+  fix_inds=false,
+  swap_bc=false,
+)::regform_blocks1
+  check(Wrf)
+  @assert plev(Wrf.ileft) == 0
+  @assert plev(Wrf.iright) == 0
+  ir, ic = linkinds(Wrf)
+  ul=Wrf.ul
+  if ul == upper
+    ir, ic = ic, ir #transpose
+  end
+  nr, nc = dim(ir), dim(ic)
+  @assert nr > 1 || nc > 1
+  if Abcd || fix_inds #does not include Ac
+    A = b = c = d = true
+  end
+  if !llur(Wrf, lr) && swap_bc #not lower-left or upper-right
+    b, c = c, b #swap flags
+  end
+
+  A = A && (nr > 1 && nc > 1)
+  b = b && nr > 1
+  c = c && nc > 1
+
+  𝕀 = nr > 1 ? slice(Wrf.W, ir => 1, ic => 1) : slice(Wrf.W, ir => 1, ic => nc)
+
+  𝐀̂ = A ? Wrf[ir=>2:(nr - 1), ic=>2:(nc - 1)] : nothing
+  𝐛̂ = b ? Wrf[ir=>2:(nr - 1), ic=>1:1] : nothing
+  𝐜̂ = c ? Wrf[ir=>nr:nr,ic=>2:(nc - 1)] : nothing
+  𝐝̂ = d ? (nr > 1 ? Wrf[ir=>nr:nr, ic=>1:1] : Wrf[ir=>1:1,ic=> 1:1]) : nothing
+
+  if Ac
+    if llur(Wrf, lr)
+      𝐀̂𝐜̂ = nr > 1 ? Wrf[ir=>2:nr, ic=>2:(nc - 1)] : Wrf[ir=>1:1, ic=>2:(nc - 1)]
+    else
+      𝐀̂𝐜̂ = nc > 1 ? Wrf[ir=>2:(nr - 1), ic=>1:(nc - 1)] : Wrf[ ir=>2:(nr - 1), ic=>1:1]
+    end
+  else
+    𝐀̂𝐜̂ = nothing
+  end
+
+  if V
+    i1, i2, n1, n2 = swap_ul(Wrf)
+    if llur(Wrf, lr) #lower left/upper right
+      min1 = Base.min(n1, 2)
+      min2 = Base.min(n2, 2)
+      𝐕̂ = Wrf[i1 => min1:n1, i2 => min2:n2] #Bottom right corner
+    else #lower right/upper left
+      max1 = Base.max(n1 - 1, 1)
+      max2 = Base.max(n2 - 1, 1)
+      𝐕̂ = Wrf[i1 => 1:max1, i2 => 1:max2] #top left corner
+    end
+  else
+    𝐕̂ = nothing
+  end
+  
+  if fix_inds
+    if ul==lower
+      c && ( 𝐜̂ = replaceind(𝐜̂, 𝐜̂.ileft, 𝐝̂.ileft))
+      b && ( 𝐛̂ = replaceind(𝐛̂, 𝐛̂.iright, 𝐝̂.iright))
+      A && ( 𝐀̂ = replaceinds(𝐀̂, [𝐀̂.ileft,𝐀̂.iright], [𝐛̂.ileft, 𝐜̂.iright]))
+    else
+      c && ( 𝐜̂ = replaceind(𝐜̂, 𝐜̂.iright, 𝐝̂.iright))
+      b && ( 𝐛̂ = replaceind(𝐛̂, 𝐛̂.ileft, 𝐝̂.ileft))
+      A && ( 𝐀̂ = replaceinds(𝐀̂, [𝐀̂.ileft,𝐀̂.iright], [𝐜̂.ileft, 𝐛̂.iright]))
+    end
+  
+  end
+  if !llur(Wrf, lr) && swap_bc #not lower-left or upper-right
+    𝐛̂, 𝐜̂ = 𝐜̂, 𝐛̂
+    # Wb.irb, Wb.irc = Wb.irc, Wb.irb
+    # Wb.icb, Wb.icc = Wb.icc, Wb.icb
+  end
+  return regform_blocks1(𝕀,𝐀̂,𝐛̂,𝐜̂,𝐝̂,𝐀̂𝐜̂,𝐕̂)
+end
+
+d(Wb::regform_blocks1)::Float64 = scalar(Wb.𝕀 * dag(Wb.𝕀))
+b0(Wb::regform_blocks1)::ITensor = Wb.𝐛̂.W * dag(Wb.𝕀) / d(Wb)
+c0(Wb::regform_blocks1)::ITensor = Wb.𝐜̂.W * dag(Wb.𝕀) / d(Wb)
+A0(Wb::regform_blocks1)::ITensor = Wb.𝐀̂.W * dag(Wb.𝕀) / d(Wb)
+
+
 function set_𝐛̂_block!(Wrf::reg_form_Op, 𝐛̂::ITensor)
   check(Wrf)
   i1, i2, n1, n2 = swap_ul(Wrf)
@@ -225,6 +328,36 @@ function set_𝐝̂_block!(Wrf::reg_form_Op, 𝐝̂::ITensor)
   i1, i2, n1, n2 = swap_ul(Wrf)
   return Wrf.W[i1 => n1:n1, i2 => 1:1] = 𝐝̂
 end
+
+
+function set_𝐛̂_block!(Wrf::reg_form_Op, 𝐛̂::reg_form_Op)
+  check(Wrf)
+  i1, i2, n1, n2 = swap_ul(Wrf)
+  return Wrf.W[i1 => 2:(n1 - 1), i2 => 1:1] = 𝐛̂.W
+end
+
+function set_𝐜̂_block!(Wrf::reg_form_Op, 𝐜̂::reg_form_Op)
+  check(Wrf)
+  i1, i2, n1, n2 = swap_ul(Wrf)
+  return Wrf.W[i1 => n1:n1, i2 => 2:(n2 - 1)] = 𝐜̂.W
+end
+
+function set_𝐛̂𝐜̂_block!(Wrf::reg_form_Op, Wb::regform_blocks1, lr::orth_type)
+  @mpoc_assert Wrf.ul==lower
+  if lr==left
+    set_𝐛̂_block!(Wrf, Wb.𝐛̂)
+  else
+    set_𝐜̂_block!(Wrf, Wb.𝐜̂)
+  end
+end
+
+function set_𝐝̂_block!(Wrf::reg_form_Op, 𝐝̂::reg_form_Op)
+  check(Wrf)
+  i1, i2, n1, n2 = swap_ul(Wrf)
+  return Wrf.W[i1 => n1:n1, i2 => 1:1] = 𝐝̂.W
+end
+
+
 
 function set_𝕀_block!(Wrf::reg_form_Op, 𝕀::ITensor)
   check(Wrf)

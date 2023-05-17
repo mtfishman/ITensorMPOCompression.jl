@@ -7,7 +7,7 @@ using Revise, Printf
 include("hamiltonians/hamiltonians.jl")
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output
 
-import ITensorMPOCompression: extract_blocks, regform_blocks
+import ITensorMPOCompression: extract_blocks, regform_blocks, extract_blocks1, regform_blocks1, check
 
 
 @testset "Extract blocks qns=$qns, ul=$ul" for qns in [false, true], ul in [lower, upper]
@@ -23,7 +23,7 @@ import ITensorMPOCompression: extract_blocks, regform_blocks
   Wrf = H[1]
   nr, nc = dims(Wrf)
   #pprint(Wrf.W)
-  Wb = extract_blocks(Wrf, lr; all=true, V=true)
+  Wb = extract_blocks1(Wrf, lr; Abcd=true, V=true)
   @test norm(matrix(Wb.𝕀) - 1.0 * Matrix(LinearAlgebra.I, d, d)) < eps
   @test isnothing(Wb.𝐀̂)
   if ul == lower
@@ -39,7 +39,7 @@ import ITensorMPOCompression: extract_blocks, regform_blocks
 
   Wrf = H[N]
   nr, nc = dims(Wrf)
-  Wb = extract_blocks(Wrf, lr; all=true, V=true, fix_inds=true)
+  Wb = extract_blocks1(Wrf, lr; Abcd=true, V=true, fix_inds=true)
   @test norm(matrix(Wb.𝕀) - 1.0 * Matrix(LinearAlgebra.I, d, d)) < eps
   @test isnothing(Wb.𝐀̂)
   if ul == lower
@@ -51,11 +51,11 @@ import ITensorMPOCompression: extract_blocks, regform_blocks
     @test norm(array(Wb.𝐝̂) - array(Wrf[1:1, nc:nc])) < eps
     @test norm(array(Wb.𝐜̂) - array(Wrf[2:(nr - 1), nc:nc])) < eps
   end
-  @test norm(array(Wb.𝐕̂) - array(Wrf[2:nr, 1:1])) < eps
+  @test norm(array(Wb.𝐕̂.W) - array(Wrf[2:nr, 1:1].W)) < eps
 
   Wrf = H[2]
   nr, nc = dims(Wrf)
-  Wb = extract_blocks(Wrf, lr; all=true, V=true, fix_inds=true, Ac=true)
+  Wb = extract_blocks1(Wrf, lr; Abcd=true, V=true, fix_inds=true, Ac=true)
   if ul == lower
     @test norm(matrix(Wb.𝕀) - 1.0 * Matrix(LinearAlgebra.I, d, d)) < eps
     @test norm(array(Wb.𝐝̂) - array(Wrf[nr:nr, 1:1])) < eps
@@ -85,37 +85,49 @@ end
   lr = ul == lower ? left : right
 
   Wrf = H[1]
-  Wb = extract_blocks(Wrf, lr; fix_inds=true)
-  if lr==left
-    @test hasinds(Wb.𝐜̂,Wb.irc,Wb.icc)
-    @test hasinds(Wb.𝐝̂,Wb.ird,Wb.icd)
-    @test Wb.ird==Wb.irc
+  Wb = extract_blocks1(Wrf, lr; Abcd=true,fix_inds=true)
+  if ul==lower
+    check(Wb.𝐜̂)
+    check(Wb.𝐝̂)
+    # @test Wb.ird==Wb.irc
+    @test Wb.𝐝̂.ileft==Wb.𝐜̂.ileft
   else
-    @test hasinds(Wb.𝐛̂,Wb.irb,Wb.icb)
-    @test hasinds(Wb.𝐝̂,Wb.ird,Wb.icd)
-    @test Wb.icd==Wb.icb
+    check(Wb.𝐛̂)
+    check(Wb.𝐝̂)
+    # @test Wb.icd==Wb.icb
+    @test Wb.𝐝̂.ileft==Wb.𝐛̂.ileft
   end
   Wrf = H[N]
-  Wb = extract_blocks(Wrf, lr; fix_inds=true)
-  if lr==right
-    @test hasinds(Wb.𝐜̂,Wb.irc,Wb.icc)
-    @test hasinds(Wb.𝐝̂,Wb.ird,Wb.icd)
-    @test Wb.ird==Wb.irc
+  Wb = extract_blocks1(Wrf, lr; Abcd=true,fix_inds=true)
+  if  ul==upper
+    check(Wb.𝐜̂)
+    check(Wb.𝐝̂)
+    # @test Wb.ird==Wb.irc
+    @test Wb.𝐝̂.iright==Wb.𝐜̂.iright
   else
-    @test hasinds(Wb.𝐛̂,Wb.irb,Wb.icb)
-    @test hasinds(Wb.𝐝̂,Wb.ird,Wb.icd)
-    @test Wb.icd==Wb.icb
+    check(Wb.𝐛̂)
+    check(Wb.𝐝̂)
+    # @test Wb.icd==Wb.icb
+    @test Wb.𝐝̂.iright==Wb.𝐛̂.iright
   end
 
   Wrf = H[2]
-  Wb = extract_blocks(Wrf, lr; fix_inds=true)
-  @test hasinds(Wb.𝐀̂,Wb.irA,Wb.icA)
-  @test hasinds(Wb.𝐛̂,Wb.irb,Wb.icb)
-  @test hasinds(Wb.𝐜̂,Wb.irc,Wb.icc)
-  @test hasinds(Wb.𝐝̂,Wb.ird,Wb.icd)
-  @test Wb.ird==Wb.irc
-  @test Wb.icd==Wb.icb
-  @test Wb.irA==Wb.irb
+  Wb = extract_blocks1(Wrf, lr; Abcd=true,fix_inds=true)
+  check(Wb.𝐀̂)
+  check(Wb.𝐛̂)
+  check(Wb.𝐜̂)
+  check(Wb.𝐝̂)
+  if  ul==lower
+    @test Wb.𝐝̂.ileft==Wb.𝐜̂.ileft
+    @test Wb.𝐝̂.iright==Wb.𝐛̂.iright
+    @test Wb.𝐀̂.ileft==Wb.𝐛̂.ileft
+    @test Wb.𝐀̂.iright==Wb.𝐜̂.iright
+  else
+    @test Wb.𝐝̂.iright==Wb.𝐜̂.iright
+    @test Wb.𝐝̂.ileft==Wb.𝐛̂.ileft
+    @test Wb.𝐀̂.iright==Wb.𝐛̂.iright
+    @test Wb.𝐀̂.ileft==Wb.𝐜̂.ileft
+  end
 end
 
 

@@ -100,10 +100,10 @@ function insert_Q(Ŵrf::reg_form_Op, Q̂::ITensor, iq::Index, lr::orth_type)
   #
   #  Preserve b,c,d blocks and insert Q
   #
-  Wb = extract_blocks(Ŵrf, lr; b=true, c=false, d=true) # we don't need c here?
-  set_𝐛̂𝐜̂_block!(Ŵrf⎖, Wb.𝐛̂, lr) #preserve b or c block from old W
-  set_𝐝̂_block!(Ŵrf⎖, Wb.𝐝̂) #preserve d block from old W
-  set_𝕀_block!(Ŵrf⎖, Wb.𝕀) #init I blocks from old W
+  Wb1 = extract_blocks1(Ŵrf, lr; b=true, c=true, d=true) 
+  set_𝐛̂𝐜̂_block!(Ŵrf⎖, Wb1, lr) #preserve b or c block from old W
+  set_𝐝̂_block!(Ŵrf⎖, Wb1.𝐝̂) #preserve d block from old W
+  set_𝕀_block!(Ŵrf⎖, Wb1.𝕀) #init I blocks from old W
   set_𝐀̂𝐜̂_block(Ŵrf⎖, Q̂, lr) #Insert new Qs form QR decomp
 
   return Ŵrf⎖, iq⎖
@@ -112,19 +112,20 @@ end
 function ac_qx(Ŵrf::reg_form_Op, lr::orth_type; qprime=false, verbose=false, cutoff=1e-14, kwargs...)
   @mpoc_assert Ŵrf.ul==lower
   @checkflux(Ŵrf.W)
-  Wb = extract_blocks(Ŵrf, lr; Ac=true)
-  ilf_Ac = lr==left ? Wb.icAc : Wb.irAc
+  Wb = extract_blocks1(Ŵrf, lr; Ac=true)
+  𝐀̂𝐜̂=Wb.𝐀̂𝐜̂
+  ilf_Ac =forward(𝐀̂𝐜̂,lr)
   ilf = forward(Ŵrf, lr) #Backward and forward indices.
-  @checkflux(Wb.𝐀̂𝐜̂)
+  @checkflux(𝐀̂𝐜̂.W)
   if lr == left
-    Qinds = noncommoninds(Wb.𝐀̂𝐜̂, ilf_Ac)
+    Qinds = noncommoninds(𝐀̂𝐜̂.W, ilf_Ac)
     Q̂, R, iq, p = qr(
-      Wb.𝐀̂𝐜̂, Qinds; verbose=verbose, positive=true, atol=cutoff, tags=tags(ilf)
+      𝐀̂𝐜̂.W, Qinds; verbose=verbose, positive=true, atol=cutoff, tags=tags(ilf)
     )
   else
     Rinds = ilf_Ac
     R, Q̂, iq, p = lq(
-      Wb.𝐀̂𝐜̂, Rinds; verbose=verbose, positive=true, atol=cutoff, tags=tags(ilf)
+      𝐀̂𝐜̂.W, Rinds; verbose=verbose, positive=true, atol=cutoff, tags=tags(ilf)
     )
   end
   @checkflux(Q̂)
