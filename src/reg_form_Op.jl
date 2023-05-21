@@ -237,6 +237,7 @@ end
 function product(Wrf::reg_form_Op, B::ITensor)::reg_form_Op
     WB = Wrf.W * B
     ic = commonind(Wrf.W, B)
+    @assert !isnothing(ic)
     @assert hastags(ic, "Link")
     new_index = noncommonind(B, ic, siteinds(Wrf))
     if ic == Wrf.iright
