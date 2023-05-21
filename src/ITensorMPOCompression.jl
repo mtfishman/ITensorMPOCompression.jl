@@ -118,7 +118,9 @@ Assign an operator to an element of the operator valued matrix W
     W[i1,i2]=op
 """
 function assign!(W::ITensor, op::ITensor, ivs::IndexVal...)
-  return assign!(W, tensor(op), ivs...)
+  is=commoninds(W,inds(op))
+  op_sort = permute(op, is...; allow_alias=true)
+  return assign!(W, tensor(op_sort), ivs...)
 end
 
 function assign!(W::ITensor, op::DenseTensor, ivs::IndexVal...)
