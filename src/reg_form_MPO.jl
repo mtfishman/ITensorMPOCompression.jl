@@ -106,7 +106,8 @@ end
 
   
   data(H::reg_form_MPO) = H.data
-  
+  Base.eltype(H::reg_form_MPO) = eltype(H[1])
+
   function Ws(H::reg_form_MPO)
     return map(n -> H[n].W, 1:length(H))
   end

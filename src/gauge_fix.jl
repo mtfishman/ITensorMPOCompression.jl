@@ -27,8 +27,9 @@ function is_gauge_fixed(Hrf::AbstractMPS; kwargs...)::Bool
 end
 
 function gauge_fix!(H::reg_form_MPO;kwargs...)
+  ElT=eltype(H)
   if !is_gauge_fixed(H;kwargs)
-    tₙ = Vector{Float64}(undef, 1)
+    tₙ = Vector{ElT}(undef, 1)
     for W in H
       tₙ = gauge_fix!(W, tₙ, left)
       @assert is_regular_form(W)
@@ -41,7 +42,7 @@ function gauge_fix!(H::reg_form_MPO;kwargs...)
   end
 end
 
-function gauge_fix!(W::reg_form_Op, tₙ₋₁::Vector{Float64}, lr::orth_type)
+function gauge_fix!(W::reg_form_Op, tₙ₋₁::Vector{ElT}, lr::orth_type)  where {ElT<:Number}
   @assert W.ul==lower
   @assert is_regular_form(W)
   

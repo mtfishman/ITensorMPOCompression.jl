@@ -93,7 +93,7 @@ The MPO is returned in lower regular form.
 - `J::Float64 = 1.0` : Nearest neighbour interaction strength. Further neighbours decay like `J/(i-j)`..
 
 """
-function transIsing_AutoMPO(sites, NNN::Int64; ul=lower, J=1.0, hx=0.0, nexp=1,kwargs...)::MPO
+function transIsing_AutoMPO(::Type{ElT},sites, NNN::Int64; ul=lower, J=1.0, hx=0.0, nexp=1,kwargs...)::MPO where {ElT<:Number}
  
   do_field = hx != 0.0
   N = length(sites)
@@ -109,13 +109,16 @@ function transIsing_AutoMPO(sites, NNN::Int64; ul=lower, J=1.0, hx=0.0, nexp=1,k
       add!(ampo, f, "Sz", j, "Sz", j + dj)
     end
   end
-  H = MPO(ampo, sites; kwargs...)
+  H = MPO(ElT,ampo, sites; kwargs...)
   if ul == upper
     to_upper!(H)
   end
   H.llim,H.rlim=-1,1
   return H
 end
+
+transIsing_AutoMPO(sites, NNN::Int64;kwargs...)=transIsing_AutoMPO(Float64,sites, NNN;kwargs...)
+
 function two_body_AutoMPO(sites, NNN::Int64; kwargs...)
   return transIsing_AutoMPO(sites, NNN; kwargs...)
 end
@@ -137,7 +140,7 @@ The MPO is returned in lower regular form.
 
 """
 
-function Heisenberg_AutoMPO(sites, NNN::Int64;ul=lower,hz=0.0,J=1.0, kwargs...)::MPO
+function Heisenberg_AutoMPO(::Type{ElT},sites, NNN::Int64;ul=lower,hz=0.0,J=1.0, kwargs...)::MPO where {ElT<:Number}
   N = length(sites)
   @mpoc_assert(N >= NNN)
   @mpoc_assert(J!=0.0)
@@ -153,7 +156,7 @@ function Heisenberg_AutoMPO(sites, NNN::Int64;ul=lower,hz=0.0,J=1.0, kwargs...):
       add!(ampo, f * 0.5, "S-", j, "S+", j + dj)
     end
   end
-  H = MPO(ampo, sites; kwargs...)
+  H = MPO(ElT,ampo, sites; kwargs...)
   if ul == upper
     to_upper!(H)
   end
@@ -161,7 +164,9 @@ function Heisenberg_AutoMPO(sites, NNN::Int64;ul=lower,hz=0.0,J=1.0, kwargs...):
   return H
 end
 
-function Hubbard_AutoMPO(sites, NNN::Int64; ul=lower, U=1.0,t=1.0,V=0.5, kwargs...)::MPO
+Heisenberg_AutoMPO(sites, NNN::Int64;kwargs...)=Heisenberg_AutoMPO(Float64,sites, NNN::Int64;kwargs...)
+
+function Hubbard_AutoMPO(::Type{ElT},sites, NNN::Int64; ul=lower, U=1.0,t=1.0,V=0.5, kwargs...)::MPO where {ElT<:Number}
   N = length(sites)
   @mpoc_assert(N >= NNN)
   os = OpSum()
@@ -178,7 +183,7 @@ function Hubbard_AutoMPO(sites, NNN::Int64; ul=lower, U=1.0,t=1.0,V=0.5, kwargs.
       os += Vj, "Ntot", n, "Ntot", n + dn
     end
   end
-  H = MPO(os, sites; kwargs...)
+  H = MPO(ElT,os, sites; kwargs...)
   if ul == upper
     to_upper!(H)
   end
@@ -186,5 +191,5 @@ function Hubbard_AutoMPO(sites, NNN::Int64; ul=lower, U=1.0,t=1.0,V=0.5, kwargs.
   return H
 end
 
-
+Hubbard_AutoMPO(sites, NNN::Int64; kwargs...)=Hubbard_AutoMPO(Float64,sites, NNN::Int64; kwargs...)
 

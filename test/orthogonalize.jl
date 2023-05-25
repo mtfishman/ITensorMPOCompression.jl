@@ -24,19 +24,20 @@ verbose1 = false #verbose inside orth algos
     [Hubbard_AutoMPO, "Electron", false],
   ]
 
-  @testset "Ac/Ab block respecting decomposition $(model[1]), qns=$qns, ul=$ul" for model in
+  @testset "Ac/Ab block respecting decomposition $(model[1]), ElT=$elt, qns=$qns, ul=$ul" for model in
                                                                                     models,
-    qns in [false, true],
-    ul in [lower, upper]
+    qns in [false,true],
+    ul in [lower,upper],
+    elt in [Float64,ComplexF64]
 
     eps = 1e-14
     pre_fixed = model[3] #Hamiltonian starts gauge fixed
     N = 10 #5 sites
     NNN = 4 #Include 6nd nearest neighbour interactions
     sites = siteinds(model[2], N; conserve_qns=qns)
-    Hrf = reg_form_MPO(model[1](sites, NNN; ul=ul))
+    Hrf = reg_form_MPO(model[1](elt,sites, NNN; ul=ul))
     state = [isodd(n) ? "Up" : "Dn" for n in 1:N]
-    psi = randomMPS(sites, state)
+    psi = randomMPS(elt,sites, state)
     E0 = inner(psi', MPO(Hrf), psi)
 
     @test is_regular_form(Hrf)

@@ -80,7 +80,7 @@ function get_subtensor(
       end
   end
   if length(Ds) == 0
-    return BlockSparseTensor(new_inds)
+    return BlockSparseTensor(ElT,new_inds)
   end
   T_sub = BlockSparseTensor(ElT, undef, bs, new_inds)
   for ib in eachindex(Ds)

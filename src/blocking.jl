@@ -224,7 +224,7 @@ function build_R⎖(R::ITensor, iqx::Index, ilf::Index)::Tuple{ITensor,Index}
   @mpoc_assert dim(iqx) == dim(ilf) #make sure RL is square
   @checkflux(R)
   im = Index(space(iqx); tags=tags(iqx), dir=dir(iqx), plev=1) #new common index between M and R⎖
-  R⎖ = ITensor(0.0, im, ilf)
+  R⎖ = ITensor(eltype(R),0.0, im, ilf)
   #R⎖+=δ(im,ilf) #set diagonal ... blocksparse + diag is not supported yet.  So we do it manually below.
   Dw = dim(im)
   for j1 in 2:(Dw - 1)
@@ -245,20 +245,20 @@ function build_R⎖(R::ITensor, iqx::Index, ilf::Index)::Tuple{ITensor,Index}
   return RL_prime, dag(im)
 end
 
-function my_similar(::DenseTensor, inds...) 
-  return ITensor(inds...)
+function my_similar(T::DenseTensor, inds...) 
+  return ITensor(eltype(T),inds...)
 end
 
-function my_similar(::BlockSparseTensor, inds...)
-  return ITensor(inds...)
+function my_similar(T::BlockSparseTensor, inds...)
+  return ITensor(eltype(T),inds...)
 end
 
-function my_similar(::DiagTensor, inds...) 
-  return diagITensor(inds...)
+function my_similar(T::DiagTensor, inds...) 
+  return diagITensor(eltype(T),inds...)
 end
 
-function my_similar(::DiagBlockSparseTensor, inds...) 
-  return diagITensor(inds...)
+function my_similar(T::DiagBlockSparseTensor, inds...) 
+  return diagITensor(eltype(T),inds...)
 end
 
 function my_similar(T::ITensor, inds...)

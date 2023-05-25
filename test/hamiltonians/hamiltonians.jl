@@ -15,7 +15,7 @@ Directly coded build up of a transverse Ising model Hamiltonian with up to `NNN`
 - `J::Float64=1.0` : Nearest neighbour interaction strength.  Further neighbours decay like `J/(i-j)`..
 
 """
-function transIsing_MPO(sites, NNN::Int64;ul=lower,J=1.0,hx=0.0,pbc=false, kwargs...)::MPO
+function transIsing_MPO(::Type{ElT},sites, NNN::Int64;ul=lower,J=1.0,hx=0.0,pbc=false, kwargs...)::MPO  where {ElT<:Number}
   N = length(sites)
   Dw::Int64 = transIsing_Dw(NNN)
   use_qn::Bool = hasqns(sites[1])
@@ -42,6 +42,8 @@ function transIsing_MPO(sites, NNN::Int64;ul=lower,J=1.0,hx=0.0,pbc=false, kwarg
   end
   return mpo
 end
+
+transIsing_MPO(sites, NNN::Int64;kwargs...)=transIsing_MPO(Float64,sites, NNN::Int64;kwargs...)
 
 #  It turns out that the trans-Ising model
 #  Dw = 2+Sum(i,i=1..NNN) =2 + NNN*(NNN+1)/2
