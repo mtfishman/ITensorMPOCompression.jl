@@ -20,7 +20,6 @@ function apply(U::ITensor,WL::reg_form_Op,WR::reg_form_Op,Udag::ITensor)
   Phi = prime(((WbL.𝐀̂𝐜̂.W * WbR.𝐀̂𝐜̂.W) * U) * Udag, -2; tags="Site")
   #@show inds(Phi)
   @assert order(Phi)==6
-  is=siteinds(WL)
   Linds=(WbL.𝐀̂𝐜̂.ileft, siteinds(WL)...)
   Rinds=(WbR.𝐀̂𝐜̂.iright, siteinds(WR)...)
   NL=prod(dims(Linds))
@@ -49,16 +48,32 @@ function gate_sweep!(H::reg_form_MPO)
 end
 
 N,NNN = 10,2
-s = siteinds("S=1", N)
+s = siteinds("S=1/2", N)
 H = reg_form_MPO(Heisenberg_AutoMPO(s, NNN))
+state = [isodd(n) ? "Up" : "Dn" for n in 1:N]
+psi = randomMPS(s, state)
+
+@show get_Dw(H)
 @assert is_gauge_fixed(H)
 orthogonalize!(H,right) 
 @assert is_gauge_fixed(H)
+@assert check_ortho(H,right)
+E0 = inner(psi', MPO(H), psi)
 
 gate_sweep!(H)
+#
+# Get sweep destroyes orthogonality and energy expectation.
+#
+@assert !check_ortho(H,right)
+@assert !check_ortho(H,left)
+E1 = inner(psi', MPO(H), psi)
 
-pprint(H)
+@show get_Dw(H)
 orthogonalize!(H,right)
-pprint(H)
+@assert check_ortho(H,right)
+@show get_Dw(H)
+E2 = inner(psi', MPO(H), psi)
+@show E0 E1 E2
+
 
 nothing
