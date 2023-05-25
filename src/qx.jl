@@ -119,13 +119,13 @@ function ac_qx(Ŵrf::reg_form_Op, lr::orth_type; qprime=false, verbose=false, cu
   @checkflux(𝐀̂𝐜̂.W)
   if lr == left
     Qinds = noncommoninds(𝐀̂𝐜̂.W, ilf_Ac)
-    Q̂, R, iq, p = qr(
-      𝐀̂𝐜̂.W, Qinds; verbose=verbose, positive=true, atol=cutoff, tags=tags(ilf)
+    Q̂, R, iq, Rp = qr(
+      𝐀̂𝐜̂.W, Qinds; verbose=verbose, positive=true, atol=cutoff, tags=tags(ilf), kwargs...
     )
   else
     Rinds = ilf_Ac
-    R, Q̂, iq, p = lq(
-      𝐀̂𝐜̂.W, Rinds; verbose=verbose, positive=true, atol=cutoff, tags=tags(ilf)
+    R, Q̂, iq, Rp = lq(
+      𝐀̂𝐜̂.W, Rinds; verbose=verbose, positive=true, atol=cutoff, tags=tags(ilf), kwargs...
     )
   end
   @checkflux(Q̂)
@@ -141,25 +141,19 @@ function ac_qx(Ŵrf::reg_form_Op, lr::orth_type; qprime=false, verbose=false, cu
 
   #both inds or R have the same tags, so we prime one of them so the grow function can distinguish.
   R⎖ = grow(prime(R, iq), dag(iq⎖)', ilf)
-  p = add_edges(p) #grow p so we can apply it to Rp.
+  if !isnothing(Rp)
+    Rp /= sqrt(dh)
+    Rp⎖=grow(prime(Rp, iq), dag(iq⎖)', ilf)
+  else
+    Rp⎖=nothing
+  end
   if qprime
     iq⎖ = prime(iq⎖)
   else
     R⎖ = noprime(R⎖)
+    if !isnothing(Rp)
+      Rp⎖ = noprime(Rp⎖)
+    end
   end
-  return Ŵrf⎖, R⎖, iq⎖, p
-end
-
-function add_edges(p::Vector{Int64})
-  Dw = length(p) + 2
-  return [1, (p .+ 1)..., Dw]
-end
-
-#
-#  This assumes the edge D=1 blocks appear first in the block list
-#  If this fails we need to return a dict{Block,Vector{Int64}} so we can 
-#  associate block with perm vectors
-#
-function add_edges(p::Vector{Vector{Int64}})
-  return [[1], [1], p...]
+  return Ŵrf⎖, R⎖, iq⎖, Rp⎖
 end
