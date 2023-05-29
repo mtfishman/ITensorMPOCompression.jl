@@ -122,6 +122,10 @@ function ITensors.noprime(Wrf::reg_form_Op)
     return Wrf
 end
 
+function ITensors.dag(Wrf::reg_form_Op)
+    return reg_form_Op(dag(Wrf.W),dag(Wrf.ileft),dag(Wrf.iright),Wrf.ul)
+end
+
 
 #
 #  Backward and forward indices for a given ortho direction.  Sweep direction is opposite
