@@ -109,6 +109,7 @@ function set_subtensor(
     if isnothing(blockT)
       insertblock!(T, tb)
       blockT = blockview(T, tb)
+      # @show "insert block" tb iT flux(T,tb) rs ab flux(A,ab) index_within_Tblock
     end
     
     siwb=SVector(index_within_Tblock)
@@ -255,7 +256,7 @@ function set_subtensor_ND(T::ITensor, A::ITensor, irs::IndexRange...)
   p = getperm(inds(T), ntuple(n -> isortT[n], length(isortT))) # find p such that isort[p]==inds(T)
   rsortT = NDTensors.permute((ranges(irs)..., ranges(inotT)...), p) #sorted ranges for T
   ireqAp = permute_tagplev(ireqA, ireqT) #match based on tags & plev, NOT IDs since dims are different.
-  isortA = NDTensors.permute((ireqAp..., inotA...), p) #inotA is the same inotT, using inotA here for a less confusing read.
+  isortA = NDTensors.permute((ireqAp..., inotA_sorted...), p) #inotA is the same inotT, using inotA here for a less confusing read.
   Ap = permute(A, isortA...; allow_alias=true)
   return tensor(T)[rsortT...] = tensor(Ap)
 end
