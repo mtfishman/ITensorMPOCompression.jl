@@ -17,7 +17,7 @@ import Base: similar, reverse, transpose
 # reg_form and orth_type values and functions
 export upper, lower, left, right, mirror, flip
 # lots of characterization functions
-export is_regular_form, isortho, check_ortho, detect_regular_form
+export is_regular_form, isortho, check_ortho, detect_regular_form, @checkflux
 # MPO bond dimensions and bond spectrum
 export get_Dw, min, max
 export bond_spectrums
@@ -40,7 +40,7 @@ function mpoc_checkflux(T::Union{BlockSparseTensor,DiagBlockSparseTensor})
 end
 
 macro checkflux(T)
-  return esc(:(mpoc_checkflux(tensor($T))))
+  return esc(:(ITensorMPOCompression.mpoc_checkflux(NDTensors.tensor($T))))
 end
 
 default_eps = 1e-14 #for characterization routines, floats abs()<default_eps are considered to be zero.
