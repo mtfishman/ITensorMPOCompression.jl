@@ -63,7 +63,7 @@ function gate_sweep!(ElT::Type{<:Number},sites,H::reg_form_MPO)
 end
 
 ElT=Float64
-N,NNN = 100,10
+N,NNN = 10,2
 # sites = siteinds("S=1/2", N;conserve_qns=true)
 # H = reg_form_MPO(transIsing_AutoMPO(ElT,sites, NNN))
 # H = reg_form_MPO(Heisenberg_AutoMPO(ElT,sites, NNN))
@@ -79,7 +79,7 @@ E0 = inner(psi', MPO(H), psi)
 # show_directions(H)
 
 gate_sweep!(ElT,sites,H)
-# show_directions(H)
+show_directions(H)
 #
 # Get sweep destroyes orthogonality and energy expectation.
 #

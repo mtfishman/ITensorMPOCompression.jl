@@ -170,4 +170,35 @@ end
     return reg_form_MPO(Ws,Hrf.llim, Hrf.rlim,Hrf. d0, Hrf.dN, ul1)
   end
   
+  function get_directions(psi::reg_form_MPO)
+    d0=dir(inds(psi[1]; tags="Link,l=0")[1])
+    dn=map(n -> dir(inds(psi[n]; tags="Link,l=$n")[1]), 1:(length(psi)))
+    return [d0,dn...]
+  end
+
+  function show_direction(d::ITensors.Arrow)
+    if d == ITensors.In
+      print("<--")
+    elseif d == ITensors.Out
+      print("-->")
+    elseif d == ITensors.Neither
+      print("???")
+    else
+      @assert(false)
+    end
+  end
+
+  function show_directions(psi::reg_form_MPO)
+    dirs = get_directions(psi)
+    n = 1
+    for d in dirs
+      show_direction(d)
+      if n<=length(psi)
+        print(" $n ")
+      end
+      n += 1
+    end
+    return print("\n")
+  end
+  
   
