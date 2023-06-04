@@ -3544,16 +3544,10 @@ or
 
 \begin_inset Formula 
 \[
-\begin{bmatrix}\mathsf{𝕀} & 0\\
+\begin{bmatrix}\boldsymbol{t}_{1} & \boldsymbol{t}_{2}\end{bmatrix}\begin{bmatrix}\mathsf{𝕀} & 0\\
 0 & \mathsf{𝕀}
-\end{bmatrix}\begin{bmatrix}\boldsymbol{t}_{1}\\
-\boldsymbol{t}_{2}
-\end{bmatrix}=\begin{bmatrix}\boldsymbol{c}_{0}^{1}\\
-\boldsymbol{c}_{0}^{2}
-\end{bmatrix}+\begin{bmatrix}0 & A_{0}^{1}\\
-A_{0}^{2} & 0
-\end{bmatrix}\begin{bmatrix}\boldsymbol{t}_{1}\\
-\boldsymbol{t}_{2}
+\end{bmatrix}=\begin{bmatrix}\boldsymbol{c}_{0}^{1} & \boldsymbol{c}_{0}^{2}\end{bmatrix}+\begin{bmatrix}\boldsymbol{t}_{1} & \boldsymbol{t}_{2}\end{bmatrix}\begin{bmatrix}0 & A_{0}^{2}\\
+A_{0}^{1} & 0
 \end{bmatrix}
 \]
 
@@ -3576,8 +3570,21 @@ or
 
 \begin_inset Formula 
 \[
-\begin{bmatrix}\mathsf{𝕀} & -A_{0}^{1}\\
-A_{0}^{2} & \mathsf{𝕀}
+\begin{bmatrix}\boldsymbol{t}_{1} & \boldsymbol{t}_{2}\end{bmatrix}\begin{bmatrix}\mathsf{𝕀} & -A_{0}^{2}\\
+-A_{0}^{1} & \mathsf{𝕀}
+\end{bmatrix}=\begin{bmatrix}\boldsymbol{c}_{0}^{1} & \boldsymbol{c}_{0}^{2}\end{bmatrix}
+\]
+
+\end_inset
+
+which can be transposed
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{bmatrix}\mathsf{𝕀} & -A_{0}^{1T}\\
+-A_{0}^{2T} & \mathsf{𝕀}
 \end{bmatrix}\begin{bmatrix}\boldsymbol{t}_{1}\\
 \boldsymbol{t}_{2}
 \end{bmatrix}=\begin{bmatrix}\boldsymbol{c}_{0}^{1}\\
@@ -3594,7 +3601,7 @@ For general
 :
 \begin_inset Formula 
 \[
-A_{0}^{1}\boldsymbol{s}_{1}=\left(\boldsymbol{b}_{0}^{1}+\boldsymbol{s}_{N}\right)
+A_{0}^{1}\boldsymbol{s}_{1}=\boldsymbol{b}_{0}^{1}+\boldsymbol{s}_{N}
 \]
 
 \end_inset
@@ -3602,7 +3609,7 @@ A_{0}^{1}\boldsymbol{s}_{1}=\left(\boldsymbol{b}_{0}^{1}+\boldsymbol{s}_{N}\righ
 
 \begin_inset Formula 
 \[
-A_{0}^{2}\boldsymbol{s}_{2}=\left(\boldsymbol{b}_{0}^{2}+\boldsymbol{s}_{1}\right)
+A_{0}^{2}\boldsymbol{s}_{2}=\boldsymbol{b}_{0}^{2}+\boldsymbol{s}_{1}
 \]
 
 \end_inset
@@ -3610,7 +3617,7 @@ A_{0}^{2}\boldsymbol{s}_{2}=\left(\boldsymbol{b}_{0}^{2}+\boldsymbol{s}_{1}\righ
 
 \begin_inset Formula 
 \[
-A_{0}^{3}\boldsymbol{s}_{3}=\left(\boldsymbol{b}_{0}^{3}+\boldsymbol{s}_{2}\right)
+A_{0}^{3}\boldsymbol{s}_{3}=\boldsymbol{b}_{0}^{3}+\boldsymbol{s}_{2}
 \]
 
 \end_inset
@@ -3629,7 +3636,7 @@ A_{0}^{3}\boldsymbol{s}_{3}=\left(\boldsymbol{b}_{0}^{3}+\boldsymbol{s}_{2}\righ
 
 \begin_inset Formula 
 \[
-A_{0}^{N}\boldsymbol{s}_{N}=\left(\boldsymbol{b}_{0}^{N}+\boldsymbol{s}_{N-1}\right)
+A_{0}^{N}\boldsymbol{s}_{N}=\boldsymbol{b}_{0}^{N}+\boldsymbol{s}_{N-1}
 \]
 
 \end_inset
@@ -3710,31 +3717,21 @@ or
 
 \begin_inset Formula 
 \[
-\begin{bmatrix}\mathsf{𝕀} & 0 & 0 & \cdots & 0\\
+\begin{bmatrix}\boldsymbol{t}_{1} & \boldsymbol{t}_{2} & \boldsymbol{t}_{3} & \cdots & \boldsymbol{t}_{N}\end{bmatrix}\begin{bmatrix}\mathsf{𝕀} & 0 & 0 & \cdots & 0\\
 0 & \mathsf{𝕀} & 0 & \cdots & 0\\
 0 & 0 & \mathsf{𝕀} & \cdots & 0\\
 \vdots & \vdots & \vdots & \ddots & \vdots\\
 0 & 0 & 0 & \cdots & \mathsf{𝕀}
-\end{bmatrix}\begin{bmatrix}\boldsymbol{t}_{1}\\
-\boldsymbol{t}_{2}\\
-\boldsymbol{t}_{3}\\
-\vdots\\
-\boldsymbol{t}_{N}
 \end{bmatrix}=\begin{bmatrix}\boldsymbol{c}_{0}^{1}\\
 \boldsymbol{c}_{0}^{2}\\
 \boldsymbol{c}_{0}^{3}\\
 \vdots\\
 \boldsymbol{c}_{0}^{N}
-\end{bmatrix}+\begin{bmatrix}0 & 0 & 0 & \cdots & 0 & A_{0}^{1}\\
-A_{0}^{2} & 0 & 0 & \cdots & 0 & 0\\
-0 & A_{0}^{3} & 0 & \cdots & 0 & 0\\
-\vdots & \vdots & \vdots & \ddots & \vdots & \vdots\\
-0 & 0 & 0 & \cdots & A_{0}^{N} & 0
-\end{bmatrix}\begin{bmatrix}\boldsymbol{t}_{1}\\
-\boldsymbol{t}_{2}\\
-\boldsymbol{t}_{3}\\
-\vdots\\
-\boldsymbol{t}_{N}
+\end{bmatrix}^{T}+\begin{bmatrix}\boldsymbol{t}_{1} & \boldsymbol{t}_{2} & \boldsymbol{t}_{3} & \cdots & \boldsymbol{t}_{N}\end{bmatrix}\begin{bmatrix}0 & A_{0}^{2} & 0 & 0 & \cdots & 0\\
+ & 0 & A_{0}^{3} & 0 & \cdots & 0\\
+\vdots & \vdots & \vdots & \vdots & \ddots & \vdots\\
+0 & 0 & 0 & 0 & \cdots & A_{0}^{N}\\
+A_{0}^{1} & 0 & 0 & 0 & \cdots & 0
 \end{bmatrix}
 \]
 
@@ -3766,22 +3763,17 @@ or
 
 \begin_inset Formula 
 \[
-\begin{bmatrix}\mathsf{𝕀} & 0 & 0 & \cdots & 0 & -A_{0}^{1}\\
--A_{0}^{2} & \mathsf{𝕀} & 0 & \cdots & 0 & 0\\
-0 & -A_{0}^{3} & \mathsf{𝕀} & \cdots & 0 & 0\\
-\vdots & \vdots & \vdots & \ddots & \vdots & \vdots\\
-0 & 0 & 0 & \cdots & -A_{0}^{N} & \mathsf{𝕀}
-\end{bmatrix}\begin{bmatrix}\boldsymbol{t}_{1}\\
-\boldsymbol{t}_{2}\\
-\boldsymbol{t}_{3}\\
-\vdots\\
-\boldsymbol{t}_{N}
+\begin{bmatrix}\boldsymbol{t}_{1} & \boldsymbol{t}_{2} & \boldsymbol{t}_{3} & \cdots & \boldsymbol{t}_{N}\end{bmatrix}\begin{bmatrix}\mathsf{𝕀} & -A_{0}^{2} & 0 & \cdots & 0\\
+0 & \mathsf{𝕀} & -A_{0}^{3} & \cdots & 0\\
+\vdots & \vdots & \vdots & \ddots & \vdots\\
+0 & 0 & 0 & \cdots & -A_{0}^{N}\\
+-A_{0}^{1} & 0 & 0 & \cdots & \mathsf{𝕀}
 \end{bmatrix}=\begin{bmatrix}\boldsymbol{c}_{0}^{1}\\
 \boldsymbol{c}_{0}^{2}\\
 \boldsymbol{c}_{0}^{3}\\
 \vdots\\
 \boldsymbol{c}_{0}^{N}
-\end{bmatrix}
+\end{bmatrix}^{T}
 \]
 
 \end_inset

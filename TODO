@@ -29,7 +29,7 @@ ITensorInfiniteMPS:
   Done: -VUMPS for iMPO
   -Profile vumps iMPO
   Done: -left/right environment for non-tri MPOs (post compression).  More inversions
-  -return el/er from vumps.  Makes no sense for InfiniteSum{} versions?.
+  Done: -return el/er from vumps.  
   -iMPO analysis for 1) ops on diag 2) unit on diag
   -Do L/R environments one QN link-block at a time?
     Do we need corner I's for every link block?
@@ -37,10 +37,14 @@ ITensorInfiniteMPS:
   -Fix L[1] and R[Dw], they are not self consistent right now.
     Just need to subtract e(I| in the test?
   Done: -Fix if N=1 stuff in tdvp_iteration_sequential tdvp_iteration_parallel
-  -Or even better do really need two orth sweeps?  Write a demo that compares get_Dw(H) for 1 and two sweeps
+  Done: -Or even better do really need two orth sweeps?  Write a demo that compares get_Dw(H) for 1 and two sweeps
    for H=HeisenbergNNN, HubbardNNN and Loic's fqhe
+    Yes we need 2 sweeps
   -Support complex InfiniteMPO which is built from InfiniteMPOMatrix, which in turn is built from InfiniteSum{MPO}
-
+  -Why does heisenbergNNNs [1,2,3,4] compress differently than [4,3,2,1]
+  -See energy discrepencies [4,1,1,1] and [1,4,1,1] !?
+    Does this happen with InfiniteSum{} ?
+    What about [4,1] and [1,4]:  Yes also different 
 
 Old:
 Done: -Fix Index Tag conventions sections of the docs.

@@ -244,7 +244,7 @@ MPOs for open and periodic boundary conditions
 Just like the MPS structure for open boundary conditions, MPOs are capped
  at each end with row and column vectors.
  For periodic boundary conditions, full operator matrices are used throughout
- since there really are no ends to the tensor chain.
+ he lattice since there really are no ends to the tensor chain.
  In the paper they write the Hamiltonian as follows:
 \begin_inset Formula 
 \begin{equation}
@@ -280,7 +280,7 @@ where
 
 \end_inset
 
-The works directly with 
+The algorithms below work directly with 
 \begin_inset Formula $\boldsymbol{𝑙}\hat{W}^{1}$
 \end_inset
 
@@ -288,7 +288,7 @@ The works directly with
 \begin_inset Formula $\hat{W}^{N}\boldsymbol{𝑟}$
 \end_inset
 
- which are column and row vectors.
+ which are row and column vectors.
 \end_layout
 
 \begin_layout Section
@@ -296,7 +296,7 @@ Finite lattice MPOs
 \end_layout
 
 \begin_layout Standard
-Before compression we must bring the MPO into canonical form.
+Before compressing or truncating we must bring an MPO into canonical form.
  
 \end_layout
 
@@ -573,7 +573,7 @@ Float64
 \family typewriter
 lapack 
 \family default
-so we must add code the remove rows
+so we must add code the remove the pseudo zero rows
 \family typewriter
 .
  
@@ -1708,7 +1708,7 @@ literal "false"
 \end_inset
 
 .
- The idea is focus only the 
+ The idea is to focus only on the 
 \begin_inset Formula $\hat{\boldsymbol{A}}$
 \end_inset
 
@@ -1760,7 +1760,7 @@ r & s & 1
 
 \end_inset
 
-In particular we are interested in gauge transforms the are able to make
+In particular we are interested in gauge transforms that are able to make
  the 
 \begin_inset Formula $\hat{\boldsymbol{b}}$
 \end_inset
@@ -2142,7 +2142,7 @@ ITensor
 \family default
  library does its own sorting and combining of symmetry adapted blocks when
  using block-sparse tensors.
- As a result there is no guarantee then tensors will appear triangular after
+ As a result there is no guarantee that tensors will appear triangular after
  QR decomposition.
  This is a non issue for Ac-block method, but can cause serious problems
  when using the V-block method.
@@ -2366,7 +2366,7 @@ noprefix "false"
 \begin_inset Formula $\mathsf{M},$
 \end_inset
 
-
+ 
 \begin_inset Formula $\mathsf{M}=\mathsf{UsV^{\dagger}}$
 \end_inset
 
@@ -3727,7 +3727,7 @@ or
 \boldsymbol{c}_{0}^{3}\\
 \vdots\\
 \boldsymbol{c}_{0}^{N}
-\end{bmatrix}+\begin{bmatrix}\boldsymbol{t}_{1} & \boldsymbol{t}_{2} & \boldsymbol{t}_{3} & \cdots & \boldsymbol{t}_{N}\end{bmatrix}\begin{bmatrix}0 & A_{0}^{2} & 0 & 0 & \cdots & 0\\
+\end{bmatrix}^{T}+\begin{bmatrix}\boldsymbol{t}_{1} & \boldsymbol{t}_{2} & \boldsymbol{t}_{3} & \cdots & \boldsymbol{t}_{N}\end{bmatrix}\begin{bmatrix}0 & A_{0}^{2} & 0 & 0 & \cdots & 0\\
  & 0 & A_{0}^{3} & 0 & \cdots & 0\\
 \vdots & \vdots & \vdots & \vdots & \ddots & \vdots\\
 0 & 0 & 0 & 0 & \cdots & A_{0}^{N}\\
@@ -3773,7 +3773,7 @@ or
 \boldsymbol{c}_{0}^{3}\\
 \vdots\\
 \boldsymbol{c}_{0}^{N}
-\end{bmatrix}
+\end{bmatrix}^{T}
 \]
 
 \end_inset
