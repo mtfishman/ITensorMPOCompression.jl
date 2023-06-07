@@ -124,7 +124,7 @@ function ac_qx(Ŵrf::reg_form_Op, lr::orth_type; qprime=false, verbose=false, cu
     )
   else
     Rinds = ilf_Ac
-    R, Q̂, iq, Rp = lq(
+    R, Q̂, iq, Rp = ITensors.lq(
       𝐀̂𝐜̂.W, Rinds; verbose=verbose, positive=true, atol=cutoff, tags=tags(ilf), kwargs...
     )
   end

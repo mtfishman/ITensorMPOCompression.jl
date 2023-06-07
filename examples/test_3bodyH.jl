@@ -2,6 +2,8 @@ using ITensors
 using ITensorMPOCompression
 using Test
 
+import ITensors: maxlinkdim
+
 # using Printf
 # Base.show(io::IO, f::Float64) = @printf(io, "%1.3e", f) #dumb way to control float output
 include("../test/hamiltonians/hamiltonians.jl")
@@ -76,7 +78,7 @@ end
     #  are all identical to machine precision.
     #
     @test length(ss_hand) == length(ss_auto)
-    for nb in 1:length(ss_hand)
+    for nb in eachindex(ss_hand)
       ss_h = eigs(ss_hand[nb])
       ss_a = eigs(ss_auto[nb])
       ha = .√(ss_h) - .√(ss_a)

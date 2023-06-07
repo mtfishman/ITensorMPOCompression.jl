@@ -74,7 +74,7 @@ end
     #
     @test length(ss_pres)==length(ss_auto)
     @test length(ss_dumb)==length(ss_auto)
-    for nb in 1:length(ss_pres)
+    for nb in eachindex(ss_pres)
       ss_p=eigs(ss_pres[nb])
       ss_d=eigs(ss_dumb[nb])
       ss_a=eigs(ss_auto[nb])

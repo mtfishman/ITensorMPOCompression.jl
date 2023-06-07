@@ -72,7 +72,7 @@ verbose1 = false #verbose inside orth algos
     @test E0 ≈ E2 atol = eps
   end
 
-  @testset "Ortho center options" for 
+  @testset "Ortho center options" begin 
 
     N = 10 #5 sites
     NNN = 4 #Include 4th nearest neighbour interactions

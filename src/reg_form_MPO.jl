@@ -114,7 +114,7 @@ end
   
   Base.length(H::reg_form_MPO) = length(H.data)
   function Base.reverse(H::reg_form_MPO)
-    return reg_form_MPO(Base.reverse(H.data), H.llim, H.rlim, H.d0, H.dN, H.ul)
+    return reg_form_MPO(reverse(H.data), H.llim, H.rlim, H.d0, H.dN, H.ul)
   end
   Base.iterate(H::reg_form_MPO, args...) = iterate(H.data, args...)
   Base.getindex(H::reg_form_MPO, args...) = getindex(H.data, args...)

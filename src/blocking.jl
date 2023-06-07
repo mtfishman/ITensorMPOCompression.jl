@@ -96,12 +96,12 @@ function extract_blocks(
   if V
     i1, i2, n1, n2 = swap_ul(Wrf)
     if llur(Wrf, lr) #lower left/upper right
-      min1 = Base.min(n1, 2)
-      min2 = Base.min(n2, 2)
+      min1 = min(n1, 2)
+      min2 = min(n2, 2)
       𝐕̂ = Wrf[i1 => min1:n1, i2 => min2:n2] #Bottom right corner
     else #lower right/upper left
-      max1 = Base.max(n1 - 1, 1)
-      max2 = Base.max(n2 - 1, 1)
+      max1 = max(n1 - 1, 1)
+      max2 = max(n2 - 1, 1)
       𝐕̂ = Wrf[i1 => 1:max1, i2 => 1:max2] #top left corner
     end
   else

@@ -248,7 +248,7 @@ function redim(i::Index, Dw::Int64, ::Int64)
 end
 
 function Base.reverse(i::QNIndex)
-  return Index(Base.reverse(space(i)); dir=dir(i), tags=tags(i), plev=plev(i))
+  return Index(reverse(space(i)); dir=dir(i), tags=tags(i), plev=plev(i))
 end
 function Base.reverse(i::Index)
   return Index(space(i); tags=tags(i), plev=plev(i))
