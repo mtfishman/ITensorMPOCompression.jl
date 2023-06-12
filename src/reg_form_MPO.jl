@@ -123,6 +123,9 @@ end
   function get_Dw(H::reg_form_MPO)
     return get_Dw(MPO(H))
   end
+
+  ITensors.maxlinkdim(Hrf::reg_form_MPO)=maximum(get_Dw(Hrf))
+  
   
   function is_regular_form(H::reg_form_MPO;kwargs...)::Bool
     for W in H
