@@ -1,9 +1,21 @@
-#-----------------------------------------------------------------------
-#
-#  Finite lattice with open BCs, of regulat form Tensos: l*W1*W2...*WN*r
-#  Edge tensors have dim=1 dummy indices (order(W)==4) so generic code can work the same
-#  on all tensors.
-#
+@doc """
+  `mutable struct reg_form_MPO <: AbstractMPS` 
+
+# Fields
+- `data`::`Vector{reg_form_Op}` string of order 4 operators Ŵ
+- `llim`::`Int64`               One site left of ortho center
+- `rlim`::`Int64`               One site right of ortho center
+- `d0`  ::`ITensor`             onehot tensor used to add a dummy, dim=1  index at the left  edge of the `MPO`
+- `dN`  ::`ITensor`             onehot tensor used to add a dummy, dim=1 index at the right edge of the `MPO`
+- `ul`  ::`reg_form`            Flag indicating {`lower`,`upper`} regular form.
+    
+# Description
+  Finite lattice with open boundary condicitions, of regular form Tensors: l*Ŵ₁*Ŵ₂...*Ŵₙ*r
+  Edge tensors have dim=1 dummy indices (so that order(Ŵ)==4) so generic code can work the same 
+  on all tensors.  `d0` and `dN` are stored and used later to remove the dummy indices when converting back to an `MPO`. 
+  Dummy indices are created, and  `lower`/`upper` detection is performed at construction time. 
+    
+"""
 mutable struct reg_form_MPO <: AbstractMPS
     data::Vector{reg_form_Op}
     llim::Int # orthocenter-1

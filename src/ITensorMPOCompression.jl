@@ -26,7 +26,7 @@ export bond_spectrums
 # Display helpers
 export @pprint, pprint, show_directions
 # Wrapped MPO types
-export reg_form_MPO
+export reg_form_Op, reg_form_MPO
 
 macro mpoc_assert(ex)
   esc(:($Base.@assert $ex))

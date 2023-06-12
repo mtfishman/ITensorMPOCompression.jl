@@ -63,7 +63,7 @@ The definition of orthogonal forms for MPOs or operator-valued matrices are more
 ```math
 \sum_{a}\left\langle \hat{W}_{ab}^{\dagger},\hat{W}_{ac}\right\rangle =\frac{\sum_{a}^{}Tr\left[\hat{W}_{ab}\hat{W}_{ac}\right]}{Tr\left[\hat{\mathbb{I}}\right]}=\delta_{bc}
 ```
-Where the summation limits depend on where the V-block is for `left`/`right` and `lower`/`upper`.  The specifics for all four cases are shown in table 6 in the [Technical Notes](../TechnicalDetails.pdf)
+Where the summation limits depend on where the V-block is for `left`/`right` and `lower`/`upper`.  The specifics for all four cases are shown in table 6 in the [Technical Notes](https://github.com/JanReimers/ITensorMPOCompression.jl/blob/main/docs/TechnicalDetails.pdf)
 
 ```@docs
 ITensorMPOCompression.orth_type
@@ -85,3 +85,11 @@ MPOs for various models.  Right now we have four Hamiltonians available
 4. The 3-body model in eq. 34 of the Parker paper, built with autoMPO.
 The autoMPO MPOs come pre-truncated so they are not as useful for testing truncation. The automated truncation in AutoMPO can **partially** disabled by providing the the keyword argument `cutoff=-1.0` which gets passed down in the svd/truncate call used when building the MPO
 
+# Internal structures
+
+Internally the orthogonalization and truncation code uses these structures for storing and manipulating MPOs and matrix operators: Ŵ.
+
+```@docs
+reg_form_Op
+reg_form_MPO
+```

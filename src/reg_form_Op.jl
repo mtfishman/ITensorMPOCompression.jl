@@ -2,8 +2,25 @@
 #
 #  Manage an MPO/iMPO tensor and track the left and right facing indices.  This 
 #  seems to be easiest way to avoid tag hunting.  
-#  Also track lower or upper regular form in ul member.
+#  Also track lower or upper regular form in ul member. 
 #
+@doc """
+`mutable struct reg_form_Op`
+
+# Fields
+- `W::ITensor`    Order 4 four operator valued matrix: Ŵ    
+- `ileft::Index`  Left facing link index
+- `iright::Index` Right facing link index
+- `ul::reg_form`  Flag indicating {upper,lower} regular form
+
+# Description
+During construction the data in `W` is interrogated once to confirm either upper or lower regular form.  Similarly for
+the left and right link indices, except that various function overloads may automatically update the indices as needed.
+This appraoch greatly simplifies all the orthogonalization and truncation code which needs to know `ileft` and `iright` at almost
+every step.
+        
+
+"""
 mutable struct reg_form_Op
     W::ITensor
     ileft::Index
@@ -11,14 +28,14 @@ mutable struct reg_form_Op
     ul::reg_form
     function reg_form_Op(W::ITensor, ileft::Index, iright::Index, ul::reg_form)
         if !hasinds(W, ileft, iright)
-        @show inds(W, tags="Link") ileft iright
+            @show inds(W, tags="Link") ileft iright
         end
         @assert hasinds(W, ileft, iright)
         return new(W, ileft, iright, ul)
     end
-    function reg_form_Op(W::ITensor, ul::reg_form)
-        return new(W, Index(1), Index(1), ul)
-    end
+    # function reg_form_Op(W::ITensor, ul::reg_form)
+    #     return new(W, Index(1), Index(1), ul)
+    # end
 end
 #
 #  Internal consistency checks
