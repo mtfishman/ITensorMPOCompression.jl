@@ -1,7 +1,7 @@
 using ITensors, ITensorMPS
 using ITensorMPOCompression
 using Test
-using Revise, Printf, SparseArrays
+using Printf, SparseArrays
 include("hamiltonians/hamiltonians.jl")
 
 import ITensorMPOCompression: gauge_fix!, is_gauge_fixed

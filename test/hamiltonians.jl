@@ -1,7 +1,5 @@
-
 using ITensors, ITensorMPS
 using ITensorMPOCompression
-using Revise
 using Test
 
 include("hamiltonians/hamiltonians.jl")

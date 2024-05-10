@@ -1,7 +1,6 @@
 using ITensors, ITensorMPS
 using ITensorMPOCompression
 using Test
-using Revise
 
 @testset "ITensorMPOCompression.jl" begin
   @testset verbose = true "$filename" for filename in [

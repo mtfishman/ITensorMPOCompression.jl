@@ -2,7 +2,7 @@ using ITensors, ITensorMPS
 using ITensorMPOCompression
 
 using Test
-using Revise, Printf
+using Printf
 
 include("hamiltonians/hamiltonians.jl")
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f) #dumb way to control float output

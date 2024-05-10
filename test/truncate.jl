@@ -1,9 +1,7 @@
 using ITensors, ITensorMPS
 using ITensorMPOCompression
-using Revise
 using Test
 using Printf
-using Profile
 
 include("hamiltonians/hamiltonians.jl")
 
