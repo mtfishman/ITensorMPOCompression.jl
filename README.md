@@ -31,7 +31,7 @@ julia> ] add ITensorMPOCompression
 Here are is an example of orthogonalizing an hand generated (not using AutoMPO) MPO
 
 ```julia
-julia> using ITensors
+julia> using ITensors, ITensorMPS
 
 julia> using ITensorMPOCompression
 
@@ -125,7 +125,7 @@ julia> pprint(H) #High level view of what is in the MPO.
 Here are is an example of truncating an hand generated (not using AutoMPO) MPO
 
 ```julia
-julia> using ITensors
+julia> using ITensors, ITensorMPS
 
 julia> using ITensorMPOCompression
 

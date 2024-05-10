@@ -1,4 +1,4 @@
-using ITensors
+using ITensors, ITensorMPS
 using ITensorMPOCompression
 using Printf
 Base.show(io::IO, f::Float64) = @printf(io, "%1.3f", f)

@@ -1,4 +1,4 @@
-using ITensors
+using ITensors, ITensorMPS
 function two_component_BH(N::Int64;U=1.0,U12=-0.5,t1=0.5,t2=0.25,kwargs...)
     sites = siteinds("Boson",N;conserve_qns=true,conserve_number=false)
     op = OpSum()

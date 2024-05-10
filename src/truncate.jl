@@ -19,7 +19,7 @@ Compress an MPO using block respecting SVD techniques as described in
 
 # Example
 ```julia
-julia> using ITensors
+julia> using ITensors, ITensorMPS
 julia> using ITensorMPOCompression
 include("../test/hamiltonians/hamiltonians.jl")
 julia> N=10; #10 sites

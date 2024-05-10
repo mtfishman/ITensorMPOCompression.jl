@@ -4,7 +4,7 @@ authors = ["Jan Reimers <janreimers@gmail.com> and contributors"]
 version = "0.3.1"
 
 [deps]
-Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+ITensorMPS = "0d1a4710-d33b-49a5-8f18-73bdf49b47e2"
 ITensors = "9136182c-28ba-11e9-034c-db9fb085ebd5"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 NDTensors = "23ae76d9-e61a-49c4-8f12-3f1a16adf9cf"
@@ -13,11 +13,11 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [compat]
-Documenter = "0.27"
-ITensors = "0.3"
-NDTensors = "0.1.45"
-julia = "1"
+ITensorMPS = "0.1"
+ITensors = "0.3, 0.4, 0.5, 0.6"
+NDTensors = "0.1.45, 0.2, 0.3"
 StaticArrays = "0.12, 1.0"
+julia = "1"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

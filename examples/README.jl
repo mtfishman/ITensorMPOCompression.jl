@@ -28,7 +28,7 @@
 #'
 #' Here are is an example of orthogonalizing an hand generated (not using AutoMPO) MPO
 #+ term=true
-using ITensors
+using ITensors, ITensorMPS
 using ITensorMPOCompression
 include("../test/hamiltonians/hamiltonians.jl");
 
@@ -50,7 +50,7 @@ pprint(H) #High level view of what is in the MPO.
 
 #' Here are is an example of truncating an hand generated (not using AutoMPO) MPO
 #+ term=true
-using ITensors
+using ITensors, ITensorMPS
 using ITensorMPOCompression
 include("../test/hamiltonians/hamiltonians.jl");
 

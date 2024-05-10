@@ -1,4 +1,4 @@
-using ITensors, ITensorMPOCompression
+using ITensors, ITensorMPS, ITensorMPOCompression
 
 import ITensorMPOCompression: assign!, slice
 

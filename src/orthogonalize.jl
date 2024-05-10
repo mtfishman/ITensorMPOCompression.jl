@@ -20,7 +20,7 @@ atol=`-1.0 and rtol=`-1.0  indicates no rank reduction.
 
 # Examples
 ```julia
-julia> using ITensors
+julia> using ITensors, ITensorMPS
 julia> using ITensorMPOCompression
 include("../test/hamiltonians/hamiltonians.jl");
 julia> N=10; #10 sites
@@ -98,7 +98,7 @@ atol=`-1.0 and rtol=`-1.0  indicates no rank reduction.
 
 # Examples
 ```julia
-julia> using ITensors
+julia> using ITensors, ITensorMPS
 julia> using ITensorMPOCompression
 include("../test/hamiltonians/hamiltonians.jl");
 julia> N=10; #10 sites

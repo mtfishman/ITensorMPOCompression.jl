@@ -26,7 +26,7 @@ Hilbert space.
 
 # Example
 ```julia
-julia>using ITensors
+julia>using ITensors, ITensorMPS
 julia>using ITensorMPOCompression
 julia>N=5; #5 sites
 julia>NNN=2; #Include 2nd nearest neighbour interactions

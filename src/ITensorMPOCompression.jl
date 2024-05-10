@@ -1,6 +1,6 @@
 module ITensorMPOCompression
 
-using ITensors
+using ITensors, ITensorMPS
 using NDTensors
 
 import ITensors: addqns, isortho, orthocenter, setinds , linkind, data, permute, checkflux

@@ -1,4 +1,4 @@
-using ITensors
+using ITensors, ITensorMPS
 using ITensorMPOCompression
 using Test
 using Revise, Printf, SparseArrays

@@ -1,4 +1,4 @@
-using ITensors, ITensorMPOCompression
+using ITensors, ITensorMPS, ITensorMPOCompression
 include("../test/hamiltonians/hamiltonians.jl")
 
 N = 10

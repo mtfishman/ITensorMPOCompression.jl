@@ -1,5 +1,5 @@
 # Define the nearest neighbor term `S⋅S` for the Heisenberg model
-using ITensors
+using ITensors, ITensorMPS
 using ITensorMPOCompression
 using Printf
 Base.show(io::IO, f::Float64) = @printf(io, "%1.5f", f)

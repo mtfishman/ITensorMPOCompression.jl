@@ -166,7 +166,7 @@ for Lower in the other two columns.
 
 # Examples
 ```julia
-julia> using ITensors
+julia> using ITensors, ITensorMPS
 julia> using ITensorMPOCompression
 julia> N=10; #10 sites
 julia> NNN=7; #Include up to 7th nearest neighbour interactions

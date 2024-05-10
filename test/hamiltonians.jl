@@ -1,5 +1,5 @@
 
-using ITensors
+using ITensors, ITensorMPS
 using ITensorMPOCompression
 using Revise
 using Test
