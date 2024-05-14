@@ -171,7 +171,7 @@ end
 function get_subtensor_wrapper(
   T::DenseTensor{ElT,N}, new_inds, rs::UnitRange{Int64}...
 ) where {ElT,N}
-  return ITensor(T[rs...], new_inds)
+  return ITensor(storage(T[rs...]), new_inds)
 end
 
 function get_subtensor_wrapper(
