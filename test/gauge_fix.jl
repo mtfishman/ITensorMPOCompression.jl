@@ -31,7 +31,7 @@ models = [
   state = [isodd(n) ? "Up" : "Dn" for n in 1:N]
 
   H = MPO(Hrf)
-  psi = randomMPS(elt,sites, state)
+  psi = random_mps(elt,sites, state)
   E0 = inner(psi', H, psi)
 
   @test is_regular_form(Hrf)

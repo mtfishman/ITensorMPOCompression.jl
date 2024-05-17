@@ -70,7 +70,7 @@ N,NNN = 10,2
 sites = siteinds("Electron", N;conserve_qns=true)
 H = reg_form_MPO(Hubbard_AutoMPO(ElT,sites, NNN))
 state = [isodd(n) ? "Up" : "Dn" for n in 1:N]
-psi = randomMPS(sites, state)
+psi = random_mps(sites, state)
 # show_directions(H)
 @show get_Dw(H)
 orthogonalize!(H,right) 

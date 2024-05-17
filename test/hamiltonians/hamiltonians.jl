@@ -456,7 +456,7 @@ end
 
 function fast_GS(H::MPO, sites, nsweeps::Int64=5)::Tuple{Float64,MPS}
   state = [isodd(n) ? "Up" : "Dn" for n in 1:length(sites)]
-  psi0 = randomMPS(sites, state)
+  psi0 = random_mps(sites, state)
   sweeps = Sweeps(nsweeps)
   setmaxdim!(sweeps, 2, 4, 8, 16, 32)
   setcutoff!(sweeps, 1E-10)

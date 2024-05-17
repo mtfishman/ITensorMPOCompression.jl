@@ -118,7 +118,7 @@ end
     sites = siteinds("SpinHalf", N; conserve_qns=false)
     Hnot = three_body_AutoMPO(sites; cutoff=-1.0) #No truncation inside autoMPO
     H = three_body_AutoMPO(sites; cutoff=1e-15) #Truncated by autoMPO
-    psi = randomMPS(sites)
+    psi = random_mps(sites)
     Enot = inner(psi', Hnot, psi)
     E = inner(psi', H, psi)
     #@show E-Enot get_Dw(Hnot) get_Dw(H)

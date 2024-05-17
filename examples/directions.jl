@@ -4,7 +4,7 @@ include("../test/hamiltonians/hamiltonians.jl")
 N = 10
 sites = siteinds("S=1/2", N; conserve_qns=true)
 state = [isodd(n) ? "Up" : "Dn" for n in 1:length(sites)]
-psi = randomMPS(sites, state)
+psi = random_mps(sites, state)
 println("Show QN directions.  Arrows should point *away* from ortho centers")
 println("MPS as constructed")
 show_directions(psi)

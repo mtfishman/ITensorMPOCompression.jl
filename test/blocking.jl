@@ -149,7 +149,7 @@ end
 @testset "Sub tensor assign for block sparse matrices with compatable QN spaces" begin 
     qns=[QN("Sz",0)=>1,QN("Sz",0)=>3,QN("Sz",0)=>2]
     i,j=Index(qns,"i"),Index(qns,"j")
-    A=randomITensor(i,j)
+    A=random_itensor(i,j)
     nr,nc=dims(A)
     B=copy(A)
     for dr in 0:nr-1
@@ -170,10 +170,10 @@ end
 #     qns=[QN("Sz",0)=>1,QN("Sz",0)=>3,QN("Sz",0)=>2]
 #     qnsC=[QN("Sz",0)=>2,QN("Sz",0)=>2,QN("Sz",0)=>2] #purposely miss allgined.
 #     i,j=Index(qns,"i"),Index(qns,"j")
-#     A=randomITensor(i,j)
+#     A=random_itensor(i,j)
 #     nr,nc=dims(A)
 #     ic,jc=Index(qnsC,"i"),Index(qnsC,"j")
-#     C=randomITensor(ic,jc)
+#     C=random_itensor(ic,jc)
 #     @show dense(A) dense(C)
 #     C[ic=>1:nr,jc=>1:nc]=A[i=>1:nr,j=>1:nc]
 #     @show matrix(A)-matrix(C)

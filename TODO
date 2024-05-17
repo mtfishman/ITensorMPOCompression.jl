@@ -314,7 +314,7 @@ Done: -add Printf for
 Done: -simplify MPOpbc code
 Done: -Get rid of MPOpbs struct.
 Done: -Prevent Documter.jl from showing ITensor docs.
-Done: -Seeing flakey GS tests.  probably need to seed the randomMPS for consistency.
+Done: -Seeing flakey GS tests.  probably need to seed the random_mps for consistency.
 Done: -Add a big lattice test and look at SVs
 Plan:
   90% Document what I have so far

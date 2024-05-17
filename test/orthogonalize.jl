@@ -37,7 +37,7 @@ verbose1 = false #verbose inside orth algos
     sites = siteinds(model[2], N; conserve_qns=qns)
     Hrf = reg_form_MPO(model[1](elt,sites, NNN; ul=ul))
     state = [isodd(n) ? "Up" : "Dn" for n in 1:N]
-    psi = randomMPS(elt,sites, state)
+    psi = random_mps(elt,sites, state)
     E0 = inner(psi', MPO(Hrf), psi)
 
     @test is_regular_form(Hrf)

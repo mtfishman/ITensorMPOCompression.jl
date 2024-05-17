@@ -12,8 +12,8 @@ using NDTensors: Diag, BlockSparse, tensor
 Base.show(io::IO, f::Float64) = @printf(io, "%1.1e", f)
 
 #
-#  We need consistent output from randomMPS in order to avoid flakey unit testset
-#  So we just pick any seed so that randomMPS (hopefull) gives us the same 
+#  We need consistent output from random_mps in order to avoid flakey unit testset
+#  So we just pick any seed so that random_mps (hopefull) gives us the same 
 #  pseudo-random output for each test run.
 #
 using Random
@@ -46,7 +46,7 @@ verbose1 = false #verbose inside orth algos
     sites = siteinds(model[2], N; conserve_qns=qns)
     Hrf = reg_form_MPO(model[1](elt,sites, NNN; ul=ul))
     state = [isodd(n) ? "Up" : "Dn" for n in 1:N]
-    psi = randomMPS(elt,sites, state)
+    psi = random_mps(elt,sites, state)
     E0 = inner(psi', MPO(Hrf), psi)
 
     bs = truncate!(Hrf, lr)
@@ -135,7 +135,7 @@ verbose1 = false #verbose inside orth algos
   #     H=transIsing_MPO(sites,NNN)
   #     #@show get_Dw(H)
   #     state=[isodd(n) ? "Up" : "Dn" for n=1:N]
-  #     psi=randomMPS(sites,state)
+  #     psi=random_mps(sites,state)
   #     Ea=inner(psi',Ha,psi)
   #     E0=inner(psi',H,psi)
   #     @test E0 ≈ Ea atol = eps
@@ -234,7 +234,7 @@ verbose1 = false #verbose inside orth algos
   #         si = infsiteinds("S=1/2", N; initstate, conserve_szparity=qns)
   #         ψ = InfMPS(si, initstate)
   #         for n in 1:N
-  #             ψ[n] = randomITensor(inds(ψ[n]))
+  #             ψ[n] = random_itensor(inds(ψ[n]))
   #         end
   #         H0=transIsing_iMPO(si,NNN;ul=ul)
   #         H0.llim=-1
@@ -310,7 +310,7 @@ verbose1 = false #verbose inside orth algos
   #             H=three_body_AutoMPO(sites) #Truncated by autoMPO
   #             #@show get_Dw(Hnot)
   #             Dw_auto = get_Dw(H)
-  #             psi=randomMPS(sites)
+  #             psi=random_mps(sites)
   #             Enot=inner(psi',Hnot,psi)
   #             E=inner(psi',H,psi)
   #             @test E ≈ Enot atol = sqrt(eps)
